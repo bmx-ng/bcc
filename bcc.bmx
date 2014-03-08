@@ -5,7 +5,7 @@ Framework brl.StandardIO
 Import "ctranslator.bmx"
 
 ?macos
-putenv_("BMXPATH=/Users/brucey/Documents/programming/Blitz/BlitzMaxTestArea")
+putenv_("BMXPATH=/Users/brucey/Documents/programming/BlitzMax_NG")
 ?linux
 putenv_("BMXPATH=/home/brucey/000_programming/BlitzMaxTestArea")
 ?

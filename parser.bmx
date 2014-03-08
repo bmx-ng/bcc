@@ -2702,6 +2702,8 @@ End Function
 Function ParseApp:TAppDecl( path$ )
 
 	Local app:TAppDecl=New TAppDecl
+	
+	_appInstance = app
 
 	Local source$=PreProcess( path )
 	'Local source:String = LoadString(path)

@@ -16,6 +16,8 @@ Const CLASS_THROWABLE:Int=	$002000
 Global _env:TScopeDecl
 Global _envStack:TList=New TList
 
+Global _appInstance:TAppDecl
+
 Global _loopnest:Int
 
 Function PushEnv( env:TScopeDecl )
@@ -584,7 +586,7 @@ End Rem
 	
 	Method FindFuncDecl:TFuncDecl( ident$,argExprs:TExpr[] = Null,explicit:Int=False )
 'DebugLog "FindFuncDecl : " + ident
-'If ident = "ReadStream" Then DebugStop
+'If ident = "Print" Then DebugStop
 		'Local funcs:TFuncDeclList=TFuncDeclList( FindDecl( ident ) )
 		Local f:TDecl = TDecl(findDecl(ident))
 		If Not f Then Return Null
@@ -1714,15 +1716,37 @@ pushenv Self
 	End Method
 	
 	Method mapStringConsts(value:String)
-		Local s:String = String(stringConsts.ValueForKey(value))
+		Local sc:TStringConst = TStringConst(stringConsts.ValueForKey(value))
 		
-		If Not s Then
-			s = "_s" + stringConstCount
+		If Not sc Then
+			Local sc:TStringConst = New TStringConst
+			sc.count = 1
+		
+			sc.id = "_s" + stringConstCount
 
-			stringConsts.Insert(value, s)
+			stringConsts.Insert(value, sc)
 
 			stringConstCount:+ 1
+		Else
+			sc.count :+ 1
 		End If
 	End Method
 	
+	Method removeStringConst(value:String)
+		Local sc:TStringConst = TStringConst(stringConsts.ValueForKey(value))
+		If sc Then
+			sc.count :- 1
+			If sc.count = 0 Then
+				stringConsts.Remove(value)
+			End If
+		End If
+	End Method
+	
+End Type
+
+Type TStringConst
+
+	Field id:String
+	Field count:Int
+
 End Type

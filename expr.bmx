@@ -32,7 +32,11 @@ Type TExpr
 	End Method
 	
 	Method EvalConst:TExpr()
-		Return New TConstExpr.Create( exprType,Eval() ).Semant()
+		Local expr:TExpr = New TConstExpr.Create( exprType,Eval() ).Semant()
+		If TStringType(TConstExpr(expr).ty) Then
+			_appInstance.mapStringConsts(TConstExpr(expr).value)
+		End If
+		Return expr
 	End Method
 	
 	Method Trans$()
@@ -322,10 +326,30 @@ Type TInvokeExpr Extends TExpr
 	End Method
 	
 	Method Semant:TExpr()
-'If decl.ident = "Create"
-'DebugStop
-'End If
+
 		If exprType Return Self
+		
+		' handle Asc and Chr keywords/functions for const values
+		Select decl.ident.ToLower()
+			Case "asc"
+				Local arg:TExpr = args[0]
+				If TConstExpr(arg) Then
+					Local expr:TExpr = New TConstExpr.Create(TType.intType, Asc(TConstExpr(arg).value))
+					_appInstance.removeStringConst(TConstExpr(arg).value)
+					expr.Semant()
+					Return expr
+				End If
+			Case "chr"
+				Local arg:TExpr = args[0]
+				If TConstExpr(arg) Then
+					Local expr:TConstExpr = New TConstExpr.Create(TType.stringType, Chr(Int(TConstExpr(arg).value)))
+					expr.Semant()
+					_appInstance.mapStringConsts(expr.value)
+					Return expr
+				End If
+		End Select
+		
+		
 		If Not decl.retType
 			decl.Semant()
 		End If

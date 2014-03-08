@@ -264,7 +264,7 @@ Type TCTranslator Extends TTranslator
 			If lhs Then
 				If lhs.exprType = TType.stringType Then
 					Return decl.munged + TransArgs(args, decl, TransSubExpr( lhs ))
-'If decl.ident = "ToCString" DebugStop
+'If decl.ident = "Print" DebugStop
 'DebugStop				
 				End If
 'If decl.ident = "Eof" DebugStop
@@ -281,10 +281,10 @@ Return class + "->md_" + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
 			Local class:String = Bra("(" + obj + "o)->clas")
 			Return class + "->md_" + decl.ident+TransArgs( args,decl, "o" )
 		EndIf
-		
+
 		' built-in functions
-		Select decl.ident
-			Case "Min", "Max", "Len"
+		Select decl.ident.ToLower()
+			Case "min", "max", "len", "asc", "chr"
 				Return TransBuiltin(decl, args)
 		End Select
 'If decl.ident = "stat_" DebugStop
@@ -300,8 +300,8 @@ Return class + "->md_" + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
 	End Method
 
 	Method TransBuiltin$( decl:TFuncDecl,args:TExpr[] )
-		Select decl.ident
-			Case "Min", "Max"
+		Select decl.ident.ToLower()
+			Case "min", "max"
 				Local isFloat:Int
 				For Local arg:TExpr = EachIn args
 					If TFloatType(arg.exprType) Or TDoubleType(arg.exprType) Then
@@ -314,12 +314,18 @@ Return class + "->md_" + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
 					' TODO : Long support
 					Return "bbInt" + decl.ident + TransArgs(args, decl)
 				End If
-			Case "Len"
-'DebugStop
+			Case "len"
 				Local arg:TExpr = args[0]
 				If TStringType(arg.exprType) Then
 					Return TVarExpr(arg).decl.munged + "->length"
 				End If
+			Case "asc"
+				Local arg:TExpr = args[0]
+				If TConstExpr(arg) InternalErr ' we should have handled this case already
+				Return "bbStringAsc" + TransArgs(args, decl)
+			Case "chr"
+				If TConstExpr(args[0]) InternalErr ' we should have handled this case already
+				Return "bbStringFromChar" + TransArgs(args, decl)
 		End Select
 	End Method
 		
@@ -336,19 +342,22 @@ Return class + "->md_" + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
 	Field stringMap:TMap = New TMap
 	
 	Method TransStringConst:String(value:String)
-		Local s:String = String(_app.stringConsts.ValueForKey(value))
+		Local sc:TStringConst = TStringConst(_app.stringConsts.ValueForKey(value))
+		Local s:String
 		
-		If Not s Then
+		If Not sc Then
 			'InternalErr
 			s = "bbEmptyString"
 '			s = "_s" + stringConstCount
 '
 '			stringMap.Insert(value, s)
 '
-'			stringConstCount:+ 1
+'			stringConstCount:+ 1e
+		Else
+			s = sc.id
 		End If
 
-		Return "&" + s	
+		Return "&" + s
 	End Method
 	
 	Method TransNewObjectExpr$( expr:TNewObjectExpr )
@@ -1852,9 +1861,9 @@ DebugLog mdecl.munged
 
 		' strings
 		For Local s:String = EachIn app.stringConsts.Keys()
-			Local key:String = String(app.stringConsts.ValueForKey(s))
+			Local key:TStringConst = TStringConst(app.stringConsts.ValueForKey(s))
 
-			Emit "static BBString " + key + "={"
+			Emit "static BBString " + key.id + "={"
 			Emit "&bbStringClass,"
 			Emit "2147483647,"
 			Emit s.length + ","
