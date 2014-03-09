@@ -484,11 +484,18 @@ Type TIdentType Extends TType
 			tyid=ident
 			ty=_env.FindType( tyid,targs )
 		Else
-			Local modid$=ident[..i]
-			Local mdecl:TModuleDecl=_env.FindModuleDecl( modid )
-			If Not mdecl Err "Module '"+modid+"' not found"
-			tyid=ident[i+1..]
-			ty=mdecl.FindType( tyid,targs )
+			' try scope search first
+			tyid=ident[..i]
+			ty=_env.FindType( tyid,targs )
+			
+			If Not ty Then
+				' no? now try module search
+				Local modid$=ident[..i]
+				Local mdecl:TModuleDecl=_env.FindModuleDecl( modid )
+				If Not mdecl Err "Module '"+modid+"' not found"
+				tyid=ident[i+1..]
+				ty=mdecl.FindType( tyid,targs )
+			End If
 		EndIf
 		If Not ty Err "Type '"+tyid+"' not found"
 		Return ty

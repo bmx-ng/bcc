@@ -817,6 +817,7 @@ Type TParser
 		Case "."
 			expr=New TScopeExpr.Create( _module )
 		Case "new"
+'DebugStop
 			NextToke
 			Local ty:TType=ParseType()
 			If CParse( "[" )

@@ -268,10 +268,20 @@ Type TCTranslator Extends TTranslator
 'DebugStop				
 				End If
 'If decl.ident = "Eof" DebugStop
-Local cdecl:TClassDecl = TObjectType(TVarExpr(lhs).decl.ty).classDecl
-Local obj:String = Bra("struct " + cdecl.munged + "_obj*")
-Local class:String = Bra("(" + obj + TransSubExpr( lhs ) + ")->clas")
-Return class + "->md_" + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
+				
+				If TVarExpr(lhs) Then
+					Local cdecl:TClassDecl = TObjectType(TVarExpr(lhs).decl.ty).classDecl
+					Local obj:String = Bra("struct " + cdecl.munged + "_obj*")
+					Local class:String = Bra("(" + obj + TransSubExpr( lhs ) + ")->clas")
+					Return class + "->md_" + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
+				Else If TNewObjectExpr(lhs) Then
+DebugStop
+					Local cdecl:TClassDecl = TNewObjectExpr(lhs).classDecl
+					Local class:String = cdecl.munged
+					Return class + ".md_" + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
+				Else
+					InternalErr
+				End If
 				'Return TransSubExpr( lhs )+"->"+decl.munged+TransArgs( args,decl )
 				'Return decl.munged+TransArgs( args,decl, TransSubExpr( lhs ) )
 			End If
@@ -375,7 +385,7 @@ Return class + "->md_" + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
 	End Method
 		
 	Method TransSelfExpr$( expr:TSelfExpr )
-		Return "this"
+		Return "o"
 	End Method
 	
 	Method TransCastExpr$( expr:TCastExpr )
@@ -1472,9 +1482,12 @@ End Rem
 			Emit fld
 		Next
 
-		Emit "// TODO: implement our own New() code"
-		' TODO
-		
+		Local decl:TFuncDecl = classDecl.FindFuncDecl("New")
+		If decl Then
+			decl.Semant
+			EmitBlock decl
+		End If
+
 		'
 		Emit "}"
 	End Method
@@ -1490,9 +1503,12 @@ End Rem
 			Emit "int _" + classid + "_Delete(BBObject *o) {"
 		End If
 		
-		Emit "// TODO: implement our own Delete() code"
-		' TODO
-	
+		Local decl:TFuncDecl = classDecl.FindFuncDecl("Delete")
+		If decl Then
+			decl.Semant
+			EmitBlock decl
+		End If
+		
 		
 		' field cleanup
 		For Local decl:TFieldDecl=EachIn classDecl.Decls()

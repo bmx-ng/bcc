@@ -875,23 +875,25 @@ Type TFuncDecl Extends TBlockDecl
 		If cdecl sclass=TClassDecl( cdecl.superClass )
 		
 		'prefix call to super ctor if necessary
-		If IsCtor() And superCtor=Null 
-			If sclass.FindFuncDecl( "new", Null )
-				superCtor=New TInvokeSuperExpr.Create( "new" )
-				stmts.AddFirst New TExprStmt.Create( superCtor )
-			EndIf
-		EndIf
+'		If IsCtor() And superCtor=Null And sclass
+'			If sclass.FindFuncDecl( "new", Null )
+'				superCtor=New TInvokeSuperExpr.Create( "new" )
+'				stmts.AddFirst New TExprStmt.Create( superCtor )
+'			EndIf
+'		EndIf
 		
 		'append a return statement if necessary
 		If Not IsExtern() And Not TVoidType( retType ) And Not TReturnStmt( stmts.Last() )
-			Local stmt:TReturnStmt
-			If IsCtor()
-				stmt=New TReturnStmt.Create( Null )
-			Else
+			If Not isCtor() And Not (isMethod() And ident.ToLower() = "delete") 
+				Local stmt:TReturnStmt
+			'If IsCtor()
+			'	stmt=New TReturnStmt.Create( Null )
+			'Else
 				stmt=New TReturnStmt.Create( New TConstExpr.Create( retType,"" ) )
-			EndIf
-			stmt.errInfo=errInfo
-			stmts.AddLast stmt
+			'EndIf
+				stmt.errInfo=errInfo
+				stmts.AddLast stmt
+			End If
 		EndIf
 
 		'check we exactly match an override

@@ -468,6 +468,9 @@ Type TNewObjectExpr Extends TExpr
 	Method Semant:TExpr()
 		If exprType Return Self
 		
+		Local it:TIdentType = TIdentType(ty)
+		Local iArgs:TExpr[] = CopyArgs(args)
+
 		ty=ty.Semant()
 		args=SemantArgs( args )
 		
@@ -485,16 +488,28 @@ Type TNewObjectExpr Extends TExpr
 
 		If classDecl.IsExtern()
 			If args Err "No suitable constructor found for class "+classDecl.ToString()+"."
-		Else
+'		Else
 'DebugStop
-			ctor=classDecl.FindFuncDecl( "new",args )
-			If Not ctor	Err "No suitable constructor found for class "+classDecl.ToString()+"."
-			args=CastArgs( args,ctor )
+'			ctor=classDecl.FindFuncDecl( "new",args )
+'			If Not ctor	Err "No suitable constructor found for class "+classDecl.ToString()+"."
+'			args=CastArgs( args,ctor )
 		EndIf
 		
 		classDecl.attrs:|CLASS_INSTANCED
 
 		exprType=ty
+		
+		If it Then
+			Local i:Int=it.ident.FindLast( "." )
+			If i > 0 Then
+				Local fdecl:TFuncDecl = classDecl.FindFuncDecl(it.ident[i+1..], iArgs)
+				If fdecl Then
+					Return New TInvokeMemberExpr.Create( Self,fdecl, iArgs ).Semant()
+				End If
+			End If
+		End If
+		
+		
 		Return Self
 	End Method
 	
