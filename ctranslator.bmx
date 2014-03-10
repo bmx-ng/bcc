@@ -275,10 +275,14 @@ Type TCTranslator Extends TTranslator
 					Local class:String = Bra("(" + obj + TransSubExpr( lhs ) + ")->clas")
 					Return class + "->md_" + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
 				Else If TNewObjectExpr(lhs) Then
-DebugStop
 					Local cdecl:TClassDecl = TNewObjectExpr(lhs).classDecl
 					Local class:String = cdecl.munged
 					Return class + ".md_" + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
+				Else If TCastExpr(lhs) Then
+					Local cdecl:TClassDecl = TObjectType(TCastExpr(lhs).ty).classDecl
+					Local obj:String = Bra("struct " + cdecl.munged + "_obj*")
+					Local class:String = Bra("(" + obj + TransSubExpr( lhs ) + ")->clas")
+					Return class + "->md_" + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
 				Else
 					InternalErr
 				End If
@@ -639,8 +643,8 @@ DebugStop
 '			If stmt.rhs.exprType.GetClass().IsInterface() rhs="GC_IPTR"+Bra(rhs)
 '		Endif
 		If TStringType(stmt.lhs.exprType) Then
-			s:+ "{"	
-			s:+ "BBSTRING tmp=" + lhs + ";~n"
+'			s:+ "{"	
+'			s:+ "BBSTRING tmp=" + lhs + ";~n"
 
 			
 			If stmt.op = "+=" Then
@@ -649,10 +653,10 @@ DebugStop
 				s :+ lhs+TransAssignOp( stmt.op )+rhs
 			End If
 
-			s :+ ";~nBBRETAIN(" + lhs +")~n"
-			s :+ "BBRELEASE(tmp)~n"
+'			s :+ ";~nBBRETAIN(" + lhs +")~n"
+'			s :+ "BBRELEASE(tmp)~n"
 			
-			s:+ "}"
+'			s:+ "}"
 		Else
 		
 				s :+ lhs+TransAssignOp( stmt.op )+rhs
@@ -1004,6 +1008,16 @@ If decl.ident = "Eof" DebugStop
 		Next
 		
 	End Method
+
+	Method EmitClassGlobalsProto(classDecl:TClassDecl)
+	
+		For Local decl:TGlobalDecl = EachIn classDecl.Decls()
+			decl.Semant()
+			
+			Emit "extern "+TransRefType( decl.ty, "" )+" "+ decl.munged+";"	'forward reference...
+		Next
+		
+	End Method
 	
 	Method EmitBBClassClassFuncProto( classDecl:TClassDecl )
 
@@ -1127,7 +1141,6 @@ If decl.ident = "Eof" DebugStop
 		
 		
 		
-		
 		'Emit "typedef struct " + classid + "_obj {"
 		Emit "struct " + classid + "_obj {"
 		Emit "struct BBClass_" + classid + "* clas;"
@@ -1147,6 +1160,9 @@ If decl.ident = "Eof" DebugStop
 
 
 		Emit "struct BBClass_" + classid + " " + classid + ";"
+
+		EmitClassGlobalsProto(classDecl);
+
 Rem	
 		' super class
 '		If Not classDecl.superClass Then
@@ -1341,6 +1357,14 @@ End Rem
 		Next
 		Emit "}"
 	End Rem
+
+		For Local decl:TDecl=EachIn classDecl.Semanted()
+			Local gdecl:TGlobalDecl =TGlobalDecl( decl )
+			If gdecl
+				Emit TransRefType( gdecl.ty, "" )+" "+gdecl.munged+";"
+				Continue
+			EndIf
+		Next
 	
 	
 		reserved = "New,Delete,ToString,ObjectCompare,SendMessage,_reserved1_,_reserved2_,_reserved3_".ToLower()
@@ -1467,16 +1491,20 @@ End Rem
 		
 		' field initialisation
 		For Local decl:TFieldDecl=EachIn classDecl.Decls()
-			' TODO : assume zero/null defaults for now
 			Local fld:String
 
 			' ((int*)((char*)o + 5))[0] = 
 			fld :+ TransFieldRef(decl, "o")
 
-			If TNumericType(decl.ty) Or TObjectType(decl.ty) Or TPointerType(decl.ty) Then
-				fld :+ "= 0;"
-			Else If TStringType(decl.ty) Then
-				fld :+ "= &bbEmptyString;"
+			If decl.init Then
+				' initial value
+				fld :+ "= " + decl.init.Trans() + ";";
+			Else
+				If TNumericType(decl.ty) Or TObjectType(decl.ty) Or TPointerType(decl.ty) Then
+					fld :+ "= 0;"
+				Else If TStringType(decl.ty) Then
+					fld :+ "= &bbEmptyString;"
+				End If
 			End If
 			
 			Emit fld

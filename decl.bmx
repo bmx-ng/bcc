@@ -1440,19 +1440,19 @@ End Rem
 		
 		If Not IsInterface()
 			'
-			'check for duplicate fields!
+			'check for duplicate fields! - BlitzMax supports fields with the same name in subclasses..
 			'
-			For Local decl:TDecl=EachIn Semanted()
-				Local fdecl:TFieldDecl=TFieldDecl( decl )
-				If Not fdecl Continue
-				Local cdecl:TClassDecl=superClass
-				While cdecl
-					For Local decl:TDecl=EachIn cdecl.Semanted()
-						If decl.ident=fdecl.ident Err "Field '"+fdecl.ident+"' in class "+ToString()+" overrides existing declaration in class "+cdecl.ToString()
-					Next
-					cdecl=cdecl.superClass
-				Wend
-			Next
+			'For Local decl:TDecl=EachIn Semanted()
+			'	Local fdecl:TFieldDecl=TFieldDecl( decl )
+			'	If Not fdecl Continue
+			'	Local cdecl:TClassDecl=superClass
+			'	While cdecl
+			'		For Local decl:TDecl=EachIn cdecl.Semanted()
+			'			If decl.ident=fdecl.ident Err "Field '"+fdecl.ident+"' in class "+ToString()+" overrides existing declaration in class "+cdecl.ToString()
+			'		Next
+			'		cdecl=cdecl.superClass
+			'	Wend
+			'Next
 			'
 			'Check we implement all abstract methods!
 			'
