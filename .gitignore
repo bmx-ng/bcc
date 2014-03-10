@@ -1,2 +1,8 @@
 *.bak
 .bmx
+.bmx/
+/bcc
+/bcc.debug
+/bcc.exe
+/bcc.debug.exe
+
