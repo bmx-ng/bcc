@@ -21,7 +21,7 @@ Type TToker
 
 	Const _keywords$=";"+ ..
 	"strict;superstrict;"+ ..
-	"public;private;property;"+ ..
+	"public;private;"+ ..
 	"short;int;float;double;long;string;array;object;ptr;var;varptr;mod;continue;exit;"+ ..
 	"include;import;module;extern;framework;"+ ..
 	"new;self;super;eachin;true;false;null;not;"+ ..

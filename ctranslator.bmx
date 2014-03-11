@@ -512,7 +512,7 @@ Type TCTranslator Extends TTranslator
 		Local t_index$=expr.index.Trans()
 		
 		If TStringType( expr.expr.exprType ) Then
-			Return t_expr + "->buf[" + t_index + "]" 
+			Return Bra(t_expr) + "->buf[" + t_index + "]" 
 			'Return "(BBINT)"+t_expr+"["+t_index+"]"
 		End If
 		

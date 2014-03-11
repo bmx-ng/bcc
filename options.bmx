@@ -1,5 +1,7 @@
 SuperStrict
 
+Import "base.configmap.bmx"
+
 Const version:String = "0.10"
 
 Const BUILDTYPE_APP:Int = 0
@@ -73,6 +75,8 @@ End Function
 Function ParseArgs:String[](args:String[])
 
 	DefaultOptions()
+	
+	CheckConfig()
 	
 	Local count:Int
 
@@ -166,3 +170,12 @@ Function DefaultOptions()
 ?
 End Function
 
+Function CheckConfig()
+
+	Local config:TConfigMap = New TConfigMap.Init("bcc.conf")
+	
+	If config.GetString("BMXPATH") <> ""
+		putenv_("BMXPATH="+config.GetString("BMXPATH_MACOS"))
+	EndIf
+
+End Function

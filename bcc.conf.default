@@ -1,0 +1,6 @@
+#copy this file as "bcc.conf" next to your bcc-binary
+#
+#uncomment the following lines and adjust paths as needed
+#
+
+#BMXPATH=YOUR/PATH/TO/BLITZMAX
