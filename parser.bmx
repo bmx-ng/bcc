@@ -2184,7 +2184,7 @@ End Rem
 
 		If FileType(path) = FILETYPE_FILE Then
 
-			Local toker:TToker=New TToker.Create( path,LoadString( path ) )
+			Local toker:TToker=New TToker.Create( path,LoadText( path ) )
 			toker.NextToke
 			
 			While True
@@ -2542,7 +2542,7 @@ Function PreProcess$( path$ )
 
 	Local ifnest:Int,con:Int=1,line:Int,source:TStringList=New TStringList
 
-	Local toker:TToker=New TToker.Create( path,LoadString( path ) )
+	Local toker:TToker=New TToker.Create( path,LoadText( path ) )
 
 	toker.NextToke
 
@@ -2687,7 +2687,7 @@ End Function
 Function ParseModule:TModuleDecl( path$,app:TAppDecl )
 
 	'Local source$=PreProcess( path )
-	Local source:String = LoadString(path)
+	Local source:String = LoadText(path)
 
 	Local toker:TToker=New TToker.Create( path,source )
 

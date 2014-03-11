@@ -1,4 +1,7 @@
 ﻿SuperStrict
+
+Framework BRL.StandardIO
+
 'HINT 1: this file must be saved with "Unicode BOM" to get recognized
 '        correctly by bmk/bcc
 '        So enable it in your editor of choice

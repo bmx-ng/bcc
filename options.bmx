@@ -175,7 +175,7 @@ Function CheckConfig()
 	Local config:TConfigMap = New TConfigMap.Init("bcc.conf")
 	
 	If config.GetString("BMXPATH") <> ""
-		putenv_("BMXPATH="+config.GetString("BMXPATH_MACOS"))
+		putenv_("BMXPATH="+config.GetString("BMXPATH"))
 	EndIf
 
 End Function
