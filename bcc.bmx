@@ -3,11 +3,19 @@ SuperStrict
 Framework brl.StandardIO
 
 Import "ctranslator.bmx"
+Import "base.configmap.bmx"
 
+local config:TConfigMap = new TConfigMap.Init("bcc.conf")
+
+'load system specific BMXPATH
 ?macos
-putenv_("BMXPATH=/Users/brucey/Documents/programming/BlitzMax_NG")
+	if config.GetString("BMXPATH_MACOS") <> ""
+		putenv_("BMXPATH="+config.GetString("BMXPATH_MACOS"))
+	endif
 ?linux
-putenv_("BMXPATH=/home/brucey/000_programming/BlitzMaxTestArea")
+	if config.GetString("BMXPATH_LINUX") <> ""
+		putenv_("BMXPATH="+config.GetString("BMXPATH_LINUX"))
+	endif
 ?
 
 Local args:String[] = ParseArgs(AppArgs[1..])
@@ -50,7 +58,7 @@ SaveSource(opt_filepath, trans, mung)
 
 
 Function SaveInterface(file:String, trans:TCTranslator, mung:String)
-	
+
 	Local path:String
 
 	If opt_buildtype = BUILDTYPE_MODULE Then
@@ -62,14 +70,14 @@ Function SaveInterface(file:String, trans:TCTranslator, mung:String)
 			' file interface
 			path = OutputFilePath(file, mung, "i")
 		End If
-		
+
 	Else
-	
+
 		' file interface
 		path = OutputFilePath(file, mung, "i")
-		
+
 	End If
-	
+
 	SaveText(trans.JoinLines("interface"), path)
 
 End Function
@@ -77,27 +85,27 @@ End Function
 Function SaveHeader(file:String, trans:TCTranslator, mung:String)
 
 	Local path:String = OutputFilePath(file, mung, "h")
-	
+
 	Local header:String = BuildHeaderName(path).ToUpper().Replace(".", "_")
 	Local text:String = HeaderComment()
 	text :+ "#ifndef " + header + "~n"
 	text :+ "#define " + header + "~n~n"
-	
+
 	If opt_buildtype = BUILDTYPE_MODULE And opt_modulename = "brl.blitz" Then
 		text :+ "#include <brl.mod/blitz.mod/blitz.h>~n"
 	End If
-	
+
 	text :+ trans.JoinLines("head")
 	text :+ "~n~n#endif~n"
 
 	SaveText(text, path)
-	
+
 End Function
 
 Function SaveSource(file:String, trans:TCTranslator, mung:String)
 
 	Local path:String = OutputFilePath(file, mung, "c")
-	
+
 	SaveText(trans.JoinLines("source"), path)
-	
+
 End Function
