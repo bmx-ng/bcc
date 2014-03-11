@@ -1,0 +1,8 @@
+#copy this file as "bcc.conf" next to your bcc-binary
+#
+#uncomment the following lines and adjust paths as needed
+#
+
+
+#BMXPATH_LINUX=YOUR/PATH/TO/BLITZMAX
+#BMXPATH_MACOS=YOUR/PATH/TO/BLITZMAX
