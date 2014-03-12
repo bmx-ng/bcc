@@ -126,10 +126,19 @@ Type TCTranslator Extends TTranslator
 		If objParam Then
 			t:+ objParam
 		End If
-		For Local i:Int=0 Until args.Length
+		For Local i:Int=0 Until decl.argDecls.Length
 			If t t:+","
-			t:+TransTemplateCast( TArgDecl(decl.argDecls[i].actual).ty,args[i].exprType,args[i].Trans() )
+			If i < args.length
+				t:+TransTemplateCast( TArgDecl(decl.argDecls[i].actual).ty,args[i].exprType,args[i].Trans() )
+			Else
+				decl.argDecls[i].Semant()
+				' default values
+				If decl.argDecls[i].init Then
+					t:+ decl.argDecls[i].init.Trans()
+				End If
+			End If
 		Next
+		
 		Return Bra(t)
 	End Method
 
@@ -195,6 +204,14 @@ Type TCTranslator Extends TTranslator
 	
 	Method TransLocalDecl$( munged$,init:TExpr )
 		Return TransType( init.exprType, munged )+" "+munged+"="+init.Trans()
+	End Method
+
+	Method CreateLocal2$( ty:TType, t$ )
+		Local tmp:TLocalDecl=New TLocalDecl.Create( "", ty,Null )
+		MungDecl tmp
+		Emit TransType(ty, "") + " " + tmp.munged + " = bbStringToCString" + Bra(t)+ ";"
+		customVarStack.Push(tmp.munged)
+		Return tmp.munged
 	End Method
 	
 	Method EmitPushErr()
@@ -301,7 +318,7 @@ Type TCTranslator Extends TTranslator
 			Case "min", "max", "len", "asc", "chr"
 				Return TransBuiltin(decl, args)
 		End Select
-'If decl.ident = "stat_" DebugStop
+'If decl.ident = "Encode" DebugStop
 		Return TransStatic( decl )+TransArgs( args,decl )
 	End Method
 	
@@ -467,6 +484,12 @@ Type TCTranslator Extends TTranslator
 				Return Bra(Bra(TransType(dst, "")) + "BBARRAYDATA(" + t + "," + t + "->dims)")
 			End If
 			If TByteType( src) Return Bra("&"+t)
+			
+			If TStringType(src) Then
+				Local tmp:String = CreateLocal2(TType.bytePointerType, t)
+				
+				Return tmp
+			End If
 		EndIf
 		
 		Return TransPtrCast( dst,src,t,"dynamic" )

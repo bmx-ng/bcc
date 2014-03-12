@@ -719,9 +719,15 @@ Method ParseFuncDecl:TFuncDecl( toke$,attrs:Int )
 	'		init=ParseExpr()
 		Else
 			ty=ParseDeclType(attrs)
+Rem
 			If CParse( "=" )
 				' TODO init=ParseExpr()
-				init = ParseUnaryExpr()
+				If CParse("$") Then
+					' string value
+					init = ParseUnaryExpr()
+				Else
+					init = ParseUnaryExpr()
+				End If
 				'DebugLog "TODO : ParseExpression"
 			Else If CParse( "[" )
 				'Local ln:TExpr=ParseExpr()
@@ -736,6 +742,7 @@ Method ParseFuncDecl:TFuncDecl( toke$,attrs:Int )
 			Else
 				Err "Constants must be initialized."
 			EndIf
+End Rem
 		EndIf
 		
 		Local decl:TValDecl
@@ -749,8 +756,8 @@ Method ParseFuncDecl:TFuncDecl( toke$,attrs:Int )
 		Else If attrs & DECL_LOCAL
 			decl=New TLocalDecl.Create( id,ty,init,attrs )
 		EndIf
-		
-		If decl.IsExtern() 
+'DebugStop
+'		If decl.IsExtern() 
 			If CParse( "=" )
 				'decl.munged=ParseStringLit()
 				
@@ -792,21 +799,29 @@ Method ParseFuncDecl:TFuncDecl( toke$,attrs:Int )
 						EndIf
 					End If
 				Else
+'					init = ParseUnaryExpr()
+					
 					If ty = TType.stringType
-						decl.munged=ParseStringLit()
+						If CParse("$") Then
+					init = ParseUnaryExpr()
+'							decl.init=New TConstExpr.Create(ty, ParseStringLit())
+						End If
 					Else
 						' a default value ?
 'DebugStop
-						Local value:String
+					decl.init = ParseUnaryExpr()
+'					Local value:String
+						
 						'_toker.NextToke()
 						
-						If CParse("-") Then
-							value = "-"
-							_toker.NextToke()
-						End If
+'						If CParse("-") Then
+'DebugStop
+'							value = "-"
+'							_toker.NextToke()
+'						End If
 						
-						decl.init = New TConstExpr.Create(ty, value + _toker._toke)
-						
+'						decl.init = New TConstExpr.Create(ty, value + _toker._toke)
+'						_toker.NextToke()
 					End If
 				End If
 				
@@ -815,8 +830,8 @@ Method ParseFuncDecl:TFuncDecl( toke$,attrs:Int )
 			Else
 				decl.munged=decl.ident
 			EndIf
-		EndIf
-	
+'		EndIf
+
 		Return decl
 	End Method
 

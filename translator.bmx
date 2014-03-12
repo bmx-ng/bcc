@@ -15,6 +15,7 @@ Type TTranslator
 	Field mungScope:TMap=New TMap'<TDecl>
 	Field mungStack:TStack=New TStack'< StringMap<TDecl> >
 	Field funcMungs:TMap=New TMap'<FuncDeclList>
+	Field customVarStack:TStack = New TStack
 
 	Field mungedScopes:TMap=New TMap'<StringSet>
 '	Field funcMungs:=New StringMap<FuncDeclList>
@@ -317,7 +318,7 @@ End Rem
 		Emit TransLocalDecl( tmp.munged,expr )+";"
 		Return tmp.munged
 	End Method
-	
+
 	'***** Utility *****
 
 	Method TransLocalDecl$( munged$,init:TExpr ) Abstract
@@ -577,6 +578,12 @@ Rem
 End Rem
 			Local t$=stmt.Trans()
 			If t Emit t+";"
+			
+			Local v:String = String(customVarStack.Pop())
+			While v
+				Emit "bbMemFree" + Bra(v) + ";"
+				v = String(customVarStack.Pop())
+			Wend
 			
 		Next
 		Local r:Int=unreachable

@@ -737,13 +737,14 @@ Type TCastExpr Extends TExpr
 					exprType = ty
 				End If
 				Return Self
-			Else
-				If TArrayType(src) Then
-					If TNumericType(TArrayType(src).elemType) Then
-						exprType = TNumericType(TArrayType(src).elemType).ToPointer()
-						Return Self
-					End If
+			Else If TArrayType(src) Then
+				If TNumericType(TArrayType(src).elemType) Then
+					exprType = TNumericType(TArrayType(src).elemType).ToPointer()
+					Return Self
 				End If
+			Else If TStringType(src) Then
+				exprType = ty
+				Return Self
 			End If
 		End If
 		
