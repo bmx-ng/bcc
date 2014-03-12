@@ -661,7 +661,13 @@ Type TParser
 		Case "$"
 			NextToke
 			ty=TType.stringType
-
+			
+			If CParse("z") Then
+				ty = TType.stringToCharPointerType
+			Else If CParse("w") Then
+				ty = TType.stringToShortPointerType
+			End If
+			
 			If CParse("var") Then
 				ty = TType.MapToVarPointerType(ty)
 			End If

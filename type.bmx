@@ -81,6 +81,17 @@ Type TType
 	Global doublePointerPtrType:TDoublePtrPtrType=New TDoublePtrPtrType
 	Global longPointerPtrType:TLongPtrPtrType=New TLongPtrPtrType
 
+	Global byteVarPointerPtrType:TByteVarPtrPtrType=New TByteVarPtrPtrType
+	Global intVarPointerPtrType:TIntVarPtrPtrType=New TIntVarPtrPtrType
+	Global shortVarPointerPtrType:TShortVarPtrPtrType=New TShortVarPtrPtrType
+	Global floatVarPointerPtrType:TFloatVarPtrPtrType=New TFloatVarPtrPtrType
+	Global doubleVarPointerPtrType:TDoubleVarPtrPtrType=New TDoubleVarPtrPtrType
+	Global longVarPointerPtrType:TLongVarPtrPtrType=New TLongVarPtrPtrType
+
+	' these represent $z and $w respectively.
+	Global stringToCharPointerType:TStringCharPtrType=New TStringCharPtrType
+	Global stringToShortPointerType:TStringShortPtrType=New TStringShortPtrType
+
 	Rem
 	bbdoc: map to a pointer type
 	End Rem
@@ -119,13 +130,12 @@ Type TType
 		If TStringType(ty) Return stringVarPointerType
 		
 		' pointer pointer
-' TODO ??
-'		If TBytePtrType(ty) Return bytePointerPtrType
-'		If TIntPtrType(ty) Return intPointerPtrType
-'		If TShortPtrType(ty) Return shortPointerPtrType
-'		If TFloatPtrType(ty) Return floatPointerPtrType
-'		If TDoublePtrType(ty) Return doublePointerPtrType
-'		If TLongPtrType(ty) Return longPointerPtrType
+		If TBytePtrType(ty) Return byteVarPointerPtrType
+		If TIntPtrType(ty) Return intVarPointerPtrType
+		If TShortPtrType(ty) Return shortVarPointerPtrType
+		If TFloatPtrType(ty) Return floatVarPointerPtrType
+		If TDoublePtrType(ty) Return doubleVarPointerPtrType
+		If TLongPtrType(ty) Return longVarPointerPtrType
 		
 		Return Null
 	End Function
@@ -636,6 +646,27 @@ Type TByteVarPtrType Extends TVarPtrType
 
 End Type
 
+Type TByteVarPtrPtrType Extends TVarPtrType
+
+	Method EqualsType:Int( ty:TType )
+		Return TByteVarPtrPtrType( ty )<>Null
+	End Method
+	
+	Method ExtendsType:Int( ty:TType )
+		If TObjectType( ty )
+			Local expr:TExpr=New TConstExpr.Create( Self,"" ).Semant()
+			Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
+			Return ctor And ctor.IsCtor()
+		EndIf
+		Return TPointerType( ty )<>Null
+	End Method
+	
+	Method ToString$()
+		Return "Byte Ptr Var"
+	End Method
+
+End Type
+
 Type TShortPtrType Extends TPointerType
 
 	Method EqualsType:Int( ty:TType )
@@ -674,6 +705,27 @@ Type TShortVarPtrType Extends TVarPtrType
 	
 	Method ToString$()
 		Return "Short Var"
+	End Method
+
+End Type
+
+Type TShortVarPtrPtrType Extends TVarPtrType
+
+	Method EqualsType:Int( ty:TType )
+		Return TShortVarPtrPtrType( ty )<>Null
+	End Method
+	
+	Method ExtendsType:Int( ty:TType )
+		If TObjectType( ty )
+			Local expr:TExpr=New TConstExpr.Create( Self,"" ).Semant()
+			Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
+			Return ctor And ctor.IsCtor()
+		EndIf
+		Return TPointerType( ty )<>Null
+	End Method
+	
+	Method ToString$()
+		Return "Short Ptr Var"
 	End Method
 
 End Type
@@ -720,6 +772,27 @@ Type TIntVarPtrType Extends TVarPtrType
 
 End Type
 
+Type TIntVarPtrPtrType Extends TVarPtrType
+
+	Method EqualsType:Int( ty:TType )
+		Return TIntVarPtrPtrType( ty )<>Null
+	End Method
+	
+	Method ExtendsType:Int( ty:TType )
+		If TObjectType( ty )
+			Local expr:TExpr=New TConstExpr.Create( Self,"" ).Semant()
+			Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
+			Return ctor And ctor.IsCtor()
+		EndIf
+		Return TPointerType( ty )<>Null
+	End Method
+	
+	Method ToString$()
+		Return "Int Ptr Var"
+	End Method
+
+End Type
+
 Type TFloatPtrType Extends TPointerType
 
 	Method EqualsType:Int( ty:TType )
@@ -758,6 +831,27 @@ Type TFloatVarPtrType Extends TVarPtrType
 	
 	Method ToString$()
 		Return "Float Var"
+	End Method
+
+End Type
+
+Type TFloatVarPtrPtrType Extends TVarPtrType
+
+	Method EqualsType:Int( ty:TType )
+		Return TFloatVarPtrPtrType( ty )<>Null
+	End Method
+	
+	Method ExtendsType:Int( ty:TType )
+		If TObjectType( ty )
+			Local expr:TExpr=New TConstExpr.Create( Self,"" ).Semant()
+			Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
+			Return ctor And ctor.IsCtor()
+		EndIf
+		Return TPointerType( ty )<>Null
+	End Method
+	
+	Method ToString$()
+		Return "Float Ptr Var"
 	End Method
 
 End Type
@@ -804,6 +898,27 @@ Type TDoubleVarPtrType Extends TVarPtrType
 
 End Type
 
+Type TDoubleVarPtrPtrType Extends TVarPtrType
+
+	Method EqualsType:Int( ty:TType )
+		Return TDoubleVarPtrPtrType( ty )<>Null
+	End Method
+	
+	Method ExtendsType:Int( ty:TType )
+		If TObjectType( ty )
+			Local expr:TExpr=New TConstExpr.Create( Self,"" ).Semant()
+			Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
+			Return ctor And ctor.IsCtor()
+		EndIf
+		Return TPointerType( ty )<>Null
+	End Method
+	
+	Method ToString$()
+		Return "Double Ptr Var"
+	End Method
+
+End Type
+
 Type TLongPtrType Extends TPointerType
 
 	Method EqualsType:Int( ty:TType )
@@ -846,6 +961,27 @@ Type TLongVarPtrType Extends TVarPtrType
 
 End Type
 
+Type TLongVarPtrPtrType Extends TVarPtrType
+
+	Method EqualsType:Int( ty:TType )
+		Return TLongVarPtrPtrType( ty )<>Null
+	End Method
+	
+	Method ExtendsType:Int( ty:TType )
+		If TObjectType( ty )
+			Local expr:TExpr=New TConstExpr.Create( Self,"" ).Semant()
+			Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
+			Return ctor And ctor.IsCtor()
+		EndIf
+		Return TPointerType( ty )<>Null
+	End Method
+	
+	Method ToString$()
+		Return "Long Ptr Var"
+	End Method
+
+End Type
+
 Type TStringPtrType Extends TPointerType
 
 	Method EqualsType:Int( ty:TType )
@@ -884,6 +1020,48 @@ Type TStringVarPtrType Extends TVarPtrType
 	
 	Method ToString$()
 		Return "String Var"
+	End Method
+
+End Type
+
+Type TStringCharPtrType Extends TPointerType
+
+	Method EqualsType:Int( ty:TType )
+		Return TStringCharPtrType( ty )<>Null
+	End Method
+	
+	Method ExtendsType:Int( ty:TType )
+		If TObjectType( ty )
+			Local expr:TExpr=New TConstExpr.Create( Self,"" ).Semant()
+			Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
+			Return ctor And ctor.IsCtor()
+		EndIf
+		Return TPointerType( ty )<>Null
+	End Method
+	
+	Method ToString$()
+		Return "$z"
+	End Method
+
+End Type
+
+Type TStringShortPtrType Extends TPointerType
+
+	Method EqualsType:Int( ty:TType )
+		Return TStringShortPtrType( ty )<>Null
+	End Method
+	
+	Method ExtendsType:Int( ty:TType )
+		If TObjectType( ty )
+			Local expr:TExpr=New TConstExpr.Create( Self,"" ).Semant()
+			Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
+			Return ctor And ctor.IsCtor()
+		EndIf
+		Return TPointerType( ty )<>Null
+	End Method
+	
+	Method ToString$()
+		Return "$w"
 	End Method
 
 End Type

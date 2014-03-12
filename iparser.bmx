@@ -877,6 +877,13 @@ End Rem
 		Case "$"
 			NextToke
 			ty=TType.stringType
+
+			If CParse("z") Then
+				ty = TType.stringToCharPointerType
+			Else If CParse("w") Then
+				ty = TType.stringToShortPointerType
+			End If
+
 			If CParse( "&" )
 				attrs :| DECL_GLOBAL
 				attrs :~ DECL_CONST

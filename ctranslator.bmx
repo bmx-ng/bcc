@@ -57,6 +57,9 @@ Type TCTranslator Extends TTranslator
 		If TFloatPtrPtrType( ty ) Return "BBFLOAT **"
 		If TDoublePtrPtrType( ty ) Return "BBDOUBLE **"
 		If TLongPtrPtrType( ty ) Return "BBLONG **"
+		If TStringCharPtrType( ty ) Return "BBBYTE *"
+		If TStringShortPtrType( ty ) Return "BBSHORT *"
+		If TIntVarPtrType( ty ) Return "BBINT *"
 		InternalErr
 	End Method
 
@@ -91,6 +94,14 @@ Type TCTranslator Extends TTranslator
 		If TDoubleVarPtrType( ty ) Return "! Var"
 		If TLongVarPtrType( ty ) Return "%% Var"
 		If TStringVarPtrType( ty ) Return "$ Var"
+		If TByteVarPtrPtrType( ty ) Return "@* Var"
+		If TShortVarPtrPtrType( ty ) Return "@@* Var"
+		If TIntVarPtrPtrType( ty ) Return "%* Var"
+		If TFloatVarPtrPtrType( ty ) Return "#* Var"
+		If TDoubleVarPtrPtrType( ty ) Return "!* Var"
+		If TLongVarPtrPtrType( ty ) Return "%%* Var"
+		If TStringCharPtrType( ty ) Return "$z"
+		If TStringShortPtrType( ty ) Return "$w"
 		InternalErr
 	End Method
 
