@@ -119,41 +119,6 @@ Type TForEachinStmt Extends TStmt
 
 End Type
 
-Type TIdentTypeExpr Extends TExpr
-	Field cdecl:TClassDecl
-	
-	Method Create:TIdentTypeExpr( ty:TType )
-		Self.exprType=ty
-	End Method
-	
-	Method Copy:TExpr()
-		Return New TIdentTypeExpr.Create( exprType )
-	End Method
-
-	Method _Semant()
-		If cdecl Return
-		exprType=exprType.Semant()
-		cdecl=exprType.GetClass()
-		If Not cdecl InternalErr
-	End Method
-		
-	Method Semant:TExpr()
-		_Semant
-		Err "Expression can't be used in this way"
-	End Method
-	
-	Method SemantFunc:TExpr( args:TExpr[] )
-		_Semant
-		If args.Length=1 And args[0] Return args[0].Cast( cdecl.objectType,CAST_EXPLICIT )
-		Err "Illegal number of arguments for type conversion"
-	End Method
-	
-	Method SemantScope:TScopeDecl()
-		_Semant
-		Return cdecl
-	End	Method
-
-End Type
 
 Type TIdentExpr Extends TExpr
 	Field ident$
@@ -1795,8 +1760,11 @@ End If
 
 		If funcDecl.IsExtern() Or (attrs & FUNC_PTR)
 			funcDecl.munged=funcDecl.ident
-			If CParse( "=" )
-				funcDecl.munged=ParseStringLit()
+			
+			If Not (attrs & FUNC_PTR) Then
+				If CParse( "=" )
+					funcDecl.munged=ParseStringLit()
+				End If
 
 				'Array $resize hack!
 				'If funcDecl.munged="$resize"

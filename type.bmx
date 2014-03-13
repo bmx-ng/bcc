@@ -354,6 +354,11 @@ Type TStringType Extends TType
 		Return cdecl
 	End Method
 	
+	Method Semant:TType()
+		GetClass()
+		Return Self
+	End Method
+	
 	Method ToString$()
 		Return "String"
 	End Method

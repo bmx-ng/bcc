@@ -211,7 +211,31 @@ Type TValDecl Extends TDecl
 	Method OnSemant()
 		If declTy
 			ty=declTy.Semant()
-			If declInit init=declInit.Copy().SemantAndCast(ty)
+			If declInit Then
+				If TFunctionPtrType(ty) Then
+'If ident = "compareFunc" DebugStop
+					'init=declInit.Copy().SemantAndCast(ty)
+					
+					Local argExpr:TExpr[] = New TExpr[0]
+					For Local arg:TArgDecl = EachIn TFunctionPtrType(ty).func.argDecls
+						Local aexp:TIdentTypeExpr = New TIdentTypeExpr.Create(arg.declTy)
+						aexp._Semant()
+						argExpr :+ [aexp]
+					Next
+					
+					Local expr:TExpr=declInit.Copy().SemantFunc(argExpr)
+					If expr.exprType.EqualsType( ty ) Then
+						init = expr
+					Else
+						init = New TCastExpr.Create( ty,expr,CAST_EXPLICIT ).Semant()
+					End If
+
+					
+					
+				Else
+					init=declInit.Copy().SemantAndCast(ty)
+				End If
+			End If
 		Else If declInit
 			init=declInit.Copy().Semant()
 			ty=init.exprType
@@ -586,7 +610,7 @@ End Rem
 	
 	Method FindFuncDecl:TFuncDecl( ident$,argExprs:TExpr[] = Null,explicit:Int=False )
 'DebugLog "FindFuncDecl : " + ident
-'If ident = "Print" Then DebugStop
+'If ident = "compareFunc" Then DebugStop
 		'Local funcs:TFuncDeclList=TFuncDeclList( FindDecl( ident ) )
 		Local f:TDecl = TDecl(findDecl(ident))
 		If Not f Then Return Null
@@ -846,7 +870,9 @@ Type TFuncDecl Extends TBlockDecl
 
 		'semant ret type
 		If Not retTypeExpr Then
-			retType = TType.voidType
+			If Not retType Then ' may have previously been set (if this is a function pointer)
+				retType = TType.voidType
+			End If
 		Else
 			retType=retTypeExpr.Semant()
 		End If

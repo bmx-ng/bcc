@@ -138,6 +138,13 @@ Type TTranslator
 		EndIf
 		mungScope.Insert munged,decl
 		decl.munged=munged
+		
+		' a function pointers' real function is stored in "func" - need to set its munged to match the parent.
+		If TValDecl(decl) Then
+			If TFunctionPtrType(TValDecl(decl).ty) Then
+				TFunctionPtrType(TValDecl(decl).ty).func.munged = munged
+			End If
+		End If
 	End Method
 
 Rem

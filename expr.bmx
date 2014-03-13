@@ -646,12 +646,16 @@ Type TCastExpr Extends TExpr
 		
 		'upcast?
 		If src.ExtendsType( ty )
-	
 			'cast from void[] to T[]
 			If TArrayType(src) And TVoidType( TArrayType(src).elemType )
 				Return New TConstExpr.Create( ty,"" ).Semant()
 			EndIf
 		
+		
+			If TStringType(src) And TObjectType(ty)
+				exprType = ty
+				Return expr
+			End If
 			'Box/unbox?...
 			'If TObjectType( ty ) And Not TObjectType( src )
 
@@ -1196,5 +1200,42 @@ Type TArrayExpr Extends TExpr
 	Method Trans$()
 		Return _trans.TransArrayExpr( Self )
 	End Method
+
+End Type
+
+Type TIdentTypeExpr Extends TExpr
+	Field cdecl:TClassDecl
+	
+	Method Create:TIdentTypeExpr( ty:TType )
+		Self.exprType=ty
+		Return Self
+	End Method
+	
+	Method Copy:TExpr()
+		Return New TIdentTypeExpr.Create( exprType )
+	End Method
+
+	Method _Semant()
+		If cdecl Return
+		exprType=exprType.Semant()
+		cdecl=exprType.GetClass()
+		If Not cdecl InternalErr
+	End Method
+		
+	Method Semant:TExpr()
+		_Semant
+		Err "Expression can't be used in this way"
+	End Method
+	
+	Method SemantFunc:TExpr( args:TExpr[] )
+		_Semant
+		If args.Length=1 And args[0] Return args[0].Cast( cdecl.objectType,CAST_EXPLICIT )
+		Err "Illegal number of arguments for type conversion"
+	End Method
+	
+	Method SemantScope:TScopeDecl()
+		_Semant
+		Return cdecl
+	End	Method
 
 End Type

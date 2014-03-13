@@ -940,6 +940,10 @@ End Rem
 		
 		If CParse( "&" ) Then
 		End If
+
+		While CParse( "[]" )
+			ty=New TArrayType.Create( ty )
+		Wend
 		
 		Return ty
 	End Method

@@ -48,7 +48,15 @@ Type TCTranslator Extends TTranslator
 		If TLongPtrType( ty ) Return "BBLONG *"
 		If TFunctionPtrType( ty ) Then
 			Local retType:String = TransType(TFunctionPtrType(ty).func.retType, "")
-			Local args:String = "/* TODO */"
+			Local args:String
+			For Local arg:TArgDecl = EachIn TFunctionPtrType(ty).func.argDecls
+				arg.Semant()
+				If args Then
+					args :+ ","
+				End If
+				
+				args :+ TransType(arg.ty, "")
+			Next
 			Return retType + Bra("* " + ident) + Bra(args)
 		End If
 		If TBytePtrPtrType( ty ) Return "BBBYTE **"
@@ -175,6 +183,10 @@ Type TCTranslator Extends TTranslator
 '		End If
 
 		If TStringType(ty) And TObjectType(src) Then
+			If Not TStringType(ty).cDecl Then
+				ty.Semant()
+			End If
+
 			Return "bbObjectDowncast" + Bra(expr + ",&" + TStringType(ty).cDecl.munged)
 		End If
 
@@ -252,6 +264,8 @@ Type TCTranslator Extends TTranslator
 			Return decl.munged
 		Else If TModuleDecl( decl.scope )
 			Return decl.munged
+		Else If TFuncDecl(decl.scope)
+			Return decl.munged
 		EndIf
 		InternalErr
 	End Method
@@ -299,18 +313,23 @@ Type TCTranslator Extends TTranslator
 				
 				If TVarExpr(lhs) Then
 					Local cdecl:TClassDecl = TObjectType(TVarExpr(lhs).decl.ty).classDecl
-					Local obj:String = Bra("struct " + cdecl.munged + "_obj*")
+ 					Local obj:String = TransFuncObj(cdecl)
 					Local class:String = Bra("(" + obj + TransSubExpr( lhs ) + ")->clas")
-					Return class + "->md_" + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
+					Return class + "->" + TransFuncPrefix(cdecl) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
 				Else If TNewObjectExpr(lhs) Then
 					Local cdecl:TClassDecl = TNewObjectExpr(lhs).classDecl
 					Local class:String = cdecl.munged
-					Return class + ".md_" + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
+					Return class + "." + TransFuncPrefix(cdecl) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
 				Else If TCastExpr(lhs) Then
 					Local cdecl:TClassDecl = TObjectType(TCastExpr(lhs).ty).classDecl
-					Local obj:String = Bra("struct " + cdecl.munged + "_obj*")
+					Local obj:String = TransFuncObj(cdecl)
 					Local class:String = Bra("(" + obj + TransSubExpr( lhs ) + ")->clas")
-					Return class + "->md_" + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
+					Return class + "->" + TransFuncPrefix(cdecl) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
+				Else If TMemberVarExpr(lhs) Then
+					Local cdecl:TClassDecl = TObjectType(TMemberVarExpr(lhs).decl.ty).classDecl
+					Local obj:String = TransFuncObj(cdecl)
+					Local class:String = Bra("(" + obj + TransSubExpr( lhs ) + ")->clas")
+					Return class + "->" + TransFuncPrefix(cdecl) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
 				Else
 					InternalErr
 				End If
@@ -331,6 +350,22 @@ Type TCTranslator Extends TTranslator
 		End Select
 'If decl.ident = "Encode" DebugStop
 		Return TransStatic( decl )+TransArgs( args,decl )
+	End Method
+	
+	Method TransFuncObj:String(decl:TClassDecl)
+		If decl.ident = "Object"
+			Return Bra("BBOBJECT")
+		Else
+			Return Bra("struct " + decl.munged + "_obj*")
+		End If
+	End Method
+
+	Method TransFuncPrefix:String(decl:TClassDecl)
+		If decl.ident = "Object"
+			Return ""
+		Else
+			Return "md_"
+		End If
 	End Method
 	
 	Method TransSuperFunc$( decl:TFuncDecl,args:TExpr[] )
@@ -1726,6 +1761,16 @@ End Rem
 		If TStringType(expr.exprType) Then
 			Return "$" + Enquote(expr.Eval())
 		EndIf
+		
+		If TFunctionPtrType(expr.exprType) Then
+			If TCastExpr(expr) Then
+				If TInvokeExpr(TCastExpr(expr).expr) Then
+					Return Enquote(TInvokeExpr(TCastExpr(expr).expr).decl.munged)
+				End If
+			End If
+			
+			InternalErr
+		End If
 
 	End Method
 
