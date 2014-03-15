@@ -419,7 +419,7 @@ Type TObjectType Extends TType
 	
 	Method EqualsType:Int( ty:TType )
 		Local objty:TObjectType=TObjectType( ty )
-		Return objty And classDecl=objty.classDecl
+		Return objty And (classDecl=objty.classDecl Or classDecl.ExtendsClass( objty.classDecl ))
 	End Method
 	
 	Method ExtendsType:Int( ty:TType )
