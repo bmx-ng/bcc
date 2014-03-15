@@ -101,6 +101,10 @@ Type TExpr
 	Method BalanceTypes:TType( lhs:TType,rhs:TType )
 		If TStringType( lhs ) Or TStringType( rhs ) Return TType.stringType
 		If TFloatType( lhs ) Or TFloatType( rhs ) Return TType.floatType
+		If TPointerType( lhs ) Or TPointerType( rhs ) Then
+			If TPointerType( lhs ) Return lhs
+			If TPointerType( rhs ) Return rhs
+		End If
 		If TIntType( lhs ) Or TIntType( rhs ) Return TType.intType
 		If lhs.ExtendsType( rhs ) Return rhs
 		If rhs.ExtendsType( lhs ) Return lhs
@@ -326,7 +330,6 @@ Type TInvokeExpr Extends TExpr
 	End Method
 	
 	Method Semant:TExpr()
-
 		If exprType Return Self
 		
 		' handle Asc and Chr keywords/functions for const values
@@ -635,7 +638,7 @@ Type TCastExpr Extends TExpr
 	
 	Method Semant:TExpr()
 		If exprType Return Self
-'DebugStop		
+'DebugStop
 		ty=ty.Semant()
 		expr=expr.Semant()
 		
@@ -901,7 +904,7 @@ Type TBinaryMathExpr Extends TBinaryExpr
 				If op<>"+" 
 					Err "Illegal string operator."
 				EndIf
-			Else If Not TNumericType( exprType )
+			Else If Not TNumericType( exprType ) And Not TPointerType( exprType )
 				Err "Illegal expression type."
 			EndIf
 		End Select

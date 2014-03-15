@@ -462,6 +462,8 @@ End Rem
 	
 	Method TransInvokeExpr$( expr:TInvokeExpr )
 		Local decl:TFuncDecl=TFuncDecl( expr.decl.actual ),t$
+'If decl.ident = "OnDebugStop" DebugStop	
+		If (decl.attrs & FUNC_PTR) And (decl.attrs & FUNC_INIT) Return decl.munged
 		
 		If decl.munged.StartsWith( "$" ) Return TransIntrinsicExpr( decl,Null,expr.args )
 		
@@ -517,6 +519,9 @@ End Rem
 		Return "break"
 	End Method
 	
+	Method TransTryStmt$( stmt:TTryStmt )
+	End Method
+
 	Method TransThrowStmt$( stmt:TThrowStmt )
 	End Method
 	

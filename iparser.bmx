@@ -515,7 +515,7 @@ Method ParseFuncDecl:TFuncDecl( toke$,attrs:Int )
 				tokeType = _toker._tokeType
 'DebugStop
 				Local id$=ParseIdent()
-'If id = "stream" DebugStop
+'If id = "compareFunc" DebugStop
 				Local ty:TType=ParseDeclType(attrs)
 				Local init:TExpr
 
@@ -525,7 +525,7 @@ Method ParseFuncDecl:TFuncDecl( toke$,attrs:Int )
 					_toker.rollback(pos, tokeType)
 					_toker._toke = id
 					'_toker.NextToke()
-					Local decl:TFuncDecl = ParseFuncDecl( id, 0 )
+					Local decl:TFuncDecl = ParseFuncDecl( id, FUNC_PTR | FUNC_INIT )
 					ty = New TFunctionPtrType
 					TFunctionPtrType(ty).func = decl
 					
@@ -541,7 +541,17 @@ Method ParseFuncDecl:TFuncDecl( toke$,attrs:Int )
 						' a string default
 						init = ParseUnaryExpr()
 					Else
-						init = ParseUnaryExpr()
+						If Not TFunctionPtrType(ty) Then
+							init = ParseUnaryExpr()
+						Else
+							' munged reference to default function pointer
+							Local defaultFunc:String = ParseStringLit()
+							Local func:TFuncDecl = TFuncDecl(TFunctionPtrType(ty).func.Copy())
+							init = New TInvokeExpr.Create(func)
+							func.munged = defaultFunc
+							init.exprType = ty
+							
+						End If
 					End If
 					' has a default value
 					'DebugStop
@@ -584,6 +594,7 @@ Method ParseFuncDecl:TFuncDecl( toke$,attrs:Int )
 		End If
 		
 		'If funcDecl.IsExtern()
+		If Not (funcDecl.attrs & (FUNC_PTR | FUNC_INIT)) Then
 		'	funcDecl.munged=funcDecl.ident
 			If CParse( "=" )
 
@@ -604,7 +615,12 @@ Method ParseFuncDecl:TFuncDecl( toke$,attrs:Int )
 						End If
 					End If
 				Else
-					funcDecl.munged=ParseStringLit()
+					'If Not (funcDecl.attrs & (FUNC_PTR | FUNC_INIT)) Then
+						funcDecl.munged=ParseStringLit()
+					'Else
+'DebugStop
+					'	funcDecl.init = ParseStringLit()
+					'End If
 					
 				End If
 
@@ -617,7 +633,8 @@ Method ParseFuncDecl:TFuncDecl( toke$,attrs:Int )
 				'EndIf
 				
 			EndIf
-			
+		End If
+		
 		' read function cast stuff
 		If CParse(":") Then
 			' ret type

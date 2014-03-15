@@ -1330,7 +1330,32 @@ Type TParser
 	End Method
 
 	Method ParseTryStmt()
-		Err "TODO : ParseTryStmt"
+		Parse "try"
+		
+		Local block:TBlockDecl=New TBlockDecl.Create( _block )
+		Local catches:TStack=New TStack
+		
+		PushBlock block
+		While _toke<>"end"
+			If CParse( "catch" )
+				Local id:String=ParseIdent()
+				Parse ":"
+				Local ty:TType=ParseType()
+				Local init:TLocalDecl=New TLocalDecl.Create( id,ty,Null,0 )
+				Local block:TBlockDecl=New TBlockDecl.Create( _block )
+				catches.Push New TCatchStmt.Create( init,block )
+				PopBlock
+				PushBlock block
+			Else
+				ParseStmt
+			End If
+		Wend
+		If Not catches.Length() Err "Try block must have at least one catch block"
+		PopBlock
+		NextToke
+		CParse "try"
+
+		_block.AddStmt New TTryStmt.Create( block,TCatchStmt[](catches.ToArray()) )
 	End Method
 	
 	Method ParseThrowStmt()
@@ -1540,7 +1565,7 @@ Type TParser
 
 '			If CParse("(") Then
 			If _toke = "(" Then
-'DebugStop
+
 				' function pointer?
 				Local decl:TFuncDecl = ParseFuncDecl("", attrs | FUNC_PTR)
 
@@ -1697,7 +1722,7 @@ Type TParser
 				' function pointer ?
 				If _toke = "(" Then
 
-					Local fdecl:TFuncDecl = ParseFuncDecl("", FUNC_PTR)
+					Local fdecl:TFuncDecl = ParseFuncDecl("", FUNC_PTR | DECL_ARG)
 
 					If Not ty Then
 						ty = New TFunctionPtrType
@@ -1749,6 +1774,8 @@ Type TParser
 				Else
 					Err "Only methods can be properties."
 				EndIf
+			Else If CParse( "nodebug" )
+				' TODO : NoDebug
 			Else
 				Exit
 			EndIf
@@ -1756,12 +1783,13 @@ Type TParser
 If Not ty Then
 'DebugStop
 End If
+
 		Local funcDecl:TFuncDecl=New TFuncDecl.CreateF( id,ty,args,attrs )
 
 		If funcDecl.IsExtern() Or (attrs & FUNC_PTR)
 			funcDecl.munged=funcDecl.ident
-			
-			If Not (attrs & FUNC_PTR) Then
+
+			If (Not (attrs & FUNC_PTR)) Or (attrs & FUNC_PTR And Not (attrs & DECL_ARG)) Then
 				If CParse( "=" )
 					funcDecl.munged=ParseStringLit()
 				End If

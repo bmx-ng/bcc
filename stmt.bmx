@@ -139,6 +139,72 @@ Type TReturnStmt Extends TStmt
 	End Method
 End Type
 
+Type TTryStmt Extends TStmt
+
+	Field block:TBlockDecl
+	Field catches:TCatchStmt[]
+	
+	Method Create:TTryStmt( block:TBlockDecl,catches:TCatchStmt[] )
+		Self.block=block
+		Self.catches=catches
+		Return Self
+	End Method
+	
+	Method OnCopy:TStmt( scope:TScopeDecl )
+		Local tcatches:TCatchStmt[] = Self.catches[..]
+		For Local i:Int=0 Until tcatches.Length
+			tcatches[i]=TCatchStmt( tcatches[i].Copy( scope ) )
+		Next
+		Return New TTryStmt.Create( block.CopyBlock( scope ),tcatches )
+	End Method
+	
+	Method OnSemant()
+		block.Semant
+		For Local i:Int = 0 Until catches.Length
+			catches[i].Semant
+			For Local j:Int = 0 Until i
+				If catches[i].init.ty.ExtendsType( catches[j].init.ty )
+					PushErr catches[i].errInfo
+					Err "Catch variable class extends earlier catch variable class"
+				EndIf
+			Next
+		Next
+	End Method
+	
+	Method Trans$()
+		Return _trans.TransTryStmt( Self )
+	End Method
+	
+End Type
+
+Type TCatchStmt Extends TStmt
+
+	Field init:TLocalDecl
+	Field block:TBlockDecl
+	
+	Method Create:TCatchStmt( init:TLocalDecl,block:TBlockDecl )
+		Self.init=init
+		Self.block=block
+		Return Self
+	End Method
+
+	Method OnCopy:TStmt( scope:TScopeDecl )
+		Return New TCatchStmt.Create( TLocalDecl( init.Copy() ),block.CopyBlock( scope ) )
+	End Method
+	
+	Method OnSemant()
+		init.Semant
+		If Not TObjectType( init.ty ) Err "Variable type must extend Throwable"
+		'If Not init.Type.GetClass().IsThrowable() Err "Variable type must extend Throwable"
+		block.InsertDecl init
+		block.Semant
+	End Method
+	
+	Method Trans$()
+	End Method
+
+End Type
+
 Type TThrowStmt Extends TStmt
 	Field expr:TExpr
 

@@ -348,7 +348,7 @@ Type TCTranslator Extends TTranslator
 			Case "min", "max", "len", "asc", "chr"
 				Return TransBuiltin(decl, args)
 		End Select
-'If decl.ident = "Encode" DebugStop
+
 		Return TransStatic( decl )+TransArgs( args,decl )
 	End Method
 	
@@ -699,7 +699,19 @@ Type TCTranslator Extends TTranslator
 	End Method
 
 	'***** Statements *****
-	
+
+	Method TransTryStmt$( stmt:TTryStmt )
+		Emit "try{"
+		EmitBlock( stmt.block )
+		For Local c:TCatchStmt=EachIn stmt.catches
+			MungDecl c.init
+			Emit "}catch("+TransType( c.init.ty, "" )+" "+c.init.munged+"){"
+			'dbgLocals.Push c.init
+			EmitBlock( c.block )
+		Next
+		Emit "}"
+	End Method
+
 	Method TransAssignStmt$( stmt:TAssignStmt )
 		If Not stmt.rhs Return stmt.lhs.Trans()
 'DebugStop

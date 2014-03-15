@@ -1,7 +1,7 @@
 'SuperStrict
 
 Const DECL_EXTERN:Int=		$010000
-Const DECL_PRIVATE:Int=	$020000
+Const DECL_PRIVATE:Int=	    $020000
 Const DECL_ABSTRACT:Int=	$040000
 Const DECL_FINAL:Int=		$080000
 
@@ -9,6 +9,8 @@ Const DECL_SEMANTED:Int=	$100000
 Const DECL_SEMANTING:Int=	$200000
 
 Const DECL_POINTER:Int=	$400000
+
+Const DECL_ARG:Int=     $800000
 
 Const CLASS_INTERFACE:Int=	$001000
 Const CLASS_THROWABLE:Int=	$002000
@@ -213,7 +215,6 @@ Type TValDecl Extends TDecl
 			ty=declTy.Semant()
 			If declInit Then
 				If TFunctionPtrType(ty) Then
-'If ident = "compareFunc" DebugStop
 					'init=declInit.Copy().SemantAndCast(ty)
 					
 					Local argExpr:TExpr[] = New TExpr[0]
@@ -223,13 +224,17 @@ Type TValDecl Extends TDecl
 						argExpr :+ [aexp]
 					Next
 					
-					Local expr:TExpr=declInit.Copy().SemantFunc(argExpr)
-					If expr.exprType.EqualsType( ty ) Then
-						init = expr
+					' the default munged function value as defined in the interface
+					If TInvokeExpr(declInit) Then
+						init = declInit.Copy()
 					Else
-						init = New TCastExpr.Create( ty,expr,CAST_EXPLICIT ).Semant()
+						Local expr:TExpr=declInit.Copy().SemantFunc(argExpr)
+						If expr.exprType.EqualsType( ty ) Then
+							init = expr
+						Else
+							init = New TCastExpr.Create( ty,expr,CAST_EXPLICIT ).Semant()
+						End If
 					End If
-
 					
 					
 				Else
@@ -756,11 +761,12 @@ Type TBlockDecl Extends TScopeDecl
 
 End Type
 
-Const FUNC_METHOD:Int=1			'mutually exclusive with ctor
-Const FUNC_CTOR:Int=2
-Const FUNC_PROPERTY:Int=4
-Const FUNC_PTR:Int=8
-Const FUNC_BUILTIN:Int = $10
+Const FUNC_METHOD:Int=   $0001			'mutually exclusive with ctor
+Const FUNC_CTOR:Int=     $0002
+Const FUNC_PROPERTY:Int= $0004
+Const FUNC_PTR:Int=      $0100
+Const FUNC_BUILTIN:Int = $0010
+Const FUNC_INIT:Int =    $0200
 
 'Fix! A func is NOT a block/scope!
 '
@@ -927,7 +933,7 @@ Type TFuncDecl Extends TBlockDecl
 'DebugStop
 'DebugLog ident + "..."
 			While sclass
-'DebugLog "Checking " + sclass.ident
+'DebugLog "Checking Class : " + sclass.ident
 				Local found:Int
 				For Local decl:TFuncDecl=EachIn sclass.MethodDecls( )
 'DebugLog "Method = " + decl.ident
@@ -936,6 +942,7 @@ Type TFuncDecl Extends TBlockDecl
 					End If
 					
 					If decl.ident = ident Then
+'If ident = "CreateStream" DebugStop
 						found=True
 						If EqualsFunc( decl ) 
 'DebugLog "Found"
