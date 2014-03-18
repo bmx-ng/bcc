@@ -38,6 +38,13 @@ Type TIParser
 'DebugStop	
 		Const STATE_CLASS:Int = 1
 		
+		
+		' already imported??
+		If _appInstance.IsImported(modpath)
+			' add import to the scope (so we can find decls in it later)
+			pmod.imported.Insert(modpath, _appInstance.globalImports.ValueForKey(modpath))
+			Return False
+		End If
 	
 		Local _mod:TModuleDecl = New TModuleDecl.Create(modpath, "bb" + modpath, path, attrs)
 		Select modpath
@@ -66,6 +73,8 @@ Type TIParser
 		Else
 			pmod.imported.Insert(modpath, _mod)
 		End If
+
+		_appInstance.globalImports.Insert(modpath, _mod)
 		
 		Local ipath:String
 		

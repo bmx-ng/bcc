@@ -565,6 +565,7 @@ Type TScopeDecl Extends TDecl
 	End Method
 
 	Method FindType:TType( ident$,args:TType[] )
+'DebugLog Self.ident + "::FindType::" + ident
 		Local decl:Object=(GetDecl( ident ))
 		If decl Then
 			Local ty:TType=TType(decl)
@@ -623,7 +624,7 @@ End Rem
 	
 	Method FindFuncDecl:TFuncDecl( ident$,argExprs:TExpr[] = Null,explicit:Int=False )
 'DebugLog "FindFuncDecl : " + ident
-'If ident = "_IsRootPath" Then DebugStop
+'If ident = "OpenStream" Then DebugStop
 		'Local funcs:TFuncDeclList=TFuncDeclList( FindDecl( ident ) )
 		Local f:TDecl = TDecl(findDecl(ident))
 		If Not f Then Return Null
@@ -1685,6 +1686,8 @@ Type TAppDecl Extends TScopeDecl
 
 	Field imported:TMap=New TMap'<TModuleDecl>			'maps modpath->mdecl
 	
+	Field globalImports:TMap = New TMap
+	
 	Field mainModule:TModuleDecl
 	Field mainFunc:TFuncDecl	
 		
@@ -1721,6 +1724,10 @@ Type TAppDecl Extends TScopeDecl
 		If Not mainModule
 			mainModule=mdecl
 		EndIf
+	End Method
+	
+	Method IsImported:Int(modpath:String)
+		Return globalImports.Contains(modpath)
 	End Method
 	
 	Method GetDecl:Object( ident$ )
