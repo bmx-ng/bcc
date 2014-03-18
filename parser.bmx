@@ -1480,8 +1480,10 @@ Type TParser
 			NextToke
 		Case "rem"
 			ParseRemStmt()
-		Case "const","local"
+		Case "const","local","global"
 			ParseDeclStmts
+		Case "function"
+			_block.InsertDecl ParseFuncDecl( _toke,0 )
 		Case "return"
 			ParseReturnStmt()
 		Case "exit"
@@ -1559,7 +1561,7 @@ Type TParser
 		Local id$=ParseIdent()
 		Local ty:TType
 		Local init:TExpr
-'If id = "StandardIOStream" DebugStop
+
 		If attrs & DECL_EXTERN
 			ty=ParseDeclType()
 

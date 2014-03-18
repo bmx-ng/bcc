@@ -213,6 +213,14 @@ Type TValDecl Extends TDecl
 	Method OnSemant()
 		If declTy
 			ty=declTy.Semant()
+			
+			' pass the scope into the function ptr
+			If TFunctionPtrType(ty) Then
+				If Not TFunctionPtrType(ty).func.scope Then
+					TFunctionPtrType(ty).func.scope = scope
+				End If
+			End If
+			
 			If declInit Then
 				If TFunctionPtrType(ty) Then
 					'init=declInit.Copy().SemantAndCast(ty)
@@ -615,7 +623,7 @@ End Rem
 	
 	Method FindFuncDecl:TFuncDecl( ident$,argExprs:TExpr[] = Null,explicit:Int=False )
 'DebugLog "FindFuncDecl : " + ident
-'If ident = "compareFunc" Then DebugStop
+'If ident = "_IsRootPath" Then DebugStop
 		'Local funcs:TFuncDeclList=TFuncDeclList( FindDecl( ident ) )
 		Local f:TDecl = TDecl(findDecl(ident))
 		If Not f Then Return Null
@@ -878,6 +886,8 @@ Type TFuncDecl Extends TBlockDecl
 		If Not retTypeExpr Then
 			If Not retType Then ' may have previously been set (if this is a function pointer)
 				retType = TType.voidType
+			Else If TIdentType(retType)
+				retType = retType.Semant()
 			End If
 		Else
 			retType=retTypeExpr.Semant()

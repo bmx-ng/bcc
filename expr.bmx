@@ -173,8 +173,10 @@ Type TConstExpr Extends TExpr
 			Else If value.StartsWith( "$" )
 				radix=4
 			EndIf
+
 			If radix
-				Local val:Int=0
+				Local val:Long = 0
+
 				For Local i:Int=1 Until value.Length
 					Local ch:Int=value[i]
 					If ch>=48 And ch<58
@@ -183,8 +185,13 @@ Type TConstExpr Extends TExpr
 						val=val Shl radix | ((ch & 15)+9)
 					EndIf
 				Next
-				value=String( val )
+				If val >= 2147483648:Long Then
+					value = String( -2147483648:Long + (val - 2147483648:Long))
+				Else
+					value=String( val )
+				End If
 			EndIf
+
 		Else If TFloatType( ty )
 			If Not (value.Contains("e") Or value.Contains("E") Or value.Contains("."))
 				value:+".0"
@@ -709,6 +716,11 @@ Type TCastExpr Extends TExpr
 		
 		EndIf
 
+		'If TStringType(src) And TStringVarPtrType(ty) Then
+		'	exprType = ty
+		'	Return Self
+		'End If
+		
 '		If TArrayType(src) And TPointerType(ty) Then
 '			exprType = ty
 '			Return expr
@@ -1141,7 +1153,7 @@ Type TSliceExpr Extends TExpr
 		If exprType Return Self
 	
 		expr=expr.Semant()
-		If TArrayType( expr.exprType ) Or TStringType( expr.exprType )
+		If TArrayType( expr.exprType ) Or TStringType( expr.exprType )  Or TStringVarPtrType( expr.exprType )
 			If from from=from.SemantAndCast( TType.intType )
 			If term term=term.SemantAndCast( TType.intType )
 			exprType=expr.exprType

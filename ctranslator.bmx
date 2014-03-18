@@ -47,6 +47,9 @@ Type TCTranslator Extends TTranslator
 		If TDoublePtrType( ty ) Return "BBDOUBLE *"
 		If TLongPtrType( ty ) Return "BBLONG *"
 		If TFunctionPtrType( ty ) Then
+'DebugStop
+			TFunctionPtrType(ty).func.Semant
+			
 			Local retType:String = TransType(TFunctionPtrType(ty).func.retType, "")
 			Local args:String
 			For Local arg:TArgDecl = EachIn TFunctionPtrType(ty).func.argDecls
@@ -131,8 +134,8 @@ Type TCTranslator Extends TTranslator
 		Else
 			If TBoolType( ty ) Return "0"
 			If TNumericType( ty ) Return "0"
-			If TStringType( ty ) Return "String()"
-			If TArrayType( ty ) Return "Array<"+TransRefType( TArrayType(ty).elemType, "PP" )+" >()"
+			If TStringType( ty ) Return "&bbEmptyString"
+			If TArrayType( ty ) Return "&bbEmptyArray"
 			If TObjectType( ty ) Return "0"
 			If TPointerType( ty) Return "0" ' todo ??
 			If TByteType( ty ) Return "0"
@@ -227,6 +230,10 @@ Type TCTranslator Extends TTranslator
 	
 	Method TransLocalDecl$( munged$,init:TExpr )
 		Return TransType( init.exprType, munged )+" "+munged+"="+init.Trans()
+	End Method
+
+	Method TransGlobalDecl$( munged$,init:TExpr )
+		Return "static " + TransType( init.exprType, munged )+" "+munged+"="+init.Trans()
 	End Method
 
 	Method CreateLocal2$( ty:TType, t$ )
@@ -1085,7 +1092,11 @@ If decl.ident = "Eof" DebugStop
 		For Local decl:TFieldDecl = EachIn classDecl.Decls()
 			decl.Semant()
 			
-			Emit "~t" + TransType(decl.ty, classDecl.actual.munged) + " _" + classDecl.actual.munged.ToLower() + "_" + decl.ident.ToLower() + ";"
+			If Not TFunctionPtrType(decl.ty) Then
+				Emit TransType(decl.ty, classDecl.actual.munged) + " _" + classDecl.actual.munged.ToLower() + "_" + decl.ident.ToLower() + ";"
+			Else
+				Emit TransType(decl.ty, "_" + classDecl.actual.munged.ToLower() + "_" + decl.ident.ToLower()) + ";"
+			End If
 		Next
 		
 	End Method
@@ -1761,7 +1772,7 @@ End Rem
 	End Method
 	
 	Method TransIfcConstExpr:String(expr:TExpr)
-	
+
 		If Not expr.exprType Then
 			expr.Semant()
 		End If
@@ -1782,6 +1793,10 @@ End Rem
 			End If
 			
 			InternalErr
+		End If
+		
+		If TObjectType(expr.exprType) And TNullDecl(TObjectType(expr.exprType).classDecl) Then
+			Return Enquote("bbNullObject")
 		End If
 
 	End Method

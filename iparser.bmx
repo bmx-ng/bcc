@@ -271,7 +271,6 @@ DebugLog ipath
 		Local imps:TIdentType[]
 
 		DebugLog "Found Class :  " + id
-'If id = "TTextStream" DebugStop
 'DebugStop 
 'End If
 		If CParse( "^" )
@@ -724,10 +723,14 @@ Method ParseFuncDecl:TFuncDecl( toke$,attrs:Int )
 	
 	Method ParseDecl:TDecl( toke$,attrs:Int )
 		'SetErr
+		
+		Local pos:Int, tokeType:Int
+		pos = _toker._tokePos
+		tokeType = _toker._tokeType
+
 		Local id$=ParseIdent()
 		Local ty:TType
 		Local init:TExpr
-		
 'DebugLog "Found Field :  " + id
 		If attrs & DECL_EXTERN
 			ty=ParseDeclType(attrs)
@@ -736,6 +739,20 @@ Method ParseFuncDecl:TFuncDecl( toke$,attrs:Int )
 	'		init=ParseExpr()
 		Else
 			ty=ParseDeclType(attrs)
+			
+			
+				If CParse( "(") Then
+'DebugStop
+					' function pointer
+					_toker.rollback(pos, tokeType)
+					_toker._toke = id
+					'_toker.NextToke()
+					Local decl:TFuncDecl = ParseFuncDecl( id, FUNC_PTR | FUNC_INIT )
+					ty = New TFunctionPtrType
+					TFunctionPtrType(ty).func = decl
+					
+				End If
+
 Rem
 			If CParse( "=" )
 				' TODO init=ParseExpr()
@@ -911,6 +928,8 @@ End Rem
 		Case ":"
 			NextToke
 			ty=ParseNewType()
+			
+			CParse("&")
 		Case "@"
 			NextToke
 			ty=TType.byteType

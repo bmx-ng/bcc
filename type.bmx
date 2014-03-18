@@ -337,7 +337,7 @@ Type TStringType Extends TType
 			Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
 			Return ctor And ctor.IsCtor()
 		EndIf
-		Return EqualsType( ty )
+		Return EqualsType( ty ) Or TStringVarPtrType( ty ) <> Null
 	End Method
 	
 	Method GetClass:TClassDecl()
@@ -502,7 +502,7 @@ Type TIdentType Extends TType
 			' try scope search first
 			tyid=ident[..i]
 			ty=_env.FindType( tyid,targs )
-			
+
 			If Not ty Then
 				' no? now try module search
 				Local modid$=ident[..i]
@@ -1010,6 +1010,8 @@ End Type
 
 Type TStringVarPtrType Extends TVarPtrType
 
+	Field cdecl:TClassDecl
+
 	Method EqualsType:Int( ty:TType )
 		Return TStringVarPtrType( ty )<>Null
 	End Method
@@ -1020,7 +1022,21 @@ Type TStringVarPtrType Extends TVarPtrType
 			Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
 			Return ctor And ctor.IsCtor()
 		EndIf
-		Return TPointerType( ty )<>Null
+		Return TPointerType( ty )<>Null Or TStringType( ty )<>Null
+	End Method
+
+	Method GetClass:TClassDecl()
+		If cdecl Return cdecl
+		
+		Local modid$="brl.classes"
+		Local mdecl:TModuleDecl=_env.FindModuleDecl( modid )
+		If Not mdecl Err "Module '"+modid+"' not found"
+		'clsid=ident[i+1..] ' BaH
+	'DebugStop
+		cdecl=TClassDecl(mdecl.FindDecl( "string" ))
+
+		'Return _env.FindClassDecl( "brl.classes.string" )
+		Return cdecl
 	End Method
 	
 	Method ToString$()

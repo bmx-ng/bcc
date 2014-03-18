@@ -329,6 +329,8 @@ End Rem
 	'***** Utility *****
 
 	Method TransLocalDecl$( munged$,init:TExpr ) Abstract
+
+	Method TransGlobalDecl$( munged$,init:TExpr ) Abstract
 	
 	Method EmitPushErr()
 	End Method
@@ -614,11 +616,15 @@ End Rem
 		If cdecl
 			Return Null
 		EndIf
+		Local gdecl:TGlobalDecl=TGlobalDecl( stmt.decl )
+		If gdecl Then
+			MungDecl gdecl
+			Return TransGlobalDecl( gdecl.munged, gdecl.init )
+		End If
 		InternalErr
 	End Method
 	
 	Method TransIfStmt$( stmt:TIfStmt )
-'DebugStop
 		If TConstExpr( stmt.expr )
 			If TConstExpr( stmt.expr ).value
 '				Emit "if"+Bra( stmt.expr.Trans() )+"{"
