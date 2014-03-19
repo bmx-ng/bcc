@@ -15,3 +15,7 @@ Modules that require multiple files need to merge the imported interfaces into t
 OpenGL/EGL
 ----------
 See what needs to be done to port GL to EGL (for such platforms as the RPi)
+
+Incbin
+------
+Embed files in headers, and add code to register them at runtime.
