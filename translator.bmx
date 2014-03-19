@@ -105,7 +105,6 @@ Type TTranslator
 			EndIf
 
 			If TModuleDecl( decl )
-'DebugStop
 				munged=decl.ModuleScope().munged+"_"+id
 			EndIf
 

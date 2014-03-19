@@ -190,7 +190,7 @@ Function MungModuleName:String(ident:String)
 End Function
 
 Function MungImportFromFile:String(file:String)
-	Return "// TODO : MungImportFromFile()"
+	Return "_bb_" + file
 End Function
 
 Rem

@@ -127,8 +127,18 @@ Type TCTranslator Extends TTranslator
 			If TShortType( ty ) Return value
 			If TIntType( ty ) Return value
 			If TLongType( ty ) Return value+"LL"
-			If TFloatType( ty ) Return value+"f"
-			If TDoubleType( ty ) Return value+"f"
+			If TFloatType( ty ) Then
+				If value.Find(".") < 0 Then
+					value :+ ".0"
+				End If
+				Return value+"f"
+			End If
+			If TDoubleType( ty ) Then
+				If value.Find(".") < 0 Then
+					value :+ ".0"
+				End If
+				Return value+"f"
+			End If
 			If TStringType( ty ) Return "String("+Enquote( value )+")"
 			If TByteType( ty ) Return value
 		Else
@@ -310,7 +320,7 @@ Type TCTranslator Extends TTranslator
 		
 	Method TransFunc$( decl:TFuncDecl,args:TExpr[],lhs:TExpr )
 		If decl.IsMethod()
-			If lhs Then
+			If lhs And Not TSelfExpr(lhs) Then
 				If lhs.exprType = TType.stringType Then
 					Return decl.munged + TransArgs(args, decl, TransSubExpr( lhs ))
 'If decl.ident = "Print" DebugStop
@@ -708,15 +718,16 @@ Type TCTranslator Extends TTranslator
 	'***** Statements *****
 
 	Method TransTryStmt$( stmt:TTryStmt )
-		Emit "try{"
+		Emit "// TODO : Try/Catch"
+		Emit "//try{//"
 		EmitBlock( stmt.block )
 		For Local c:TCatchStmt=EachIn stmt.catches
 			MungDecl c.init
-			Emit "}catch("+TransType( c.init.ty, "" )+" "+c.init.munged+"){"
+			Emit "//}catch("+TransType( c.init.ty, "" )+" "+c.init.munged+"){//"
 			'dbgLocals.Push c.init
-			EmitBlock( c.block )
+			'EmitBlock( c.block )
 		Next
-		Emit "}"
+		Emit "//}"
 	End Method
 
 	Method TransAssignStmt$( stmt:TAssignStmt )
@@ -1896,7 +1907,7 @@ End Rem
 	Method EmitModuleInclude(moduleDecl:TModuleDecl)
 		If moduleDecl.filepath Then
 			' a module import
-			If FileType(moduleDecl.filepath) = FILETYPE_DIR Or opt_ismain Then
+			If FileType(moduleDecl.filepath) = FILETYPE_DIR Or (opt_ismain And moduleDecl.ident = opt_modulename) Then
 				Emit "#include <" + ModuleHeaderFromIdent(moduleDecl.ident, True) + ">"
 			Else
 				' maybe a file import...
@@ -1913,7 +1924,7 @@ End Rem
 				Emit MungModuleName(moduleDecl.ident) + "();"
 			Else
 				' maybe a file import...
-				Emit MungImportFromFile(moduleDecl.filepath) + "();"
+				Emit MungImportFromFile(moduleDecl.ident) + "();"
 			End If
 		End If
 	End Method
@@ -1927,7 +1938,7 @@ End Rem
 		prefix = app.GetPathPrefix()
 	
 		' TODO
-'DebugStop
+
 		If Not opt_apptype Then
 			app.mainFunc.munged="bb_localmain"
 		Else
@@ -1936,7 +1947,7 @@ End Rem
 		
 		For Local decl:TModuleDecl=EachIn app.imported.Values()
 			For Local mdecl:TDecl=EachIn decl.imported.Values()
-'DebugStop
+
 				MungDecl mdecl
 DebugLog mdecl.munged
 

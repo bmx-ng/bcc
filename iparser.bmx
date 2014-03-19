@@ -35,7 +35,7 @@ Type TIParser
 	Field _tokerStack:TList=New TList'<TToker>
 
 	Method ParseModuleImport:Int(pmod:TModuleDecl, modpath:String, path:String, imp:String = Null, iData:String = Null, attrs:Int = 0, relPath:String = "")
-'DebugStop	
+
 		Const STATE_CLASS:Int = 1
 		
 		
@@ -64,7 +64,7 @@ Type TIParser
 			
 			' import Object and String definitions
 			Local par:TIParser = New TIParser
-			par.ParseModuleImport(_mod, "brl.classes", modulepath("brl.blitz"), "blitz_classes.i")
+			par.ParseModuleImport(_mod, "brl.classes", modulepath("brl.blitz"), modulepath("brl.blitz") + "\blitz_classes.i")
 	
 			' set up built-in keywords
 			par = New TIParser
@@ -80,7 +80,7 @@ Type TIParser
 		
 		'Local ipath:String = path + "\" + ModuleIdent(modpath) + ".release.macos.x86.i"
 		If imp Then
-			ipath = path + "/" + imp
+			ipath = imp
 		Else
 			ipath = path + "/" + ModuleIdent(modpath) + FileMung() + ".i"
 		End If
@@ -88,6 +88,8 @@ Type TIParser
 		If Not iData Then
 DebugLog ipath
 			If Not FileType(ipath) Then
+DebugLog "TODO : missing .i file..."
+DebugLog "FILE NOT FOUND : " + ipath
 				Return False
 			End If
 	

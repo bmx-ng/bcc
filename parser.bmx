@@ -497,6 +497,7 @@ Type TParser
 		Local id$=ParseIdent()
 'DebugLog "ParseIdentType : " + id
 		If CParse( "." ) id:+"."+ParseIdent()
+		If CParse( "." ) id:+"."+ParseIdent()
 		Local args:TIdentType[]
 		If CParse( "<" )
 			Local nargs:Int
@@ -1904,7 +1905,6 @@ Rem
 		EndIf
 End Rem
 		If CParse( "extends" )
-
 			'If attrs & CLASS_TEMPLATEARG
 			'	Err "Extends cannot be used with class parameters."
 			'EndIf
@@ -2060,8 +2060,8 @@ End Rem
 		
 		If filepath.Endswith(".bmx") Then
 
-			Local path:String = RealPath(filepath)
-			path = OutputFilePath(path, FileMung(), "i")
+			Local origPath:String = RealPath(filepath)
+			Local path:String = OutputFilePath(origPath, FileMung(), "i")
 	
 			If FileType( path )<>FILETYPE_FILE
 				Err "File '"+ path +"' not found."
@@ -2069,11 +2069,20 @@ End Rem
 	
 			
 			If _module.imported.Contains( path ) Return
+			
+			Local modpath:String
+			If opt_buildtype = BUILDTYPE_MODULE Then
+				modpath = opt_modulename + "_" + StripExt(filepath)
+				modpath = modpath.ToLower().Replace(".", "_")
+			Else
+				' todo file imports for apps
+				internalErr
+			End If
 	
 			' try to import interface
 			Local par:TIParser = New TIParser
 	
-			If par.ParseModuleImport(_module, "", "", path, , , filepath) Return
+			If par.ParseModuleImport(_module, modpath, origPath, path, , , filepath) Return
 		Else
 			If filepath.startswith("-") Then
 				_app.fileimports.AddLast filepath
@@ -2164,6 +2173,14 @@ End Rem
 	Method MungAppDecl(app:TAppDecl)
 		If opt_buildtype = BUILDTYPE_MODULE And opt_ismain Then
 			app.munged = MungModuleName(opt_modulename)
+		Else If opt_buildtype = BUILDTYPE_MODULE Then
+			Local dir:String = ExtractDir(opt_filepath).ToLower()
+			dir = dir[dir.findLast("/") + 1..]
+			If dir.EndsWith(".mod") Then
+				dir = dir.Replace(".mod", "")
+			End If
+			Local mung:String = "_bb_" + opt_modulename + "_" + StripExt(StripDir(opt_filepath).ToLower())
+			app.munged = mung.Replace(".", "_")
 		Else
 			' main application file?
 			If opt_apptype Then
@@ -2303,13 +2320,15 @@ End Rem
 		'If CParse( "strict" ) mattrs:|MODULE_STRICT
 		'If CParse( "superstrict" ) mattrs:|MODULE_SUPERSTRICT
 
-
 		Local path$=_toker.Path()
 		Local ident$=StripAll( path )
 		Local munged$	'="bb_"+ident+"_"
 
 		If opt_buildtype = BUILDTYPE_MODULE And opt_ismain
 			ValidateModIdent ident
+		Else If opt_buildtype = BUILDTYPE_MODULE Then
+			munged = opt_modulename + "_" + ident
+			munged = munged.ToLower().Replace(".", "_")
 		End If
 		
 		If opt_ismain Then 'And opt_modulename <> "brl.blitz" Then

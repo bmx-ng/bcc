@@ -486,7 +486,7 @@ Type TIdentType Extends TType
 	
 	Method Semant:TType()
 		If Not ident Return TClassDecl.nullObjectClass.objectType
-	
+
 		Local targs:TType[args.Length]
 		For Local i:Int=0 Until args.Length
 			targs[i]=args[i].Semant()
