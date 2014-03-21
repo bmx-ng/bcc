@@ -135,6 +135,7 @@ Type TTranslator
 			Until Not mungScope.Contains( t )
 			munged=t
 		EndIf
+
 		mungScope.Insert munged,decl
 		decl.munged=munged
 		

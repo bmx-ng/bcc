@@ -622,9 +622,9 @@ End Rem
 		Return decl
 	End Method
 	
-	Method FindFuncDecl:TFuncDecl( ident$,argExprs:TExpr[] = Null,explicit:Int=False )
+	Method FindFuncDecl:TFuncDecl( ident$,argExprs:TExpr[] = Null,explicit:Int=False, isArg:Int = False )
 'DebugLog "FindFuncDecl : " + ident
-'If ident = "OpenStream" Then DebugStop
+'If ident = "Hook" Then DebugStop
 		'Local funcs:TFuncDeclList=TFuncDeclList( FindDecl( ident ) )
 		Local f:TDecl = TDecl(findDecl(ident))
 		If Not f Then Return Null
@@ -663,6 +663,12 @@ End Rem
 			
 			Local exact:Int=True
 			Local possible:Int=True
+			
+			' we found a matching name - this is probably the one we mean...
+			If isArg Then
+				match=func
+				Exit
+			End If
 			
 			For Local i:Int=0 Until argDecls.Length
 
@@ -1192,7 +1198,7 @@ End Rem
 		Return Super.GetDecl( ident )
 	End Method
 	
-	Method FindFuncDecl:TFuncDecl( ident$,args:TExpr[] = Null ,explicit:Int=False )
+	Method FindFuncDecl:TFuncDecl( ident$,args:TExpr[] = Null ,explicit:Int=False, isArg:Int = False )
 	
 		If args = Null Then
 			args = New TExpr[0]
@@ -1585,6 +1591,8 @@ Type TModuleDecl Extends TScopeDecl
 	Field relpath$
 	Field imported:TMap=New TMap'<TModuleDecl>		'Maps filepath to modules
 	Field pubImported:TMap=New TMap'<TModuleDecl>	'Ditto for publicly imported modules
+
+	Field fileImports:TList=New TList'StringList
 	
 	' cache of ModuleInfo lines
 	Field modInfo:TList = New TList
@@ -1774,22 +1782,30 @@ pushenv Self
 			Local sc:TStringConst = New TStringConst
 			sc.count = 1
 		
-			sc.id = "_s" + stringConstCount
+			If value Then
+				sc.id = "_s" + stringConstCount
+			Else
+				sc.id = "bbEmptyString"
+			End If
 
 			stringConsts.Insert(value, sc)
 
-			stringConstCount:+ 1
+			If value Then
+				stringConstCount:+ 1
+			End If
 		Else
 			sc.count :+ 1
 		End If
 	End Method
 	
 	Method removeStringConst(value:String)
-		Local sc:TStringConst = TStringConst(stringConsts.ValueForKey(value))
-		If sc Then
-			sc.count :- 1
-			If sc.count = 0 Then
-				stringConsts.Remove(value)
+		If value Then
+			Local sc:TStringConst = TStringConst(stringConsts.ValueForKey(value))
+			If sc Then
+				sc.count :- 1
+				If sc.count = 0 Then
+					stringConsts.Remove(value)
+				End If
 			End If
 		End If
 	End Method

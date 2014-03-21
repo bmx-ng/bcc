@@ -71,7 +71,12 @@ Type TExpr
 	Method SemantArgs:TExpr[]( args:TExpr[] )
 		args=args[..]
 		For Local i:Int=0 Until args.Length
-			If args[i] args[i]=args[i].Semant()
+			If args[i] Then
+				If TIdentExpr(args[i]) Then
+					TIdentExpr(args[i]).isArg = True
+				End If
+				args[i]=args[i].Semant()
+			End If
 		Next
 		Return args
 	End Method
@@ -725,6 +730,11 @@ Type TCastExpr Extends TExpr
 '			exprType = ty
 '			Return expr
 '		End If
+
+		If TFunctionPtrType(ty) And TInvokeExpr(expr) Then
+			exprType = ty
+			Return expr
+		End If
 		
 		If TIntType(ty) And TPointerType(src) Then
 			exprType = ty
@@ -1252,5 +1262,205 @@ Type TIdentTypeExpr Extends TExpr
 		_Semant
 		Return cdecl
 	End	Method
+
+End Type
+
+Type TIdentExpr Extends TExpr
+	Field ident$
+	Field expr:TExpr
+	Field scope:TScopeDecl
+	Field static:Int
+	Field isArg:Int
+
+	Method Create:TIdentExpr( ident$,expr:TExpr=Null )
+		Self.ident=ident
+		Self.expr=expr
+		Return Self
+	End Method
+
+	Method Copy:TExpr()
+		Return New TIdentExpr.Create( ident,CopyExpr(expr) )
+	End Method
+
+	Method ToString$()
+		Local t$="TIdentExpr(~q"+ident+"~q"
+		If expr t:+","+expr.ToString()
+		Return t+")"
+	End Method
+
+	Method _Semant()
+		If scope Return
+
+		If expr Then
+			scope=expr.SemantScope()
+			If scope
+				static=True
+			Else
+				expr=expr.Semant()
+				scope=expr.exprType.GetClass()
+				If Not scope Err "Expression has no scope"
+			End If
+		Else
+			scope=_env
+			static=_env.FuncScope()=Null Or _env.FuncScope().IsStatic()
+		End If
+		
+	End Method
+
+	Method IdentScope:TScopeDecl()
+		If Not expr Return _env
+
+		Local scope:TScopeDecl=expr.SemantScope()
+		If scope
+			expr=Null
+		Else
+			expr=expr.Semant()
+			scope=expr.exprType.GetClass()
+			If Not scope Err "Expression has no scope."
+		EndIf
+		Return scope
+	End Method
+
+	Method IdentErr( )
+		If scope
+			Local close$
+			For Local decl:TDecl=EachIn scope.Decls()
+				If ident.ToLower()=decl.ident.ToLower()
+					close=decl.ident
+				EndIf
+			Next
+			If close And ident<>close Then
+				Err "Identifier '"+ident+"' not found - perhaps you meant '"+close+"'?"
+			EndIf
+		EndIf
+		Err "Identifier '"+ident+"' not found."
+	End Method
+
+	Method IdentNotFound()
+	End Method
+
+	Method IsVar()
+		InternalErr
+	End Method
+
+	Method Semant:TExpr()
+'DebugStop
+		Return SemantSet( "",Null )
+	End Method
+
+	Method SemantSet:TExpr( op$,rhs:TExpr )
+	
+		_Semant
+		
+		'Local scope:TScopeDecl=IdentScope()
+'DebugStop
+		Local vdecl:TValDecl=scope.FindValDecl( ident )
+		If vdecl
+
+			If TConstDecl( vdecl )
+'				If rhs Err "Constant '"+ident+"' cannot be modified."
+'				Return New TConstExpr.Create( vdecl.ty,TConstDecl( vdecl ).value ).Semant()
+				If rhs Err "Constant '"+ident+"' cannot be modified."
+				Local cexpr:TConstExpr =New TConstExpr.Create( vdecl.ty,TConstDecl( vdecl ).value )
+				If Not static And (TInvokeExpr( expr ) Or TInvokeMemberExpr( expr )) Return New TStmtExpr.Create( New TExprStmt.Create( expr ),cexpr ).Semant()
+				Return cexpr.Semant()
+
+			Else If TFieldDecl( vdecl )
+				If static Err "Field '"+ident+"' cannot be accessed from here."
+				If expr Return New TMemberVarExpr.Create( expr,TVarDecl( vdecl ) ).Semant()
+'				If expr Return New TMemberVarExpr.Create( expr,TVarDecl( vdecl ) ).Semant()
+'				If scope<>_env Or Not _env.FuncScope() Or _env.FuncScope().IsStatic() Err "Field '"+ident+"' cannot be accessed from here."
+			EndIf
+
+			Return New TVarExpr.Create( TVarDecl( vdecl ) ).Semant()
+		EndIf
+
+		If op And op<>"="
+
+			Local fdecl:TFuncDecl=scope.FindFuncDecl( ident )
+			If Not fdecl IdentErr
+
+			If _env.ModuleScope().IsStrict() And Not fdecl.IsProperty() Err "Identifier '"+ident+"' cannot be used in this way."
+
+			Local lhs:TExpr
+
+			If fdecl.IsStatic() Or (scope=_env And Not _env.FuncScope().IsStatic())
+				lhs=New TInvokeExpr.Create( fdecl )
+			Else If expr
+				Local tmp:TLocalDecl=New TLocalDecl.Create( "",Null,expr )
+				lhs=New TInvokeMemberExpr.Create( New TVarExpr.Create( tmp ),fdecl )
+				lhs=New TStmtExpr.Create( New TDeclStmt.Create( tmp ),lhs )
+			Else
+				Return Null
+			EndIf
+
+			Local bop$=op[..1]
+			Select bop
+			Case "*","/","shl","shr","+","-","&","|","~~"
+				rhs=New TBinaryMathExpr.Create( bop,lhs,rhs )
+			Default
+				InternalErr
+			End Select
+			rhs=rhs.Semant()
+		EndIf
+
+		Local args:TExpr[]
+		If rhs args=[rhs]
+
+		Local fdecl:TFuncDecl=scope.FindFuncDecl( ident,args, , isArg )
+		
+		If fdecl
+			If _env.ModuleScope().IsStrict() And Not fdecl.IsProperty() And Not isArg Err "Identifier '"+ident+"' cannot be used in this way."
+	
+			If Not fdecl.IsStatic()
+				If expr Return New TInvokeMemberExpr.Create( expr,fdecl,args ).Semant()
+				If scope<>_env Or Not _env.FuncScope() Or _env.FuncScope().IsStatic() Err "Method '"+ident+"' cannot be accessed from here."
+			EndIf
+	
+			Return New TInvokeExpr.Create( fdecl,args ).Semant()
+		End If
+		
+		IdentErr
+	End Method
+
+	Method SemantFunc:TExpr( args:TExpr[] )
+
+		_Semant
+
+		'Local scope:TScopeDecl=IdentScope()
+		Local fdecl:TFuncDecl=scope.FindFuncDecl( ident,args )
+
+		If fdecl
+			If Not fdecl.IsStatic()
+				If static Err "Method '"+ident+"' cannot be accessed from here."
+				If expr Return New TInvokeMemberExpr.Create( expr,fdecl,args ).Semant()
+				'If scope<>_env Or _env.FuncScope().IsStatic() Err "Method '"+ident+"' cannot be accessed from here."
+			EndIf
+			Return New TInvokeExpr.Create( fdecl,args ).Semant()
+		EndIf
+
+		'If args.Length=1 And args[0] And TObjectType( args[0].exprType )
+		'	Local cdecl:TClassDecl=TClassDecl( scope.FindScopeDecl( ident ) )
+		'	If cdecl Return args[0].Cast( New TObjectType.Create(cdecl),CAST_EXPLICIT )
+		'EndIf
+
+		Local ty:TType=scope.FindType( ident,Null )
+		If ty Then
+			If args.Length=1 And args[0] Return args[0].Cast( ty,CAST_EXPLICIT )
+			Err "Illegal number of arguments for type conversion"
+		End If
+
+		IdentErr
+	End Method
+
+	Method SemantScope:TScopeDecl()
+		If Not expr Return _env.FindScopeDecl( ident )
+		Local scope:TScopeDecl=expr.SemantScope()
+		If scope Return scope.FindScopeDecl( ident )
+	End Method
+
+'	Method Trans$()
+'		Return _trans.TransIdentExpr( Self )
+'	End Method
 
 End Type

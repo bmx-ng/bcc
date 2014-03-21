@@ -38,6 +38,7 @@ Type TCTranslator Extends TTranslator
 		If TDoubleType( ty ) Return "BBDOUBLE"
 		If TLongType( ty ) Return "BBLONG"
 		If TStringType( ty ) Return "BBSTRING"
+		If TStringVarPtrType( ty ) Return "BBSTRING *"
 		If TArrayType( ty ) Return "BBARRAY"
 		If TObjectType( ty ) Return "BBOBJECT"
 		If TBytePtrType( ty ) Return "BBBYTE *"
@@ -161,6 +162,16 @@ Type TCTranslator Extends TTranslator
 		For Local i:Int=0 Until decl.argDecls.Length
 			If t t:+","
 			If i < args.length
+				If TStringVarPtrType(TArgDecl(decl.argDecls[i].actual).ty) Then
+					If TCastExpr(args[i]) And TStringType(TCastExpr(args[i]).expr.exprType) Then
+						t:+ "&"
+					End If
+				Else If TFunctionPtrType(TArgDecl(decl.argDecls[i].actual).ty) Then
+					If TInvokeExpr(args[i]) Then
+						t:+ "&" + TInvokeExpr(args[i]).decl.munged
+						Continue
+					End If
+				End If
 				t:+TransTemplateCast( TArgDecl(decl.argDecls[i].actual).ty,args[i].exprType,args[i].Trans() )
 			Else
 				decl.argDecls[i].Semant()
@@ -306,9 +317,9 @@ Type TCTranslator Extends TTranslator
 	
 	Method TransField$( decl:TFieldDecl,lhs:TExpr )
 		If lhs Then
-			Return TransFieldRef(decl, TransSubExpr( lhs ))
+			Return TransFieldRef(decl, TransSubExpr( lhs ), lhs.exprType)
 		Else
-			Return TransFieldRef(decl, "o")
+			Return TransFieldRef(decl, "o", Null)
 		End If
 '		Local swiz$
 '		If TObjectType( decl.ty )
@@ -319,12 +330,16 @@ Type TCTranslator Extends TTranslator
 	End Method
 		
 	Method TransFunc$( decl:TFuncDecl,args:TExpr[],lhs:TExpr )
+If decl.ident = "AddHook" DebugStop
 		If decl.IsMethod()
 			If lhs And Not TSelfExpr(lhs) Then
 				If lhs.exprType = TType.stringType Then
 					Return decl.munged + TransArgs(args, decl, TransSubExpr( lhs ))
 'If decl.ident = "Print" DebugStop
-'DebugStop				
+'DebugStop		
+				Else If lhs.exprType = TType.stringVarPointerType Then
+'DebugStop
+					Return decl.munged + TransArgs(args, decl, "*" + TransSubExpr( lhs ))
 				End If
 'If decl.ident = "Eof" DebugStop
 				
@@ -522,6 +537,9 @@ Type TCTranslator Extends TTranslator
 			If TFloatType( src ) Return "bbStringFromFloat"+Bra( t )
 			If TDoubleType( src ) Return "bbStringFromDouble"+Bra( t )
 			If TStringType( src ) Return t
+			If TStringVarPtrType( src ) Return "*" + t
+		Else If TStringVarPtrType( dst )
+'DebugStop
 		Else If TByteType( dst )
 			If TByteType( src) Return t
 			If TIntType( src ) Return Bra("(BBBYTE)"+t)
@@ -616,6 +634,7 @@ Type TCTranslator Extends TTranslator
 	End Method
 	
 	Method TransSliceExpr$( expr:TSliceExpr )
+'DebugStop
 		Local t_expr:String=TransSubExpr( expr.expr )
 		Local t_args$
 		If expr.from Then
@@ -628,6 +647,8 @@ Type TCTranslator Extends TTranslator
 		Else
 			If TArrayType(expr.exprType) Then
 				t_args :+ "," + t_expr + "->scales[0]"
+			Else If TStringVarPtrType(expr.exprType) Then
+				t_args :+ ",(*" + t_expr + ")->length"
 			Else
 				t_args :+ "," + t_expr + "->length"
 			End If
@@ -635,6 +656,8 @@ Type TCTranslator Extends TTranslator
 		
 		If TArrayType(expr.exprType) Then
 			Return "bbArraySlice" + Bra(TransArrayType(TArrayType(expr.exprType).elemType) + "," + t_expr + "," + t_args)
+		Else If TStringVarPtrType(expr.exprType) Then
+			Return "bbStringSlice" + Bra("*" + t_expr + "," + t_args)
 		Else
 			Return "bbStringSlice" + Bra(t_expr + "," + t_args)
 		End If
@@ -732,7 +755,7 @@ Type TCTranslator Extends TTranslator
 
 	Method TransAssignStmt$( stmt:TAssignStmt )
 		If Not stmt.rhs Return stmt.lhs.Trans()
-'DebugStop
+
 		Local rhs$=stmt.rhs.Trans()
 		Local lhs$=stmt.lhs.TransVar()
 		
@@ -756,10 +779,10 @@ Type TCTranslator Extends TTranslator
 '			s :+ "BBRELEASE(tmp)~n"
 			
 '			s:+ "}"
+		Else If TStringVarPtrType(stmt.lhs.exprType) Then
+			s :+ "*" + lhs+TransAssignOp( stmt.op )+rhs
 		Else
-		
-				s :+ lhs+TransAssignOp( stmt.op )+rhs
-
+			s :+ lhs+TransAssignOp( stmt.op )+rhs
 		End If
 		
 		Return s
@@ -1666,7 +1689,7 @@ End Rem
 		Emit "}"
 	End Method
 
-	Method TransFieldRef:String(decl:TFieldDecl, variable:String)
+	Method TransFieldRef:String(decl:TFieldDecl, variable:String, exprType:TType = Null)
 		Local s:String = variable
 
 		' array.length
@@ -1679,7 +1702,11 @@ End Rem
 		' string methods
 		If decl.scope And decl.scope.ident = "String" Then
 			If decl.ident = "length" Then
-				Return Bra(variable + "->length")
+				If TStringVarPtrType(exprType) Then
+					Return Bra("(*" + variable + ")->length")
+				Else
+					Return Bra(variable + "->length")
+				End If
 			End If
 		End If
 
@@ -1789,7 +1816,12 @@ End Rem
 		End If
 
 		If TNumericType(expr.exprType) Then
-			Return expr.Eval()
+			Local s:String = expr.Eval()
+			If Not s Then
+				Return "0"
+			Else
+				Return s
+			End If
 		EndIf
 
 		If TStringType(expr.exprType) Then
@@ -2022,30 +2054,32 @@ DebugLog mdecl.munged
 
 		' strings
 		For Local s:String = EachIn app.stringConsts.Keys()
-			Local key:TStringConst = TStringConst(app.stringConsts.ValueForKey(s))
-
-			Emit "static BBString " + key.id + "={"
-			Emit "&bbStringClass,"
-			Emit "2147483647,"
-			Emit s.length + ","
-			
-			Local t:String = "{"
-			
-			For Local i:Int = 0 Until s.length
-				If i Then
-					t:+ ","
-				End If
-				t:+ s[i]
+			If s Then
+				Local key:TStringConst = TStringConst(app.stringConsts.ValueForKey(s))
+	
+				Emit "static BBString " + key.id + "={"
+				Emit "&bbStringClass,"
+				Emit "2147483647,"
+				Emit s.length + ","
 				
-				If i And Not (i Mod 16) Then
-					Emit t
-					t = ""
-				End If
-			Next
-			
-			Emit t + "}"
-			
-			Emit "};"
+				Local t:String = "{"
+				
+				For Local i:Int = 0 Until s.length
+					If i Then
+						t:+ ","
+					End If
+					t:+ s[i]
+					
+					If i And Not (i Mod 16) Then
+						Emit t
+						t = ""
+					End If
+				Next
+				
+				Emit t + "}"
+				
+				Emit "};"
+			End If
 		Next
 		
 		'definitions!
@@ -2086,7 +2120,7 @@ DebugLog mdecl.munged
 		' call any imported mod inits
 		For Local decl:TModuleDecl=EachIn app.imported.Values()
 			For Local mdecl:TDecl=EachIn decl.imported.Values()
-				If TModuleDecl(mdecl) And app.mainModule <> mdecl And mdecl.ident <> "brl.classes" Then
+				If TModuleDecl(mdecl) And app.mainModule <> mdecl And mdecl.ident <> "brl.classes" And mdecl.ident <> "brl.blitzkeywords" Then
 					EmitModuleInit(TModuleDecl(mdecl))
 				End If
 			Next
@@ -2148,9 +2182,16 @@ DebugLog mdecl.munged
 			If mdecl Then
 				If mdecl.IsActualModule() Then
 					Emit "import " + mdecl.ident
+				Else If Not opt_ismain And mdecl.filepath.EndsWith(".bmx") And app.mainModule<>mdecl
+					Emit "import " + Enquote(StripDir(mdecl.filepath))
 				End If
 			End If
 		Next
+		
+		' module imports from other files?
+		If opt_buildtype = BUILDTYPE_MODULE And opt_ismain Then
+			
+		End If
 		
 		' other imports
 		For Local s:String = EachIn app.fileImports

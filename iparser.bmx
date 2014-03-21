@@ -126,27 +126,64 @@ DebugLog "FILE NOT FOUND : " + ipath
 				
 				' skip non-module imports
 				If toker.TokeType()=TOKE_STRINGLIT
-					Continue
-				End If
-				
 
-				Local m:String = toker._toke
-				toker.NextToke()
+					Local iRelPath:String = ParseStringLit()
+					
+					If iRelPath.EndsWith(".bmx") Then
+							
+						Local origPath:String = RealPath(ExtractDir(path) + "/" + iRelPath)
+						Local iPath:String = OutputFilePath(origPath, FileMung(), "i")
 				
-				Parse(".")
+						If FileType( iPath )<>FILETYPE_FILE
+							Err "File '"+ iPath +"' not found."
+						EndIf
+	
+	
+						If _mod.imported.Contains( iPath ) Continue
 				
-				m :+ "." + toker._toke
-				
-				Local mdecl:TDecl=TDecl(pmod.GetDecl( m ))
-'DebugStop
+						Local modpath:String
+						If opt_buildtype = BUILDTYPE_MODULE Then
+							modpath = opt_modulename + "_" + StripExt(iRelPath)
+							modpath = modpath.ToLower().Replace(".", "_")
+						Else
+							' todo file imports for apps
+							internalErr
+						End If
 
-				If Not mdecl
-					Local path:String = modulepath(m)
-					' parse the imported module
-					New TIParser.ParseModuleImport( _mod, m, path )
+
+'					Local mdecl:TDecl=TDecl(pmod.GetDecl( modpath ))
+	
+'					If Not mdecl
+						New TIParser.ParseModuleImport( _mod, modpath, origPath, iPath, , , iRelPath)
+'					Else
+'						_mod.imported.Insert(modpath, mdecl)
+'					EndIf
+					Else
+DebugStop
+						Local p:String = ParseStringLit()
+						_mod.fileImports.AddLast(p)
+					End If
 				Else
-					_mod.imported.Insert(m, mdecl)
-				EndIf
+				
+
+					Local m:String = toker._toke
+					toker.NextToke()
+					
+					Parse(".")
+					
+					m :+ "." + toker._toke
+					
+					Local mdecl:TDecl=TDecl(pmod.GetDecl( m ))
+	
+					If Not mdecl
+						Local path:String = modulepath(m)
+						' parse the imported module
+						New TIParser.ParseModuleImport( _mod, m, path )
+					Else
+						_mod.imported.Insert(m, mdecl)
+					EndIf
+
+				End If
 				
 				Continue
 				
