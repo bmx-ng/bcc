@@ -1407,6 +1407,9 @@ Type TParser
 	 			' function pointer?
 
 				Local fdecl:TFuncDecl = ParseFuncDecl("", FUNC_PTR)
+				If toke = "field" Then
+					fdecl.attrs :| FUNC_METHOD
+				End If
 
 				If Not ty Then
 					ty = New TFunctionPtrType
@@ -1647,7 +1650,7 @@ End If
 		EndIf
 
 		PushBlock funcDecl
-		While (Not meth And _toke<>"endfunction") Or (meth And _toke<>"endmethod")
+		While (Not meth And _toke.ToLower()<>"endfunction") Or (meth And _toke.ToLower()<>"endmethod")
 			If CParse( "end" )
 				If (Not meth And CParse("function")) Or (meth And CParse("method"))
 					Exit

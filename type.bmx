@@ -189,7 +189,7 @@ Type TIntType Extends TNumericType
 			Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
 			Return ctor And ctor.IsCtor()
 		EndIf
-		Return TNumericType( ty )<>Null Or TStringType( ty )<>Null
+		Return TNumericType( ty )<>Null Or TStringType( ty )<>Null Or TIntVarPtrType( ty )<> Null
 	End Method
 	
 	Method ToPointer:TPointerType()
@@ -642,7 +642,7 @@ Type TByteVarPtrType Extends TVarPtrType
 			Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
 			Return ctor And ctor.IsCtor()
 		EndIf
-		Return TPointerType( ty )<>Null
+		Return TPointerType( ty )<>Null Or TStringType( ty )<>Null
 	End Method
 	
 	Method ToString$()
@@ -705,7 +705,7 @@ Type TShortVarPtrType Extends TVarPtrType
 			Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
 			Return ctor And ctor.IsCtor()
 		EndIf
-		Return TPointerType( ty )<>Null
+		Return TPointerType( ty )<>Null Or TStringType( ty )<>Null
 	End Method
 	
 	Method ToString$()
@@ -768,7 +768,7 @@ Type TIntVarPtrType Extends TVarPtrType
 			Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
 			Return ctor And ctor.IsCtor()
 		EndIf
-		Return TPointerType( ty )<>Null
+		Return TPointerType( ty )<>Null Or TStringType( ty )<>Null
 	End Method
 	
 	Method ToString$()
@@ -831,7 +831,7 @@ Type TFloatVarPtrType Extends TVarPtrType
 			Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
 			Return ctor And ctor.IsCtor()
 		EndIf
-		Return TPointerType( ty )<>Null
+		Return TPointerType( ty )<>Null Or TStringType( ty )<>Null
 	End Method
 	
 	Method ToString$()
@@ -894,7 +894,7 @@ Type TDoubleVarPtrType Extends TVarPtrType
 			Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
 			Return ctor And ctor.IsCtor()
 		EndIf
-		Return TPointerType( ty )<>Null
+		Return TPointerType( ty )<>Null Or TStringType( ty )<>Null
 	End Method
 	
 	Method ToString$()
@@ -957,7 +957,7 @@ Type TLongVarPtrType Extends TVarPtrType
 			Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
 			Return ctor And ctor.IsCtor()
 		EndIf
-		Return TPointerType( ty )<>Null
+		Return TPointerType( ty )<>Null Or TStringType( ty )<>Null
 	End Method
 	
 	Method ToString$()

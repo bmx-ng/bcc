@@ -330,7 +330,7 @@ Type TCTranslator Extends TTranslator
 	End Method
 		
 	Method TransFunc$( decl:TFuncDecl,args:TExpr[],lhs:TExpr )
-If decl.ident = "AddHook" DebugStop
+'If decl.munged = "_brl_hook_thook_func" DebugStop
 		If decl.IsMethod()
 			If lhs And Not TSelfExpr(lhs) Then
 				If lhs.exprType = TType.stringType Then
@@ -346,8 +346,12 @@ If decl.ident = "AddHook" DebugStop
 				If TVarExpr(lhs) Then
 					Local cdecl:TClassDecl = TObjectType(TVarExpr(lhs).decl.ty).classDecl
  					Local obj:String = TransFuncObj(cdecl)
-					Local class:String = Bra("(" + obj + TransSubExpr( lhs ) + ")->clas")
-					Return class + "->" + TransFuncPrefix(cdecl) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
+					If decl.attrs & FUNC_PTR Then
+						Return "(" + obj + TransSubExpr( lhs ) + ")->" + decl.munged+TransArgs( args,decl, Null)
+					Else
+						Local class:String = Bra("(" + obj + TransSubExpr( lhs ) + ")->clas")
+						Return class + "->" + TransFuncPrefix(cdecl) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
+					End If
 				Else If TNewObjectExpr(lhs) Then
 					Local cdecl:TClassDecl = TNewObjectExpr(lhs).classDecl
 					Local class:String = cdecl.munged
@@ -538,6 +542,14 @@ If decl.ident = "AddHook" DebugStop
 			If TDoubleType( src ) Return "bbStringFromDouble"+Bra( t )
 			If TStringType( src ) Return t
 			If TStringVarPtrType( src ) Return "*" + t
+			If TVarPtrType( src ) Then
+				If TByteVarPtrType( src ) Return "bbStringFromInt"+Bra( "*" + t )
+				If TShortVarPtrType( src ) Return "bbStringFromInt"+Bra( "*" + t )
+				If TIntVarPtrType( src ) Return "bbStringFromInt"+Bra( "*" + t )
+				If TLongVarPtrType( src ) Return "bbStringFromLong"+Bra( "*" + t )
+				If TFloatVarPtrType( src ) Return "bbStringFromFloat"+Bra( "*" + t )
+				If TDoubleVarPtrType( src ) Return "bbStringFromDouble"+Bra( "*" + t )
+			End If
 		Else If TStringVarPtrType( dst )
 'DebugStop
 		Else If TByteType( dst )
@@ -554,11 +566,15 @@ If decl.ident = "AddHook" DebugStop
 			If TDoubleType( src ) Return Bra("(BBSHORT)"+t)
 			If TStringType( src ) Return "bbStringToShort" + Bra(t)
 		Else If TVarPtrType( dst )
-			If TByteType( src) Return Bra("&"+t)
-			If TShortType( src) Return Bra("&"+t)
-			If TFloatType( src) Return Bra("&"+t)
-			If TIntType( src) Return Bra("&"+t)
-			If TDoubleType( src) Return Bra("&"+t)
+			If Not TConstExpr(expr.expr) Then
+				If TByteType( src) Return Bra("&"+t)
+				If TShortType( src) Return Bra("&"+t)
+				If TFloatType( src) Return Bra("&"+t)
+				If TIntType( src) Return Bra("&"+t)
+				If TDoubleType( src) Return Bra("&"+t)
+			Else
+				Return Bra(TransValue(TConstExpr(expr.expr).ty, TConstExpr(expr.expr).value))
+			End If
 		
 		Else If TPointerType( dst )
 			If TArrayType(src) Then
@@ -779,7 +795,7 @@ If decl.ident = "AddHook" DebugStop
 '			s :+ "BBRELEASE(tmp)~n"
 			
 '			s:+ "}"
-		Else If TStringVarPtrType(stmt.lhs.exprType) Then
+		Else If TVarPtrType(stmt.lhs.exprType) Then
 			s :+ "*" + lhs+TransAssignOp( stmt.op )+rhs
 		Else
 			s :+ lhs+TransAssignOp( stmt.op )+rhs
@@ -1767,6 +1783,12 @@ End Rem
 		' function args
 		func :+ TransIfcArgs(funcDecl)
 		
+		If funcDecl.attrs & DECL_FINAL Then
+			func :+ "F"
+		Else If funcDecl.attrs & DECL_ABSTRACT Then
+			func :+ "A"
+		End If
+
 		func :+ "="
 		
 		func :+ Enquote(funcDecl.munged)
@@ -1780,6 +1802,9 @@ End Rem
 		Local func:String
 	
 		func :+ funcDecl.ident
+		
+		' ensure the function has been semanted
+		funcDecl.Semant()
 		
 		func :+ TransIfcType(funcDecl.retType)
 		
@@ -2167,6 +2192,69 @@ DebugLog mdecl.munged
 		
 	End Method
 	
+	Method EmitIfcImports(impMod:TModuleDecl)
+		For Local decl:TDecl=EachIn impMod.imported.Values()
+			Local mdecl:TModuleDecl=TModuleDecl( decl )
+			If mdecl Then
+				If mdecl.filepath.EndsWith(".bmx") And _appInstance.mainModule<>mdecl
+					EmitIfcImports(mdecl)
+
+					For Local s:String = EachIn mdecl.fileImports
+						Emit "import ~q" + s + "~q"
+					Next
+
+				End If
+			End If
+		Next
+		
+	End Method
+
+	Method EmitIfcStructImports(impMod:TModuleDecl, processed:TMap)
+		For Local decl:TDecl=EachIn impMod.imported.Values()
+			Local mdecl:TModuleDecl=TModuleDecl( decl )
+			If mdecl Then
+				If mdecl.filepath.EndsWith(".bmx") And _appInstance.mainModule<>mdecl And Not processed.Contains(mdecl)
+					EmitIfcStructImports(mdecl, processed)
+					
+					processed.Insert(mdecl, mdecl)
+					
+					For Local decl:TDecl=EachIn mdecl._decls
+
+						' consts
+						Local cdecl:TConstDecl=TConstDecl( decl )
+						If cdecl
+							EmitIfcConstDecl(cdecl)
+							Continue
+						End If
+			
+						' classes
+						Local tdecl:TClassDecl=TClassDecl( decl )
+						If tdecl
+							EmitIfcClassDecl(tdecl)
+							Continue
+						EndIf
+			
+						' functions
+						Local fdecl:TFuncDecl=TFuncDecl( decl )
+						If fdecl And fdecl <> _appInstance.mainFunc Then
+							EmitIfcFuncDecl(fdecl)
+							Continue
+						End If
+					
+						' globals
+						Local gdecl:TGlobalDecl=TGlobalDecl( decl )
+						If gdecl
+							EmitIfcGlobalDecl(gdecl)
+							Continue
+						End If
+					Next
+
+				End If
+			End If
+		Next
+		
+	End Method
+
 	Method TransInterface(app:TAppDecl)
 
 		SetOutput("interface")
@@ -2190,13 +2278,20 @@ DebugLog mdecl.munged
 		
 		' module imports from other files?
 		If opt_buildtype = BUILDTYPE_MODULE And opt_ismain Then
-			
+			EmitIfcImports(app.mainModule)
 		End If
 		
 		' other imports
 		For Local s:String = EachIn app.fileImports
 			Emit "import ~q" + s + "~q"
 		Next
+
+
+		Local processed:TMap = New TMap
+		' imported module structure (consts, classes, functions, etc)
+		If opt_buildtype = BUILDTYPE_MODULE And opt_ismain Then
+			EmitIfcStructImports(app.mainModule, processed)
+		End If
 
 		' consts
 		For Local decl:TDecl=EachIn app.Semanted()

@@ -624,7 +624,7 @@ End Rem
 	
 	Method FindFuncDecl:TFuncDecl( ident$,argExprs:TExpr[] = Null,explicit:Int=False, isArg:Int = False )
 'DebugLog "FindFuncDecl : " + ident
-'If ident = "Hook" Then DebugStop
+'If ident = "PassByReference" Then DebugStop
 		'Local funcs:TFuncDeclList=TFuncDeclList( FindDecl( ident ) )
 		Local f:TDecl = TDecl(findDecl(ident))
 		If Not f Then Return Null
@@ -780,7 +780,7 @@ Const FUNC_METHOD:Int=   $0001			'mutually exclusive with ctor
 Const FUNC_CTOR:Int=     $0002
 Const FUNC_PROPERTY:Int= $0004
 Const FUNC_PTR:Int=      $0100
-Const FUNC_BUILTIN:Int = $0010
+Const FUNC_BUILTIN:Int = $0080
 Const FUNC_INIT:Int =    $0200
 
 'Fix! A func is NOT a block/scope!

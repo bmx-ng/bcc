@@ -159,9 +159,9 @@ DebugLog "FILE NOT FOUND : " + ipath
 '						_mod.imported.Insert(modpath, mdecl)
 '					EndIf
 					Else
-DebugStop
-						Local p:String = ParseStringLit()
-						_mod.fileImports.AddLast(p)
+						If iRelPath.StartsWith("-") Then
+							_mod.fileImports.AddLast(iRelPath)
+						End If
 					End If
 				Else
 				
@@ -211,9 +211,9 @@ DebugStop
 						_mod.InsertDecl(class)
 
 						If CParse("F")
-							class.attrs :| DECL_ABSTRACT
-						Else If CParse("A")
 							class.attrs :| DECL_FINAL
+						Else If CParse("A")
+							class.attrs :| DECL_ABSTRACT
 						Else If CParse("AF")
 							class.attrs :| DECL_ABSTRACT | DECL_FINAL
 						End If
@@ -221,7 +221,13 @@ DebugStop
 						If CParse( "=" )
 'DebugStop
 							class.munged=ParseStringLit()
-				
+
+							If class.ident <> "String" Then
+								For Local fdecl:TFieldDecl = EachIn class._decls
+									fdecl.munged = "_" + class.munged + "_" + fdecl.ident
+									fdecl.munged = fdecl.munged.ToLower()
+								Next
+							End If
 						EndIf
 
 						DebugLog ""
@@ -319,7 +325,6 @@ DebugStop
 		Local imps:TIdentType[]
 
 		DebugLog "Found Class :  " + id
-'DebugStop 
 'End If
 		If CParse( "^" )
 
@@ -350,7 +355,6 @@ DebugStop
 		
 		Local method_attrs:Int=decl_attrs
 		If attrs & CLASS_INTERFACE method_attrs:|DECL_ABSTRACT
-
 
 		Repeat
 			SkipEols
@@ -384,9 +388,7 @@ DebugStop
 
 			Case "." ' field
 				NextToke
-				
 				decl_attrs :| DECL_FIELD
-				
 				Local decl:TDecl= ParseDecl( _toke,decl_attrs )
 				classDecl.InsertDecl decl
 			Rem
@@ -420,9 +422,9 @@ DebugStop
 				' Const / Global?
 				'NextToke
 				
-				decl_attrs :| DECL_CONST
+				'decl_attrs :| DECL_CONST
 				
-				Local decl:TDecl= ParseDecl( _toke,decl_attrs )
+				Local decl:TDecl= ParseDecl( _toke,decl_attrs | DECL_CONST)
 				classDecl.InsertDecl decl
 			End If
 			
@@ -617,9 +619,9 @@ Method ParseFuncDecl:TFuncDecl( toke$,attrs:Int )
 		Parse ")"
 		
 		Repeat		
-			If CParse( "final" )
+			If CParse( "F" )
 				attrs:|DECL_FINAL
-			Else If CParse( "abstract" )
+			Else If CParse( "A" )
 				attrs:|DECL_ABSTRACT
 			Else If CParse( "property" )
 				If attrs & FUNC_METHOD
@@ -771,7 +773,6 @@ Method ParseFuncDecl:TFuncDecl( toke$,attrs:Int )
 	
 	Method ParseDecl:TDecl( toke$,attrs:Int )
 		'SetErr
-		
 		Local pos:Int, tokeType:Int
 		pos = _toker._tokePos
 		tokeType = _toker._tokeType
@@ -779,7 +780,7 @@ Method ParseFuncDecl:TFuncDecl( toke$,attrs:Int )
 		Local id$=ParseIdent()
 		Local ty:TType
 		Local init:TExpr
-'DebugLog "Found Field :  " + id
+
 		If attrs & DECL_EXTERN
 			ty=ParseDeclType(attrs)
 
@@ -931,7 +932,7 @@ End Rem
 				ty = TType.longType
 			End If
 			
-			If CParse("&") Then
+			If CParse("&") And Not (attrs & DECL_FIELD) Then
 				attrs :| DECL_GLOBAL
 				attrs :~ DECL_CONST
 			End If
@@ -951,7 +952,7 @@ End Rem
 			NextToke
 			ty=TType.floatType
 
-			If CParse("&") Then
+			If CParse("&")  And Not (attrs & DECL_FIELD) Then
 				attrs :| DECL_GLOBAL
 				attrs :~ DECL_CONST
 			End If
@@ -966,7 +967,7 @@ End Rem
 				ty = TType.stringToShortPointerType
 			End If
 
-			If CParse( "&" )
+			If CParse( "&" )  And Not (attrs & DECL_FIELD)
 				attrs :| DECL_GLOBAL
 				attrs :~ DECL_CONST
 			End If
