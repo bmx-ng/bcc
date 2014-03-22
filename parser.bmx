@@ -1249,7 +1249,7 @@ Type TParser
 
 	Method ParseRemStmt()
 		Parse "rem"
-
+		
 ' TODO : end/rem should be at the beginning of a line... ignore otherwise
 		While _toke
 			SkipEols()
@@ -1490,7 +1490,6 @@ Type TParser
 				attrs:&~FUNC_METHOD
 			Else
 				id=ParseIdent()
-'If id = "Flush" DebugStop
 				ty=ParseDeclType()
 			EndIf
 		Else

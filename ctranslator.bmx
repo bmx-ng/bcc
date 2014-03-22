@@ -1758,7 +1758,11 @@ End Rem
 			args:+ arg.ident + TransIfcType( arg.ty )
 
 			If arg.init Then
-				args:+ "=" + TransIfcConstExpr(arg.init)
+				If TInvokeExpr(arg.init) Then
+					args:+ "=" + Enquote(TInvokeExpr(arg.init).decl.munged)
+				Else
+					args:+ "=" + TransIfcConstExpr(arg.init)
+				End If
 			End If
 		Next
 			
