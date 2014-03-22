@@ -624,7 +624,7 @@ End Rem
 	
 	Method FindFuncDecl:TFuncDecl( ident$,argExprs:TExpr[] = Null,explicit:Int=False, isArg:Int = False )
 'DebugLog "FindFuncDecl : " + ident
-'If ident = "PassByReference" Then DebugStop
+'If ident = "xmlOutputBufferCreateIO" Then DebugStop
 		'Local funcs:TFuncDeclList=TFuncDeclList( FindDecl( ident ) )
 		Local f:TDecl = TDecl(findDecl(ident))
 		If Not f Then Return Null
@@ -676,6 +676,10 @@ End Rem
 				
 					Local declTy:TType=argDecls[i].ty
 					Local exprTy:TType=argExprs[i].exprType
+					
+					If TFunctionPtrType(declTy) And TInvokeExpr(argExprs[i]) Then
+						If TFunctionPtrType(declTy).equalsDecl(TInvokeExpr(argExprs[i]).decl) Exit
+					End If
 					
 					If exprTy.EqualsType( declTy ) Exit
 					

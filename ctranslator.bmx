@@ -147,7 +147,7 @@ Type TCTranslator Extends TTranslator
 			If TNumericType( ty ) Return "0"
 			If TStringType( ty ) Return "&bbEmptyString"
 			If TArrayType( ty ) Return "&bbEmptyArray"
-			If TObjectType( ty ) Return "0"
+			If TObjectType( ty ) Return "&bbNullObject"
 			If TPointerType( ty) Return "0" ' todo ??
 			If TByteType( ty ) Return "0"
 		EndIf
@@ -366,6 +366,10 @@ Type TCTranslator Extends TTranslator
 					Local obj:String = TransFuncObj(cdecl)
 					Local class:String = Bra("(" + obj + TransSubExpr( lhs ) + ")->clas")
 					Return class + "->" + TransFuncPrefix(cdecl) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
+				Else If TInvokeExpr(lhs) Then
+					Local obj:String = Bra("struct " + decl.scope.munged + "_obj*")
+					Local class:String = Bra("(" + obj + TransSubExpr( lhs ) +")->clas")
+					Return class + "->md_" + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
 				Else
 					InternalErr
 				End If

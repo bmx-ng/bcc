@@ -419,7 +419,7 @@ Type TObjectType Extends TType
 	
 	Method EqualsType:Int( ty:TType )
 		Local objty:TObjectType=TObjectType( ty )
-		Return objty And (classDecl=objty.classDecl Or classDecl.ExtendsClass( objty.classDecl ))
+		Return TNullDecl(classDecl) <> Null Or (objty And (classDecl=objty.classDecl Or classDecl.ExtendsClass( objty.classDecl )))
 	End Method
 	
 	Method ExtendsType:Int( ty:TType )
@@ -1103,6 +1103,26 @@ Type TFunctionPtrType Extends TPointerType
 			Return ctor And ctor.IsCtor()
 		EndIf
 		Return TPointerType( ty )<>Null
+	End Method
+	
+	Method equalsDecl:Int(fdecl:TFuncDecl)
+		func.Semant
+		fdecl.Semant
+	
+		' same number of args?
+		If func.argDecls.length <> fdecl.argDecls.length Then
+			Return False
+		End If
+		
+		' same arg types?
+		For Local i:Int = 0 Until func.argDecls.length
+			If Not func.argDecls[i].ty.equalsType(fdecl.argDecls[i].ty) Return False
+		Next
+		
+		' same return type?
+		If Not func.retType.equalsType(fdecl.retType) Return False
+		
+		Return True
 	End Method
 	
 	Method ToString$()

@@ -155,11 +155,12 @@ Type TToker
 		Else If str="~q"
 			_tokeType=TOKE_STRINGLIT
 			While TSTR() And TSTR()<>"~q"
-				_tokePos:+1
 				' Strings can't cross line boundries
 				If TSTR()="~n" Then
+					_tokePos:-1
 					Exit
 				End If
+				_tokePos:+1
 			Wend
 			If _tokePos<_source.Length _tokePos:+1 Else _tokeType=TOKE_STRINGLITEX
 		Else If str="'"

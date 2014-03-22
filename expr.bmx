@@ -717,6 +717,8 @@ Type TCastExpr Extends TExpr
 				'if both objects or both non-objects...
 				If (TObjectType(ty)<>Null)=(TObjectType(src)<>Null) exprType=ty
 
+			Else
+				If (TObjectType(ty)<>Null) And (TObjectType(src)<>Null) exprType=ty
 			EndIf
 		
 		EndIf
