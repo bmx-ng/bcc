@@ -140,6 +140,23 @@ Type TType
 		Return Null
 	End Function
 	
+	Function MapPointerToPrim:TType(ty:TType)
+		If TBytePtrType(ty) Return byteType
+		If TIntPtrType(ty) Return intType
+		If TShortPtrType(ty) Return shortType
+		If TFloatPtrType(ty) Return floatType
+		If TDoublePtrType(ty) Return doubleType
+		If TLongPtrType(ty) Return longType
+
+		If TBytePtrPtrType(ty) Return bytePointerType
+		If TIntPtrPtrType(ty) Return intPointerType
+		If TShortPtrPtrType(ty) Return shortPointerType
+		If TFloatPtrPtrType(ty) Return floatPointerType
+		If TDoublePtrPtrType(ty) Return doublePointerType
+		If TLongPtrPtrType(ty) Return longPointerType
+		
+	End Function
+	
 	Field _arrayOf:TArrayType
 	
 End Type
@@ -337,7 +354,7 @@ Type TStringType Extends TType
 			Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
 			Return ctor And ctor.IsCtor()
 		EndIf
-		Return EqualsType( ty ) Or TStringVarPtrType( ty ) <> Null
+		Return EqualsType( ty ) Or TStringVarPtrType( ty ) <> Null Or TStringCharPtrType(ty) <> Null
 	End Method
 	
 	Method GetClass:TClassDecl()

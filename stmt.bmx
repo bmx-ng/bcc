@@ -194,7 +194,7 @@ Type TCatchStmt Extends TStmt
 	
 	Method OnSemant()
 		init.Semant
-		If Not TObjectType( init.ty ) Err "Variable type must extend Throwable"
+		If Not TObjectType( init.ty )  And Not TStringType(init.ty) Err "Variable type must extend Throwable"
 		'If Not init.Type.GetClass().IsThrowable() Err "Variable type must extend Throwable"
 		block.InsertDecl init
 		block.Semant

@@ -401,6 +401,9 @@ Type TParser
 		Case ":"
 			NextToke
 			ty=CParsePrimitiveNumberType()
+			If Not ty Then
+				ty = ParseIdentType()
+			End If
 		End Select
 		
 		Return ty
@@ -483,6 +486,8 @@ Type TParser
 			
 			If CParse("var") Then
 				ty = TType.MapToVarPointerType(ty)
+			Else If CParse("ptr") Then
+				ty = TType.MapToPointerType(ty)
 			End If
 		End Select
 		While CParse( "[]" )
@@ -1500,7 +1505,8 @@ Type TParser
 		EndIf
 
 		Local args:TArgDecl[]
-'If _toker._line = 63 DebugStop
+'If id = "png_destroy_read_struct" DebugStop
+
 		Parse "("
 		SkipEols
 		If _toke<>")"
@@ -1521,9 +1527,7 @@ Type TParser
 				End If
 
 				Local id$=ParseIdent()
-'If id = "Flush" Then
-'DebugStop
-'End If
+
 				Local ty:TType=ParseDeclType()
 				Local init:TExpr
 				' function pointer ?

@@ -23,6 +23,13 @@ Type TCTranslator Extends TTranslator
 		If TStringType( ty ) Return "~q$~q"
 		If TArrayType( ty ) Return "~q[~q"
 		If TObjectType( ty ) Return "~q:~q"
+
+		If TBytePtrType( ty ) Return "~q*b~q"
+		If TShortPtrType( ty ) Return "~q*s~q"
+		If TIntPtrType( ty ) Return "~q*i~q"
+		If TFloatPtrType( ty ) Return "~q*f~q"
+		If TDoublePtrType( ty ) Return "~q*d~q"
+		If TLongPtrType( ty ) Return "~q*l~q"
 	End Method
 
 	Method TransType$( ty:TType, ident:String)
@@ -166,9 +173,14 @@ Type TCTranslator Extends TTranslator
 					If TCastExpr(args[i]) And TStringType(TCastExpr(args[i]).expr.exprType) Then
 						t:+ "&"
 					End If
-				Else If TFunctionPtrType(TArgDecl(decl.argDecls[i].actual).ty) Then
-					If TInvokeExpr(args[i]) Then
+				Else If TFunctionPtrType(TArgDecl(decl.argDecls[i].actual).ty) Or TBytePtrType(TArgDecl(decl.argDecls[i].actual).ty) Then
+					If TInvokeExpr(args[i]) And Not TInvokeExpr(args[i]).decl.IsMethod() Then
 						t:+ "&" + TInvokeExpr(args[i]).decl.munged
+						Continue
+					End If
+					' some cases where we are passing a function pointer via a void* parameter.
+					If TCastExpr(args[i]) And TInvokeExpr(TCastExpr(args[i]).expr) Then
+						t:+ "&" + TInvokeExpr(TCastExpr(args[i]).expr).decl.munged
 						Continue
 					End If
 				End If
@@ -330,7 +342,7 @@ Type TCTranslator Extends TTranslator
 	End Method
 		
 	Method TransFunc$( decl:TFuncDecl,args:TExpr[],lhs:TExpr )
-'If decl.munged = "_brl_hook_thook_func" DebugStop
+'If decl.munged = "brl_pixmap_TPixmap_CreateStatic" DebugStop
 		If decl.IsMethod()
 			If lhs And Not TSelfExpr(lhs) Then
 				If lhs.exprType = TType.stringType Then
@@ -528,12 +540,16 @@ Type TCTranslator Extends TTranslator
 			If TDoubleType( src ) Return Bra("(BBLONG)"+t)
 			If TStringType( src ) Return "bbStringToLong" + Bra(t)
 		Else If TFloatType( dst )
+			If TByteType( src ) Return Bra("(BBFLOAT)"+t)
 			If TIntType( src ) Return Bra("(BBFLOAT)"+t)
+			If TShortType( src ) Return Bra("(BBFLOAT)"+t)
 			If TFloatType( src ) Return t
 			If TDoubleType( src ) Return Bra("(BBFLOAT)"+t)
 			If TStringType( src ) Return "bbStringToFloat" + Bra(t)
 		Else If TDoubleType( dst )
+			If TByteType( src ) Return Bra("(BBDOUBLE)"+t)
 			If TIntType( src ) Return Bra("(BBDOUBLE)"+t)
+			If TShortType( src ) Return Bra("(BBDOUBLE)"+t)
 			If TDoubleType( src ) Return t
 			If TFloatType( src ) Return Bra("(BBDOUBLE)"+t)
 			If TStringType( src ) Return "bbStringToDouble" + Bra(t)

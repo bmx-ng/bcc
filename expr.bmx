@@ -1122,7 +1122,8 @@ Type TIndexExpr Extends TExpr
 		Else If TArrayType( expr.exprType )
 			exprType=TArrayType( expr.exprType ).elemType
 		Else If TPointerType( expr.exprType) And Not TFunctionPtrType( expr.exprType )
-			exprType=TType.intType
+			exprType=TType.MapPointerToPrim(expr.exprType)
+			'exprType=TType.intType
 		Else
 			Err "Only strings, arrays and pointers may be indexed."
 		EndIf
