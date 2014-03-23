@@ -386,6 +386,12 @@ Type TParser
 	Method ParseConstNumberType:TType()
 		Local ty:TType
 		Select _toke
+		Case "@"
+			NextToke
+			ty=TType.byteType
+		Case "@@"
+			NextToke
+			ty=TType.shortType
 		Case "%"
 			NextToke
 			ty=TType.intType
@@ -398,6 +404,9 @@ Type TParser
 		Case "!"
 			NextToke
 			ty=TType.doubleType
+		Case "%%"
+			NextToke
+			ty=TType.longType
 		Case ":"
 			NextToke
 			ty=CParsePrimitiveNumberType()
@@ -415,12 +424,41 @@ Type TParser
 		'Case "?"
 		'	NextToke
 		'	ty=TType.boolType
+		Case "@"
+			NextToke
+			ty=TType.byteType
+
+			If CParse("var") Then
+				ty = TType.MapToVarPointerType(ty)
+			Else If CParse("ptr") Then
+				ty = TType.MapToPointerType(ty)
+			End If
+		Case "@@"
+			NextToke
+			ty=TType.shortType
+
+			If CParse("var") Then
+				ty = TType.MapToVarPointerType(ty)
+			Else If CParse("ptr") Then
+				ty = TType.MapToPointerType(ty)
+			End If
 		Case "%"
 			NextToke
 			ty=TType.intType
 
 			If CParse("var") Then
 				ty = TType.MapToVarPointerType(ty)
+			Else If CParse("ptr") Then
+				ty = TType.MapToPointerType(ty)
+			End If
+		Case "%%"
+			NextToke
+			ty=TType.longType
+
+			If CParse("var") Then
+				ty = TType.MapToVarPointerType(ty)
+			Else If CParse("ptr") Then
+				ty = TType.MapToPointerType(ty)
 			End If
 		Case "#"
 			NextToke
@@ -428,6 +466,8 @@ Type TParser
 
 			If CParse("var") Then
 				ty = TType.MapToVarPointerType(ty)
+			Else If CParse("ptr") Then
+				ty = TType.MapToPointerType(ty)
 			End If
 		Case "$"
 			NextToke
@@ -448,6 +488,8 @@ Type TParser
 
 			If CParse("var") Then
 				ty = TType.MapToVarPointerType(ty)
+			Else If CParse("ptr") Then
+				ty = TType.MapToPointerType(ty)
 			End If
 		Case ":"
 			NextToke
@@ -1290,8 +1332,9 @@ Type TParser
 			ParseRemStmt()
 		Case "const","local","global"
 			ParseDeclStmts
+		' nested function - needs to get added to the "module"
 		Case "function"
-			_block.InsertDecl ParseFuncDecl( _toke,0 )
+			_block.InsertDecl ParseFuncDecl( _toke,FUNC_NESTED )
 		Case "return"
 			ParseReturnStmt()
 		Case "exit"

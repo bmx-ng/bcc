@@ -939,7 +939,7 @@ End Rem
 
 
 			If CParse( "*" ) Then
-'DebugStop
+
 				If ty = TType.longType Then
 					ty = TType.longPointerType
 				Else
@@ -955,6 +955,10 @@ End Rem
 			If CParse("&")  And Not (attrs & DECL_FIELD) Then
 				attrs :| DECL_GLOBAL
 				attrs :~ DECL_CONST
+			End If
+
+			If CParse( "*" ) Then
+				ty = TType.floatPointerType
 			End If
 			
 		Case "$"
@@ -974,6 +978,16 @@ End Rem
 		Case "!"
 			NextToke
 			ty=TType.doubleType
+
+			If CParse("&")  And Not (attrs & DECL_FIELD) Then
+				attrs :| DECL_GLOBAL
+				attrs :~ DECL_CONST
+			End If
+
+			If CParse( "*" ) Then
+				ty = TType.doublePointerType
+			End If
+
 		Case ":"
 			NextToke
 			ty=ParseNewType()

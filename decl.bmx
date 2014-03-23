@@ -624,7 +624,7 @@ End Rem
 	
 	Method FindFuncDecl:TFuncDecl( ident$,argExprs:TExpr[] = Null,explicit:Int=False, isArg:Int = False )
 'DebugLog "FindFuncDecl : " + ident
-'If ident = "CopyPixels" Then DebugStop
+'If ident = "Pow2Size" Then DebugStop
 		'Local funcs:TFuncDeclList=TFuncDeclList( FindDecl( ident ) )
 		Local f:TDecl = TDecl(findDecl(ident))
 		If Not f Then Return Null
@@ -786,6 +786,7 @@ Const FUNC_PROPERTY:Int= $0004
 Const FUNC_PTR:Int=      $0100
 Const FUNC_BUILTIN:Int = $0080
 Const FUNC_INIT:Int =    $0200
+Const FUNC_NESTED:Int =  $0400
 
 'Fix! A func is NOT a block/scope!
 '
@@ -921,6 +922,11 @@ Type TFuncDecl Extends TBlockDecl
 			If decl<>Self And EqualsArgs( decl )
 				Err "Duplicate declaration "+ToString()
 			EndIf
+		Next
+		
+		' any nested functions?
+		For Local fdecl:TFuncDecl = EachIn _decls
+			fdecl.Semant
 		Next
 		
 		'get cdecl, sclasss

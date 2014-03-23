@@ -226,6 +226,9 @@ Type TCTranslator Extends TTranslator
 			Return "bbObjectDowncast" + Bra(expr + ",&" + TStringType(ty).cDecl.munged)
 		End If
 
+		If TVarPtrType(src) And TNumericType(ty) Then
+			Return "*" + expr
+		End If
 
 		If TIntType(ty) And TStringType(src) Then
 			Return Bra(expr + " != &bbEmptyString")
@@ -266,7 +269,18 @@ Type TCTranslator Extends TTranslator
 	End Method
 
 	Method TransGlobalDecl$( munged$,init:TExpr )
-		Return "static " + TransType( init.exprType, munged )+" "+munged+"="+init.Trans()
+		Local glob:String = "static " + TransType( init.exprType, munged )+" "+munged+"="
+		
+		If TNewObjectExpr(init) Then
+			glob :+ "0;~n"
+			glob :+ indent + "if (" + munged + "==0) {~n"
+			glob :+ indent + "~t" + munged + "=" + init.Trans() + ";~n"
+			glob :+ indent + "}"
+		Else
+			glob :+ init.Trans()
+		End If
+		
+		Return glob
 	End Method
 
 	Method CreateLocal2$( ty:TType, t$ )
@@ -379,6 +393,11 @@ Type TCTranslator Extends TTranslator
 					Local class:String = Bra("(" + obj + TransSubExpr( lhs ) + ")->clas")
 					Return class + "->" + TransFuncPrefix(cdecl) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
 				Else If TInvokeExpr(lhs) Then
+					Local obj:String = Bra("struct " + decl.scope.munged + "_obj*")
+					Local class:String = Bra("(" + obj + TransSubExpr( lhs ) +")->clas")
+					Return class + "->md_" + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
+				Else If TInvokeMemberExpr(lhs) Then
+DebugStop
 					Local obj:String = Bra("struct " + decl.scope.munged + "_obj*")
 					Local class:String = Bra("(" + obj + TransSubExpr( lhs ) +")->clas")
 					Return class + "->md_" + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
@@ -516,9 +535,11 @@ Type TCTranslator Extends TTranslator
 		
 		If TBoolType( dst )
 			If TBoolType( src ) Return t
+			If TByteType( src ) Return Bra( t+"!=0" )
+			If TShortType( src ) Return Bra( t+"!=0" )
 			If TIntType( src ) Return Bra( t+"!=0" )
 			If TFloatType( src ) Return Bra( t+"!=0.0f" )
-		'	If TArrayType( src ) Return Bra( t+".Length()!=0" )
+			If TArrayType( src ) Return Bra( t+"!= &bbEmptyArray" )
 			If TStringType( src ) Return Bra( t+"!= &bbEmptyString" )
 			If TObjectType( src ) Return Bra( t+"!= &bbNullObject" )
 			If TPointerType( src ) Return Bra( t )
@@ -574,9 +595,11 @@ Type TCTranslator Extends TTranslator
 'DebugStop
 		Else If TByteType( dst )
 			If TByteType( src) Return t
+			If TShortType( src ) Return Bra("(BBBYTE)"+t)
 			If TIntType( src ) Return Bra("(BBBYTE)"+t)
 			If TFloatType( src ) Return Bra("(BBBYTE)"+t)
 			If TDoubleType( src ) Return Bra("(BBBYTE)"+t)
+			If TLongType( src ) Return Bra("(BBBYTE)"+t)
 			If TStringType( src ) Return t+".ToByte()"
 		Else If TShortType( dst )
 			If TShortType( src) Return t
@@ -584,13 +607,17 @@ Type TCTranslator Extends TTranslator
 			If TIntType( src ) Return Bra("(BBSHORT)"+t)
 			If TFloatType( src ) Return Bra("(BBSHORT)"+t)
 			If TDoubleType( src ) Return Bra("(BBSHORT)"+t)
+			If TLongType( src ) Return Bra("(BBSHORT)"+t)
 			If TStringType( src ) Return "bbStringToShort" + Bra(t)
 		Else If TVarPtrType( dst )
 			If Not TConstExpr(expr.expr) Then
+				If TInvokeExpr(expr.expr) Return t
+				
 				If TByteType( src) Return Bra("&"+t)
 				If TShortType( src) Return Bra("&"+t)
 				If TFloatType( src) Return Bra("&"+t)
 				If TIntType( src) Return Bra("&"+t)
+				If TLongType( src) Return Bra("&"+t)
 				If TDoubleType( src) Return Bra("&"+t)
 			Else
 				Return Bra(TransValue(TConstExpr(expr.expr).ty, TConstExpr(expr.expr).value))
@@ -647,7 +674,6 @@ Type TCTranslator Extends TTranslator
 	End Method
 	
 	Method TransIndexExpr$( expr:TIndexExpr )
-	
 		Local t_expr$=TransSubExpr( expr.expr )
 		Local t_index$=expr.index.Trans()
 		
@@ -657,7 +683,6 @@ Type TCTranslator Extends TTranslator
 		End If
 		
 		If TArrayType( expr.expr.exprType ) Then
-'DebugStop
 			Return Bra("(" + TransType(expr.exprType, "") + "*)BBARRAYDATA(" + t_expr + "," + t_expr + "->dims)") + "[" + t_index + "]"
 		End If
 		
@@ -1046,6 +1071,13 @@ End Rem
 		decl.Semant
 		
 		MungDecl decl
+
+		' emit nested functions
+		If Not proto Then
+			For Local fdecl:TFuncDecl = EachIn decl._decls
+				EmitFuncDecl(fdecl, proto, classFunc)
+			Next
+		End If
 		
 		'Find decl we override
 		Local odecl:TFuncDecl=decl
@@ -1761,6 +1793,8 @@ End Rem
 			s = "((struct " + decl.scope.munged + "_obj*)" + variable + ")->" + decl.munged + " "
 		Else If TPointerType(decl.ty) Then
 			s = "((struct " + decl.scope.munged + "_obj*)" + variable + ")->" + decl.munged + " "
+		Else If TArrayType(decl.ty) Then
+			s = "((struct " + decl.scope.munged + "_obj*)" + variable + ")->" + decl.munged + " "
 		End If
 		
 		Return s
@@ -1966,8 +2000,11 @@ End Rem
 	End Method
 	
 	Method EmitIfcGlobalDecl(globalDecl:TGlobalDecl)
-		Local g:String = globalDecl.ident
+	
+		globalDecl.Semant
 		
+		Local g:String = globalDecl.ident
+
 		g:+ TransIfcType(globalDecl.ty)
 		
 		g:+ "&"

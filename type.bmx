@@ -785,7 +785,7 @@ Type TIntVarPtrType Extends TVarPtrType
 			Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
 			Return ctor And ctor.IsCtor()
 		EndIf
-		Return TPointerType( ty )<>Null Or TStringType( ty )<>Null
+		Return TPointerType( ty )<>Null Or TStringType( ty )<>Null Or TIntType( ty )<>Null
 	End Method
 	
 	Method ToString$()
