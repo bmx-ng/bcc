@@ -154,6 +154,39 @@ Type TFuncCallExpr Extends TExpr
 
 End Type
 
+Type TIncbin
+
+	Field file:String
+	Field path:String
+	Field id:Int
+	Field length:Int
+	
+	Global count:Int
+	
+	Method Create:TIncbin(file:String, source:String)
+		count :+ 1
+		
+		Self.file = file
+		
+		' find the file
+		If Not FileType(file) Then
+			' maybe relative to source
+			Local dir:String = ExtractDir(source) + "/" + file
+			If FileType(dir) = FILETYPE_FILE Then
+				path = RealPath(dir)
+			Else
+				Internalerr '?
+			End If
+		Else
+			path = RealPath(file)
+		End If
+		
+		id = count
+		Return Self
+	End Method
+
+End Type
+
 '***** Parser *****
 Type TParser
 
@@ -680,6 +713,56 @@ Type TParser
 				expr=New TCastExpr.Create( ty,expr,CAST_EXPLICIT )
 '				expr=New TIdentExpr.Create( id )
 			EndIf
+		Case "len"
+			NextToke
+			' optional brackets
+			If CParse( "(" )
+				expr=ParseExpr()
+				Parse ")"
+				expr=New TLenExpr.Create( expr )
+			Else
+				expr=ParseExpr()
+				expr=New TLenExpr.Create( expr )
+			EndIf
+		Case "abs"
+			NextToke
+			' optional brackets
+			If CParse( "(" )
+				expr=ParseExpr()
+				Parse ")"
+				expr=New TAbsExpr.Create( expr )
+			Else
+				expr=ParseExpr()
+				expr=New TAbsExpr.Create( expr )
+			EndIf
+		Case "min"
+			NextToke
+			' optional brackets
+			Local b:Int = CParse( "(" )
+			
+			expr=ParseExpr()
+			Parse ","
+			Local expr2:TExpr=ParseExpr()
+
+			If b Then
+				Parse ")"
+			End If
+
+			expr=New TMinExpr.Create( expr, expr2 )
+		Case "max"
+			NextToke
+			' optional brackets
+			Local b:Int = CParse( "(" )
+			
+			expr=ParseExpr()
+			Parse ","
+			Local expr2:TExpr=ParseExpr()
+
+			If b Then
+				Parse ")"
+			End If
+
+			expr=New TMaxExpr.Create( expr, expr2 )
 		Case "string"
 			Local id$=_toke
 			Local ty:TType=ParseType()
@@ -2306,14 +2389,14 @@ End Rem
 				Exit
 			End Select
 		Wend
-'DebugStop
+
 		' app code
 		PushBlock(mainFunc)
 
 		'Parse main app
 		While _toke
 			SetErr
-			Select _toke
+			Select _toke.toLower()
 			Case "~n"
 				NextToke
 			Case "public"
@@ -2375,8 +2458,12 @@ End Rem
 			Case "function"
 				_module.InsertDecl ParseFuncDecl( _toke,attrs )
 			Case "rem"
-'DebugStop
 				ParseRemStmt()
+			Case "incbin"
+				NextToke
+				Local s:String = ParseStringLit()
+				_app.mapStringConsts(s)
+				_app.incbins.AddLast(New TIncbin.Create(s, path))
 			Default
 				ParseStmt
 				'Err "Syntax error - expecting declaration."

@@ -1432,6 +1432,14 @@ Type TIdentExpr Extends TExpr
 
 		'Local scope:TScopeDecl=IdentScope()
 		Local fdecl:TFuncDecl=scope.FindFuncDecl( ident,args )
+		
+		' couldn't find it? try a global search
+		If Not fdecl Then
+			For Local mdecl:TModuleDecl = EachIn _appInstance.globalImports.Values()
+				fdecl=mdecl.FindFuncDecl( ident, args )
+				If fdecl Exit
+			Next
+		End If
 
 		If fdecl
 			If Not fdecl.IsStatic()
@@ -1467,3 +1475,163 @@ Type TIdentExpr Extends TExpr
 '	End Method
 
 End Type
+
+Type TBuiltinExpr Extends TExpr
+
+	Field id:String
+	Field expr:TExpr
+
+	Method Semant:TExpr()
+		If exprType Return Self
+		
+		expr=expr.Semant()
+		exprType=expr.exprType
+		Return Self
+	End Method
+
+	Method Trans$()
+		Return _trans.TransBuiltinExpr( Self )
+	End Method
+
+End Type
+
+Type TLenExpr Extends TBuiltinExpr
+	
+	Method Create:TLenExpr( expr:TExpr )
+		Self.id="len"
+		Self.expr=expr
+		Return Self
+	End Method
+
+	Method Semant:TExpr()
+		If exprType Return Self
+		
+		expr=expr.Semant()
+		exprType=TType.intType
+		Return Self
+	End Method
+	
+	Method Copy:TExpr()
+		Return New TLenExpr.Create( CopyExpr(expr) )
+	End Method
+
+	Method ToString$()
+		Return "TLenExpr(,"+expr.ToString()+")"
+	End Method
+		
+End Type
+
+Type TAbsExpr Extends TBuiltinExpr
+	
+	Method Create:TAbsExpr( expr:TExpr )
+		Self.id="abs"
+		Self.expr=expr
+		Return Self
+	End Method
+
+	Method Semant:TExpr()
+		If exprType Return Self
+		
+		expr=expr.Semant()
+		
+		If TIntType(expr.exprType) Or TByteType(expr.exprType) Or TShortType(expr.exprType) Then
+			exprType=TType.intType
+		Else If TLongType(expr.exprType) Then
+			exprType=TType.longType
+		Else
+			exprType=TType.doubleType
+		End If
+		
+		Return Self
+	End Method
+	
+	Method Copy:TExpr()
+		Return New TAbsExpr.Create( CopyExpr(expr) )
+	End Method
+
+	Method ToString$()
+		Return "TAbsExpr(,"+expr.ToString()+")"
+	End Method
+
+End Type
+
+Type TAscExpr Extends TBuiltinExpr
+	
+	Method Create:TAscExpr( expr:TExpr )
+		Self.id="asc"
+		Self.expr=expr
+		Return Self
+	End Method
+	
+	Method Copy:TExpr()
+		Return New TAscExpr.Create( CopyExpr(expr) )
+	End Method
+
+	Method ToString$()
+		Return "TAscExpr(,"+expr.ToString()+")"
+	End Method
+
+End Type
+
+Type TMinExpr Extends TBuiltinExpr
+
+	Field expr2:TExpr
+	
+	Method Create:TMinExpr( lhs:TExpr, rhs:TExpr )
+		Self.id="min"
+		Self.expr=lhs
+		Self.expr2=rhs
+		Return Self
+	End Method
+
+	Method Semant:TExpr()
+		If exprType Return Self
+		
+		expr=expr.Semant()
+		expr2=expr2.Semant()
+		
+		exprType=TType.intType
+		Return Self
+	End Method
+
+	Method Copy:TExpr()
+		Return New TMinExpr.Create( CopyExpr(expr), CopyExpr(expr2) )
+	End Method
+
+	Method ToString$()
+		Return "TMinExpr("+expr.ToString()+"," + expr2.ToString() + ")"
+	End Method
+
+End Type
+
+Type TMaxExpr Extends TBuiltinExpr
+
+	Field expr2:TExpr
+	
+	Method Create:TMaxExpr( lhs:TExpr, rhs:TExpr )
+		Self.id="max"
+		Self.expr=lhs
+		Self.expr2=rhs
+		Return Self
+	End Method
+
+	Method Semant:TExpr()
+		If exprType Return Self
+		
+		expr=expr.Semant()
+		expr2=expr2.Semant()
+		
+		exprType=TType.intType
+		Return Self
+	End Method
+	
+	Method Copy:TExpr()
+		Return New TMaxExpr.Create( CopyExpr(expr), CopyExpr(expr2) )
+	End Method
+
+	Method ToString$()
+		Return "TMaxExpr("+expr.ToString()+"," + expr2.ToString() + ")"
+	End Method
+
+End Type
+

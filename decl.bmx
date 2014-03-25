@@ -624,7 +624,7 @@ End Rem
 	
 	Method FindFuncDecl:TFuncDecl( ident$,argExprs:TExpr[] = Null,explicit:Int=False, isArg:Int = False )
 'DebugLog "FindFuncDecl : " + ident
-'If ident = "Pow2Size" Then DebugStop
+'If ident = "GetScale" Then DebugStop
 		'Local funcs:TFuncDeclList=TFuncDeclList( FindDecl( ident ) )
 		Local f:TDecl = TDecl(findDecl(ident))
 		If Not f Then Return Null
@@ -889,7 +889,7 @@ Type TFuncDecl Extends TBlockDecl
 	End Method
 
 	Method EqualsFunc:Int( decl:TFuncDecl )
-		Return retType.EqualsType( decl.retType ) And EqualsArgs( decl )
+		Return (retType.EqualsType( decl.retType ) Or decl.retType.EqualsType( retType )) And EqualsArgs( decl )
 	End Method
 
 	Method OnSemant()
@@ -1716,6 +1716,8 @@ Type TAppDecl Extends TScopeDecl
 	
 	Field stringConsts:TMap = New TMap
 	Field stringConstCount:Int
+	
+	Field incbins:TList = New TList
 	
 	Method GetPathPrefix:String()
 		If opt_buildtype = BUILDTYPE_MODULE Then

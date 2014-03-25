@@ -891,8 +891,7 @@ End Rem
 						End If
 					Else
 						' a default value ?
-'DebugStop
-					decl.init = ParseUnaryExpr()
+						decl.init = ParseUnaryExpr()
 '					Local value:String
 						
 						'_toker.NextToke()

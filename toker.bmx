@@ -29,7 +29,7 @@ Type TToker
 	"const;local;global;field;method;function;type;"+ ..
 	"and;or;shl;shr;end;if;then;else;elseif;endif;while;wend;repeat;until;forever;"+ ..
 	"for;to;step;next;return;"+ ..
-	"alias;rem;endrem;throw;assert;try;catch;nodebug;"
+	"alias;rem;endrem;throw;assert;try;catch;nodebug;incbin;"
 
 	Global _symbols$[]=[ "..","[]",":*",":/",":+",":-",":|",":&",":~~",":shr",":shl" ]
 	Global _symbols_map$[]=[ "..","[]","*=","/=","+=","-=","|=","&=","~~=","=>>", "=<<" ]

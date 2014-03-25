@@ -527,6 +527,31 @@ End Rem
 	Method TransThrowStmt$( stmt:TThrowStmt )
 	End Method
 	
+
+	Method TransBuiltinExpr$( expr:TBuiltinExpr )
+		If TMinExpr(expr) Return TransMinExpr(TMinExpr(expr))
+		If TMaxExpr(expr) Return TransMaxExpr(TMaxExpr(expr))
+		If TAbsExpr(expr) Return TransAbsExpr(TAbsExpr(expr))
+		If TAscExpr(expr) Return TransAscExpr(TAscExpr(expr))
+		If TLenExpr(expr) Return TransLenExpr(TLenExpr(expr))
+		Err "TODO : TransBuiltinExpr()"
+	End Method
+	
+	Method TransMinExpr:String(expr:TMinExpr)
+	End Method
+
+	Method TransMaxExpr:String(expr:TMaxExpr)
+	End Method
+
+	Method TransAbsExpr:String(expr:TAbsExpr)
+	End Method
+
+	Method TransAscExpr:String(expr:TAscExpr)
+	End Method
+
+	Method TransLenExpr:String(expr:TLenExpr)
+	End Method
+
 	'***** Block statements - all very C like! *****
 	
 	Method Emit( t$, useIndent:Int = True )

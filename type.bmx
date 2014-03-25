@@ -230,7 +230,7 @@ Type TByteType Extends TNumericType
 			Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
 			Return ctor And ctor.IsCtor()
 		EndIf
-		Return TNumericType( ty )<>Null Or TStringType( ty )<>Null
+		Return TNumericType( ty )<>Null Or TStringType( ty )<>Null Or TByteVarPtrType( ty )<> Null
 	End Method
 
 	Method ToPointer:TPointerType()
@@ -254,7 +254,7 @@ Type TShortType Extends TNumericType
 			Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
 			Return ctor And ctor.IsCtor()
 		EndIf
-		Return TNumericType( ty )<>Null Or TStringType( ty )<>Null
+		Return TNumericType( ty )<>Null Or TStringType( ty )<>Null Or TShortVarPtrType( ty )<> Null
 	End Method
 	
 	Method ToPointer:TPointerType()
@@ -278,7 +278,7 @@ Type TLongType Extends TNumericType ' BaH Long
 			Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
 			Return ctor And ctor.IsCtor()
 		EndIf
-		Return TNumericType( ty )<>Null Or TStringType( ty )<>Null
+		Return TNumericType( ty )<>Null Or TStringType( ty )<>Null Or TLongVarPtrType( ty )<> Null
 	End Method
 	
 	Method ToPointer:TPointerType()
@@ -302,7 +302,7 @@ Type TFloatType Extends TNumericType
 			Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
 			Return ctor And ctor.IsCtor()
 		EndIf	
-		Return TNumericType( ty )<>Null Or TStringType( ty )<>Null
+		Return TNumericType( ty )<>Null Or TStringType( ty )<>Null Or TFloatVarPtrType( ty )<> Null
 	End Method
 
 	Method ToPointer:TPointerType()
@@ -327,7 +327,7 @@ Type TDoubleType Extends TNumericType
 			Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
 			Return ctor And ctor.IsCtor()
 		EndIf	
-		Return TNumericType( ty )<>Null Or TStringType( ty )<>Null
+		Return TNumericType( ty )<>Null Or TStringType( ty )<>Null Or TDoubleVarPtrType( ty )<> Null
 	End Method
 
 	Method ToPointer:TPointerType()
@@ -402,7 +402,7 @@ Type TArrayType Extends TType
 	
 	Method ExtendsType:Int( ty:TType )
 		Local arrayType:TArrayType=TArrayType( ty )
-		Return (arrayType And ( TVoidType( elemType ) Or elemType.EqualsType( arrayType.elemType ) )) Or TPointerType(ty)
+		Return (arrayType And ( TVoidType( elemType ) Or elemType.EqualsType( arrayType.elemType ) )) Or TPointerType(ty) <> Null Or TObjectType(ty) <> Null
 	End Method
 	
 	Method Semant:TType()
@@ -515,6 +515,14 @@ Type TIdentType Extends TType
 		If i=-1
 			tyid=ident
 			ty=_env.FindType( tyid,targs )
+
+			' finally scan all modules for it
+			If Not ty Then
+				For Local mdecl:TModuleDecl = EachIn _appInstance.globalImports.Values()
+					ty=mdecl.FindType( tyid,targs )
+					If ty Exit
+				Next
+			End If
 		Else
 			' try scope search first
 			tyid=ident[..i]
