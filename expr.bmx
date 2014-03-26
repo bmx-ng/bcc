@@ -692,6 +692,9 @@ Type TCastExpr Extends TExpr
 					op="ToFloat"
 				Else If TStringType( ty )
 					op="ToString"
+				Else If TBytePtrType( ty )
+					exprType = ty
+					Return expr
 				Else
 					InternalErr
 				EndIf
@@ -1517,7 +1520,7 @@ Type TLenExpr Extends TBuiltinExpr
 	End Method
 
 	Method ToString$()
-		Return "TLenExpr(,"+expr.ToString()+")"
+		Return "TLenExpr("+expr.ToString()+")"
 	End Method
 		
 End Type
@@ -1551,7 +1554,7 @@ Type TAbsExpr Extends TBuiltinExpr
 	End Method
 
 	Method ToString$()
-		Return "TAbsExpr(,"+expr.ToString()+")"
+		Return "TAbsExpr("+expr.ToString()+")"
 	End Method
 
 End Type
@@ -1569,7 +1572,7 @@ Type TAscExpr Extends TBuiltinExpr
 	End Method
 
 	Method ToString$()
-		Return "TAscExpr(,"+expr.ToString()+")"
+		Return "TAscExpr("+expr.ToString()+")"
 	End Method
 
 End Type
@@ -1634,5 +1637,31 @@ Type TMaxExpr Extends TBuiltinExpr
 		Return "TMaxExpr("+expr.ToString()+"," + expr2.ToString() + ")"
 	End Method
 
+End Type
+
+Type TSizeOfExpr Extends TBuiltinExpr
+	
+	Method Create:TSizeOfExpr( expr:TExpr )
+		Self.id="sizeof"
+		Self.expr=expr
+		Return Self
+	End Method
+
+	Method Semant:TExpr()
+		If exprType Return Self
+		
+		expr=expr.Semant()
+		exprType=TType.intType
+		Return Self
+	End Method
+	
+	Method Copy:TExpr()
+		Return New TSizeOfExpr.Create( CopyExpr(expr) )
+	End Method
+
+	Method ToString$()
+		Return "TSizeOfExpr("+expr.ToString()+")"
+	End Method
+		
 End Type
 

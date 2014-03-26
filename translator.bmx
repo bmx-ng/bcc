@@ -255,6 +255,7 @@ End Rem
 		Case "*","/" Return op
 		Case "shl" Return "<<"
 		Case "shr" Return ">>"
+		Case "sar" Return ">>"
 		Case "mod" Return " % "
 		Case "and" Return " && "
 		Case "or" Return " || "
@@ -272,6 +273,7 @@ End Rem
 		Case "mod=" Return "%="
 		Case "shl=" Return "<<="
 		Case "shr=" Return ">>="
+		Case "sar=" Return ">>="
 		End Select
 		Return op
 	End Method
@@ -293,7 +295,7 @@ End Rem
 			Select TBinaryExpr( expr ).op
 			Case "*","/","mod" Return 4
 			Case "+","-" Return 5
-			Case "shl","shr" Return 6
+			Case "shl","shr", "sar" Return 6
 			Case "<","<=",">",">=" Return 7
 			Case "=","<>" Return 8
 			Case "&" Return 9
@@ -534,6 +536,7 @@ End Rem
 		If TAbsExpr(expr) Return TransAbsExpr(TAbsExpr(expr))
 		If TAscExpr(expr) Return TransAscExpr(TAscExpr(expr))
 		If TLenExpr(expr) Return TransLenExpr(TLenExpr(expr))
+		If TSizeOfExpr(expr) Return TransSizeOfExpr(TSizeOfExpr(expr))
 		Err "TODO : TransBuiltinExpr()"
 	End Method
 	
@@ -550,6 +553,9 @@ End Rem
 	End Method
 
 	Method TransLenExpr:String(expr:TLenExpr)
+	End Method
+
+	Method TransSizeOfExpr:String(expr:TSizeOfExpr)
 	End Method
 
 	'***** Block statements - all very C like! *****

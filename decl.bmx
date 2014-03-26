@@ -494,7 +494,8 @@ Type TScopeDecl Extends TDecl
 	End Method
 	
 	Method InsertDecl( decl:TDecl )
-		If decl.scope And Not attrs & DECL_INITONLY InternalErr
+
+		If decl.scope And Not (decl.attrs & DECL_INITONLY) InternalErr
 		
 		Local ident$=decl.ident
 		If Not ident Return
@@ -672,16 +673,21 @@ End Rem
 				match=func
 				Exit
 			End If
-			
+
 			For Local i:Int=0 Until argDecls.Length
 
 				If i<argExprs.Length And argExprs[i]
 				
 					Local declTy:TType=argDecls[i].ty
 					Local exprTy:TType=argExprs[i].exprType
-					
+
 					If TFunctionPtrType(declTy) And TInvokeExpr(argExprs[i]) Then
 						If TFunctionPtrType(declTy).equalsDecl(TInvokeExpr(argExprs[i]).decl) Continue
+					End If
+
+					' not ideal - since the arg is configured as a Byte Ptr, we can't check that the function is of the correct type.
+					If TBytePtrType(declTy) And TInvokeExpr(argExprs[i]) Then
+						Continue
 					End If
 					
 					If exprTy.EqualsType( declTy ) Continue

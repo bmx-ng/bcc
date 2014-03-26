@@ -160,7 +160,7 @@ Function MakeKeywords:String()
 	keywords :+ "Len%(v:Object)=~qbrl_blitz_keywords_len~q~n"
 	keywords :+ "Min%(v1%,v2%)=~qbrl_blitz_keywords_min~q~n"
 	keywords :+ "Max%(v1%,v2%)=~qbrl_blitz_keywords_max~q~n"
-	keywords :+ "SizeOf%(v%)=~qbrl_blitz_keywords_sizeof~q~n"
+	'keywords :+ "SizeOf%(v%)=~qbrl_blitz_keywords_sizeof~q~n"
 	'keywords :+ "Incbin(v$)=~qbrl_blitz_keywords_incbin~q~n"
 	keywords :+ "IncbinPtr@*(v$)=~qbbIncbinPtr~q~n"
 	keywords :+ "IncbinLen%(v$)=~qbbIncbinLen~q~n"

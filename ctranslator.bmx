@@ -84,6 +84,14 @@ Type TCTranslator Extends TTranslator
 		If TFloatVarPtrType( ty ) Return "BBFLOAT *"
 		If TDoubleVarPtrType( ty ) Return "BBDOUBLE *"
 		If TLongVarPtrType( ty ) Return "BBLONG *"
+
+		If TIntVarPtrPtrType( ty ) Return "BBINT **"
+		If TByteVarPtrPtrType( ty ) Return "BBBYTE **"
+		If TShortVarPtrPtrType( ty ) Return "BBSHORT **"
+		If TFloatVarPtrPtrType( ty ) Return "BBFLOAT **"
+		If TDoubleVarPtrPtrType( ty ) Return "BBDOUBLE **"
+		If TLongVarPtrPtrType( ty ) Return "BBLONG **"
+
 		InternalErr
 	End Method
 
@@ -188,12 +196,23 @@ Type TCTranslator Extends TTranslator
 						t:+ "&" + TInvokeExpr(TCastExpr(args[i]).expr).decl.munged
 						Continue
 					End If
-					
+
 					If TObjectType(args[i].exprType) And TObjectType(args[i].exprType).classDecl = TClassDecl.nullObjectClass Then
 						t:+ "0"
 						Continue
 					End If
 					
+					' Object -> Byte Ptr
+					If TBytePtrType(TArgDecl(decl.argDecls[i].actual).ty) And TObjectType(args[i].exprType) Then
+						t:+ Bra("(BBBYTE*)" + Bra(args[i].Trans())) + "+" + Bra("sizeof(void*)+4")
+						Continue
+					End If
+					
+				Else If TNumericType(TArgDecl(decl.argDecls[i].actual).ty)  Then
+					If TObjectType(args[i].exprType) And TObjectType(args[i].exprType).classDecl = TClassDecl.nullObjectClass Then
+						t:+ "0"
+						Continue
+					End If
 				End If
 				t:+TransTemplateCast( TArgDecl(decl.argDecls[i].actual).ty,args[i].exprType,args[i].Trans() )
 			Else
@@ -377,7 +396,7 @@ Type TCTranslator Extends TTranslator
 	End Method
 		
 	Method TransFunc$( decl:TFuncDecl,args:TExpr[],lhs:TExpr )
-'If decl.ident = "glTexImage2D" DebugStop
+'If decl.ident = "FT_Init_FreeType" DebugStop
 		If decl.IsMethod()
 			If lhs And Not TSelfExpr(lhs) Then
 				If lhs.exprType = TType.stringType Then
@@ -568,7 +587,20 @@ Type TCTranslator Extends TTranslator
 			End If
 		End If
 	End Method
-		
+
+	Method TransSizeOfExpr:String(expr:TSizeOfExpr)
+
+		If TVarExpr(expr.expr) Then
+			Local obj:TObjectType = TObjectType(TVarExpr(expr.expr).exprType)
+			If obj Then
+				Return Bra(TVarExpr(expr.expr).decl.munged + "->clas->instance_size-(sizeof(void*)+4)")
+			End If
+			
+			
+		End If
+		InternalErr
+	End Method
+
 	'***** Expressions *****
 
 	Method TransConstExpr$( expr:TConstExpr )
@@ -711,6 +743,8 @@ Type TCTranslator Extends TTranslator
 				If TIntType( src) Return Bra("&"+t)
 				If TLongType( src) Return Bra("&"+t)
 				If TDoubleType( src) Return Bra("&"+t)
+
+				If TPointerType( src) Return Bra("&"+t)
 			Else
 				Return Bra(TransValue(TConstExpr(expr.expr).ty, TConstExpr(expr.expr).value))
 			End If
@@ -917,6 +951,11 @@ Type TCTranslator Extends TTranslator
 '		If ObjectType( stmt.rhs.exprType )
 '			If stmt.rhs.exprType.GetClass().IsInterface() rhs="GC_IPTR"+Bra(rhs)
 '		Endif
+		If TBytePtrType(stmt.lhs.exprType) And rhs = "&bbNullObject" Then
+			rhs = "0"
+		End If
+
+
 		If TStringType(stmt.lhs.exprType) Then
 '			s:+ "{"	
 '			s:+ "BBSTRING tmp=" + lhs + ";~n"
@@ -939,10 +978,6 @@ Type TCTranslator Extends TTranslator
 			End If
 			
 			s :+ "*" + lhs+TransAssignOp( stmt.op )+rhs
-		Else If TBytePtrType(stmt.lhs.exprType) Then
-			If rhs = "&bbNullObject" Then
-				rhs = "0"
-			End If
 		Else
 			s :+ lhs+TransAssignOp( stmt.op )+rhs
 		End If

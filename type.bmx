@@ -442,6 +442,7 @@ Type TObjectType Extends TType
 	Method ExtendsType:Int( ty:TType )
 		Local objty:TObjectType=TObjectType( ty )
 		If objty Return classDecl.ExtendsClass( objty.classDecl )
+		If TBytePtrType( ty ) Return True
 		Local op$
 		If TBoolType( ty )
 			op="ToBool"
@@ -646,7 +647,7 @@ Type TBytePtrType Extends TPointerType
 			Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
 			Return ctor And ctor.IsCtor()
 		EndIf
-		Return TPointerType( ty )<>Null
+		Return TPointerType( ty )<>Null Or TByteVarPtrPtrType( ty )<> Null
 	End Method
 	
 	Method ToString$()
@@ -709,7 +710,7 @@ Type TShortPtrType Extends TPointerType
 			Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
 			Return ctor And ctor.IsCtor()
 		EndIf
-		Return TPointerType( ty )<>Null
+		Return TPointerType( ty )<>Null Or TShortVarPtrPtrType( ty )<> Null
 	End Method
 	
 	Method ToString$()
@@ -772,7 +773,7 @@ Type TIntPtrType Extends TPointerType
 			Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
 			Return ctor And ctor.IsCtor()
 		EndIf
-		Return TPointerType( ty )<>Null
+		Return TPointerType( ty )<>Null Or TShortVarPtrPtrType( ty )<> Null
 	End Method
 	
 	Method ToString$()
@@ -835,7 +836,7 @@ Type TFloatPtrType Extends TPointerType
 			Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
 			Return ctor And ctor.IsCtor()
 		EndIf
-		Return TPointerType( ty )<>Null
+		Return TPointerType( ty )<>Null Or TFloatVarPtrPtrType( ty )<> Null
 	End Method
 	
 	Method ToString$()
@@ -877,7 +878,7 @@ Type TFloatVarPtrPtrType Extends TVarPtrType
 			Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
 			Return ctor And ctor.IsCtor()
 		EndIf
-		Return TPointerType( ty )<>Null
+		Return TPointerType( ty )<>Null Or TDoubleVarPtrPtrType( ty )<> Null
 	End Method
 	
 	Method ToString$()
@@ -940,7 +941,7 @@ Type TDoubleVarPtrPtrType Extends TVarPtrType
 			Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
 			Return ctor And ctor.IsCtor()
 		EndIf
-		Return TPointerType( ty )<>Null
+		Return TPointerType( ty )<>Null Or TLongVarPtrPtrType( ty )<> Null
 	End Method
 	
 	Method ToString$()

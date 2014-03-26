@@ -713,6 +713,17 @@ Type TParser
 				expr=New TCastExpr.Create( ty,expr,CAST_EXPLICIT )
 '				expr=New TIdentExpr.Create( id )
 			EndIf
+		Case "sizeof"
+			NextToke
+			' optional brackets
+			If CParse( "(" )
+				expr=ParseExpr()
+				Parse ")"
+				expr=New TSizeOfExpr.Create( expr )
+			Else
+				expr=ParseExpr()
+				expr=New TSizeOfExpr.Create( expr )
+			EndIf
 		Case "len"
 			NextToke
 			' optional brackets
@@ -932,7 +943,7 @@ Type TParser
 		Repeat
 			Local op$=_toke
 			Select op
-			Case "*","/","mod","shl","shr"
+			Case "*","/","mod","shl","shr", "sar"
 				NextToke
 				Local rhs:TExpr=ParseUnaryExpr()
 				expr=New TBinaryMathExpr.Create( op,expr,rhs )
@@ -1453,7 +1464,7 @@ Type TParser
 
 			Select _toke.ToLower()
 			'"=","*=","/=","+=","-=","&=","|=","~~=","mod","shl","shr"
-			Case "=",":*",":/",":+",":-",":&",":|",":~~","mod","shl","shr", ":shl", ":shr"
+			Case "=",":*",":/",":+",":-",":&",":|",":~~","mod","shl","shr", ":shl", ":shr", "sar", ":sar"
 'DebugLog _toke
 				' remap symbols...
 				For Local i:Int = 0 Until TToker._symbols.length
