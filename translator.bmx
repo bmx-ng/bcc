@@ -330,7 +330,7 @@ End Rem
 
 	Method TransLocalDecl$( munged$,init:TExpr ) Abstract
 
-	Method TransGlobalDecl$( munged$,init:TExpr ) Abstract
+	Method TransGlobalDecl$( munged$,init:TExpr, attrs:Int ) Abstract
 	
 	Method EmitPushErr()
 	End Method
@@ -644,7 +644,7 @@ End Rem
 		Local gdecl:TGlobalDecl=TGlobalDecl( stmt.decl )
 		If gdecl Then
 			MungDecl gdecl
-			Return TransGlobalDecl( gdecl.munged, gdecl.init )
+			Return TransGlobalDecl( gdecl.munged, gdecl.init, gdecl.attrs )
 		End If
 		InternalErr
 	End Method

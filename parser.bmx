@@ -852,6 +852,11 @@ Type TParser
 			Case TOKE_FLOATLIT
 				expr=New TConstExpr.Create( TType.floatType,_toke )
 				NextToke
+
+				Local ty:TType = ParseConstNumberType()
+				If ty Then
+					TConstExpr(expr).ty = ty
+				End If
 			Case TOKE_STRINGLIT
 				expr=New TConstExpr.Create( TType.stringType,BmxUnquote( _toke ) )
 				_app.mapStringConsts(BmxUnquote( _toke ))
@@ -2449,8 +2454,15 @@ End Rem
 
 				attrs = 0
 
-			Case "const","global"
+			Case "const"
 				_module.InsertDecls ParseDecls( _toke,attrs )
+			Case "global"
+				Local list:TList = ParseDecls( _toke,attrs )
+				_module.InsertDecls list
+				For Local gdecl:TGlobalDecl = EachIn list
+					gdecl.attrs :| DECL_INITONLY
+					_block.AddStmt New TDeclStmt.Create( gdecl )
+				Next
 			Case "type"
 				_module.InsertDecl ParseClassDecl( _toke,attrs )
 			'Case "interface"

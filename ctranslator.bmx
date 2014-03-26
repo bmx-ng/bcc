@@ -188,6 +188,12 @@ Type TCTranslator Extends TTranslator
 						t:+ "&" + TInvokeExpr(TCastExpr(args[i]).expr).decl.munged
 						Continue
 					End If
+					
+					If TObjectType(args[i].exprType) And TObjectType(args[i].exprType).classDecl = TClassDecl.nullObjectClass Then
+						t:+ "0"
+						Continue
+					End If
+					
 				End If
 				t:+TransTemplateCast( TArgDecl(decl.argDecls[i].actual).ty,args[i].exprType,args[i].Trans() )
 			Else
@@ -277,8 +283,14 @@ Type TCTranslator Extends TTranslator
 		Return TransType( init.exprType, munged )+" "+munged+"="+init.Trans()
 	End Method
 
-	Method TransGlobalDecl$( munged$,init:TExpr )
-		Local glob:String = "static " + TransType( init.exprType, munged )+" "+munged+"="
+	Method TransGlobalDecl$( munged$,init:TExpr, attrs:Int )
+		Local glob:String 
+		
+		If Not (attrs & DECL_INITONLY) Then
+			glob :+"static " + TransType( init.exprType, munged )+" "
+		End If
+		
+		glob :+ munged+"="
 		
 		If TNewObjectExpr(init) Then
 			glob :+ "0;~n"
@@ -365,7 +377,7 @@ Type TCTranslator Extends TTranslator
 	End Method
 		
 	Method TransFunc$( decl:TFuncDecl,args:TExpr[],lhs:TExpr )
-'If decl.munged = "brl_polledinput_EnablePolledInput" DebugStop
+'If decl.ident = "glTexImage2D" DebugStop
 		If decl.IsMethod()
 			If lhs And Not TSelfExpr(lhs) Then
 				If lhs.exprType = TType.stringType Then
@@ -927,6 +939,10 @@ Type TCTranslator Extends TTranslator
 			End If
 			
 			s :+ "*" + lhs+TransAssignOp( stmt.op )+rhs
+		Else If TBytePtrType(stmt.lhs.exprType) Then
+			If rhs = "&bbNullObject" Then
+				rhs = "0"
+			End If
 		Else
 			s :+ lhs+TransAssignOp( stmt.op )+rhs
 		End If
@@ -2363,15 +2379,15 @@ End Rem
 		
 		' initialise globals
 		For Local decl:TGlobalDecl=EachIn app.semantedGlobals
-'DebugStop
+
 			decl.Semant
 			
 			' TODO : what about OnDebugStop etc, who have no init ?
-			If decl.init Then
+			If decl.init And Not (decl.attrs & DECL_INITONLY) Then
 				Emit TransGlobal( decl )+"="+decl.init.Trans()+";"
 			End If
 		Next
-		
+
 		' now do the local main stuff
 		app.mainFunc.Semant()
 		EmitBlock app.mainFunc

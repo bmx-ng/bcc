@@ -11,6 +11,7 @@ Const DECL_SEMANTING:Int=	$200000
 Const DECL_POINTER:Int=	$400000
 
 Const DECL_ARG:Int=     $800000
+Const DECL_INITONLY:Int=$1000000
 
 Const CLASS_INTERFACE:Int=	$001000
 Const CLASS_THROWABLE:Int=	$002000
@@ -493,12 +494,14 @@ Type TScopeDecl Extends TDecl
 	End Method
 	
 	Method InsertDecl( decl:TDecl )
-		If decl.scope InternalErr
+		If decl.scope And Not attrs & DECL_INITONLY InternalErr
 		
 		Local ident$=decl.ident
 		If Not ident Return
 		
-		decl.scope=Self
+		If Not decl.scope Then
+			decl.scope=Self
+		End If
 		_decls.AddLast decl
 
 		'Local _decls:TMap
