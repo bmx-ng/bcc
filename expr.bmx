@@ -105,6 +105,7 @@ Type TExpr
 	
 	Method BalanceTypes:TType( lhs:TType,rhs:TType )
 		If TStringType( lhs ) Or TStringType( rhs ) Return TType.stringType
+		If TDoubleType( lhs ) Or TDoubleType( rhs ) Return TType.floatType
 		If TFloatType( lhs ) Or TFloatType( rhs ) Return TType.floatType
 		If TPointerType( lhs ) Or TPointerType( rhs ) Then
 			If TPointerType( lhs ) Return lhs
