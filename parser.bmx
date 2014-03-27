@@ -1335,7 +1335,7 @@ Type TParser
 
 		block.AddStmt New TDeclStmt.Create( tmpVar )
 
-		While _toke<>"end" And _toke<>"default"
+		While _toke<>"end" And _toke<>"default" And _toke<>"endselect"
 			SetErr
 			Select _toke
 			Case "~n"
@@ -1361,7 +1361,7 @@ Type TParser
 				block=ifstmt.thenBlock
 
 				PushBlock block
-				While _toke<>"case" And _toke<>"default" And _toke<>"end"
+				While _toke<>"case" And _toke<>"default" And _toke<>"end" And _toke<>"endselect"
 					ParseStmt
 				Wend
 				PopBlock
@@ -1375,7 +1375,7 @@ Type TParser
 		If _toke="default"
 			NextToke
 			PushBlock block
-			While _toke<>"end"
+			While _toke<>"end" And _toke<>"endselect"
 				SetErr
 				Select _toke
 				Case "case"
@@ -1389,8 +1389,11 @@ Type TParser
 		EndIf
 
 		SetErr
-		Parse "end"
-		CParse "select"
+		
+		If Not CParse("endselect") Then
+			Parse "end"
+			Parse "select"
+		End If
 	End Method
 
 	Method ParseRemStmt()
@@ -1464,7 +1467,7 @@ Type TParser
 
 			Select _toke.ToLower()
 			'"=","*=","/=","+=","-=","&=","|=","~~=","mod","shl","shr"
-			Case "=",":*",":/",":+",":-",":&",":|",":~~","mod","shl","shr", ":shl", ":shr", "sar", ":sar"
+			Case "=",":*",":/",":+",":-",":&",":|",":~~","mod","shl","shr", ":shl", ":shr", "sar", ":sar", ":mod"
 'DebugLog _toke
 				' remap symbols...
 				For Local i:Int = 0 Until TToker._symbols.length

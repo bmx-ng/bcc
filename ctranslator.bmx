@@ -1200,7 +1200,7 @@ End Rem
 
 	Method EmitFuncDecl( decl:TFuncDecl, proto:Int = False, classFunc:Int = False )
 		'If Not proto And decl.IsAbstract() Return
-		
+
 		'PushMungScope
 		BeginLocalScope
 'DebugStop
@@ -1351,7 +1351,7 @@ End Rem
 	
 	Method EmitBBClassClassFuncProto( classDecl:TClassDecl )
 
-		Local reserved:String = "New,Delete,ToString,ObjectCompare,SendMessage,_reserved1_,_reserved2_,_reserved3_".ToLower()
+		Local reserved:String = ",New,Delete,ToString,Compare,SendMessage,_reserved1_,_reserved2_,_reserved3_,".ToLower()
 
 		If classDecl.superClass Then
 			EmitBBClassClassFuncProto(classDecl.superClass)
@@ -1363,7 +1363,7 @@ End Rem
 		For Local decl:TDecl=EachIn classDecl.Decls()
 			Local fdecl:TFuncDecl =TFuncDecl( decl )
 			If fdecl
-				If reserved.Find(fdecl.ident.ToLower()) = -1 Then
+				If reserved.Find("," + fdecl.ident.ToLower() + ",") = -1 Then
 					EmitBBClassFuncProto( fdecl )
 					Continue
 				End If
@@ -1390,7 +1390,7 @@ End Rem
 			Emit "BBSTRING _" + classid + "_ToString(BBOBJECT o);"
 		End If
 		
-		If classHasFunction(classDecl, "ObjectCompare") Then
+		If classHasFunction(classDecl, "Compare") Then
 			Emit "BBINT _" + classid + "_ObjectCompare(BBOBJECT o, BBOBJECT otherObject);"
 		End If
 
@@ -1398,7 +1398,7 @@ End Rem
 			Emit "void _" + classid + "_SendMessage(BBOBJECT o, BBOBJECT message, BBOBJECT source);"
 		End If
 
-		Local reserved:String = "New,Delete,ToString,ObjectCompare,SendMessage,_reserved1_,_reserved2_,_reserved3_".ToLower()
+		Local reserved:String = ",New,Delete,ToString,Compare,SendMessage,_reserved1_,_reserved2_,_reserved3_,".ToLower()
 		
 		'Local fdecls:TFuncDecl[] = classDecl.GetAllFuncDecls(Null, False)
 		For Local decl:TDecl=EachIn classDecl.Decls()
@@ -1406,7 +1406,7 @@ End Rem
 		
 			Local fdecl:TFuncDecl =TFuncDecl( decl )
 			If fdecl
-				If reserved.Find(fdecl.ident.ToLower()) = -1 Then
+				If reserved.Find("," + fdecl.ident.ToLower() + ",") = -1 Then
 					EmitClassFuncProto( fdecl )
 					Continue
 				End If
@@ -1656,14 +1656,14 @@ End Rem
 		Next
 		Emit "}"
 		End Rem
-		Local reserved:String = "New,Delete".ToLower()
+		Local reserved:String = ",New,Delete,".ToLower()
 
 		'methods		
 		For Local decl:TDecl=EachIn classDecl.Decls()
 		
 			Local fdecl:TFuncDecl=TFuncDecl( decl )
 			If fdecl
-				If reserved.Find(fdecl.ident.ToLower()) = -1 Then
+				If reserved.Find("," + fdecl.ident.ToLower() + ",") = -1 Then
 					EmitFuncDecl fdecl, , True
 					Continue
 				End If
@@ -1697,7 +1697,7 @@ End Rem
 		Next
 	
 	
-		reserved = "New,Delete,ToString,ObjectCompare,SendMessage,_reserved1_,_reserved2_,_reserved3_".ToLower()
+		reserved = ",New,Delete,ToString,Compare,SendMessage,_reserved1_,_reserved2_,_reserved3_,".ToLower()
 	
 		Emit "struct BBClass_" + classid + " " + classid + "={"
 		
@@ -1783,7 +1783,7 @@ End Rem
 		Local fdecls:TFuncDecl[] = classDecl.GetAllFuncDecls()
 		'For Local decl:TFuncDecl = EachIn classDecl.Decls()
 		For Local decl:TFuncDecl = EachIn fdecls
-			If reserved.Find(decl.ident.ToLower()) = -1 Then
+			If reserved.Find("," + decl.ident.ToLower() + ",") = -1 Then
 			
 				MungDecl decl
 
@@ -1960,7 +1960,7 @@ End Rem
 	End Method
 	
 	Method EmitIfcClassFuncDecl(funcDecl:TFuncDecl)
-	
+
 		funcDecl.Semant
 	
 		Local func:String
@@ -1994,7 +1994,7 @@ End Rem
 	End Method
 
 	Method EmitIfcFuncDecl(funcDecl:TFuncDecl)
-	
+
 		Local func:String
 	
 		func :+ funcDecl.ident
@@ -2115,13 +2115,13 @@ End Rem
 		Emit "-New%()=" + Enquote("_" + classDecl.munged + "_New")
 		Emit "-Delete%()=" + Enquote("_" + classDecl.munged + "_Delete")
 		
-		Local reserved:String = "New,Delete,ToString,ObjectCompare,SendMessage,_reserved1_,_reserved2_,_reserved3_".ToLower()
+		Local reserved:String = ",New,Delete,ToString,Compare,SendMessage,_reserved1_,_reserved2_,_reserved3_,".ToLower()
 
 		For Local decl:TDecl=EachIn classDecl.Decls()
 		
 			Local fdecl:TFuncDecl=TFuncDecl( decl )
 			If fdecl
-				If reserved.Find(fdecl.ident.ToLower()) = -1 Then
+				If reserved.Find("," + fdecl.ident.ToLower() + ",") = -1 Then
 					EmitIfcClassFuncDecl fdecl
 				End If
 				Continue
@@ -2361,9 +2361,10 @@ End Rem
 				End If
 				Continue
 			EndIf
-			
+
 			Local fdecl:TFuncDecl=TFuncDecl( decl )
 			If fdecl And Not fdecl.IsExtern()
+
 				' don't include the main function - it's handled separately
 				If fdecl = app.mainFunc Then
 					Continue

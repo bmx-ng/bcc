@@ -29,10 +29,11 @@ Type TToker
 	"const;local;global;field;method;function;type;"+ ..
 	"and;or;shl;shr;sar;end;if;then;else;elseif;endif;while;wend;repeat;until;forever;"+ ..
 	"for;to;step;next;return;"+ ..
-	"alias;rem;endrem;throw;assert;try;catch;nodebug;incbin;"
+	"alias;rem;endrem;throw;assert;try;catch;nodebug;incbin;"+ ..
+	"endselect;endmethod;endfunction;"
 
-	Global _symbols$[]=[ "..","[]",":*",":/",":+",":-",":|",":&",":~~",":shr",":shl",":sar" ]
-	Global _symbols_map$[]=[ "..","[]","*=","/=","+=","-=","|=","&=","~~=","=>>", "=<<","=>>" ]
+	Global _symbols$[]=[ "..","[]",":*",":/",":+",":-",":|",":&",":~~",":shr",":shl",":sar",":mod" ]
+	Global _symbols_map$[]=[ "..","[]","*=","/=","+=","-=","|=","&=","~~=",">>=", "<<=",">>=","&=" ]
 	'Global _symbols$[]=[ "..","[]",":=",":*",":/",":+",":-",":|",":&",":~~" ]
 	'Global _symbols_map$[]=[ "..","[]",":=","*=","/=","+=","-=","|=","&=","~~=" ]
 
