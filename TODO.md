@@ -16,10 +16,6 @@ OpenGL/EGL
 ----------
 See what needs to be done to port GL to EGL (for such platforms as the RPi)
 
-Incbin
-------
-Embed files in headers, and add code to register them at runtime.
-
 Solve the Method Calls problem
 ------------------------------
 There is an issue with the way the following code is currently handled :
@@ -36,3 +32,8 @@ tmpPixmap = pixmap_class->md_window(pixmap_obj,n*8,0,8,16);
 ...
 tmpPixmap_class->md_copy(tmpPixmap)
 ...
+
+Framework
+---------
+When compiling an application with a "Framework", the framework chosen is passed down to all the imported source files and applied to them too. Without it, each imported source is assumed to have access to *all* the standard modules (and will include all of them in their interface).
+Currently not supporting an application build without framework...
