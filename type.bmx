@@ -1073,6 +1073,8 @@ End Type
 
 Type TStringCharPtrType Extends TPointerType
 
+	Field cdecl:TClassDecl
+
 	Method EqualsType:Int( ty:TType )
 		Return TStringCharPtrType( ty )<>Null
 	End Method
@@ -1084,6 +1086,20 @@ Type TStringCharPtrType Extends TPointerType
 			Return ctor And ctor.IsCtor()
 		EndIf
 		Return TPointerType( ty )<>Null
+	End Method
+
+	Method GetClass:TClassDecl()
+		If cdecl Return cdecl
+		
+		Local modid$="brl.classes"
+		Local mdecl:TModuleDecl=_env.FindModuleDecl( modid )
+		If Not mdecl Err "Module '"+modid+"' not found"
+		'clsid=ident[i+1..] ' BaH
+	'DebugStop
+		cdecl=TClassDecl(mdecl.FindDecl( "string" ))
+
+		'Return _env.FindClassDecl( "brl.classes.string" )
+		Return cdecl
 	End Method
 	
 	Method ToString$()
