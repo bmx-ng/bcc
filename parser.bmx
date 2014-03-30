@@ -121,39 +121,6 @@ End Type
 
 
 
-Type TFuncCallExpr Extends TExpr
-	Field expr:TExpr
-	Field args:TExpr[]
-
-	Method Create:TFuncCallExpr( expr:TExpr,args:TExpr[]=Null )
-		Self.expr=expr
-		If args Then
-			Self.args=args
-		Else
-			Self.args = New TExpr[0]
-		End If
-		Return Self
-	End Method
-
-	Method Copy:TExpr()
-		Return New TFuncCallExpr.Create( CopyExpr(expr),CopyArgs(args) )
-	End Method
-
-	Method ToString$()
-		Local t$="TFuncCallExpr("+expr.ToString()
-		For Local arg:TExpr=EachIn args
-			t:+","+arg.ToString()
-		Next
-		Return t+")"
-	End Method
-
-	Method Semant:TExpr()
-		args=SemantArgs( args )
-		Return expr.SemantFunc( args )
-	End Method
-
-End Type
-
 Type TIncbin
 
 	Field file:String
@@ -384,7 +351,7 @@ Type TParser
 		If CParse( "float" ) Return TType.floatType
 		If CParse( "string" ) Return TType.stringType
 		If CParse( "object" ) Return TType.objectType
-		If CParse( "long" ) Return TType.intType ' BaH Long
+		If CParse( "long" ) Return TType.longType ' BaH Long
 		If CParse( "double" ) Return TType.doubleType
 	End	Method
 
@@ -393,7 +360,7 @@ Type TParser
 		If CParse( "byte" ) Return TType.byteType
 		If CParse( "int" ) Return TType.intType
 		If CParse( "float" ) Return TType.floatType
-		If CParse( "long" ) Return TType.intType ' BaH Long
+		If CParse( "long" ) Return TType.longType ' BaH Long
 		If CParse( "double" ) Return TType.doubleType
 	End	Method
 
@@ -405,7 +372,7 @@ Type TParser
 		If CParse( "float" ) Return TType.floatType
 		If CParse( "string" ) Return TType.stringType
 		If CParse( "object" ) Return TType.objectType
-		If CParse( "long" ) Return TType.intType ' BaH Long
+		If CParse( "long" ) Return TType.longType ' BaH Long
 		If CParse( "double" ) Return TType.doubleType
 		Return ParseIdentType()
 	End Method
@@ -697,6 +664,21 @@ Type TParser
 
 			Local id$=_toke
 			Local ty:TType=ParseType()
+			
+			If TIntType(ty) And id.ToLower() <> "int" Then
+				Select id.ToLower()
+					Case "byte"
+						ty = TType.byteType
+					Case "short"
+						ty = TType.shortType
+					Case "long"
+						ty = TType.longType
+					Case "float"
+						ty = TType.floatType
+					Case "double"
+						ty = TType.doubleType
+				End Select
+			End If
 
 			If CParse("ptr") Then
 				ty = TType.MapToPointerType(ty)
@@ -1534,6 +1516,7 @@ Type TParser
 				End If
 
 				TFunctionPtrType(ty).func.ident = id
+
 			Else If toke = "const" Then
 				If CParse("=") Then
 					init=ParseExpr()
@@ -1572,6 +1555,11 @@ Type TParser
 
 				TFunctionPtrType(ty).func.ident = ""
 
+				' check for function pointer init
+				If CParse("=") Then
+					init=ParseExpr()
+				End If
+
 			Else If toke<>"const"
 				init=New TConstExpr.Create( ty,"" )
 			Else
@@ -1589,8 +1577,12 @@ Type TParser
 		End Select
 
 		If decl.IsExtern()
+'DebugStop
 			If CParse( "=" )
 				decl.munged=ParseStringLit()
+				If TFunctionPtrType(ty) Then
+					TFunctionPtrType(ty).func.munged = decl.munged
+				End If
 			Else
 				decl.munged=decl.ident
 			EndIf
@@ -1650,7 +1642,6 @@ Type TParser
 		EndIf
 
 		Local args:TArgDecl[]
-'If id = "png_destroy_read_struct" DebugStop
 
 		Parse "("
 		SkipEols
@@ -1745,7 +1736,10 @@ End If
 		If funcDecl.IsExtern() Or (attrs & FUNC_PTR)
 			funcDecl.munged=funcDecl.ident
 
-			If (Not (attrs & FUNC_PTR)) Or (attrs & FUNC_PTR And Not (attrs & DECL_ARG)) Then
+			' a normal function pointer definition *probably* can't be defined with a munged name?
+			' If there is an equals here, one can assume it is for an initialisation...
+			'If (Not (attrs & FUNC_PTR)) Or (attrs & FUNC_PTR And Not (attrs & DECL_ARG)) Then
+			If Not (attrs & FUNC_PTR) Then
 				If CParse( "=" )
 					funcDecl.munged=ParseStringLit()
 				End If
@@ -1754,7 +1748,6 @@ End If
 				'If funcDecl.munged="$resize"
 				'	funcDecl.retTypeExpr=TType.emptyArrayType
 				'EndIf
-
 			EndIf
 
 			If funcDecl.munged Then
@@ -1952,7 +1945,7 @@ End Rem
 		Repeat
 			SkipEols
 			Select _toke
-			Case "end"
+			Case "end", "endtype"
 				NextToke
 				Exit
 			Case "private"
@@ -2301,7 +2294,7 @@ End Rem
 		If opt_buildtype = BUILDTYPE_MODULE And opt_modulename = "brl.blitz" Then
 			' import Object and String definitions
 			Local par:TIParser = New TIParser
-			par.ParseModuleImport(_module, "brl.classes", modulepath("brl.blitz"), modulepath("brl.blitz") + "\blitz_classes.i")
+			par.ParseModuleImport(_module, "brl.classes", modulepath("brl.blitz"), modulepath("brl.blitz") + "/blitz_classes.i")
 	
 			' set up built-in keywords
 			par = New TIParser
@@ -2309,7 +2302,7 @@ End Rem
 		End If
 
 		' don't import ourself
-		If opt_buildtype = BUILDTYPE_MODULE And opt_modulename <> "brl.blitz" Then
+		If opt_modulename <> "brl.blitz" Then
 			Local par:TIParser = New TIParser
 			par.ParseModuleImport(_module, "brl.blitz", modulepath("brl.blitz"), , , MODULE_ACTUALMOD)
 		End If

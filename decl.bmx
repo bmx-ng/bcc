@@ -116,7 +116,6 @@ Type TDecl
 	End Method
 
 	Method Semant()
-'DebugStop
 		If IsSemanted() Return
 'DebugLog "Semant : " + ident
 		
@@ -238,6 +237,14 @@ Type TValDecl Extends TDecl
 						init = declInit.Copy()
 					Else
 						Local expr:TExpr=declInit.Copy().SemantFunc(argExpr)
+'						Local expr:TExpr
+'						
+'						If TFuncCallExpr(declInit) Then
+'							expr=declInit.Copy().Semant()
+'						Else
+'							expr=declInit.Copy().SemantFunc(argExpr)
+'						End If
+'						
 						If expr.exprType.EqualsType( ty ) Then
 							init = expr
 						Else
@@ -628,7 +635,7 @@ End Rem
 	
 	Method FindFuncDecl:TFuncDecl( ident$,argExprs:TExpr[] = Null,explicit:Int=False, isArg:Int = False )
 'DebugLog "FindFuncDecl : " + ident
-'If ident = "GetScale" Then DebugStop
+'If ident = "alcGetString" Then DebugStop
 		'Local funcs:TFuncDeclList=TFuncDeclList( FindDecl( ident ) )
 		Local f:TDecl = TDecl(findDecl(ident))
 		If Not f Then Return Null
@@ -636,6 +643,9 @@ End Rem
 		Local func:TFuncDecl = TFuncDecl(f)
 		If Not func Then
 			If TVarDecl(f) Then
+				If Not f.IsSemanted() Then
+					f.Semant()
+				End If
 				If TFunctionPtrType(TVarDecl(f).ty) Then
 					func = TFunctionPtrType(TVarDecl(f).ty).func
 					If Not func.scope Then
@@ -701,6 +711,11 @@ End Rem
 					exact=False
 
 					If Not explicit Exit
+				Else
+					If func.attrs & FUNC_PTR Then
+						exact=False
+						Exit
+					End If
 				EndIf
 			
 				possible=False
@@ -927,11 +942,13 @@ Type TFuncDecl Extends TBlockDecl
 		If actual<>Self Return
 		
 		'check for duplicate decl
-		For Local decl:TFuncDecl=EachIn scope.SemantedFuncs( ident )
-			If decl<>Self And EqualsArgs( decl )
-				Err "Duplicate declaration "+ToString()
-			EndIf
-		Next
+		If ident Then
+			For Local decl:TFuncDecl=EachIn scope.SemantedFuncs( ident )
+				If decl<>Self And EqualsArgs( decl )
+					Err "Duplicate declaration "+ToString()
+				EndIf
+			Next
+		End If
 		
 		' any nested functions?
 		For Local fdecl:TFuncDecl = EachIn _decls

@@ -149,16 +149,32 @@ Type TCTranslator Extends TTranslator
 			If TIntType( ty ) Return value
 			If TLongType( ty ) Return value+"LL"
 			If TFloatType( ty ) Then
-				If value.Find(".") < 0 Then
-					value :+ ".0"
+				If value = "nan.0" Then
+					Return "bbNANf"
+				Else If value = "inf.0" Then
+					Return "bbPOSINFf"
+				Else If value = "-inf.0" Then
+					Return "bbNEGINFf"
+				Else
+					If value.Find(".") < 0 Then
+						value :+ ".0"
+					End If
+					Return value+"f"
 				End If
-				Return value+"f"
 			End If
 			If TDoubleType( ty ) Then
-				If value.Find(".") < 0 Then
-					value :+ ".0"
+				If value = "nan.0" Then
+					Return "bbNANd"
+				Else If value = "inf.0" Then
+					Return "bbPOSINFd"
+				Else If value = "-inf.0" Then
+					Return "bbNEGINFd"
+				Else
+					If value.Find(".") < 0 Then
+						value :+ ".0"
+					End If
+					Return value+"f"
 				End If
-				Return value+"f"
 			End If
 			If TStringType( ty ) Return "String("+Enquote( value )+")"
 			If TByteType( ty ) Return value
@@ -175,6 +191,7 @@ Type TCTranslator Extends TTranslator
 	End Method
 	
 	Method TransArgs$( args:TExpr[],decl:TFuncDecl, objParam:String = Null )
+'If decl.ident="FromCString" DebugStop
 		Local t$
 		If objParam Then
 			t:+ objParam
@@ -188,7 +205,11 @@ Type TCTranslator Extends TTranslator
 					End If
 				Else If TFunctionPtrType(TArgDecl(decl.argDecls[i].actual).ty) Or TBytePtrType(TArgDecl(decl.argDecls[i].actual).ty) Then
 					If TInvokeExpr(args[i]) And Not TInvokeExpr(args[i]).decl.IsMethod() Then
-						t:+ "&" + TInvokeExpr(args[i]).decl.munged
+						If TBytePtrType(TArgDecl(decl.argDecls[i].actual).ty) Then
+							t:+ TInvokeExpr(args[i]).Trans()
+						Else
+							t:+ "&" + TInvokeExpr(args[i]).decl.munged
+						End If
 						Continue
 					End If
 					' some cases where we are passing a function pointer via a void* parameter.
@@ -396,7 +417,7 @@ Type TCTranslator Extends TTranslator
 	End Method
 		
 	Method TransFunc$( decl:TFuncDecl,args:TExpr[],lhs:TExpr )
-'If decl.ident = "FT_Init_FreeType" DebugStop
+'If decl.ident = "WriteStdout" DebugStop
 		If decl.IsMethod()
 			If lhs And Not TSelfExpr(lhs) Then
 				If lhs.exprType = TType.stringType Then
@@ -406,6 +427,10 @@ Type TCTranslator Extends TTranslator
 				Else If lhs.exprType = TType.stringVarPointerType Then
 'DebugStop
 					Return decl.munged + TransArgs(args, decl, "*" + TransSubExpr( lhs ))
+				End If
+				
+				If TStmtExpr(lhs) Then
+					lhs = TStmtExpr(lhs).expr
 				End If
 'If decl.ident = "Eof" DebugStop
 				
@@ -441,11 +466,17 @@ Type TCTranslator Extends TTranslator
 					Local class:String = Bra("(" + obj + TransSubExpr( lhs ) +")->clas")
 					'Local class:String = Bra("&" + decl.scope.munged)
 					Return class + "->md_" + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
-				Else If TInvokeMemberExpr(lhs) Then
+				Else If TInvokeMemberExpr(lhs)
 					Local obj:String = Bra("struct " + decl.scope.munged + "_obj*")
 					Local class:String = Bra("(" + obj + TransSubExpr( lhs ) +")->clas")
 					'Local class:String = Bra("&" + decl.scope.munged)
 					Return class + "->md_" + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
+				Else If TIndexExpr(lhs) Then
+					Local loc:String = CreateLocal(lhs)
+					Local obj:String = Bra("struct " + decl.scope.munged + "_obj*")
+					Local class:String = Bra("(" + obj + loc +")->clas")
+					'Local class:String = Bra("&" + decl.scope.munged)
+					Return class + "->md_" + decl.ident+TransArgs( args,decl, loc )
 				Else
 					InternalErr
 				End If
@@ -676,6 +707,7 @@ Type TCTranslator Extends TTranslator
 			If TFloatType( src ) Return Bra("(BBINT)"+t)
 			If TDoubleType( src ) Return Bra("(BBINT)"+t)
 			If TStringType( src ) Return "bbStringToInt" + Bra(t)
+			If TPointerType( src ) Return Bra("(BBINT)"+t)
 		 Else If TLongType( dst )
 			If TByteType( src) Return Bra("(BBLONG)"+t)
 			If TShortType( src) Return Bra("(BBLONG)"+t)
@@ -684,6 +716,7 @@ Type TCTranslator Extends TTranslator
 			If TFloatType( src ) Return Bra("(BBLONG)"+t)
 			If TDoubleType( src ) Return Bra("(BBLONG)"+t)
 			If TStringType( src ) Return "bbStringToLong" + Bra(t)
+			If TPointerType( src ) Return Bra("(BBLONG)"+t)
 		Else If TFloatType( dst )
 			If TByteType( src ) Return Bra("(BBFLOAT)"+t)
 			If TIntType( src ) Return Bra("(BBFLOAT)"+t)
@@ -691,6 +724,7 @@ Type TCTranslator Extends TTranslator
 			If TFloatType( src ) Return t
 			If TDoubleType( src ) Return Bra("(BBFLOAT)"+t)
 			If TStringType( src ) Return "bbStringToFloat" + Bra(t)
+			If TPointerType( src ) Return Bra("(BBFLOAT)"+t)
 		Else If TDoubleType( dst )
 			If TByteType( src ) Return Bra("(BBDOUBLE)"+t)
 			If TIntType( src ) Return Bra("(BBDOUBLE)"+t)
@@ -698,6 +732,7 @@ Type TCTranslator Extends TTranslator
 			If TDoubleType( src ) Return t
 			If TFloatType( src ) Return Bra("(BBDOUBLE)"+t)
 			If TStringType( src ) Return "bbStringToDouble" + Bra(t)
+			If TPointerType( src ) Return Bra("(BBDOUBLE)"+t)
 		Else If TStringType( dst )
 			If TByteType( src ) Return "bbStringFromInt"+Bra( t )
 			If TShortType( src ) Return "bbStringFromInt"+Bra( t )
@@ -1304,7 +1339,7 @@ End Rem
 			If decl.IsAbstract() Then
 				Emit "brl_blitz_NullMethodError();"
 			Else
-'If decl.ident = "Eof" DebugStop
+'If decl.ident = "Delete" DebugStop
 
 				decl.Semant()
 'If decl.ident = "LoadByteArray" DebugStop
@@ -2282,6 +2317,7 @@ End Rem
 				If Not TFunctionPtrType(gdecl.ty) Then
 					Emit "extern "+TransRefType( gdecl.ty, "" )+" "+gdecl.munged+";"	'forward reference...
 				Else
+'DebugStop
 					Emit "extern "+TransRefType( gdecl.ty, gdecl.munged )+";"	'forward reference...
 				End If
 				Continue

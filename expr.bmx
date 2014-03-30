@@ -651,7 +651,7 @@ Type TCastExpr Extends TExpr
 	
 	Method Semant:TExpr()
 		If exprType Return Self
-'DebugStop
+
 		ty=ty.Semant()
 		expr=expr.Semant()
 		
@@ -747,6 +747,12 @@ Type TCastExpr Extends TExpr
 			Return expr
 		End If
 
+		' explicit cast to number
+		If TNumericType(ty) And TPointerType(src) And flags = CAST_EXPLICIT Then
+			exprType = ty
+			Return Self
+		End If
+		
 '		If TPointerType(ty) And TIntType(src) Then
 '			exprType = ty
 '			Return expr
@@ -1081,7 +1087,7 @@ Type TBinaryLogicExpr Extends TBinaryExpr
 	
 	Method Semant:TExpr()
 		If exprType Return Self
-		
+
 		lhs=lhs.SemantAndCast( TType.boolType,CAST_EXPLICIT )
 		rhs=rhs.SemantAndCast( TType.boolType,CAST_EXPLICIT )
 		
@@ -1117,7 +1123,7 @@ Type TIndexExpr Extends TExpr
 	
 	Method Semant:TExpr()
 		If exprType Return Self
-	
+
 		expr=expr.Semant()
 		index=index.SemantAndCast( TType.intType )
 		
@@ -1125,6 +1131,13 @@ Type TIndexExpr Extends TExpr
 			exprType=TType.intType
 		Else If TArrayType( expr.exprType )
 			exprType=TArrayType( expr.exprType ).elemType
+
+			'If TObjectType(exprType) And Not TStringType(exprType) And Not TArrayType(exprType) Then
+			'	Local tmp:TLocalDecl=New TLocalDecl.Create( "", exprType,expr )
+			'	Local stmt:TExpr = New TStmtExpr.Create( New TDeclStmt.Create( tmp ),New TVarExpr.Create( tmp ) ).Semant()
+			'	stmt.exprType = exprType
+			'	Return stmt
+			'End If
 		Else If TPointerType( expr.exprType) And Not TFunctionPtrType( expr.exprType )
 			exprType=TType.MapPointerToPrim(expr.exprType)
 			'exprType=TType.intType
@@ -1663,5 +1676,38 @@ Type TSizeOfExpr Extends TBuiltinExpr
 		Return "TSizeOfExpr("+expr.ToString()+")"
 	End Method
 		
+End Type
+
+Type TFuncCallExpr Extends TExpr
+	Field expr:TExpr
+	Field args:TExpr[]
+
+	Method Create:TFuncCallExpr( expr:TExpr,args:TExpr[]=Null )
+		Self.expr=expr
+		If args Then
+			Self.args=args
+		Else
+			Self.args = New TExpr[0]
+		End If
+		Return Self
+	End Method
+
+	Method Copy:TExpr()
+		Return New TFuncCallExpr.Create( CopyExpr(expr),CopyArgs(args) )
+	End Method
+
+	Method ToString$()
+		Local t$="TFuncCallExpr("+expr.ToString()
+		For Local arg:TExpr=EachIn args
+			t:+","+arg.ToString()
+		Next
+		Return t+")"
+	End Method
+
+	Method Semant:TExpr()
+		args=SemantArgs( args )
+		Return expr.SemantFunc( args )
+	End Method
+
 End Type
 
