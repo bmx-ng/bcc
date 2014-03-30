@@ -223,28 +223,26 @@ Type TValDecl Extends TDecl
 			
 			If declInit Then
 				If TFunctionPtrType(ty) Then
-					'init=declInit.Copy().SemantAndCast(ty)
-					
-					Local argExpr:TExpr[] = New TExpr[0]
-					For Local arg:TArgDecl = EachIn TFunctionPtrType(ty).func.argDecls
-						Local aexp:TIdentTypeExpr = New TIdentTypeExpr.Create(arg.declTy)
-						aexp._Semant()
-						argExpr :+ [aexp]
-					Next
 					
 					' the default munged function value as defined in the interface
 					If TInvokeExpr(declInit) Then
 						init = declInit.Copy()
 					Else
-						Local expr:TExpr=declInit.Copy().SemantFunc(argExpr)
-'						Local expr:TExpr
-'						
-'						If TFuncCallExpr(declInit) Then
-'							expr=declInit.Copy().Semant()
-'						Else
-'							expr=declInit.Copy().SemantFunc(argExpr)
-'						End If
-'						
+						Local expr:TExpr
+						
+						If TFuncCallExpr(declInit) Then
+							expr=declInit.Copy().Semant()
+						Else
+							Local argExpr:TExpr[] = New TExpr[0]
+							For Local arg:TArgDecl = EachIn TFunctionPtrType(ty).func.argDecls
+								Local aexp:TIdentTypeExpr = New TIdentTypeExpr.Create(arg.declTy)
+								aexp._Semant()
+								argExpr :+ [aexp]
+							Next
+
+							expr=declInit.Copy().SemantFunc(argExpr)
+						End If
+						
 						If expr.exprType.EqualsType( ty ) Then
 							init = expr
 						Else
