@@ -248,7 +248,19 @@ DebugLog "FILE NOT FOUND : " + ipath
 						toker.NextToke()
 
 						Local decl:TFuncDecl = ParseFuncDecl( _toke, 0 )
-						_mod.InsertDecl decl
+						
+						If decl.attrs & FUNC_PTR Then
+							ty = New TFunctionPtrType
+							TFunctionPtrType(ty).func = decl
+							'Local declInit:TExpr = decl.declInit
+							'decl.declInit = Null
+							Local gdecl:TGlobalDecl = New TGlobalDecl.Create( decl.ident,ty, Null, DECL_GLOBAL )
+							gdecl.munged = decl.munged
+							_mod.InsertDecl gdecl
+						Else
+							_mod.InsertDecl decl
+						End If
+						
 
 					Else
 'DebugStop
@@ -765,6 +777,10 @@ Method ParseFuncDecl:TFuncDecl( toke$,attrs:Int )
 			
 		'	Return funcDecl
 		'EndIf
+		
+		If funcDecl.attrs & DECL_POINTER Then
+			funcDecl.attrs :| FUNC_PTR
+		End If
 		
 		'If funcDecl.IsAbstract() Return funcDecl
 		Return funcDecl
