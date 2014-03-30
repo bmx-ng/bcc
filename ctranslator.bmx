@@ -150,7 +150,9 @@ Type TCTranslator Extends TTranslator
 			If TLongType( ty ) Return value+"LL"
 			If TFloatType( ty ) Then
 				If value = "nan.0" Then
-					Return "bbNANf"
+					Return "bbPOSNANf"
+				Else If value="-nan.0" Then
+					Return "bbNEGNANf"
 				Else If value = "inf.0" Then
 					Return "bbPOSINFf"
 				Else If value = "-inf.0" Then
@@ -164,7 +166,9 @@ Type TCTranslator Extends TTranslator
 			End If
 			If TDoubleType( ty ) Then
 				If value = "nan.0" Then
-					Return "bbNANd"
+					Return "bbPOSNANd"
+				Else If value="-nan.0" Then
+					Return "bbNEGNANd"
 				Else If value = "inf.0" Then
 					Return "bbPOSINFd"
 				Else If value = "-inf.0" Then
