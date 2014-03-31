@@ -1,26 +1,26 @@
-' Copyright (c) 2013-2014 Bruce A Henderson & Ronny Otto 
+' Copyright (c) 2013-2014 Bruce A Henderson & Ronny Otto
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
-' 
+'
 ' This software is provided 'as-is', without any express or implied
 ' warranty. In no event will the authors be held liable for any damages
 ' arising from the use of this software.
-' 
+'
 ' Permission is granted to anyone to use this software for any purpose,
 ' including commercial applications, and to alter it and redistribute it
 ' freely, subject to the following restrictions:
-' 
+'
 '    1. The origin of this software must not be misrepresented; you must not
 '    claim that you wrote the original software. If you use this software
 '    in a product, an acknowledgment in the product documentation would be
 '    appreciated but is not required.
-' 
+'
 '    2. Altered source versions must be plainly marked as such, and must not be
 '    misrepresented as being the original software.
-' 
+'
 '    3. This notice may not be removed or altered from any source
 '    distribution.
-' 
+'
 SuperStrict
 
 Import BRL.MaxUtil
@@ -150,14 +150,14 @@ Type TIncbin
 	Field path:String
 	Field id:Int
 	Field length:Int
-	
+
 	Global count:Int
-	
+
 	Method Create:TIncbin(file:String, source:String)
 		count :+ 1
-		
+
 		Self.file = file
-		
+
 		' find the file
 		If Not FileType(file) Then
 			' maybe relative to source
@@ -170,7 +170,7 @@ Type TIncbin
 		Else
 			path = RealPath(file)
 		End If
-		
+
 		id = count
 		Return Self
 	End Method
@@ -191,7 +191,7 @@ Type TParser
 
 	Field _app:TAppDecl
 	Field _module:TModuleDecl
-	
+
 	Field _externCasts:TMap = New TMap
 
 	Method SetErr()
@@ -199,12 +199,12 @@ Type TParser
 			_errInfo=_toker.Path()+"<"+_toker.Line()+">"
 		EndIf
 	End Method
-	
+
 	Method DoErr(error:String)
 		SetErr()
 		Err error
 	End Method
-	
+
 	Method PushBlock( block:TBlockDecl )
 		If _block <> Null Then
 			_blockStack.AddLast _block
@@ -345,7 +345,7 @@ Type TParser
 			If _tokeType<>TOKE_IDENT Return Null
 			id:+"."+ParseIdent()
 		End If
-		If Not CParse( "<" ) 
+		If Not CParse( "<" )
 			If inner Return New TIdentType.Create( id,Null )
 			Return Null
 		EndIf
@@ -353,7 +353,7 @@ Type TParser
 		Local nargs:Int
 		Repeat
 			Local arg:TType=CParsePrimitiveType()
-			If Not arg 
+			If Not arg
 				arg=CParseIdentType( True )
 				If Not arg Return Null
 			EndIf
@@ -437,10 +437,10 @@ Type TParser
 				ty = ParseIdentType()
 			End If
 		End Select
-		
+
 		Return ty
 	End Method
-	
+
 	Method ParseDeclType:TType()
 		Local ty:TType
 		Select _toke
@@ -495,13 +495,13 @@ Type TParser
 		Case "$"
 			NextToke
 			ty=TType.stringType
-			
+
 			If CParse("z") Then
 				ty = TType.stringToCharPointerType
 			Else If CParse("w") Then
 				ty = TType.stringToShortPointerType
 			End If
-			
+
 			If CParse("var") Then
 				ty = TType.MapToVarPointerType(ty)
 			End If
@@ -528,7 +528,7 @@ Type TParser
 
 				If Not ty DoErr "Invalid Pointer type."
 			End If
-			
+
 			If CParse("var") Then
 				ty = TType.MapToVarPointerType(ty)
 			End If
@@ -548,7 +548,7 @@ Type TParser
 		Default
 			If _module.IsSuperStrict() Err "Illegal type expression."
 			ty=TType.intType
-			
+
 			If CParse("var") Then
 				ty = TType.MapToVarPointerType(ty)
 			Else If CParse("ptr") Then
@@ -687,7 +687,7 @@ Type TParser
 
 			Local id$=_toke
 			Local ty:TType=ParseType()
-			
+
 			If TIntType(ty) And id.ToLower() <> "int" Then
 				Select id.ToLower()
 					Case "byte"
@@ -755,7 +755,7 @@ Type TParser
 			NextToke
 			' optional brackets
 			Local b:Int = CParse( "(" )
-			
+
 			expr=ParseExpr()
 			Parse ","
 			Local expr2:TExpr=ParseExpr()
@@ -769,7 +769,7 @@ Type TParser
 			NextToke
 			' optional brackets
 			Local b:Int = CParse( "(" )
-			
+
 			expr=ParseExpr()
 			Parse ","
 			Local expr2:TExpr=ParseExpr()
@@ -794,7 +794,7 @@ Type TParser
 			Else
 				expr=New TIdentExpr.Create( id )
 			EndIf
-			
+
 		Case "varptr"
 			NextToke
 			expr=ParseExpr()
@@ -828,9 +828,9 @@ Type TParser
 			End If
 
 			expr=ParseExpr()
-			
+
 			'NextToke
-			
+
 			'If Not CParse("~n") Then
 			'	Err "Expecting expression but encountered '..'"
 			'End If
@@ -839,7 +839,7 @@ Type TParser
 			Select _tokeType
 			Case TOKE_IDENT
 				Local tok:TToker=New TToker.Copy( _toker )
-				
+
 				Local ty:TType=CParseIdentType()
 				If ty
 					expr=New TIdentTypeExpr.Create( ty )
@@ -848,7 +848,7 @@ Type TParser
 					_toke=_toker.Toke()
 					_tokeType=_toker.TokeType()
 					expr=New TIdentExpr.Create( ParseIdent() )
-					
+
 					ParseConstNumberType()
 				EndIf
 
@@ -857,7 +857,7 @@ Type TParser
 
 				expr=New TConstExpr.Create( TType.intType,_toke )
 				NextToke
-				
+
 				Local ty:TType = ParseConstNumberType()
 				If ty Then
 					TConstExpr(expr).ty = ty
@@ -1025,12 +1025,14 @@ Type TParser
 		Repeat
 			Local op$=_toke
 			Select op
-			Case "=","<",">","<=",">=","<>"
+			Case "=","<",">","<=","=<",">=","=>","<>"
 				NextToke
-				If op=">" And (_toke="=")
+				' <= or =>
+				If (op=">" And (_toke="=")) OR (op="=" And (_toke=">"))
 					op:+_toke
 					NextToke
-				Else If op="<" And (_toke="=" Or _toke=">")
+				' <> or <= or =<
+				Else If (op="<" and _toke=">") OR (op="<" and _toke="=") OR (op="=" and _toke="<")
 					op:+_toke
 					NextToke
 				EndIf
@@ -1285,10 +1287,10 @@ Type TParser
 
 	Method ParseTryStmt()
 		Parse "try"
-		
+
 		Local block:TBlockDecl=New TBlockDecl.Create( _block )
 		Local catches:TStack=New TStack
-		
+
 		PushBlock block
 		While _toke<>"end"
 			If CParse( "catch" )
@@ -1311,7 +1313,7 @@ Type TParser
 
 		_block.AddStmt New TTryStmt.Create( block,TCatchStmt[](catches.ToArray()) )
 	End Method
-	
+
 	Method ParseThrowStmt()
 		Parse "throw"
 		Local expr:TExpr = ParseExpr()
@@ -1322,12 +1324,12 @@ Type TParser
 		Parse "assert"
 		Local expr:TExpr = ParseExpr()
 		Local elseExpr:TExpr
-		
+
 		If _toke = "," Or _toke = "else" Then
 			NextToke
 			elseExpr = ParseExpr()
 		End If
-		
+
 		_block.AddStmt New TAssertStmt.Create( expr, elseExpr )
 	End Method
 
@@ -1394,7 +1396,7 @@ Type TParser
 		EndIf
 
 		SetErr
-		
+
 		If Not CParse("endselect") Then
 			Parse "end"
 			Parse "select"
@@ -1403,7 +1405,7 @@ Type TParser
 
 	Method ParseRemStmt()
 		Parse "rem"
-		
+
 ' TODO : end/rem should be at the beginning of a line... ignore otherwise
 		While _toke
 			SkipEols()
@@ -2026,19 +2028,19 @@ End Rem
 	End Method
 
 	Method ImportFile( filepath$ )
-		
+
 		If filepath.Endswith(".bmx") Then
 
 			Local origPath:String = RealPath(filepath)
 			Local path:String = OutputFilePath(origPath, FileMung(), "i")
-	
+
 			If FileType( path )<>FILETYPE_FILE
 				Err "File '"+ path +"' not found."
 			EndIf
-	
-			
+
+
 			If _module.imported.Contains( path ) Return
-			
+
 			Local modpath:String
 			If opt_buildtype = BUILDTYPE_MODULE Then
 				modpath = opt_modulename + "_" + StripExt(filepath)
@@ -2047,17 +2049,17 @@ End Rem
 				' todo file imports for apps
 				internalErr
 			End If
-	
+
 			' try to import interface
 			Local par:TIParser = New TIParser
-	
+
 			If par.ParseModuleImport(_module, modpath, origPath, path, , , filepath) Return
 		Else
 			If filepath.startswith("-") Then
 				_app.fileimports.AddLast filepath
 			End If
 		End If
-		
+
 	End Method
 
 	Method ImportModule( modpath$,attrs:Int )
@@ -2169,116 +2171,116 @@ End Rem
 
 	' load external cast defs
 	Method LoadExternCasts(path:String)
-	
+
 		path = StripExt(path) + ".x"
 
 		If FileType(path) = FILETYPE_FILE Then
 
 			Local toker:TToker=New TToker.Create( path,LoadText( path ) )
 			toker.NextToke
-			
+
 			While True
-			
+
 				SkipEolsToker(toker)
-				
+
 				If toker._tokeType = TOKE_EOF Exit
-				
+
 				Local rt$=toker._toke
 				NextTokeToker(toker)
 				If CParseToker(toker,"*") Then
 					rt:+ "*"
-					
+
 					If CParseToker(toker,"*") Then
 						rt:+ "*"
 					End If
 				End If
-				
-				
+
+
 				Local dets:TCastDets = New TCastDets
-				
+
 				' fname
 				Local fn$=toker._toke
 				NextTokeToker(toker)
-				
+
 				dets.name = fn
 				dets.retType = rt
-				
+
 				_externCasts.Insert(fn, dets)
-				
+
 				' args
 				ParseToker(toker, "(")
-	
+
 				If CParseToker(toker, ")") Then
-				
+
 					NextTokeToker(toker)
-					
+
 					' don't generate header extern
 					If CParseToker(toker, "!") Then
 						dets.noGen = True
 					End If
-					
+
 					Continue
 				End If
-	
-				Local i:Int = 0			
+
+				Local i:Int = 0
 				Repeat
 					Local at$=toker._toke
-					
+
 					If CParseToker(toker, "const") Then
 						at :+ " " + toker._toke
 					End If
-					
+
 					If CParseToker(toker, "unsigned") Then
 						at :+ " " + toker._toke
 					End If
-					
+
 					NextTokeToker(toker)
 					If CParseToker(toker, "*") Then
 						at:+ "*"
-						
+
 						If CParseToker(toker, "*") Then
 							at:+ "*"
 						End If
 					End If
-					
+
 					' function pointer
 					If CParseToker(toker, "(") Then
 
 						ParseToker(toker, "*")
 						ParseToker(toker, ")")
 						at :+ "(*)"
-						
+
 						ParseToker(toker, "(")
 						at :+ "("
-						
+
 						While Not CParseToker(toker, ")")
 							NextTokeToker(toker)
 							at :+ toker._toke
 						Wend
-						
+
 						at :+ ")"
 					End If
-					
+
 
 					dets.args :+ [at]
-				
+
 					If toker._toke=")" Exit
 					ParseToker(toker, ",")
-					
+
 					i:+ 1
 				Forever
-				
+
 				NextTokeToker(toker)
-			
+
 				' don't generate header extern
 				If CParseToker(toker, "!") Then
 					dets.noGen = True
 				End If
-			
+
 			Wend
-		
+
 		End If
-	
+
 	End Method
 
 	Method ParseMain()
@@ -2299,7 +2301,7 @@ End Rem
 			munged = opt_modulename + "_" + ident
 			munged = munged.ToLower().Replace(".", "_")
 		End If
-		
+
 		If opt_ismain Then 'And opt_modulename <> "brl.blitz" Then
 			ident = opt_modulename
 		End If
@@ -2318,7 +2320,7 @@ End Rem
 			' import Object and String definitions
 			Local par:TIParser = New TIParser
 			par.ParseModuleImport(_module, "brl.classes", modulepath("brl.blitz"), modulepath("brl.blitz") + "/blitz_classes.i")
-	
+
 			' set up built-in keywords
 			par = New TIParser
 			par.ParseModuleImport(_module, "brl.blitzkeywords", "", "", MakeKeywords())
@@ -2442,19 +2444,19 @@ End Rem
 				attrs=DECL_PRIVATE
 			Case "extern"
 'DebugStop
-				
+
 				'If ENV_SAFEMODE
 				'	If _app.mainModule=_module
 				'		Err "Extern not permitted in safe mode."
 				'	EndIf
 				'EndIf
 				NextToke
-				
+
 				If _tokeType=TOKE_STRINGLIT
 					DebugLog "EXTERN : " + ParseStringLit()
 				End If
-				
-				
+
+
 				attrs=DECL_EXTERN
 				If CParse( "private" ) attrs=attrs|DECL_PRIVATE
 
@@ -2619,7 +2621,7 @@ End Rem
 
 			con = 0
 			If Eval( toker,TType.intType ) = "1" con = 1
-		
+
 Rem
 		Case "macos", "macosx86", "x86", "littleendian", "bigendian"
 			con = 1
@@ -2706,7 +2708,7 @@ End Function
 Function ParseApp:TAppDecl( path$ )
 
 	Local app:TAppDecl=New TAppDecl
-	
+
 	_appInstance = app
 
 	Local source$=PreProcess( path )
@@ -2756,23 +2758,23 @@ End Rem
 	env.InsertDecl New TConstDecl.Create( "win32",TType.intType,New TConstExpr.Create( TType.intType,opt_platform="win32" ),0 )
 	env.InsertDecl New TConstDecl.Create( "win32x64",TType.intType,New TConstExpr.Create( TType.intType,(opt_platform="win64" And opt_arch="x64") Or (opt_platform="win32" And opt_arch="x64")),0 )
 	env.InsertDecl New TConstDecl.Create( "win64",TType.intType,New TConstExpr.Create( TType.intType,(opt_platform="win64" And opt_arch="x64") Or (opt_platform="win32" And opt_arch="x64")),0 )
-	
+
 	' linux
 	env.InsertDecl New TConstDecl.Create( "linux",TType.intType,New TConstExpr.Create( TType.intType,opt_platform="linux" ),0 )
 	env.InsertDecl New TConstDecl.Create( "linuxx86",TType.intType,New TConstExpr.Create( TType.intType,opt_platform="linux" And opt_arch="x86"),0 )
 	env.InsertDecl New TConstDecl.Create( "linuxx64",TType.intType,New TConstExpr.Create( TType.intType,opt_platform="linux" And opt_arch="x64"),0 )
 	env.InsertDecl New TConstDecl.Create( "linuxARM",TType.intType,New TConstExpr.Create( TType.intType,opt_platform="linux" And opt_arch="arm"),0 )
-	
+
 	' arch
 	env.InsertDecl New TConstDecl.Create( "ppc",TType.intType,New TConstExpr.Create( TType.intType,opt_arch="ppc" ),0 )
 	env.InsertDecl New TConstDecl.Create( "x86",TType.intType,New TConstExpr.Create( TType.intType,opt_arch="x86" ),0 )
 	env.InsertDecl New TConstDecl.Create( "x64",TType.intType,New TConstExpr.Create( TType.intType,opt_arch="x64" ),0 )
 	env.InsertDecl New TConstDecl.Create( "arm",TType.intType,New TConstExpr.Create( TType.intType,opt_arch="arm" ),0 )
-	
+
 	' endian
 	env.InsertDecl New TConstDecl.Create( "bigendian",TType.intType,New TConstExpr.Create( TType.intType,opt_arch="ppc" ),0 )
 	env.InsertDecl New TConstDecl.Create( "littleendian",TType.intType,New TConstExpr.Create( TType.intType,opt_arch<>"ppc" ),0 )
-	
+
 '	env.InsertDecl New TConstDecl.Create( "LANG",TType.stringType,New TConstExpr.Create( TType.stringType,ENV_LANG ),0 )
 '	env.InsertDecl New TConstDecl.Create( "TARGET",TType.stringType,New TConstExpr.Create( TType.stringType,ENV_TARGET ),0 )
 '	env.InsertDecl New TConstDecl.Create( "CONFIG",TType.stringType,New TConstExpr.Create( TType.stringType,ENV_CONFIG ),0 )
