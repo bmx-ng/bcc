@@ -747,6 +747,7 @@ Type TCTranslator Extends TTranslator
 			If TIntType( src ) Return t
 			If TFloatType( src ) Return Bra("(BBINT)"+t)
 			If TDoubleType( src ) Return Bra("(BBINT)"+t)
+			If TLongType( src ) Return Bra("(BBINT)"+t)
 			If TStringType( src ) Return "bbStringToInt" + Bra(t)
 			If TPointerType( src ) Return Bra("(BBINT)"+t)
 		 Else If TLongType( dst )
@@ -764,6 +765,7 @@ Type TCTranslator Extends TTranslator
 			If TShortType( src ) Return Bra("(BBFLOAT)"+t)
 			If TFloatType( src ) Return t
 			If TDoubleType( src ) Return Bra("(BBFLOAT)"+t)
+			If TLongType( src ) Return Bra("(BBFLOAT)"+t)
 			If TStringType( src ) Return "bbStringToFloat" + Bra(t)
 			If TPointerType( src ) Return Bra("(BBFLOAT)"+t)
 		Else If TDoubleType( dst )
@@ -772,6 +774,7 @@ Type TCTranslator Extends TTranslator
 			If TShortType( src ) Return Bra("(BBDOUBLE)"+t)
 			If TDoubleType( src ) Return t
 			If TFloatType( src ) Return Bra("(BBDOUBLE)"+t)
+			If TLongType( src ) Return Bra("(BBDOUBLE)"+t)
 			If TStringType( src ) Return "bbStringToDouble" + Bra(t)
 			If TPointerType( src ) Return Bra("(BBDOUBLE)"+t)
 		Else If TStringType( dst )

@@ -966,7 +966,15 @@ Type TBinaryMathExpr Extends TBinaryExpr
 
 		Select op
 		Case "&","~~","|","mod","shl","shr"
-			exprType=TType.intType
+			If TDoubleType(lhs.exprType) Then
+				exprType=TType.longType
+			Else If TFloatType(lhs.exprType) Then
+				exprType=TType.intType
+			Else If TNumericType(lhs.exprType) Then
+				exprType=lhs.exprType
+			Else
+				exprType=TType.intType
+			End If
 		Default
 			exprType=BalanceTypes( lhs.exprType,rhs.exprType )
 			If TStringType( exprType )
@@ -1003,8 +1011,30 @@ Type TBinaryMathExpr Extends TBinaryExpr
 			Case "~~" Return x ~ y
 			Case "|" Return x | y
 			End Select
+		Else If TLongType( exprType )
+			Local x:Long=Long(lhs),y:Long=Long(rhs)
+			Select op
+			Case "*" Return x*y
+			Case "/" Return x/y
+			Case "mod" Return x Mod y
+			Case "shl" Return x Shl y
+			Case "shr" Return x Shr y
+			Case "+" Return x + y
+			Case "-" Return x - y
+			Case "&" Return x & y
+			Case "~~" Return x ~ y
+			Case "|" Return x | y
+			End Select
 		Else If TFloatType( exprType )
-			Local x#=Float(lhs),y#=Float(rhs)
+			Local x:Float=Float(lhs),y:Float=Float(rhs)
+			Select op
+			Case "*" Return x * y
+			Case "/" Return x / y
+			Case "+" Return x + y
+			Case "-" Return x - y
+			End Select
+		Else If TDoubleType( exprType )
+			Local x:Double=Double(lhs),y:Double=Double(rhs)
 			Select op
 			Case "*" Return x * y
 			Case "/" Return x / y
