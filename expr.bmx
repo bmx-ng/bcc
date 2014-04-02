@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2014 Bruce A Henderson & Ronny Otto
+' Copyright (c) 2013-2014 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -183,6 +183,11 @@ Type TStmtExpr Extends TExpr
 	End Method
 
 	Method Trans$()
+		Return _trans.TransStmtExpr( Self )
+	End Method
+
+	Method TransVar$()
+		Semant
 		Return _trans.TransStmtExpr( Self )
 	End Method
 
@@ -558,9 +563,11 @@ End Type
 
 Type TNewArrayExpr Extends TExpr
 	Field ty:TType
-	Field expr:TExpr
 
-	Method Create:TNewArrayExpr( ty:TType,expr:TExpr )
+	Field expr:TExpr[]
+	
+	Method Create:TNewArrayExpr( ty:TType,expr:TExpr[] )
+
 		Self.ty=ty
 		Self.expr=expr
 		Return Self
@@ -568,7 +575,11 @@ Type TNewArrayExpr Extends TExpr
 
 	Method Copy:TExpr()
 		If exprType InternalErr
-		Return New TNewArrayExpr.Create( ty,CopyExpr(expr) )
+		Local cexpr:TExpr[expr.length]
+		For Local i:Int = 0 Until expr.length
+			cexpr[i] = CopyExpr(expr[i])
+		Next
+		Return New TNewArrayExpr.Create( ty,cexpr )
 	End Method
 
 	Method Semant:TExpr()
@@ -576,7 +587,9 @@ Type TNewArrayExpr Extends TExpr
 
 		ty=ty.Semant()
 		exprType=New TArrayType.Create( ty )
-		expr=expr.SemantAndCast( TType.intType )
+		For Local i:Int = 0 Until expr.length
+			expr[i]=expr[i].SemantAndCast( TType.intType )
+		Next
 		Return Self
 	End Method
 
@@ -1131,29 +1144,48 @@ End Type
 
 Type TIndexExpr Extends TExpr
 	Field expr:TExpr
-	Field index:TExpr
+	Field index:TExpr[]
 
-	Method Create:TIndexExpr( expr:TExpr,index:TExpr )
+	Method Create:TIndexExpr( expr:TExpr,index:TExpr[] )
 		Self.expr=expr
 		Self.index=index
 		Return Self
 	End Method
 
 	Method Copy:TExpr()
-		Return New TIndexExpr.Create( CopyExpr(expr),CopyExpr(index) )
+		Local ind:TExpr[]
+		For Local i:Int = 0 Until index.length
+			ind = ind + [CopyExpr(index[i])]
+		Next
+		Return New TIndexExpr.Create( CopyExpr(expr),ind )
 	End Method
 
 	Method Semant:TExpr()
 		If exprType Return Self
 
 		expr=expr.Semant()
-		index=index.SemantAndCast( TType.intType )
+		For Local i:Int = 0 Until index.length
+			index[i]=index[i].SemantAndCast( TType.intType )
+		Next
 
 		If TStringType( expr.exprType )
 			exprType=TType.intType
+			If index.length > 1 Then
+				Err "Illegal subexpression for string index"
+			End If
 		Else If TArrayType( expr.exprType )
 			exprType=TArrayType( expr.exprType ).elemType
 
+			If TArrayType( expr.exprType ).dims > 1 Then
+				Local sizeExpr:TExpr = New TArraySizeExpr.Create(expr, Null, index)
+				index = [sizeExpr]
+				Local tmp:TLocalDecl=New TLocalDecl.Create( "", TType.intPointerType, sizeExpr )
+				TArraySizeExpr(sizeExpr).val = tmp
+				Local stmt:TExpr = New TStmtExpr.Create( New TDeclStmt.Create( tmp ), Self ).Semant()
+				stmt.exprType = exprType
+				Return stmt
+				
+			End If
 			'If TObjectType(exprType) And Not TStringType(exprType) And Not TArrayType(exprType) Then
 			'	Local tmp:TLocalDecl=New TLocalDecl.Create( "", exprType,expr )
 			'	Local stmt:TExpr = New TStmtExpr.Create( New TDeclStmt.Create( tmp ),New TVarExpr.Create( tmp ) ).Semant()
@@ -1171,8 +1203,8 @@ Type TIndexExpr Extends TExpr
 	End Method
 
 	Method SemantSet:TExpr( op$,rhs:TExpr )
-		Semant
-		Return Self
+		Return Semant()
+		'Return Self
 	End Method
 
 	Method Trans$()
@@ -1266,6 +1298,46 @@ Type TArrayExpr Extends TExpr
 
 	Method Trans$()
 		Return _trans.TransArrayExpr( Self )
+	End Method
+
+End Type
+
+Type TArraySizeExpr Extends TExpr
+
+	Field expr:TExpr
+	Field val:TDecl
+	Field index:TExpr[]
+
+	Method Create:TArraySizeExpr( expr:TExpr, val:TDecl, index:TExpr[] )
+		Self.expr=expr
+		Self.val=val
+		Self.index=index
+		Return Self
+	End Method
+
+	Method Copy:TExpr()
+		Local ind:TExpr[]
+		For Local i:Int = 0 Until index.length
+			ind = ind + [CopyExpr(index[i])]
+		Next
+		Return New TArraySizeExpr.Create( CopyExpr(expr), val, ind )
+	End Method
+
+	Method Semant:TExpr()
+		If exprType Return Self
+
+		expr=expr.Semant()
+		
+		For Local i:Int = 0 Until index.length
+			index[i]=index[i].SemantAndCast( TType.intType )
+		Next
+		
+		exprType=TType.intPointerType
+		Return Self
+	End Method
+
+	Method Trans$()
+		Return _trans.TransArraySizeExpr( Self )
 	End Method
 
 End Type

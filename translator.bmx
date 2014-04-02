@@ -1,26 +1,26 @@
-' Copyright (c) 2013-2014 Bruce A Henderson & Ronny Otto 
+' Copyright (c) 2013-2014 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
-' 
+'
 ' This software is provided 'as-is', without any express or implied
 ' warranty. In no event will the authors be held liable for any damages
 ' arising from the use of this software.
-' 
+'
 ' Permission is granted to anyone to use this software for any purpose,
 ' including commercial applications, and to alter it and redistribute it
 ' freely, subject to the following restrictions:
-' 
+'
 '    1. The origin of this software must not be misrepresented; you must not
 '    claim that you wrote the original software. If you use this software
 '    in a product, an acknowledgment in the product documentation would be
 '    appreciated but is not required.
-' 
+'
 '    2. Altered source versions must be plainly marked as such, and must not be
 '    misrepresented as being the original software.
-' 
+'
 '    3. This notice may not be removed or altered from any source
 '    distribution.
-' 
+'
 
 Global _trans:TTranslator
 
@@ -128,6 +128,7 @@ Type TTranslator
 
 			If TModuleDecl( decl )
 				munged=decl.ModuleScope().munged+"_"+id
+				munged = munged.Replace(".", "_")
 			EndIf
 
 '		End Select
@@ -284,6 +285,8 @@ End Rem
 		Case "=" Return "=="
 		Case "<>" Return "!="
 		Case "<","<=",">",">=" Return op
+		Case "=<" Return "<="
+		Case "=>" Return ">="
 		Case "&","|" Return op
 		Case "~~" Return "^"
 		End Select
@@ -318,7 +321,7 @@ End Rem
 			Case "*","/","mod" Return 4
 			Case "+","-" Return 5
 			Case "shl","shr", "sar" Return 6
-			Case "<","<=",">",">=" Return 7
+			Case "<","<=",">",">=", "=<", "=>" Return 7
 			Case "=","<>" Return 8
 			Case "&" Return 9
 			Case "~~" Return 10
@@ -397,6 +400,8 @@ End Rem
 	Method TransSliceExpr$( expr:TSliceExpr ) Abstract
 	
 	Method TransArrayExpr$( expr:TArrayExpr ) Abstract
+	
+	Method TransArraySizeExpr$ ( expr:TArraySizeExpr ) Abstract
 	
 	Method TransIntrinsicExpr$( decl:TDecl,expr:TExpr,args:TExpr[]=Null ) Abstract
 

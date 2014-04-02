@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2014 Bruce A Henderson & Ronny Otto
+' Copyright (c) 2013-2014 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -89,7 +89,7 @@ Type TForEachinStmt Extends TStmt
 
 			Local cmpExpr:TExpr=New TBinaryCompareExpr.Create( "<",New TVarExpr.Create( indexTmp ),lenExpr )
 
-			Local indexExpr:TExpr=New TIndexExpr.Create( New TVarExpr.Create( exprTmp ),New TVarExpr.Create( indexTmp ) )
+			Local indexExpr:TExpr=New TIndexExpr.Create( New TVarExpr.Create( exprTmp ),[New TVarExpr.Create( indexTmp )] )
 			Local addExpr:TExpr=New TBinaryMathExpr.Create( "+",New TVarExpr.Create( indexTmp ),New TConstExpr.Create( TType.intType,"1" ) )
 
 			block.stmts.AddFirst New TAssignStmt.Create( "=",New TVarExpr.Create( indexTmp ),addExpr )
@@ -665,8 +665,13 @@ Type TParser
 			NextToke
 			Local ty:TType=ParseType()
 			If CParse( "[" )
-				Local ln:TExpr=ParseExpr()
-				Parse "]"
+				Local ln:TExpr[]
+				Repeat
+					ln = ln + [ParseExpr()]
+					If CParse("]") Exit
+					Parse ","
+				Forever
+				'Parse "]"
 				While CParse( "[]" )
 					ty=New TArrayType.Create( ty)
 				Wend
@@ -901,7 +906,6 @@ Type TParser
 				End If
 
 			Case "["
-
 				NextToke
 				If CParse( ".." )
 					If _toke="]"
@@ -909,6 +913,7 @@ Type TParser
 					Else
 						expr=New TSliceExpr.Create( expr,Null,ParseExpr() )
 					EndIf
+					Parse "]"
 				Else
 					Local from:TExpr=ParseExpr()
 					If CParse( ".." )
@@ -917,11 +922,22 @@ Type TParser
 						Else
 							expr=New TSliceExpr.Create( expr,from,ParseExpr() )
 						EndIf
+						Parse "]"
 					Else
-						expr=New TIndexExpr.Create( expr,from )
+						Local ind:TExpr[] = [from]
+						Repeat
+							If CParse("]") Then
+								Exit
+							End If
+						
+							Parse ","							
+
+							ind = ind + [ParseExpr()]
+						Forever
+						
+						expr=New TIndexExpr.Create( expr,ind )
 					EndIf
 				EndIf
-				Parse "]"
 			Default
 				Return expr
 			End Select
@@ -1028,11 +1044,11 @@ Type TParser
 			Case "=","<",">","<=","=<",">=","=>","<>"
 				NextToke
 				' <= or =>
-				If (op=">" And (_toke="=")) OR (op="=" And (_toke=">"))
+				If (op=">" And (_toke="=")) Or (op="=" And (_toke=">"))
 					op:+_toke
 					NextToke
 				' <> or <= or =<
-				Else If (op="<" and _toke=">") OR (op="<" and _toke="=") OR (op="=" and _toke="<")
+				Else If (op="<" And _toke=">") Or (op="<" And _toke="=") Or (op="=" And _toke="<")
 					op:+_toke
 					NextToke
 				EndIf
@@ -1554,13 +1570,18 @@ Type TParser
 			If CParse( "=" )
 				init=ParseExpr()
 			Else If CParse( "[" )
-				Local ln:TExpr=ParseExpr()
-				Parse "]"
+				Local ln:TExpr[]
+				Repeat
+					ln = ln + [ParseExpr()]
+					If CParse("]") Exit
+					Parse(",")
+				Forever
+				'Parse "]"
 				While CParse( "[]" )
 					ty=New TArrayType.Create(ty)
 				Wend
 				init=New TNewArrayExpr.Create( ty,ln)
-				ty=New TArrayType.Create( ty )
+				ty=New TArrayType.Create( ty, ln.length )
 			Else If _toke = "(" Then
 	 			' function pointer?
 

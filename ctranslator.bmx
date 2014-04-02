@@ -1,26 +1,26 @@
-' Copyright (c) 2013-2014 Bruce A Henderson & Ronny Otto 
-' 
+' Copyright (c) 2013-2014 Bruce A Henderson
+'
 ' Based on the public domain Monkey "trans" by Mark Sibly
-' 
+'
 ' This software is provided 'as-is', without any express or implied
 ' warranty. In no event will the authors be held liable for any damages
 ' arising from the use of this software.
-' 
+'
 ' Permission is granted to anyone to use this software for any purpose,
 ' including commercial applications, and to alter it and redistribute it
 ' freely, subject to the following restrictions:
-' 
+'
 '    1. The origin of this software must not be misrepresented; you must not
 '    claim that you wrote the original software. If you use this software
 '    in a product, an acknowledgment in the product documentation would be
 '    appreciated but is not required.
-' 
+'
 '    2. Altered source versions must be plainly marked as such, and must not be
 '    misrepresented as being the original software.
-' 
+'
 '    3. This notice may not be removed or altered from any source
 '    distribution.
-' 
+'
 SuperStrict
 
 Import "parser.bmx"
@@ -698,10 +698,24 @@ Type TCTranslator Extends TTranslator
 	End Method
 	
 	Method TransNewArrayExpr$( expr:TNewArrayExpr )
-'		Local texpr$=expr.expr.Trans()
-		'
-		Return "bbArrayNew1D" + Bra(TransArrayType(expr.ty) + ", " + expr.expr.Trans())
-		'Return "Array<"+TransRefType( expr.ty, "LL" )+" >"+Bra( expr.expr.Trans() )
+
+		If expr.expr.length = 1 Then
+			Return "bbArrayNew1D" + Bra(TransArrayType(expr.ty) + ", " + expr.expr[0].Trans())
+		Else
+			' multiple array
+			Local s:String
+			
+			For Local i:Int = 0 Until expr.expr.length
+				If i Then
+					s:+ ", "
+				End If
+				
+				s:+ expr.expr[i].Trans()
+			Next
+			
+			Return "bbArrayNew" + Bra(TransArrayType(expr.ty) + ", " + expr.expr.length + ", " + s)
+		End If
+
 	End Method
 		
 	Method TransSelfExpr$( expr:TSelfExpr )
@@ -842,7 +856,7 @@ Type TCTranslator Extends TTranslator
 				t_expr = TransSubExpr( expr.expr,pri )
 			End If
 		Else
-				t_expr = TransSubExpr( expr.expr,pri )
+			t_expr = TransSubExpr( expr.expr,pri )
 		End If
 
 '		TransSubExpr( expr.expr,pri )
@@ -857,13 +871,41 @@ Type TCTranslator Extends TTranslator
 		If TStringType(expr.exprType) And expr.op = "+" Then
 			Return "bbStringConcat(" + t_lhs + "," + t_rhs + ")"
 		End If
-		
+
+		If TBinaryCompareExpr(expr) And TStringType(TBinaryCompareExpr(expr).ty) Then
+			Return "bbStringCompare" + Bra(t_lhs + ", " + t_rhs) + TransBinaryOp(expr.op, "") + "0"
+		End If
+
 		Return bra(t_lhs+TransBinaryOp( expr.op,t_rhs )+t_rhs)
 	End Method
 	
 	Method TransIndexExpr$( expr:TIndexExpr )
 		Local t_expr$=TransSubExpr( expr.expr )
-		Local t_index$=expr.index.Trans()
+		
+		Local t_index$
+		If expr.index.length = 1 Then
+			If TArraySizeExpr(expr.index[0]) Then
+				Local sizes:TArraySizeExpr = TArraySizeExpr(expr.index[0])
+				sizes.Trans()
+				Local v:String = sizes.val.munged
+				Local i:Int = 0
+				For i = 0 Until sizes.index.length - 1
+					If i Then
+						t_index :+ " + "
+					End If
+					t_index :+ "(*(" + v
+					If i Then
+						t_index :+ "+" + i
+					End If
+					t_index :+ ")) * " + sizes.index[i].Trans()
+				Next
+				t_index :+ " + " + sizes.index[i].Trans()
+				' (*(v+0)) * var1 + (*(v+1)) * var2 + var3
+'DebugStop
+			Else
+				t_index=expr.index[0].Trans()
+			End If
+		End If
 		
 		If TStringType( expr.expr.exprType ) Then
 			Return Bra(t_expr) + "->buf[" + t_index + "]" 
@@ -874,12 +916,12 @@ Type TCTranslator Extends TTranslator
 			Return Bra("(" + TransType(expr.exprType, "") + "*)BBARRAYDATA(" + t_expr + "," + t_expr + "->dims)") + "[" + t_index + "]"
 		End If
 		
-		Local swiz$
-		If TObjectType( expr.exprType )And expr.exprType.GetClass().IsInterface() swiz=".p"
+		'Local swiz$
+		'If TObjectType( expr.exprType )And expr.exprType.GetClass().IsInterface() swiz=".p"
 		
 		'If ENV_CONFIG="debug" Return t_expr+".At("+t_index+")"+swiz
 		
-		Return t_expr+"["+t_index+"]"+swiz
+		Return t_expr+"["+t_index+"]"
 	End Method
 	
 	Method TransSliceExpr$( expr:TSliceExpr )
@@ -931,9 +973,16 @@ Type TCTranslator Extends TTranslator
 '		If Not _env tt="static "
 
 		Emit tt+TransType( elemType, tmp.munged )+" "+tmp.munged+"[]={"+t+"};"
-'DebugStop
+
 		Return "bbArrayFromData" + Bra(TransArrayType(elemType) + "," + count + "," + tmp.munged )
 		'Return "Array<"+TransRefType( elemType, "MM" )+" >("+tmp.munged+","+expr.exprs.Length+")"
+	End Method
+
+	Method TransArraySizeExpr$ ( expr:TArraySizeExpr )
+		' scales[0] is the total size of the array
+		' we start from [1] because it is the size of the next full dimension.
+		' in the case of a 2-dimensional array, [1] represents the length of a row.
+		Return Bra("(BBARRAY)" + expr.expr.Trans()) + "->scales + 1"
 	End Method
 
 	Method TransIntrinsicExpr$( decl:TDecl,expr:TExpr,args:TExpr[] )
@@ -2650,7 +2699,7 @@ End Rem
 	End Method
 	
 	Method TransApp( app:TAppDecl )
-	
+
 		If app.mainModule.IsSuperStrict()
 			opt_issuperstrict = True
 		End If
