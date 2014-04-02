@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2014 Bruce A Henderson & Ronny Otto 
+' Copyright (c) 2013-2014 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 ' 
