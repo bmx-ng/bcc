@@ -671,6 +671,9 @@ End Rem
 					If Not func.scope Then
 						func.scope = f.scope
 					End If
+					If Not func.ident Then
+						func.ident = f.ident
+					End If
 				End If
 			End If
 		End If

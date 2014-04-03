@@ -444,7 +444,7 @@ Type TCTranslator Extends TTranslator
 	End Method
 		
 	Method TransFunc$( decl:TFuncDecl,args:TExpr[],lhs:TExpr )
-'If decl.ident = "WriteStdout" DebugStop
+'If decl.ident = "_func" DebugStop
 		If decl.IsMethod()
 			If lhs And Not TSelfExpr(lhs) Then
 				If lhs.exprType = TType.stringType Then
@@ -512,10 +512,17 @@ Type TCTranslator Extends TTranslator
 			End If
  
 			' ((brl_standardio_TCStandardIO_obj*)o->clas)->md_Read(o, xxx, xxx)
-			Local obj:String = Bra("struct " + decl.scope.munged + "_obj*")
-			Local class:String = Bra("(" + obj + "o)->clas")
-			'Local class:String = Bra("&" + decl.scope.munged)
-			Return class + "->md_" + decl.ident+TransArgs( args,decl, "o" )
+			If Not (decl.attrs & FUNC_PTR) Then 
+				Local obj:String = Bra("struct " + decl.scope.munged + "_obj*")
+				Local class:String = Bra("(" + obj + "o)->clas")
+				'Local class:String = Bra("&" + decl.scope.munged)
+				Return class + "->md_" + decl.ident+TransArgs( args,decl, "o" )
+			Else
+				Local obj:String = Bra("struct " + decl.scope.munged + "_obj*")
+				'Local class:String = Bra("(" + obj + "o)->clas")
+				'Local class:String = Bra("&" + decl.scope.munged)
+				Return Bra(obj + "o") + "->" + decl.munged+TransArgs( args,decl )
+			End If
 		EndIf
 
 		' built-in functions
