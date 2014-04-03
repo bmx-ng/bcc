@@ -929,12 +929,12 @@ Type TParser
 							If CParse("]") Then
 								Exit
 							End If
-						
-							Parse ","							
+
+							Parse ","
 
 							ind = ind + [ParseExpr()]
 						Forever
-						
+
 						expr=New TIndexExpr.Create( expr,ind )
 					EndIf
 				EndIf
@@ -2171,8 +2171,7 @@ End Rem
 			If dir.EndsWith(".mod") Then
 				dir = dir.Replace(".mod", "")
 			End If
-			Local mung:String = "_bb_" + opt_modulename + "_" + StripExt(StripDir(opt_filepath).ToLower())
-			app.munged = mung.Replace(".", "_")
+			app.munged = "_bb_" + opt_modulename + "_" + StripExt(StripDir(opt_filepath).ToLower())
 		Else
 			' main application file?
 			If opt_apptype Then
@@ -2188,6 +2187,7 @@ End Rem
 				app.munged = "bb_" + dir + "_" + StripExt(file)
 			End If
 		End If
+		app.munged = app.munged.Replace(".", "_")
 	End Method
 
 	' load external cast defs
