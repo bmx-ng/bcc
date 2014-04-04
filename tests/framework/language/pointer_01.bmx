@@ -3,8 +3,7 @@ Rem
 	- if function pointers are possible
 End Rem
 SuperStrict
-
-Import BRL.StandardIO
+Framework BRL.StandardIO
 
 
 Type MyType
