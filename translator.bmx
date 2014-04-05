@@ -128,7 +128,7 @@ Type TTranslator
 
 			If TModuleDecl( decl )
 				munged=decl.ModuleScope().munged+"_"+id
-				munged = munged.Replace(".", "_")
+				munged = munged.Replace(".", "_").Replace("-", "_")
 			EndIf
 
 '		End Select
@@ -829,4 +829,5 @@ End Rem
 	End Method
 	
 End Type
+
 
