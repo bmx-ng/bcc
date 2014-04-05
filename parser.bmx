@@ -1322,7 +1322,8 @@ Type TParser
 				ParseStmt
 			End If
 		Wend
-		If Not catches.Length() Err "Try block must have at least one catch block"
+		' TODO : handle case of no catch - perhaps throw the exception again.
+		'If Not catches.Length() Err "Try block must have at least one catch block"
 		PopBlock
 		NextToke
 		CParse "try"

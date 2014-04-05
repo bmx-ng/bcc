@@ -93,6 +93,7 @@ Type TType
 	Global doubleVarPointerType:TDoubleVarPtrType=New TDoubleVarPtrType
 	Global longVarPointerType:TLongVarPtrType=New TLongVarPtrType
 	Global stringVarPointerType:TStringVarPtrType=New TStringVarPtrType
+	Global objectVarPointerType:TObjectVarPtrType=New TObjectVarPtrType
 	
 	Global functionPointerType:TFunctionPtrType=New TFunctionPtrType
 	
@@ -142,7 +143,7 @@ Type TType
 	Rem
 	bbdoc: map to a var pointer type
 	End Rem
-	Function MapToVarPointerType:TVarPtrType(ty:TType)
+	Function MapToVarPointerType:TType(ty:TType)
 		If TByteType(ty) Return byteVarPointerType
 		If TIntType(ty) Return intVarPointerType
 		If TShortType(ty) Return shortVarPointerType
@@ -151,6 +152,9 @@ Type TType
 		If TLongType(ty) Return longVarPointerType
 
 		If TStringType(ty) Return stringVarPointerType
+		If TObjectType(ty) Return objectVarPointerType
+		
+		If TIdentType(ty) Return TIdentType(ty).CopyToDest(New TIdentVarPtrType)
 		
 		' pointer pointer
 		If TBytePtrType(ty) Return byteVarPointerPtrType
@@ -461,7 +465,7 @@ Type TObjectType Extends TType
 	
 	Method EqualsType:Int( ty:TType )
 		Local objty:TObjectType=TObjectType( ty )
-		Return TNullDecl(classDecl) <> Null Or (objty And (classDecl=objty.classDecl Or classDecl.ExtendsClass( objty.classDecl )))
+		Return TNullDecl(classDecl) <> Null Or (objty And (classDecl=objty.classDecl Or classDecl.ExtendsClass( objty.classDecl ))) Or TObjectVarPtrType(ty) <> Null
 	End Method
 	
 	Method ExtendsType:Int( ty:TType )
@@ -507,6 +511,12 @@ Type TIdentType Extends TType
 			Self.args=args
 		End If
 		Return Self
+	End Method
+	
+	Method CopyToDest:TIdentType(dst:TIdentType)
+		dst.ident = ident
+		dst.args = args
+		Return dst
 	End Method
 	
 	Method ActualType:TType()
@@ -564,6 +574,11 @@ Type TIdentType Extends TType
 			End If
 		EndIf
 		If Not ty Err "Type '"+tyid+"' not found"
+		
+		If TIdentVarPtrType(Self) And TObjectType(ty) Then
+			ty = New TObjectVarPtrType.Create(TObjectType(ty).classDecl)
+		End If
+		
 		Return ty
 	End Method
 	
@@ -658,6 +673,9 @@ Type TVarPtrType Extends TPointerType
 		Return "VarPtr"
 	End Method
 
+End Type
+
+Type TIdentVarPtrType Extends TIdentType
 End Type
 
 Type TBytePtrType Extends TPointerType
@@ -1152,6 +1170,55 @@ Type TStringShortPtrType Extends TPointerType
 		Return "$w"
 	End Method
 
+End Type
+
+Type TObjectVarPtrType Extends TVarPtrType
+	Field classDecl:TClassDecl
+	
+	Method Create:TObjectVarPtrType( classDecl:TClassDecl )
+		Self.classDecl=classDecl
+		Return Self
+	End Method
+	
+	Method ActualType:TType()
+		If classDecl.actual=classDecl Return Self
+		Return New TObjectVarPtrType.Create( TClassDecl(classDecl.actual) )
+	End Method
+	
+	Method EqualsType:Int( ty:TType )
+		Local objty:TObjectType=TObjectType( ty )
+		Return TNullDecl(classDecl) <> Null Or (objty And (classDecl=objty.classDecl Or classDecl.ExtendsClass( objty.classDecl ))) Or TPointerType( ty )<>Null Or TObjectType(ty)
+	End Method
+	
+	Method ExtendsType:Int( ty:TType )
+		Local objty:TObjectType=TObjectType( ty )
+		If objty Return classDecl.ExtendsClass( objty.classDecl )
+		If TBytePtrType( ty ) Return True
+		Local op$
+		If TBoolType( ty )
+			op="ToBool"
+		Else If TIntType( ty ) 
+			op="ToInt"
+		Else If TFloatType( ty )
+			op="ToFloat"
+		Else If TStringType( ty )
+			op="ToString"
+		Else If TLongType( ty ) ' BaH Long
+			op="ToLong"
+		Else
+			Return False
+		EndIf
+		Local fdecl:TFuncDecl=GetClass().FindFuncDecl( op,Null,True )
+		Return fdecl And fdecl.IsMethod() And fdecl.retType.EqualsType( ty )
+	End Method
+	
+	Method GetClass:TClassDecl()
+		Return classDecl
+	End Method
+	
+	Method ToString$()
+		Return classDecl.ToString()
+	End Method
 End Type
 
 Type TFunctionPtrType Extends TPointerType

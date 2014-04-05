@@ -1497,7 +1497,6 @@ Type TIdentExpr Extends TExpr
 		_Semant
 
 		'Local scope:TScopeDecl=IdentScope()
-'DebugStop
 		Local vdecl:TValDecl=scope.FindValDecl( ident )
 		If vdecl
 
@@ -1648,6 +1647,13 @@ Type TLenExpr Extends TBuiltinExpr
 		If exprType Return Self
 
 		expr=expr.Semant()
+		
+		' anything other than a string or array will become "1", and return a length of 1 accordingly.
+		If TBoolType(expr.exprType) Or TNumericType(expr.exprType) Then
+			expr = New TConstExpr.Create( TType.stringType, "1" ).Semant()
+			_appInstance.mapStringConsts(TConstExpr(expr).value)
+		End If
+		
 		exprType=TType.intType
 		Return Self
 	End Method

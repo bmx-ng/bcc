@@ -71,6 +71,7 @@ Type TCTranslator Extends TTranslator
 		If TStringVarPtrType( ty ) Return "BBSTRING *"
 		If TArrayType( ty ) Return "BBARRAY"
 		If TObjectType( ty ) Return "BBOBJECT"
+		If TObjectVarPtrType( ty ) Return "BBOBJECT *"
 		If TBytePtrType( ty ) Return "BBBYTE *"
 		If TShortPtrType( ty ) Return "BBSHORT *"
 		If TIntPtrType( ty ) Return "BBINT *"
@@ -157,6 +158,7 @@ Type TCTranslator Extends TTranslator
 		If TLongVarPtrPtrType( ty ) Return "%%* Var"
 		If TStringCharPtrType( ty ) Return "$z"
 		If TStringShortPtrType( ty ) Return "$w"
+		If TObjectVarPtrType( ty ) Return ":" + TObjectVarPtrType(ty).classDecl.ident + " Var"
 		InternalErr
 	End Method
 
@@ -230,6 +232,10 @@ Type TCTranslator Extends TTranslator
 					If TCastExpr(args[i]) And TStringType(TCastExpr(args[i]).expr.exprType) Then
 						t:+ "&"
 					End If
+				Else If TObjectVarPtrType(TArgDecl(decl.argDecls[i].actual).ty) Then
+					If TVarExpr(args[i]) And TObjectType(TVarExpr(args[i]).exprType) Then
+						t:+ "&"
+					End If
 				Else If TFunctionPtrType(TArgDecl(decl.argDecls[i].actual).ty) Or TBytePtrType(TArgDecl(decl.argDecls[i].actual).ty) Then
 					If TInvokeExpr(args[i]) And Not TInvokeExpr(args[i]).decl.IsMethod() Then
 						If TBytePtrType(TArgDecl(decl.argDecls[i].actual).ty) Then
@@ -249,7 +255,7 @@ Type TCTranslator Extends TTranslator
 						t:+ "0"
 						Continue
 					End If
-					
+
 					' Object -> Byte Ptr
 					If TBytePtrType(TArgDecl(decl.argDecls[i].actual).ty) And TObjectType(args[i].exprType) Then
 						t:+ Bra("(BBBYTE*)" + Bra(args[i].Trans())) + "+" + Bra("sizeof(void*)+4")
@@ -2033,6 +2039,11 @@ End Rem
 					Return Bra(variable + "->length")
 				End If
 			End If
+		End If
+		
+		If TObjectVarPtrType(exprType) Then
+			' get the object from the pointer
+			variable = Bra("*" + variable)
 		End If
 
 		If TNumericType(decl.ty) Then
