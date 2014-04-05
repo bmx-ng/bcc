@@ -816,21 +816,8 @@ Type TParser
 			Local id$=ParseIdent()
 			expr=New TInvokeSuperExpr.Create( id,ParseArgs( stmt ) )
 		Case ".." ' handle end-of-line "dot dot return"
-			Local tok:TToker = New TToker.Copy(_toker)
-			Local t:String = tok.NextToke()
-			If t = "~r" Then
-				t = tok.NextToke()
-				If t = "~n" Then
-					NextToke
-					NextToke
-				Else
-					NextToke
-				End If
-			Else
-				If t = "~n" Then
-					NextToke
-				End If
-			End If
+			'concat lines connected with ".."
+			HandleDotsLineConnector()
 
 			expr=ParseExpr()
 
@@ -969,21 +956,9 @@ Type TParser
 				Local rhs:TExpr=ParseUnaryExpr()
 				expr=New TBinaryMathExpr.Create( op,expr,rhs )
 			Case ".." ' handle end-of-line "dot dot return"
-				Local tok:TToker = New TToker.Copy(_toker)
-				Local t:String = tok.NextToke()
-				If t = "~r" Then
-					t = tok.NextToke()
-					If t = "~n" Then
-						NextToke
-						NextToke
-					Else
-						NextToke
-					End If
-				Else
-					If t = "~n" Then
-						NextToke
-					End If
-				End If
+				'concat lines connected with ".."
+				HandleDotsLineConnector()
+
 				Return expr
 			Default
 				Return expr
@@ -1322,8 +1297,7 @@ Type TParser
 				ParseStmt
 			End If
 		Wend
-		' TODO : handle case of no catch - perhaps throw the exception again.
-		'If Not catches.Length() Err "Try block must have at least one catch block"
+		If Not catches.Length() Err "Try block must have at least one catch block"
 		PopBlock
 		NextToke
 		CParse "try"
@@ -1635,6 +1609,12 @@ Type TParser
 			EndIf
 		EndIf
 
+		'meta data for variables
+		If CParse( "{" ) then
+			'print "meta for variable: "+id+ " -> "+ParseMetaData()
+			ParseMetaData()
+		Endif
+
 		Return decl
 	End Method
 
@@ -1657,6 +1637,52 @@ Type TParser
 			_block.AddStmt New TDeclStmt.Create( decl )
 		Until Not CParse(",")
 	End Method
+
+	'handle end-of-line "dot dot return"-line connector
+	'-> skips EOL tokens
+	Method HandleDotsLineConnector()
+		Local tok:TToker = New TToker.Copy(_toker)
+		Local t:String = tok.NextToke()
+		If t = "~r" Then
+			t = tok.NextToke()
+			If t = "~n" Then
+				NextToke
+				NextToke
+			Else
+				NextToke
+			End If
+		Else
+			If t = "~n" Then
+				NextToke
+			End If
+		End If
+	End Method
+
+	'should return a specific "metadata object" ?
+	Method ParseMetaData:String()
+		Local metaDataString:String = ""
+		SkipEols
+
+		Repeat
+			'concat lines connected with ".."
+			If _toke =".." then HandleDotsLineConnector()
+
+			'append current token to metaDataString
+			metaDataString :+ _toke
+			'read next token
+			NextToke()
+
+			'reached end of meta data declaration
+			If _toke="}" then Exit
+		Forever
+
+		'continue to next token
+		NextToke()
+
+		'parse this into something
+		return metaDataString
+	End Method
+
 
 	Method ParseFuncDecl:TFuncDecl( toke$,attrs:Int )
 		SetErr
@@ -1695,19 +1721,8 @@ Type TParser
 		If _toke<>")"
 			Local nargs:Int
 			Repeat
-				If _toke =".." ' handle end-of-line "dot dot return"
-					Local tok:TToker = New TToker.Copy(_toker)
-					Local t:String = tok.NextToke()
-					If t = "~r" Then
-						t = tok.NextToke()
-						If t = "~n" Then
-							NextToke
-							NextToke
-						Else
-							NextToke
-						End If
-					End If
-				End If
+				' handle end-of-line "dot dot return"
+				If _toke =".." then HandleDotsLineConnector()
 
 				Local id$=ParseIdent()
 
@@ -1737,19 +1752,8 @@ Type TParser
 				nargs:+1
 				If _toke=")" Exit
 
-				If _toke =".." ' handle end-of-line "dot dot return"
-					Local tok:TToker = New TToker.Copy(_toker)
-					Local t:String = tok.NextToke()
-					If t = "~r" Then
-						t = tok.NextToke()
-						If t = "~n" Then
-							NextToke
-							NextToke
-						Else
-							NextToke
-						End If
-					End If
-				End If
+				' handle end-of-line "dot dot return"
+				If _toke =".." then HandleDotsLineConnector()
 
 				Parse ","
 			Forever
@@ -1770,6 +1774,11 @@ Type TParser
 				EndIf
 			Else If CParse( "nodebug" )
 				' TODO : NoDebug
+			Else If CParse( "{" ) 'meta data
+				' TODO : do something with the metadata
+				'meta data for functions/methods
+				'print "meta for func/meth: "+id+ " -> "+ParseMetaData()
+				ParseMetaData()
 			Else
 				Exit
 			EndIf
@@ -1974,6 +1983,15 @@ End Rem
 				Exit
 			EndIf
 		Forever
+
+		'check for metadata
+		If CParse( "{" )
+			' TODO : do something with the metadata
+			'metadata for "type"s
+			'print "meta for type: "+id+ " -> "+ParseMetaData()
+			ParseMetaData()
+		End If
+
 
 		Local classDecl:TClassDecl=New TClassDecl.Create( id,args,superTy,imps,attrs )
 
