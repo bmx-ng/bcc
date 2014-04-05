@@ -2084,7 +2084,7 @@ End Rem
 			Local modpath:String
 			If opt_buildtype = BUILDTYPE_MODULE Then
 				modpath = opt_modulename + "_" + StripExt(filepath)
-				modpath = modpath.ToLower().Replace(".", "_")
+				modpath = modpath.ToLower().Replace(".", "_").Replace("-", "_")
 			Else
 				' todo file imports for apps
 				internalErr
@@ -2201,12 +2201,12 @@ End Rem
 				If dir.EndsWith(".mod") Then
 					dir = dir.Replace(".mod", "")
 				End If
-				dir = dir.Replace(".", "_")
+				dir = dir.Replace(".", "_").Replace("-", "_")
 				Local file:String = StripDir(opt_filepath).ToLower()
 				app.munged = "bb_" + dir + "_" + StripExt(file)
 			End If
 		End If
-		app.munged = app.munged.Replace(".", "_")
+		app.munged = app.munged.Replace(".", "_").Replace("-", "_")
 	End Method
 
 	' load external cast defs
@@ -2339,7 +2339,7 @@ End Rem
 			ValidateModIdent ident
 		Else If opt_buildtype = BUILDTYPE_MODULE Then
 			munged = opt_modulename + "_" + ident
-			munged = munged.ToLower().Replace(".", "_")
+			munged = munged.ToLower().Replace(".", "_").Replace("-", "_")
 		End If
 
 		If opt_ismain Then 'And opt_modulename <> "brl.blitz" Then
@@ -2439,7 +2439,7 @@ End Rem
 					Err "Module does not match commandline module"
 				End If
 
-				_module.munged = m.Replace(".", "_")
+				_module.munged = m.Replace(".", "_").Replace("-", "_")
 			Case "rem"
 				ParseRemStmt()
 			Case "nodebug"

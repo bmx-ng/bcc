@@ -95,7 +95,7 @@ Function SaveHeader(file:String, trans:TCTranslator, mung:String)
 
 	Local path:String = OutputFilePath(file, mung, "h")
 
-	Local header:String = BuildHeaderName(path).ToUpper().Replace(".", "_")
+	Local header:String = BuildHeaderName(path).ToUpper().Replace(".", "_").Replace("-","_")
 	Local text:String = HeaderComment()
 	text :+ "#ifndef " + header + "~n"
 	text :+ "#define " + header + "~n~n"

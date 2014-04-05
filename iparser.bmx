@@ -167,7 +167,7 @@ DebugLog "FILE NOT FOUND : " + ipath
 						Local modpath:String
 						If opt_buildtype = BUILDTYPE_MODULE Then
 							modpath = opt_modulename + "_" + StripExt(iRelPath)
-							modpath = modpath.ToLower().Replace(".", "_")
+							modpath = modpath.ToLower().Replace(".", "_").Replace("-", "_")
 						Else
 							' todo file imports for apps
 							internalErr

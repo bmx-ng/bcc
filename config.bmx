@@ -214,7 +214,7 @@ End Function
 
 Function MungModuleName:String(ident:String)
 	Local mung:String = "__bb_" + ident + "_" + ident[ident.Find(".") + 1..]
-	Return mung.Replace(".", "_")
+	Return mung.Replace(".", "_").Replace("-", "_")
 End Function
 
 Function MungImportFromFile:String(file:String)
