@@ -170,7 +170,7 @@ DebugLog "FILE NOT FOUND : " + ipath
 							modpath = modpath.ToLower().Replace(".", "_").Replace("-", "_")
 						Else
 							' todo file imports for apps
-							internalErr
+							'internalErr
 						End If
 
 

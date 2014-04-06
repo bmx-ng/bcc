@@ -203,10 +203,17 @@ Function FilePath:String(path:String)
 End Function
 
 Function BuildHeaderName:String(path:String)
-	path = StripDir(path)
-
 	If opt_buildtype = BUILDTYPE_MODULE Then
-		path = opt_modulename + "." + path
+		path = opt_modulename + "." + StripDir(path)
+	Else
+		Local dir:String = ExtractDir(path).ToLower().Replace("/.bmx","")
+		dir = dir[dir.findLast("/") + 1..]
+		If dir.EndsWith(".mod") Then
+			dir = dir.Replace(".mod", "")
+		End If
+		dir = dir.Replace(".", "_").Replace("-", "_")
+		Local file:String = StripDir(path).ToLower()
+		path = dir + "_" + file
 	End If
 	
 	Return path
@@ -215,10 +222,6 @@ End Function
 Function MungModuleName:String(ident:String)
 	Local mung:String = "__bb_" + ident + "_" + ident[ident.Find(".") + 1..]
 	Return mung.Replace(".", "_").Replace("-", "_")
-End Function
-
-Function MungImportFromFile:String(file:String)
-	Return "_bb_" + file
 End Function
 
 Rem
@@ -234,21 +237,6 @@ Function ModuleHeaderFromIdent:String(ident:String, includePath:Int = False)
 		file = ns + ".mod/" + name + ".mod/.bmx/" + file
 	End If
 	
-	Return file
-End Function
-
-Function FileHeaderFromFile:String(filepath:String, includePath:Int = False)
-
-	Local name:String = StripAll(filepath)
-	Local dir:String = ExtractDir(filePath)
-
-	Local file:String = name + ".bmx" + FileMung(opt_apptype) + ".h"
-
-	If includePath Then
-		'Local parent:String = dir[dir.FindLast("/") + 1..]
-		'file = parent + "/.bmx/" + file
-	End If
-
 	Return file
 End Function
 

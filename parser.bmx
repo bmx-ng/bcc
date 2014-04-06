@@ -2141,8 +2141,8 @@ End Rem
 				modpath = opt_modulename + "_" + StripExt(filepath)
 				modpath = modpath.ToLower().Replace(".", "_").Replace("-", "_")
 			Else
-				' todo file imports for apps
-				internalErr
+				modpath = StripExt(filepath)
+				modpath = modpath.ToLower().Replace(".", "_").Replace("-", "_")
 			End If
 
 			' try to import interface
@@ -2258,7 +2258,7 @@ End Rem
 				End If
 				dir = dir.Replace(".", "_").Replace("-", "_")
 				Local file:String = StripDir(opt_filepath).ToLower()
-				app.munged = "bb_" + dir + "_" + StripExt(file)
+				app.munged = "_bb_" + dir + "_" + StripExt(file)
 			End If
 		End If
 		app.munged = app.munged.Replace(".", "_").Replace("-", "_")

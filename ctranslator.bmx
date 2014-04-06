@@ -2304,7 +2304,7 @@ End Rem
 				Emit "#include <" + ModuleHeaderFromIdent(moduleDecl.ident, True) + ">"
 			Else
 				' maybe a file import...
-				Emit "#include ~q" + FileHeaderFromFile(moduleDecl.filepath) + "~q"
+				Emit "#include ~q" + FileHeaderFromFile(moduleDecl, False) + "~q"
 			End If
 '			DebugLog moduleDecl.filepath
 		End If
@@ -2317,7 +2317,7 @@ End Rem
 				Emit MungModuleName(moduleDecl.ident) + "();"
 			Else
 				' maybe a file import...
-				Emit MungImportFromFile(moduleDecl.ident) + "();"
+				Emit MungImportFromFile(moduleDecl) + "();"
 			End If
 		End If
 	End Method
@@ -2649,6 +2649,34 @@ End Rem
 		
 	End Method
 
+	Method FileHeaderFromFile:String(mdecl:TModuleDecl, includePath:Int = False)
+	
+		Local name:String = StripAll(mdecl.filepath)
+		Local dir:String = ExtractDir(mdecl.filePath)
+	
+		Local file:String = name + ".bmx" + FileMung(opt_apptype And (Not mdecl.declImported)) + ".h"
+
+		If mdecl.relPath Then
+			Local dir:String = ExtractDir(mdecl.relPath)
+			If dir Then
+				file = "../" + dir + "/.bmx/" + file
+			End If
+		End If
+	
+		Return file
+	End Method
+
+	Method MungImportFromFile:String(mdecl:TModuleDecl)
+		Local dir:String = ExtractDir(mdecl.filepath).ToLower()
+		dir = dir[dir.findLast("/") + 1..]
+		If dir.EndsWith(".mod") Then
+			dir = dir.Replace(".mod", "")
+		End If
+		dir = dir.Replace(".", "_").Replace("-", "_")
+		Local file:String = StripDir(mdecl.filepath).ToLower()
+		Return "_bb_" + dir + "_" + StripExt(file)
+	End Method
+
 	Method TransInterface(app:TAppDecl)
 
 		SetOutput("interface")
@@ -2668,7 +2696,14 @@ End Rem
 					Emit "import " + mdecl.ident
 					processed.Insert(mdecl.ident, "")
 				Else If Not opt_ismain And mdecl.filepath.EndsWith(".bmx") And app.mainModule<>mdecl
-					Emit "import " + Enquote(StripDir(mdecl.filepath))
+					Local file:String = StripDir(mdecl.filepath)
+					If mdecl.relPath Then
+						Local dir:String = ExtractDir(mdecl.relPath)
+						If dir Then
+							file = dir + "/" + file
+						End If
+					End If
+					Emit "import " + Enquote(file)
 				End If
 			End If
 		Next
@@ -2739,3 +2774,4 @@ End Rem
 	End Method
 	
 End Type
+
