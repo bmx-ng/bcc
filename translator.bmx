@@ -613,7 +613,7 @@ End Rem
 	
 	'returns unreachable status!
 	Method EmitBlock:Int( block:TBlockDecl )
-
+'DebugStop
 		'If ENV_CONFIG="debug"
 		'	If TFuncDecl( block ) EmitPushErr
 		'EndIf
@@ -625,7 +625,7 @@ End Rem
 			_errInfo=stmt.errInfo
 			
 			If unreachable And ENV_LANG<>"as"
-				'If stmt.errInfo Print "Unreachable:"+stmt.errInfo
+				If stmt.errInfo Print "Unreachable:"+stmt.errInfo
 				Exit
 			EndIf
 
@@ -795,6 +795,8 @@ End Rem
 		Emit "// TODO : assert statement"
 
 	End Method
+
+	Method TransEndStmt$( stmt:TEndStmt ) Abstract
 	
 	'module
 	Method TransApp( app:TAppDecl ) Abstract

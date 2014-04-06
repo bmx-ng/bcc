@@ -443,3 +443,21 @@ Type TAssertStmt Extends TStmt
 		Return _trans.TransAssertStmt( Self )
 	End Method
 End Type
+
+Type TEndStmt Extends TStmt
+	
+	Method Create:TEndStmt( )
+		Return Self
+	End Method
+
+	Method OnCopy:TStmt( scope:TScopeDecl )
+		Return New TEndStmt.Create( )
+	End Method
+	
+	Method OnSemant()
+	End Method
+	
+	Method Trans$()
+		Return _trans.TransEndStmt( Self )
+	End Method
+End Type

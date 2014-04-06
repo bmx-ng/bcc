@@ -1121,6 +1121,11 @@ Type TCTranslator Extends TTranslator
 		Return s
 	End Method
 	
+	Method TransEndStmt$( stmt:TEndStmt )
+		Emit "bbEnd();"
+	End Method
+
+	
 	'***** Declarations *****
 Rem	
 	Method EmitFuncProto( decl:TFuncDecl )

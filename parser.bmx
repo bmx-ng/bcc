@@ -1068,9 +1068,8 @@ Type TParser
 	End Method
 
 	Method ParseIfStmt( term$ )
-
 		CParse "if"
-'DebugStop
+
 		Local expr:TExpr=ParseExpr()
 
 		CParse "then"
@@ -1103,13 +1102,30 @@ Type TParser
 				EndIf
 			Default
 				ParseStmt
+
+				' to handle "end" statement
+				If _toke = "end" Then
+					NextToke
+					If _toke = "if" Then
+						'_block.RemoveStmt ' remove the "end" statement we just added
+						If term="end" Then
+							Parse "if"
+							If eatTerm Then
+								eatTerm = False
+							End If
+							Exit
+						End If
+					Else
+						ParseEndStmt(False)
+					End If
+				End If
 			End Select
 		Wend
 		PopBlock
 
 		If eatTerm
 			NextToke
-			If term="end" CParse "if"
+			If term="end" Parse "if"
 		EndIf
 
 		Local stmt:TIfStmt=New TIfStmt.Create( expr,thenBlock,elseBlock )
@@ -1118,7 +1134,6 @@ Type TParser
 	End Method
 
 	Method ParseWhileStmt()
-
 		Parse "while"
 
 		Local expr:TExpr=ParseExpr()
@@ -1126,11 +1141,22 @@ Type TParser
 
 		PushBlock block
 		While Not CParse( "wend" )
-			If CParse( "end" )
-				CParse "while"
-				Exit
-			EndIf
+'			If CParse( "end" )
+'				CParse "while"
+'				Exit
+'			EndIf
 			ParseStmt
+
+			' to handle "end" statement
+			If _toke = "end" Then
+				NextToke
+				If _toke = "while" Then
+					NextToke
+					Exit
+				Else
+					ParseEndStmt(False)
+				End If
+			End If
 		Wend
 		PopBlock
 
@@ -1191,10 +1217,10 @@ Type TParser
 
 			PushBlock block
 			While Not CParse( "next" )
-				If CParse( "end" )
-					CParse "for"
-					Exit
-				EndIf
+				'If CParse( "end" )
+				'	CParse "for"
+				'	Exit
+				'EndIf
 				ParseStmt
 			Wend
 			PopBlock
@@ -1244,10 +1270,10 @@ Type TParser
 
 		PushBlock block
 		While Not CParse( "next" )
-			If CParse( "end" )
-				CParse "for"
-				Exit
-			EndIf
+			'If CParse( "end" )
+			'	CParse "for"
+			'	Exit
+			'EndIf
 			ParseStmt
 		Wend
 		PopBlock
@@ -1297,7 +1323,8 @@ Type TParser
 				ParseStmt
 			End If
 		Wend
-		If Not catches.Length() Err "Try block must have at least one catch block"
+		' TODO : handle case of no catch - perhaps throw the exception again.
+		'If Not catches.Length() Err "Try block must have at least one catch block"
 		PopBlock
 		NextToke
 		CParse "try"
@@ -1322,6 +1349,14 @@ Type TParser
 		End If
 
 		_block.AddStmt New TAssertStmt.Create( expr, elseExpr )
+	End Method
+	
+	Method ParseEndStmt(eatEnd:Int = True)
+		If eatEnd Then
+			Parse "end"
+		End If
+		
+		_block.AddStmt New TEndStmt.Create( )
 	End Method
 
 	Method ParseSelectStmt()
@@ -1361,6 +1396,15 @@ Type TParser
 				PushBlock block
 				While _toke<>"case" And _toke<>"default" And _toke<>"end" And _toke<>"endselect"
 					ParseStmt
+					
+					If _toke = "end" Then
+						NextToke
+						If _toke = "select" Then
+							Exit
+						Else
+							ParseEndStmt(False)
+						End If
+					End If
 				Wend
 				PopBlock
 
@@ -1382,6 +1426,15 @@ Type TParser
 					Err "Select statement can have only one default block."
 				End Select
 				ParseStmt
+
+				If _toke = "end" Then
+					NextToke
+					If _toke = "select" Then
+						Exit
+					Else
+						ParseEndStmt(False)
+					End If
+				End If
 			Wend
 			PopBlock
 		EndIf
@@ -1389,8 +1442,10 @@ Type TParser
 		SetErr
 
 		If Not CParse("endselect") Then
-			Parse "end"
-			Parse "select"
+			If Not CParse("select")
+				Parse "end"
+				Parse "select"
+			End If
 		End If
 	End Method
 
@@ -1457,10 +1512,10 @@ Type TParser
 			ParseTryStmt()
 		Case "throw"
 			ParseThrowStmt()
+		Case "end"
+			ParseEndStmt()
 		Default
-'If _toker._line = 246 Then
-'DebugStop
-'End If
+
 			Local expr:TExpr=ParsePrimaryExpr( True )
 
 			Select _toke.ToLower()
@@ -1472,7 +1527,6 @@ Type TParser
 					Local sym$= TToker._symbols[i]
 					If _toke.ToLower() = sym
 						_toke = TToker._symbols_map[i]
-'DebugLog _toke
 						Exit
 					EndIf
 				Next
@@ -1610,10 +1664,10 @@ Type TParser
 		EndIf
 
 		'meta data for variables
-		If CParse( "{" ) then
+		If CParse( "{" ) Then
 			'print "meta for variable: "+id+ " -> "+ParseMetaData()
 			ParseMetaData()
-		Endif
+		EndIf
 
 		Return decl
 	End Method
@@ -1665,7 +1719,7 @@ Type TParser
 
 		Repeat
 			'concat lines connected with ".."
-			If _toke =".." then HandleDotsLineConnector()
+			If _toke =".." Then HandleDotsLineConnector()
 
 			'append current token to metaDataString
 			metaDataString :+ _toke
@@ -1673,14 +1727,14 @@ Type TParser
 			NextToke()
 
 			'reached end of meta data declaration
-			If _toke="}" then Exit
+			If _toke="}" Then Exit
 		Forever
 
 		'continue to next token
 		NextToke()
 
 		'parse this into something
-		return metaDataString
+		Return metaDataString
 	End Method
 
 
@@ -1722,7 +1776,7 @@ Type TParser
 			Local nargs:Int
 			Repeat
 				' handle end-of-line "dot dot return"
-				If _toke =".." then HandleDotsLineConnector()
+				If _toke =".." Then HandleDotsLineConnector()
 
 				Local id$=ParseIdent()
 
@@ -1753,7 +1807,7 @@ Type TParser
 				If _toke=")" Exit
 
 				' handle end-of-line "dot dot return"
-				If _toke =".." then HandleDotsLineConnector()
+				If _toke =".." Then HandleDotsLineConnector()
 
 				Parse ","
 			Forever
@@ -1852,13 +1906,14 @@ End If
 				If (Not meth And CParse("function")) Or (meth And CParse("method"))
 					Exit
 				End If
+				
+				' handle "end" statement
+				ParseEndStmt(False)
 			EndIf
 
 			ParseStmt
 		Wend
 		PopBlock
-
-		'DebugStop ' BaH
 
 		NextToke
 		If toke CParse toke
