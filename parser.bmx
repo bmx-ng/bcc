@@ -1087,6 +1087,8 @@ Type TParser
 		While _toke<>term
 			Select _toke
 			Case "endif"
+				'if searching for "end" (not function "end"),
+				'also accept "endif"
 				If term="end" Exit
 				Err "Syntax error - expecting 'End'."
 			Case "else","elseif"
@@ -1124,8 +1126,13 @@ Type TParser
 		PopBlock
 
 		If eatTerm
+			'only parse for "if" if the token wasn't endif
+			if _toke = "endif" then eatTerm = False
+
 			NextToke
-			If term="end" Parse "if"
+
+			'still eating term? look for If
+			If eatTerm and term="end" Parse "if"
 		EndIf
 
 		Local stmt:TIfStmt=New TIfStmt.Create( expr,thenBlock,elseBlock )
