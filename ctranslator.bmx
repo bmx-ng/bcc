@@ -2672,9 +2672,11 @@ End Rem
 		If dir.EndsWith(".mod") Then
 			dir = dir.Replace(".mod", "")
 		End If
-		dir = dir.Replace(".", "_").Replace("-", "_")
 		Local file:String = StripDir(mdecl.filepath).ToLower()
-		Return "_bb_" + dir + "_" + StripExt(file)
+		local result:String = "_bb_" + dir + "_" + StripExt(file)
+		'remove non-allowed characters
+		result = result.Replace(".", "_").Replace("-", "_")
+		return result
 	End Method
 
 	Method TransInterface(app:TAppDecl)
