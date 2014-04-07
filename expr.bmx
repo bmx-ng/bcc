@@ -468,6 +468,8 @@ Type TInvokeMemberExpr Extends TExpr
 
 		If Not decl.IsSemanted() decl.Semant()
 		exprType=decl.retType
+		
+		args=SemantArgs( args )
 		args=CastArgs( args,decl )
 
 		'Array $resize hack!
@@ -1488,7 +1490,6 @@ Type TIdentExpr Extends TExpr
 	End Method
 
 	Method Semant:TExpr()
-'DebugStop
 		Return SemantSet( "",Null )
 	End Method
 
