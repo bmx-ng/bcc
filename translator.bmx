@@ -625,7 +625,7 @@ End Rem
 			_errInfo=stmt.errInfo
 			
 			If unreachable And ENV_LANG<>"as"
-				If stmt.errInfo Print "Unreachable:"+stmt.errInfo
+				'If stmt.errInfo Print "Unreachable:"+stmt.errInfo
 				Exit
 			EndIf
 
