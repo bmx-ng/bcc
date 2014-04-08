@@ -2655,13 +2655,20 @@ End Rem
 	End Method
 
 	Method MungImportFromFile:String(mdecl:TModuleDecl)
-		Local dir:String = ExtractDir(mdecl.filepath).ToLower()
-		dir = dir[dir.findLast("/") + 1..]
-		If dir.EndsWith(".mod") Then
-			dir = dir.Replace(".mod", "")
+DebugStop
+		Local result:String
+		If opt_buildtype <> BUILDTYPE_MODULE Then
+			Local dir:String = ExtractDir(mdecl.filepath).ToLower()
+			dir = dir[dir.findLast("/") + 1..]
+			If dir.EndsWith(".mod") Then
+				dir = dir.Replace(".mod", "")
+			End If
+			Local file:String = StripDir(mdecl.filepath).ToLower()
+			result = "_bb_" + dir + "_" + StripExt(file)
+		Else
+			result = "_bb_" + mdecl.ident
 		End If
-		Local file:String = StripDir(mdecl.filepath).ToLower()
-		Local result:String = "_bb_" + dir + "_" + StripExt(file)
+		
 		'remove non-allowed characters
 		result = result.Replace(".", "_").Replace("-", "_")
 		Return result
