@@ -1127,12 +1127,12 @@ Type TParser
 
 		If eatTerm
 			'only parse for "if" if the token wasn't endif
-			if _toke = "endif" then eatTerm = False
+			If _toke = "endif" Then eatTerm = False
 
 			NextToke
 
 			'still eating term? look for If
-			If eatTerm and term="end" Parse "if"
+			If eatTerm And term="end" Parse "if"
 		EndIf
 
 		Local stmt:TIfStmt=New TIfStmt.Create( expr,thenBlock,elseBlock )
@@ -1401,12 +1401,15 @@ Type TParser
 				block=ifstmt.thenBlock
 
 				PushBlock block
+				Local fin:Int = False
 				While _toke<>"case" And _toke<>"default" And _toke<>"end" And _toke<>"endselect"
 					ParseStmt
 					
 					If _toke = "end" Then
 						NextToke
 						If _toke = "select" Then
+							' we are done with the select statement, full exit
+							fin = True
 							Exit
 						Else
 							ParseEndStmt(False)
@@ -1416,6 +1419,7 @@ Type TParser
 				PopBlock
 
 				block=elseBlock
+				If fin Exit
 			Default
 				Err "Syntax error - expecting 'Case', 'Default' or 'End'."
 			End Select
