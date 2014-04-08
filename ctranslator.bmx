@@ -258,7 +258,7 @@ Type TCTranslator Extends TTranslator
 
 					' Object -> Byte Ptr
 					If TBytePtrType(TArgDecl(decl.argDecls[i].actual).ty) And TObjectType(args[i].exprType) Then
-						t:+ Bra("(BBBYTE*)" + Bra(args[i].Trans())) + "+" + Bra("sizeof(void*)+4")
+						t:+ Bra("(BBBYTE*)" + Bra(args[i].Trans())) + "+" + Bra("sizeof(void*)")
 						Continue
 					End If
 					
@@ -664,7 +664,7 @@ Type TCTranslator Extends TTranslator
 		If TVarExpr(expr.expr) Then
 			Local obj:TObjectType = TObjectType(TVarExpr(expr.expr).exprType)
 			If obj Then
-				Return Bra(TVarExpr(expr.expr).decl.munged + "->clas->instance_size-(sizeof(void*)+4)")
+				Return Bra(TVarExpr(expr.expr).decl.munged + "->clas->instance_size-(sizeof(void*))")
 			End If
 			
 			
@@ -1553,18 +1553,6 @@ End Rem
 
 		Emit ""
 
-		' bbobject def
-		
-		Rem
-		struct BBString{
-			BBClass*	clas;
-			int		refs;
-			int		length;
-			BBChar	buf[];
-		};
-		End Rem
-		
-		
 		' emit the class structure
 		Emit "struct BBClass_" + classid + " {"
 		If classDecl.superClass.ident = "Object" Then
@@ -1606,7 +1594,7 @@ End Rem
 		'Emit "typedef struct " + classid + "_obj {"
 		Emit "struct " + classid + "_obj {"
 		Emit "struct BBClass_" + classid + "* clas;"
-		Emit "int refs;"
+		'Emit "int refs;"
 
 		BeginLocalScope
 		EmitClassFieldsProto(classDecl)		
@@ -2464,7 +2452,7 @@ End Rem
 	
 				Emit "static BBString " + key.id + "={"
 				Emit "&bbStringClass,"
-				Emit "2147483647,"
+				'Emit "2147483647,"
 				Emit s.length + ","
 				
 				Local t:String = "{"
@@ -2673,10 +2661,10 @@ End Rem
 			dir = dir.Replace(".mod", "")
 		End If
 		Local file:String = StripDir(mdecl.filepath).ToLower()
-		local result:String = "_bb_" + dir + "_" + StripExt(file)
+		Local result:String = "_bb_" + dir + "_" + StripExt(file)
 		'remove non-allowed characters
 		result = result.Replace(".", "_").Replace("-", "_")
-		return result
+		Return result
 	End Method
 
 	Method TransInterface(app:TAppDecl)
