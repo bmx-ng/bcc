@@ -974,8 +974,11 @@ Type TCTranslator Extends TTranslator
 	Method TransArrayExpr$( expr:TArrayExpr )
 		Local elemType:TType=TArrayType( expr.exprType ).elemType
 
-		Local tmp:TLocalDecl =New TLocalDecl.Create( "",TType.voidType,Null )
-		MungDecl tmp
+		Local tmpData:TLocalDecl =New TLocalDecl.Create( "",TType.voidType,Null )
+		MungDecl tmpData
+
+		Local tmpArray:TLocalDecl =New TLocalDecl.Create( "",TType.voidType,Null )
+		MungDecl tmpArray
 		
 		Local t$
 		Local count:Int
@@ -988,9 +991,11 @@ Type TCTranslator Extends TTranslator
 		Local tt$
 '		If Not _env tt="static "
 
-		Emit tt+TransType( elemType, tmp.munged )+" "+tmp.munged+"[]={"+t+"};"
+		Emit tt+TransType( elemType, tmpData.munged )+" "+tmpData.munged+"[]={"+t+"};"
+		Emit "BBARRAY " + tmpArray.munged + " = bbArrayFromData" + Bra(TransArrayType(elemType) + "," + count + "," + tmpData.munged ) + ";"
 
-		Return "bbArrayFromData" + Bra(TransArrayType(elemType) + "," + count + "," + tmp.munged )
+		Return tmpArray.munged
+		'Return "bbArrayFromData" + Bra(TransArrayType(elemType) + "," + count + "," + tmp.munged )
 		'Return "Array<"+TransRefType( elemType, "MM" )+" >("+tmp.munged+","+expr.exprs.Length+")"
 	End Method
 
