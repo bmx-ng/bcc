@@ -8,33 +8,35 @@ Import BRL.Freeaudioaudio
 Import BRL.Audio
 Import BRL.WavLoader
 Import BRL.OggLoader
-Import BRL.Timer
-'SetAudioDriver("FreeAudio PulseAudio System")
 
-local timer:TTimer = CreateTimer(50)
-
-For local driver:string = eachin AudioDrivers()
-	print "available driver: "+driver
-Next
-
+local soundFiles:string[] = ["audio_01.wav", "audio_01.ogg"]
+local channel:TChannel
 local sound:TSound
 
-'try WAV
-sound = LoadSound("audio_01.wav")
-if sound
-	For local i:int = 0 to 2
-		WaitTimer(timer)
-		PlaySound(sound)
-	Next
-	print "wav sound played"
-endif
 
-'try OGG
-sound = LoadSound("audio_01.ogg")
-if sound
-	For local i:int = 0 to 2
-		WaitTimer(timer)
-		PlaySound(sound)
+'loop through drivers
+For local driver:string = eachin AudioDrivers()
+	'default blitzmax modules have "null" driver which segfaults
+	'-> skip it
+	if driver.ToLower() = "null" then continue
+
+	print "Trying Audio Driver: "+driver
+	SetAudioDriver(driver)
+
+	For local f:string = EachIn soundFiles
+		sound = LoadSound(f)
+		if not sound
+			print " loading of ~q"+f+"~q failed."
+			continue
+		endif
+		print "playing: "+f
+
+		channel = PlaySound(sound)
+		While channel.Playing()
+			delay(10)
+		Wend
+		print "stopped: "+f
 	Next
-	print "ogg sound played"
-endif
+Next
+
+
