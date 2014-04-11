@@ -1077,7 +1077,7 @@ Type TCTranslator Extends TTranslator
 
 		Local rhs$=stmt.rhs.Trans()
 		Local lhs$=stmt.lhs.TransVar()
-		
+
 		Local s:String
 		
 '		If ObjectType( stmt.rhs.exprType )
@@ -1110,6 +1110,12 @@ Type TCTranslator Extends TTranslator
 			End If
 			
 			s :+ "*" + lhs+TransAssignOp( stmt.op )+rhs
+		Else If TArrayType(stmt.lhs.exprType) Then
+			If stmt.op = "+=" Then
+				s :+ lhs+"=bbArrayConcat("+ TransArrayType(TArrayType(stmt.lhs.exprType).elemType) + "," + lhs+","+rhs+")"
+			Else
+				s :+ lhs+TransAssignOp( stmt.op )+rhs
+			End If
 		Else
 			s :+ lhs+TransAssignOp( stmt.op )+rhs
 		End If
