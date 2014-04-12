@@ -991,7 +991,7 @@ Type TBinaryMathExpr Extends TBinaryExpr
 				If op<>"+"
 					Err "Illegal string operator."
 				EndIf
-			Else If Not TNumericType( exprType ) And Not TPointerType( exprType )
+			Else If Not TNumericType( exprType ) And Not TPointerType( exprType ) And Not TArrayType( exprType )
 				Err "Illegal expression type."
 			EndIf
 		End Select

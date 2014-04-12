@@ -242,15 +242,11 @@ Type TParser
 	End Method
 
 	Method NextTokeToker$(toker:TToker)
-		Local toke$=toker._toke
-
-		Local tokeSpace:Int=False
+'		Local toke$=toker._toke
 
 		Repeat
 			toker.NextToke()
-			If toker.tokeType()<>TOKE_SPACE Exit
-			tokeSpace=True
-		Forever
+		Until toker.tokeType()<>TOKE_SPACE
 
 		Return toker._toke
 	End Method
@@ -1505,6 +1501,43 @@ Type TParser
 
 	End Method
 
+	Method ParseExternBlock(mdecl:TModuleDecl)
+
+		NextToke
+
+		If _tokeType=TOKE_STRINGLIT
+			DebugLog "EXTERN : " + ParseStringLit()
+		End If
+
+
+		Local attrs:Int=DECL_EXTERN
+		If CParse( "private" ) attrs=attrs|DECL_PRIVATE
+
+
+		While _toke<>"endextern"
+			If CParse( "end" )
+				Parse "extern"
+				Exit
+			EndIf
+
+			SetErr
+			Select _toke
+				Case "~n"
+					NextToke
+				Case "const","global"
+					mdecl.InsertDecls ParseDecls( _toke,attrs )
+				Case "type"
+					mdecl.InsertDecl ParseClassDecl( _toke,attrs )
+				Case "function"
+					mdecl.InsertDecl ParseFuncDecl( _toke,attrs )
+				Case "rem"
+					ParseRemStmt()
+			End Select
+
+		Wend
+
+	End Method
+
 	Method ParseStmt()
 		SetErr
 		Select _toke
@@ -1541,6 +1574,8 @@ Type TParser
 			ParseThrowStmt()
 		Case "end"
 			ParseEndStmt()
+		Case "extern"
+			ParseExternBlock(_module)
 		Default
 
 			Local expr:TExpr=ParsePrimaryExpr( True )
@@ -2565,13 +2600,9 @@ End Rem
 				NextToke
 				attrs=DECL_PRIVATE
 			Case "extern"
-'DebugStop
 
-				'If ENV_SAFEMODE
-				'	If _app.mainModule=_module
-				'		Err "Extern not permitted in safe mode."
-				'	EndIf
-				'EndIf
+				ParseExternBlock(_module)
+Rem
 				NextToke
 
 				If _tokeType=TOKE_STRINGLIT
@@ -2585,7 +2616,7 @@ End Rem
 
 				While _toke<>"endextern"
 					If CParse( "end" )
-						If CParse("extern")
+						If Parse("extern")
 							Exit
 						End If
 					EndIf
@@ -2607,7 +2638,7 @@ End Rem
 				Wend
 
 				attrs = 0
-
+End Rem
 			Case "const"
 				_module.InsertDecls ParseDecls( _toke,attrs )
 			Case "global"
@@ -2665,29 +2696,38 @@ Function Eval$( toker:TToker,_type:TType )
 	Return t
 End Function
 
+Function PreProcessNextToke$(toker:TToker)
+
+	Repeat
+		toker.NextToke()
+	Until toker.tokeType()<>TOKE_SPACE
+
+	Return toker._toke
+End Function
+
 Function PreProcess$( path$ )
 
 	Local ifnest:Int,con:Int=1,line:Int,source:TStringList=New TStringList
 
 	Local toker:TToker=New TToker.Create( path,LoadText( path ) )
 
-	toker.NextToke
+	PreProcessNextToke(toker)
 
 	Repeat
 
 		If line
 			source.AddLast "~n"
 			While toker.Toke() And toker.Toke()<>"~n" And toker.TokeType()<>TOKE_LINECOMMENT
-				toker.NextToke()
+				PreProcessNextToke(toker)
 			Wend
 			If Not toker.Toke() Exit
-			toker.NextToke()
+			PreProcessNextToke(toker)
 		EndIf
 		line:+1
 
 		_errInfo=toker.Path()+"<"+toker.Line()+">"
 
-		If toker.TokeType()=TOKE_SPACE toker.NextToke()
+		If toker.TokeType()=TOKE_SPACE PreProcessNextToke(toker)
 
 		If toker.Toke()<>"?"
 			If con
@@ -2702,14 +2742,14 @@ Function PreProcess$( path$ )
 			EndIf
 			Continue
 		EndIf
-'DebugStop
-		Local stm$=toker.NextToke().ToLower()
+
+		Local stm$= PreProcessNextToke(toker).ToLower()
 		'toker.NextToke()
 
 		Local isNot:Int = False
 
 		If stm = "not" Then
-			If toker.TokeType()=TOKE_SPACE toker.NextToke()
+			If toker.TokeType()=TOKE_SPACE PreProcessNextToke(toker)
 			stm = toker.Toke().ToLower()
 			isNot = True
 		End If
@@ -2741,6 +2781,9 @@ End Rem
 
 		Default
 
+			' test for EOF
+			If Not toker.Toke() Exit
+			
 			con = 0
 			If Eval( toker,TType.intType ) = "1" con = 1
 

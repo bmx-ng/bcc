@@ -2675,7 +2675,7 @@ End Rem
 	End Method
 
 	Method MungImportFromFile:String(mdecl:TModuleDecl)
-DebugStop
+
 		Local result:String
 		If opt_buildtype <> BUILDTYPE_MODULE Then
 			Local dir:String = ExtractDir(mdecl.filepath).ToLower()

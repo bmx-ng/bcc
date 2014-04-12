@@ -391,7 +391,7 @@ Type TStringType Extends TType
 			Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
 			Return ctor And ctor.IsCtor()
 		EndIf
-		Return EqualsType( ty ) Or TStringVarPtrType( ty ) <> Null Or TStringCharPtrType(ty) <> Null
+		Return EqualsType( ty ) Or TStringVarPtrType( ty ) <> Null Or TStringCharPtrType(ty) <> Null Or TBytePtrType(ty) <> Null
 	End Method
 	
 	Method GetClass:TClassDecl()
