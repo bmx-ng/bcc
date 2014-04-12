@@ -791,6 +791,7 @@ Type TCTranslator Extends TTranslator
 			If TStringType( src ) Return "bbStringToDouble" + Bra(t)
 			If TPointerType( src ) Return Bra("(BBDOUBLE)"+t)
 		Else If TStringType( dst )
+			If TBoolType( src ) Return "bbStringFromInt"+Bra( t )
 			If TByteType( src ) Return "bbStringFromInt"+Bra( t )
 			If TShortType( src ) Return "bbStringFromInt"+Bra( t )
 			If TIntType( src ) Return "bbStringFromInt"+Bra( t )
@@ -881,8 +882,16 @@ Type TCTranslator Extends TTranslator
 	
 	Method TransBinaryExpr$( expr:TBinaryExpr )
 		Local pri:Int=ExprPri( expr )
+
 		Local t_lhs$=TransSubExpr( expr.lhs,pri )
+		If TVarPtrType(expr.lhs.exprType) Then
+			t_lhs = "*" + t_lhs
+		End If
+		
 		Local t_rhs$=TransSubExpr( expr.rhs,pri-1 )
+		If TVarPtrType(expr.rhs.exprType) Then
+			t_rhs = "*" + t_rhs
+		End If
 
 		If TStringType(expr.exprType) And expr.op = "+" Then
 			Return "bbStringConcat(" + t_lhs + "," + t_rhs + ")"

@@ -126,6 +126,14 @@ Type TExpr
 	End Method
 
 	Method BalanceTypes:TType( lhs:TType,rhs:TType )
+		If TVarPtrType(lhs) Then
+			lhs = TType.MapVarPointerToPrim(lhs)
+		End If
+
+		If TVarPtrType(rhs) Then
+			rhs = TType.MapVarPointerToPrim(rhs)
+		End If
+
 		If TStringType( lhs ) Or TStringType( rhs ) Return TType.stringType
 		If TDoubleType( lhs ) Or TDoubleType( rhs ) Return TType.floatType
 		If TFloatType( lhs ) Or TFloatType( rhs ) Return TType.floatType

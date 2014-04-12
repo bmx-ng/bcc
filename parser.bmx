@@ -1067,7 +1067,9 @@ Type TParser
 		Return ParseOrExpr()
 	End Method
 
-	Method ParseIfStmt( term$ )
+	Method ParseIfStmt( term$, elseIfEndIfReadAheadCheck:Int = False )
+		Local tok:TToker
+
 		CParse "if"
 
 		Local expr:TExpr=ParseExpr()
@@ -1100,10 +1102,24 @@ Type TParser
 				PopBlock
 				PushBlock elseBlock
 				If elif Or _toke="if"
-					ParseIfStmt term
+					ParseIfStmt term, True
 				EndIf
 			Default
 				ParseStmt
+
+				' for an elseif, it is part of the original if, insofar as the subsequent End If will close both.
+				' read ahead (without moving the parser forward) for an End If and exit if required.
+				If _toke = "end" And elseIfEndIfReadAheadCheck Then
+					tok = New TToker.Copy(_toker)
+					If tok._toke.ToLower() = "end" Then
+						NextTokeToker(tok)
+						If tok._toke.ToLower() = "if" Then
+							If term="end" Then
+								Exit
+							End If
+						End If
+					End If
+				End If
 
 				' to handle "end" statement
 				If _toke = "end" Then

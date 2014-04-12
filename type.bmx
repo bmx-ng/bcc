@@ -183,6 +183,16 @@ Type TType
 		If TLongPtrPtrType(ty) Return longPointerType
 		
 	End Function
+
+	Function MapVarPointerToPrim:TType(ty:TType)
+		If TByteVarPtrType(ty) Return byteType
+		If TIntVarPtrType(ty) Return intType
+		If TShortVarPtrType(ty) Return shortType
+		If TFloatVarPtrType(ty) Return floatType
+		If TDoubleVarPtrType(ty) Return doubleType
+		If TLongVarPtrType(ty) Return longType
+		If TStringVarPtrType(ty) Return stringType
+	End Function
 	
 	Field _arrayOf:TArrayType
 	
@@ -206,7 +216,7 @@ Type TBoolType Extends TType
 	End Method
 	
 	Method ExtendsType:Int( ty:TType )
-		Return TIntType( ty )<>Null Or TBoolType( ty )<>Null
+		Return TIntType( ty )<>Null Or TBoolType( ty )<>Null Or TStringType( ty )<>Null
 	End Method
 	
 	Method ToString$()
