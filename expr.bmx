@@ -271,6 +271,15 @@ Type TConstExpr Extends TExpr
 		Return _trans.TransConstExpr( Self )
 	End Method
 
+	Method SemantAndCast:TExpr( ty:TType,castFlags:Int=0 )
+		Local expr:TExpr=Semant()
+		If expr.exprType.EqualsType( ty ) Return expr
+		If value = "bbNullObject" Then
+			Return expr
+		End If
+		Return New TCastExpr.Create( ty,expr,castFlags ).Semant()
+	End Method
+
 End Type
 
 Type TVarExpr Extends TExpr
@@ -1571,7 +1580,7 @@ Type TIdentExpr Extends TExpr
 
 			Return New TInvokeExpr.Create( fdecl,args ).Semant()
 		End If
-
+		
 		IdentErr
 	End Method
 
@@ -1616,6 +1625,15 @@ Type TIdentExpr Extends TExpr
 	Method SemantScope:TScopeDecl()
 		If Not expr Return _env.FindScopeDecl( ident )
 		Local scope:TScopeDecl=expr.SemantScope()
+
+		' If scope is a namespace, then we are a module. Look up the module id and return it as the real scope.
+		If TNamespaceDecl(scope) Then
+			Local mdecl:TModuleDecl=TModuleDecl(scope.FindDecl(scope.ident + "." + ident))
+			If mdecl Then
+				Return mdecl
+			End If
+		End If
+
 		If scope Return scope.FindScopeDecl( ident )
 	End Method
 
@@ -1850,3 +1868,27 @@ Type TFuncCallExpr Extends TExpr
 
 End Type
 
+Type TScopeExpr Extends TExpr
+	Field scope:TScopeDecl
+
+	Method Create:TScopeExpr( scope:TScopeDecl )
+		Self.scope=scope
+		Return Self
+	End Method
+
+	Method Copy:TExpr()
+		Return Self
+	End Method
+
+	Method ToString$()
+		Return "TScopeExpr("+scope.ToString()+")"
+	End Method
+
+	Method Semant:TExpr()
+		Err "Syntax error."
+	End Method
+
+	Method SemantScope:TScopeDecl()
+		Return scope
+	End Method
+End Type

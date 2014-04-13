@@ -1652,6 +1652,22 @@ Const MODULE_STRICT:Int=1
 Const MODULE_SUPERSTRICT:Int=2
 Const MODULE_ACTUALMOD:Int=4
 
+Type TNamespaceDecl Extends TScopeDecl
+
+'	Field mods:TMap = New TMap
+
+	Method Create:TNamespaceDecl( ident$,munged$ )
+		Self.ident=ident
+		Self.munged=munged
+		Return Self
+	End Method
+
+'	Method GetDecl:Object( ident$ )
+'		Return mods.ValueForKey(ident.ToLower())
+'	End Method
+	
+End Type
+
 Type TModuleDecl Extends TScopeDecl
 
 	Field filepath$
@@ -1673,6 +1689,22 @@ Type TModuleDecl Extends TScopeDecl
 		Self.munged=munged
 		Self.filepath=filepath
 		Self.attrs=attrs
+
+		If ident.Find(".") <> -1 Then
+			Local m:String = ident[..ident.Find(".")]
+			Local ns:TNamespaceDecl = TNamespaceDecl(_appInstance.GetDecl(m))
+			If Not ns Then
+				ns = New TNamespaceDecl.Create(m, m)
+				If _appInstance.mainModule Then
+					_appInstance.mainModule.InsertDecl(ns)
+				Else
+					' this must be the main module...
+					InsertDecl(ns)
+				End If
+			End If
+			ns.InsertDecl(Self)
+		End If
+
 		Return Self
 	End Method
 	
@@ -1809,7 +1841,7 @@ Type TAppDecl Extends TScopeDecl
 	
 	Method GetDecl:Object( ident$ )
 		Local obj:Object = Super.GetDecl(ident)
-		If Not obj Then
+		If Not obj And mainModule Then
 			Return mainModule.GetDecl(ident)
 		End If
 		Return obj

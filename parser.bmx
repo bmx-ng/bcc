@@ -30,31 +30,6 @@ Import "iparser.bmx"
 
 Global FILE_EXT$="bmx"
 
-Type TScopeExpr Extends TExpr
-	Field scope:TScopeDecl
-
-	Method Create:TScopeExpr( scope:TScopeDecl )
-		Self.scope=scope
-		Return Self
-	End Method
-
-	Method Copy:TExpr()
-		Return Self
-	End Method
-
-	Method ToString$()
-		Return "TScopeExpr("+scope.ToString()+")"
-	End Method
-
-	Method Semant:TExpr()
-		Err "Syntax error."
-	End Method
-
-	Method SemantScope:TScopeDecl()
-		Return scope
-	End Method
-End Type
-
 Type TForEachinStmt Extends TStmt
 	Field varid$
 	Field varty:TType
@@ -319,6 +294,7 @@ Type TParser
 'DebugLog "ParseIdentType : " + id
 		If CParse( "." ) id:+"."+ParseIdent()
 		If CParse( "." ) id:+"."+ParseIdent()
+
 		Local args:TIdentType[]
 		If CParse( "<" )
 			Local nargs:Int
@@ -874,7 +850,6 @@ Type TParser
 
 			Select _toke
 			Case "."
-'DebugLog "FOUND DOT for : " + expr.ToString() + " : " + _toker._line
 				NextToke
 				expr=New TIdentExpr.Create( ParseIdent(),expr )
 'DebugLog expr.ToString()
@@ -2200,7 +2175,17 @@ End Rem
 
 			Local modpath:String
 			If opt_buildtype = BUILDTYPE_MODULE Then
-				modpath = opt_modulename + "_" + StripExt(filepath)
+
+				Local dir:String = ExtractDir(origPath).ToLower()
+				dir = dir[dir.findLast("/") + 1..]
+				If dir.EndsWith(".mod") Then
+					dir = ""
+				Else
+					dir = dir.Replace(".", "_").Replace("-", "_") + "_"
+				End If
+				Local file:String = StripDir(origPath).ToLower()
+
+				modpath = opt_modulename + "_" + dir + StripExt(file)
 				modpath = modpath.ToLower().Replace(".", "_").Replace("-", "_")
 			Else
 				modpath = StripExt(filepath)
@@ -2213,7 +2198,9 @@ End Rem
 			If par.ParseModuleImport(_module, modpath, origPath, path, , , filepath) Return
 		Else
 			If filepath.startswith("-") Then
-				_app.fileimports.AddLast filepath
+				If Not _app.fileimports.Contains(filepath) Then
+					_app.fileimports.AddLast filepath
+				End If
 			End If
 		End If
 
@@ -2305,9 +2292,11 @@ End Rem
 			Local dir:String = ExtractDir(opt_filepath).ToLower()
 			dir = dir[dir.findLast("/") + 1..]
 			If dir.EndsWith(".mod") Then
-				dir = dir.Replace(".mod", "")
+				dir = ""
+			Else
+				dir :+ "_"
 			End If
-			app.munged = "_bb_" + opt_modulename + "_" + StripExt(StripDir(opt_filepath).ToLower())
+			app.munged = "_bb_" + opt_modulename + "_" + dir + StripExt(StripDir(opt_filepath).ToLower())
 		Else
 			' main application file?
 			If opt_apptype Then
@@ -2455,7 +2444,16 @@ End Rem
 		If opt_buildtype = BUILDTYPE_MODULE And opt_ismain
 			ValidateModIdent ident
 		Else If opt_buildtype = BUILDTYPE_MODULE Then
-			munged = opt_modulename + "_" + ident
+			Local dir:String = ExtractDir(opt_filepath).ToLower()
+			dir = dir[dir.findLast("/") + 1..]
+			If dir.EndsWith(".mod") Then
+				dir = ""
+			Else
+				dir :+ "_"
+			End If
+			dir = dir.Replace(".", "_").Replace("-", "_")
+
+			munged = opt_modulename + "_" + dir + ident
 			munged = munged.ToLower().Replace(".", "_").Replace("-", "_")
 		End If
 
@@ -2886,6 +2884,28 @@ Function ParseApp:TAppDecl( path$ )
 	parser.ParseMain
 
 	Return app
+End Function
+
+Function MungModuleName:String(ident:Object)
+	If String(ident) Then
+		Local id:String = String(ident)
+		Local mung:String = "__bb_" + id + "_" + id[id.Find(".") + 1..]
+		Return mung.Replace(".", "_").Replace("-", "_")
+	Else
+		Local mdecl:TModuleDecl = TModuleDecl(ident)
+		If mdecl Then
+			Local id:String = mdecl.ident
+			Local dir:String = ExtractDir(mdecl.filepath).ToLower()
+			dir = dir[dir.findLast("/") + 1..]
+			If dir.EndsWith(".mod") Then
+				dir = ""
+			Else
+				dir :+ "_"
+			End If
+			Local mung:String = "__bb_" + id + "_" + dir + id[id.Find(".") + 1..]
+			Return mung.Replace(".", "_").Replace("-", "_")
+		End If
+	End If
 End Function
 
 Function EvalS$( source$,ty:TType )

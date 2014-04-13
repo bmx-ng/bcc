@@ -1264,7 +1264,13 @@ Type TFunctionPtrType Extends TPointerType
 		Next
 		
 		' same return type?
-		If Not func.retType.equalsType(fdecl.retType) Return False
+		If Not func.retType.equalsType(fdecl.retType) Then
+			' if function pointer specifies Int return type, our function can specify void...
+			If TIntType(func.retType) And TVoidType(fdecl.retType) Then
+				Return True
+			End If
+			Return False
+		End If
 		
 		Return True
 	End Method

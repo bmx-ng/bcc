@@ -893,8 +893,12 @@ Type TCTranslator Extends TTranslator
 			t_rhs = "*" + t_rhs
 		End If
 
-		If TStringType(expr.exprType) And expr.op = "+" Then
-			Return "bbStringConcat(" + t_lhs + "," + t_rhs + ")"
+		If expr.op = "+" Then
+			If TStringType(expr.exprType) Then
+				Return "bbStringConcat(" + t_lhs + "," + t_rhs + ")"
+			Else If TArrayType(expr.exprType) Then
+				Return "bbArrayConcat(" + TransArrayType(TArrayType(expr.lhs.exprType).elemType) + "," + t_lhs + "," + t_rhs + ")"
+			End If
 		End If
 
 		If TBinaryCompareExpr(expr) And TStringType(TBinaryCompareExpr(expr).ty) Then
@@ -2322,7 +2326,7 @@ End Rem
 		If moduleDecl.filepath Then
 			' a module import
 			If FileType(moduleDecl.filepath) = FILETYPE_DIR Then
-				Emit MungModuleName(moduleDecl.ident) + "();"
+				Emit MungModuleName(moduleDecl) + "();"
 			Else
 				' maybe a file import...
 				Emit MungImportFromFile(moduleDecl) + "();"
@@ -2399,6 +2403,8 @@ End Rem
 		Emit "int " + app.munged + "();"
 
 		For Local decl:TDecl=EachIn app.Semanted()
+
+			If decl.declImported Continue
 		
 			MungDecl decl
 
@@ -2421,6 +2427,8 @@ End Rem
 
 		'prototypes/header!
 		For Local decl:TDecl=EachIn app.Semanted()
+		
+			If decl.declImported Continue
 		
 			Local gdecl:TGlobalDecl=TGlobalDecl( decl )
 			If gdecl
@@ -2498,6 +2506,8 @@ End Rem
 		'definitions!
 		For Local decl:TDecl=EachIn app.Semanted()
 			
+			If decl.declImported Continue
+			
 			Local gdecl:TGlobalDecl=TGlobalDecl( decl )
 			If gdecl
 				If Not TFunctionPtrType(gdecl.ty) Then
@@ -2546,6 +2556,9 @@ End Rem
 		
 		' register types
 		For Local decl:TDecl=EachIn app.Semanted()
+		
+			If decl.declImported Continue
+		
 			Local cdecl:TClassDecl=TClassDecl( decl )
 			If cdecl
 				Emit "bbObjectRegisterType(&" + cdecl.munged + ");"
@@ -2561,6 +2574,8 @@ End Rem
 		
 		' initialise globals
 		For Local decl:TGlobalDecl=EachIn app.semantedGlobals
+
+			If decl.declImported Continue
 
 			decl.Semant
 			
@@ -2597,7 +2612,10 @@ End Rem
 						EmitIfcImports(mdecl, processed)
 
 						For Local s:String = EachIn mdecl.fileImports
-							Emit "import ~q" + s + "~q"
+							If Not processed.Contains("XX" + s + "XX") Then
+								Emit "import ~q" + s + "~q"
+								processed.Insert("XX" + s + "XX", "")
+							End If
 						Next
 					End If
 				Else
@@ -2621,7 +2639,9 @@ End Rem
 					processed.Insert(mdecl, mdecl)
 					
 					For Local decl:TDecl=EachIn mdecl._decls
-
+					
+						decl.Semant
+					
 						' consts
 						Local cdecl:TConstDecl=TConstDecl( decl )
 						If cdecl
@@ -2745,7 +2765,7 @@ End Rem
 		' consts
 		For Local decl:TDecl=EachIn app.Semanted()
 			Local cdecl:TConstDecl=TConstDecl( decl )
-			If cdecl
+			If cdecl And Not cdecl.declImported
 				EmitIfcConstDecl(cdecl)
 			End If
 		Next
@@ -2753,7 +2773,7 @@ End Rem
 		' classes
 		For Local decl:TDecl=EachIn app.Semanted()
 			Local cdecl:TClassDecl=TClassDecl( decl )
-			If cdecl
+			If cdecl And Not cdecl.declImported
 				EmitIfcClassDecl(cdecl)
 			EndIf
 		Next
@@ -2761,7 +2781,7 @@ End Rem
 		' functions
 		For Local decl:TDecl=EachIn app.Semanted()
 			Local fdecl:TFuncDecl=TFuncDecl( decl )
-			If fdecl And fdecl <> app.mainFunc Then
+			If fdecl And fdecl <> app.mainFunc  And Not fdecl.declImported Then
 				EmitIfcFuncDecl(fdecl)
 			End If
 		Next
@@ -2769,7 +2789,7 @@ End Rem
 		' globals
 		For Local decl:TDecl=EachIn app.Semanted()
 			Local gdecl:TGlobalDecl=TGlobalDecl( decl )
-			If gdecl
+			If gdecl And Not gdecl.declImported
 				EmitIfcGlobalDecl(gdecl)
 			End If
 		Next

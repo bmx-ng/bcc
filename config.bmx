@@ -219,11 +219,6 @@ Function BuildHeaderName:String(path:String)
 	Return path
 End Function
 
-Function MungModuleName:String(ident:String)
-	Local mung:String = "__bb_" + ident + "_" + ident[ident.Find(".") + 1..]
-	Return mung.Replace(".", "_").Replace("-", "_")
-End Function
-
 Rem
 bbdoc: Get the header file name from a given module ident, optionally with include path.
 End Rem

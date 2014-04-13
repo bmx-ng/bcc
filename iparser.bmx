@@ -166,7 +166,16 @@ DebugLog "FILE NOT FOUND : " + ipath
 				
 						Local modpath:String
 						If opt_buildtype = BUILDTYPE_MODULE Then
-							modpath = opt_modulename + "_" + StripExt(iRelPath)
+							Local dir:String = ExtractDir(origPath).ToLower()
+							dir = dir[dir.findLast("/") + 1..]
+							If dir.EndsWith(".mod") Then
+								dir = ""
+							Else
+								dir = dir.Replace(".", "_").Replace("-", "_") + "_"
+							End If
+							Local file:String = StripDir(origPath).ToLower()
+			
+							modpath = opt_modulename + "_" + dir + StripExt(file)
 							modpath = modpath.ToLower().Replace(".", "_").Replace("-", "_")
 						Else
 							' todo file imports for apps
@@ -183,7 +192,9 @@ DebugLog "FILE NOT FOUND : " + ipath
 '					EndIf
 					Else
 						If iRelPath.StartsWith("-") Then
-							_mod.fileImports.AddLast(iRelPath)
+							If Not _mod.fileImports.Contains(iRelPath) Then
+								_mod.fileImports.AddLast(iRelPath)
+							End If
 						End If
 					End If
 				Else
@@ -231,6 +242,7 @@ DebugLog "FILE NOT FOUND : " + ipath
 						toker.NextToke()
 						' class decl
 						class = ParseClassDecl( stm,0 )
+						class.declImported = True
 						_mod.InsertDecl(class)
 
 						If CParse("F")
@@ -271,6 +283,7 @@ DebugLog "FILE NOT FOUND : " + ipath
 						toker.NextToke()
 
 						Local decl:TFuncDecl = ParseFuncDecl( _toke, 0 )
+						decl.declImported = True
 						
 						If decl.attrs & FUNC_PTR Then
 							ty = New TFunctionPtrType
@@ -280,6 +293,7 @@ DebugLog "FILE NOT FOUND : " + ipath
 							Local gdecl:TGlobalDecl = New TGlobalDecl.Create( decl.ident,ty, Null, DECL_GLOBAL )
 							gdecl.munged = decl.munged
 							_mod.InsertDecl gdecl
+							gdecl.declImported = True
 						Else
 							_mod.InsertDecl decl
 						End If
@@ -292,6 +306,7 @@ DebugLog "FILE NOT FOUND : " + ipath
 						
 						Local decl:TDecl = ParseDecl( _toke, DECL_CONST | DECL_EXTERN)'DECL_GLOBAL | DECL_EXTERN )
 						_mod.InsertDecl decl
+						decl.declImported = True
 
 					End If
 				
