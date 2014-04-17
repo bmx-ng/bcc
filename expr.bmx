@@ -842,6 +842,11 @@ Type TCastExpr Extends TExpr
 				Return Self
 			End If
 		End If
+		
+		If TStringCharPtrType(src) And TStringType(ty) Then
+			exprType = ty
+			Return Self
+		End If
 
 		If Not exprType
 			Err "Cannot convert from "+src.ToString()+" to "+ty.ToString()+"."

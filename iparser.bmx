@@ -251,17 +251,23 @@ DebugLog "FILE NOT FOUND : " + ipath
 							class.attrs :| DECL_ABSTRACT
 						Else If CParse("AF")
 							class.attrs :| DECL_ABSTRACT | DECL_FINAL
+						Else If CParse("E")
+							class.attrs :| DECL_EXTERN
 						End If
 'DebugStop
 						If CParse( "=" )
 'DebugStop
-							class.munged=ParseStringLit()
+							If Not class.IsExtern() Then
+								class.munged=ParseStringLit()
 
-							If class.ident <> "String" Then
-								For Local fdecl:TFieldDecl = EachIn class._decls
-									fdecl.munged = "_" + class.munged + "_" + fdecl.ident
-									fdecl.munged = fdecl.munged.ToLower()
-								Next
+								If class.ident <> "String" Then
+									For Local fdecl:TFieldDecl = EachIn class._decls
+										fdecl.munged = "_" + class.munged + "_" + fdecl.ident
+										fdecl.munged = fdecl.munged.ToLower()
+									Next
+								End If
+							Else
+								Parse "0"
 							End If
 						EndIf
 

@@ -116,6 +116,9 @@ Type TCTranslator Extends TTranslator
 		If TDoubleVarPtrPtrType( ty ) Return "BBDOUBLE **"
 		If TLongVarPtrPtrType( ty ) Return "BBLONG **"
 
+		If TExternObjectType( ty ) Return "struct " + TExternObjectType( ty ).classDecl.munged
+		If TExternObjectPtrType( ty ) Return "struct " + TExternObjectPtrType( ty ).classDecl.munged + " *"
+		
 		InternalErr
 	End Method
 
@@ -159,6 +162,8 @@ Type TCTranslator Extends TTranslator
 		If TStringCharPtrType( ty ) Return "$z"
 		If TStringShortPtrType( ty ) Return "$w"
 		If TObjectVarPtrType( ty ) Return ":" + TObjectVarPtrType(ty).classDecl.ident + " Var"
+		If TExternObjectType( ty ) Return ":" + TExternObjectType(ty).classDecl.ident
+		If TExternObjectPtrType( ty ) Return ":" + TExternObjectPtrType(ty).classDecl.ident + "*"
 		InternalErr
 	End Method
 
@@ -800,6 +805,7 @@ Type TCTranslator Extends TTranslator
 			If TDoubleType( src ) Return "bbStringFromDouble"+Bra( t )
 			If TStringType( src ) Return t
 			If TStringVarPtrType( src ) Return "*" + t
+			If TStringCharPtrType( src ) Return "bbStringFromCString"+Bra( t )
 			If TVarPtrType( src ) Then
 				If TByteVarPtrType( src ) Return "bbStringFromInt"+Bra( "*" + t )
 				If TShortVarPtrType( src ) Return "bbStringFromInt"+Bra( "*" + t )
@@ -1533,204 +1539,97 @@ End Rem
 		Local classid$=classDecl.munged
 		Local superid$=classDecl.superClass.actual.munged
 
+		If Not classDecl.IsExtern() Then
+			If opt_issuperstrict Then
+				Emit "void _" + classid + "_New(BBOBJECT o);"
+				Emit "void _" + classid + "_Delete(BBOBJECT o);"
+			Else
+				Emit "int _" + classid + "_New(BBOBJECT o);"
+				Emit "int _" + classid + "_Delete(BBOBJECT o);"
+			End If
 
-		If opt_issuperstrict Then
-			Emit "void _" + classid + "_New(BBOBJECT o);"
-			Emit "void _" + classid + "_Delete(BBOBJECT o);"
-		Else
-			Emit "int _" + classid + "_New(BBOBJECT o);"
-			Emit "int _" + classid + "_Delete(BBOBJECT o);"
+			If classHasFunction(classDecl, "ToString") Then
+				Emit "BBSTRING _" + classid + "_ToString(BBOBJECT o);"
+			End If
+
+			If classHasFunction(classDecl, "Compare") Then
+				Emit "BBINT _" + classid + "_ObjectCompare(BBOBJECT o, BBOBJECT otherObject);"
+			End If
+
+			If classHasFunction(classDecl, "SendMessage") Then
+				Emit "void _" + classid + "_SendMessage(BBOBJECT o, BBOBJECT message, BBOBJECT source);"
+			End If
+
+			Local reserved:String = ",New,Delete,ToString,Compare,SendMessage,_reserved1_,_reserved2_,_reserved3_,".ToLower()
+
+			'Local fdecls:TFuncDecl[] = classDecl.GetAllFuncDecls(Null, False)
+			For Local decl:TDecl=EachIn classDecl.Decls()
+			'For Local fdecl:TFuncDecl = EachIn fdecls
+
+				Local fdecl:TFuncDecl =TFuncDecl( decl )
+				If fdecl
+					If reserved.Find("," + fdecl.ident.ToLower() + ",") = -1 Then
+						EmitClassFuncProto( fdecl )
+						Continue
+					End If
+				EndIf
+
+				'Local gdecl:TGlobalDecl =TGlobalDecl( decl )
+				'If gdecl
+				'	Emit "static "+TransRefType( gdecl.ty )+" "+gdecl.munged+";"
+				'	Continue
+				'EndIf
+			Next
+
+			Emit ""
+
+			' emit the class structure
+			Emit "struct BBClass_" + classid + " {"
+			If classDecl.superClass.ident = "Object" Then
+				Emit "BBClass*  super;"
+			Else
+				Emit "struct BBClass_" + classDecl.superClass.munged + "*  super;"
+			End If
+			Emit "void      (*free)( BBObject *o );"
+			Emit "BBDebugScope* debug_scope;"
+			Emit "int       instance_size;"
+			Emit "void      (*ctor)( BBOBJECT o );"
+			Emit "void      (*dtor)( BBOBJECT o );"
+			Emit "BBSTRING (*ToString)( BBOBJECT x );"
+			Emit "int       (*Compare)( BBOBJECT x,BBOBJECT y );"
+			Emit "BBOBJECT (*SendMessage)( BBOBJECT m,BBOBJECT s );"
+			Emit "void      (*_reserved1_)();"
+			Emit "void      (*_reserved2_)();"
+			Emit "void      (*_reserved3_)();"
+
+			EmitBBClassClassFuncProto(classDecl)
+
+			Emit "};~n"
+
 		End If
-
-		If classHasFunction(classDecl, "ToString") Then
-			Emit "BBSTRING _" + classid + "_ToString(BBOBJECT o);"
-		End If
-		
-		If classHasFunction(classDecl, "Compare") Then
-			Emit "BBINT _" + classid + "_ObjectCompare(BBOBJECT o, BBOBJECT otherObject);"
-		End If
-
-		If classHasFunction(classDecl, "SendMessage") Then
-			Emit "void _" + classid + "_SendMessage(BBOBJECT o, BBOBJECT message, BBOBJECT source);"
-		End If
-
-		Local reserved:String = ",New,Delete,ToString,Compare,SendMessage,_reserved1_,_reserved2_,_reserved3_,".ToLower()
-		
-		'Local fdecls:TFuncDecl[] = classDecl.GetAllFuncDecls(Null, False)
-		For Local decl:TDecl=EachIn classDecl.Decls()
-		'For Local fdecl:TFuncDecl = EachIn fdecls
-		
-			Local fdecl:TFuncDecl =TFuncDecl( decl )
-			If fdecl
-				If reserved.Find("," + fdecl.ident.ToLower() + ",") = -1 Then
-					EmitClassFuncProto( fdecl )
-					Continue
-				End If
-			EndIf
-			
-			'Local gdecl:TGlobalDecl =TGlobalDecl( decl )
-			'If gdecl
-			'	Emit "static "+TransRefType( gdecl.ty )+" "+gdecl.munged+";"
-			'	Continue
-			'EndIf
-		Next
-
-		Emit ""
-
-		' emit the class structure
-		Emit "struct BBClass_" + classid + " {"
-		If classDecl.superClass.ident = "Object" Then
-			Emit "BBClass*  super;"
-		Else
-			Emit "struct BBClass_" + classDecl.superClass.munged + "*  super;"
-		End If
-		Emit "void      (*free)( BBObject *o );"
-		Emit "BBDebugScope* debug_scope;"
-		Emit "int       instance_size;"
-		Emit "void      (*ctor)( BBOBJECT o );"
-		Emit "void      (*dtor)( BBOBJECT o );"
-		Emit "BBSTRING (*ToString)( BBOBJECT x );"
-		Emit "int       (*Compare)( BBOBJECT x,BBOBJECT y );"
-		Emit "BBOBJECT (*SendMessage)( BBOBJECT m,BBOBJECT s );"
-		Emit "void      (*_reserved1_)();"
-		Emit "void      (*_reserved2_)();"
-		Emit "void      (*_reserved3_)();"
-		
-		EmitBBClassClassFuncProto(classDecl)
-		
-'		' user defined functions and methods
-'		For Local decl:TDecl=EachIn classDecl.Decls()
-'			Local fdecl:TFuncDecl =TFuncDecl( decl )
-'			If fdecl
-'				If reserved.Find(fdecl.ident.ToLower()) = -1 Then
-'					EmitBBClassFuncProto( fdecl )
-'					Continue
-'				End If
-'			EndIf
-'		Next
-		
-		
-		Emit "};~n"
-		
-		
 		
 		
 		'Emit "typedef struct " + classid + "_obj {"
-		Emit "struct " + classid + "_obj {"
-		Emit "struct BBClass_" + classid + "* clas;"
-		'Emit "int refs;"
+		If classDecl.IsExtern() Then
+			Emit "struct " + classid + " {"
+		Else
+			Emit "struct " + classid + "_obj {"
+			Emit "struct BBClass_" + classid + "* clas;"
+		End If
 
 		BeginLocalScope
 		EmitClassFieldsProto(classDecl)		
 		EndLocalScope
-'		For Local decl:TFieldDecl = EachIn classDecl.Decls()
-'			Emit "~t" + TransType(decl.declTy) + " _" + decl.ident.ToLower() + ";"
-'		Next
-		
-		'Emit "} " + classid + "_obj;"
+
 		Emit "};"
 
 
 
+		If Not classDecl.IsExtern() Then
+			Emit "extern struct BBClass_" + classid + " " + classid + ";"
 
-		Emit "struct BBClass_" + classid + " " + classid + ";"
-
-		EmitClassGlobalsProto(classDecl);
-
-Rem	
-		' super class
-'		If Not classDecl.superClass Then
-'			Emit "~t&bbObjectClass,"
-'		Else
-'		If classDecl.superClass.ident = "Object" Then
-			Emit "&" + classDecl.superClass.munged + ","
-'		Else
-'			Emit "&_" + classDecl.superClass.munged + ","
-'		End If
-'		End If
-		
-		Emit "bbObjectFree,"
-		
-		Emit "0,"
-		'Emit "~t" + (OBJECT_BASE_OFFSET + classDecl.lastOffset) + ","
-		Emit "sizeof" + Bra("struct " + classid + "_obj") + ","
-		
-		
-		Emit "_" + classid + "_New,"
-		Emit "_" + classid + "_Delete,"
-		
-		If classHasFunction(classDecl, "ToString") Then
-			Emit "_" + classid + "_ToString,"
-		Else
-			Emit "bbObjectToString,"
+			EmitClassGlobalsProto(classDecl);
 		End If
-		
-		If classHasFunction(classDecl, "ObjectCompare") Then
-			Emit "_" + classid + "_ObjectCompare,"
-		Else
-			Emit "bbObjectCompare,"
-		End If
-
-		If classHasFunction(classDecl, "SendMessage") Then
-			Emit "_" + classid + "_SendMessage,"
-		Else
-			Emit "bbObjectSendMessage,"
-		End If
-		
-		'Emit "public:"
-
-		'fields
-		'For Local decl:TDecl=EachIn classDecl.Semanted()
-		'	Local fdecl:TFieldDecl =TFieldDecl( decl )
-		'	If fdecl
-		'		Emit TransRefType( fdecl.ty )+" "+fdecl.munged+";"
-		'		Continue
-		'	EndIf
-		'Next
-
-		'fields ctor
-		'Emit classid+"();"
-
-		'methods		
-		'For Local decl:TDecl=EachIn classDecl.Semanted()
-		'
-		'	Local fdecl:TFuncDecl =TFuncDecl( decl )
-		'	If fdecl
-		'		EmitFuncProto fdecl
-		'		Continue
-		'	EndIf
-		'	
-		'	Local gdecl:TGlobalDecl =TGlobalDecl( decl )
-		'	If gdecl
-		'		Emit "static "+TransRefType( gdecl.ty )+" "+gdecl.munged+";"
-		'		Continue
-		'	EndIf
-		'Next
-
-		'gc mark
-		'Emit "void mark();"
-
-		Emit "bbObjectReserved,"
-		Emit "bbObjectReserved,"
-		Emit "bbObjectReserved"
-
-		' methods/funcs
-		'reserved = "New,Delete,ToString,ObjectCompare,SendMessage".ToLower()
-
-		Local fdecls:TFuncDecl[] = classDecl.GetAllFuncDecls()
-		'For Local decl:TFuncDecl = EachIn classDecl.Decls()
-		For Local decl:TFuncDecl = EachIn fdecls
-			If reserved.Find(decl.ident.ToLower()) = -1 Then
-			
-				MungDecl decl
-
-				Emit ",_" + decl.munged
-			End If
-		Next
-		
-		Emit "};~n"
-End Rem
-
 
 		' fields
 		For Local decl:TFieldDecl = EachIn classDecl.Decls()
@@ -1780,7 +1679,7 @@ End Rem
 		'	Return
 		'EndIf
 		
-		If classDecl.IsInterface()
+		If classDecl.IsInterface() Or classDecl.IsExtern()
 			Return
 		EndIf
 
@@ -2261,25 +2160,28 @@ End Rem
 		
 		
 		' functions
-		Emit "-New%()=" + Enquote("_" + classDecl.munged + "_New")
-		Emit "-Delete%()=" + Enquote("_" + classDecl.munged + "_Delete")
-		
-		Local reserved:String = ",New,Delete,ToString,Compare,SendMessage,_reserved1_,_reserved2_,_reserved3_,".ToLower()
+		If Not classDecl.IsExtern() Then
+			Emit "-New%()=" + Enquote("_" + classDecl.munged + "_New")
+			Emit "-Delete%()=" + Enquote("_" + classDecl.munged + "_Delete")
 
-		For Local decl:TDecl=EachIn classDecl.Decls()
-		
-			Local fdecl:TFuncDecl=TFuncDecl( decl )
-			If fdecl
-				If reserved.Find("," + fdecl.ident.ToLower() + ",") = -1 Then
-					EmitIfcClassFuncDecl fdecl
-				End If
-				Continue
-			EndIf
+			Local reserved:String = ",New,Delete,ToString,Compare,SendMessage,_reserved1_,_reserved2_,_reserved3_,".ToLower()
 
-		Next
-	
-		
-		Emit "}=" + Enquote(classDecl.munged), False
+			For Local decl:TDecl=EachIn classDecl.Decls()
+
+				Local fdecl:TFuncDecl=TFuncDecl( decl )
+				If fdecl
+					If reserved.Find("," + fdecl.ident.ToLower() + ",") = -1 Then
+						EmitIfcClassFuncDecl fdecl
+					End If
+					Continue
+				EndIf
+
+			Next
+
+			Emit "}=" + Enquote(classDecl.munged), False
+		Else
+			Emit "}E=0", False
+		End If
 
 		'PopMungScope
 		EndLocalScope
@@ -2553,14 +2455,14 @@ End Rem
 		' initialise stuff
 		Emit "if (!" + app.munged + "_inited) {"
 		Emit app.munged + "_inited = 1;"
-		
+
 		' register types
 		For Local decl:TDecl=EachIn app.Semanted()
 		
 			If decl.declImported Continue
 		
 			Local cdecl:TClassDecl=TClassDecl( decl )
-			If cdecl
+			If cdecl And Not cdecl.IsExtern()
 				Emit "bbObjectRegisterType(&" + cdecl.munged + ");"
 			EndIf
 		Next
@@ -2720,7 +2622,7 @@ End Rem
 
 		' module info
 		For Local info:String = EachIn app.mainModule.modInfo
-			Emit "ModuleInfo ~q" + info + "~q"
+			Emit "ModuleInfo " + BmxEnquote(info)
 		Next
 		
 		Local processed:TMap = New TMap

@@ -129,6 +129,8 @@ Type TType
 
 		If TStringType(ty) Return stringPointerType
 		
+		If TIdentType(ty) Return TIdentType(ty).CopyToPointer(New TIdentPtrType)
+		
 		' pointer pointer
 		If TBytePtrType(ty) Return bytePointerPtrType
 		If TIntPtrType(ty) Return intPointerPtrType
@@ -528,6 +530,12 @@ Type TIdentType Extends TType
 		dst.args = args
 		Return dst
 	End Method
+
+	Method CopyToPointer:TIdentPtrType(dst:TIdentPtrType)
+		dst.ident = ident
+		dst.args = args
+		Return dst
+	End Method
 	
 	Method ActualType:TType()
 		InternalErr
@@ -591,9 +599,104 @@ Type TIdentType Extends TType
 		
 		Return ty
 	End Method
+
+	Method SemantClass:TClassDecl()
+		Local ty:TObjectType=TObjectType( Semant() )
+		If Not ty Err "Type is not a class"
+		Return ty.classDecl
+	End Method
+
+	Method ToString$()
+		Local t$
+		For Local arg:TIdentType=EachIn args
+			If t t:+","
+			t:+arg.ToString()
+		Next
+		If t Return "$"+ident+"<"+t.Replace("$","")+">"
+		Return "$"+ident
+	End Method
+End Type
+
+
+Type TIdentPtrType Extends TPointerType
+	Field ident$
+	Field args:TType[]
+	
+	Method Create:TIdentPtrType( ident$,args:TType[] = Null )
+		Self.ident=ident
+		If args = Null Then
+			Self.args = New TType[0]
+		Else
+			Self.args=args
+		End If
+		Return Self
+	End Method
+	
+	Method ActualType:TType()
+		InternalErr
+	End Method
+	
+	Method EqualsType:Int( ty:TType )
+		InternalErr
+	End Method
+	
+	Method ExtendsType:Int( ty:TType )
+		InternalErr
+	End Method
+	
+	'Method Semant:TType()
+	'	If ident Return New TObjectType.Create( FindClass() )
+	'	Return New TObjectType.Create( TClassDecl.nullObjectClass )
+	'End Method
 	
 	
-	
+	Method Semant:TType()
+		If Not ident Return TClassDecl.nullObjectClass.objectType
+
+		Local targs:TType[args.Length]
+		For Local i:Int=0 Until args.Length
+			targs[i]=args[i].Semant()
+		Next
+		
+		Local tyid$,ty:TType
+		Local i:Int=ident.FindLast( "." )
+		
+		If i=-1
+			tyid=ident
+			ty=_env.FindType( tyid,targs )
+
+			' finally scan all modules for it
+			If Not ty Then
+				For Local mdecl:TModuleDecl = EachIn _appInstance.globalImports.Values()
+					ty=mdecl.FindType( tyid,targs )
+					If ty Exit
+				Next
+			End If
+		Else
+			' try scope search first
+			tyid=ident[..i]
+			ty=_env.FindType( tyid,targs )
+
+			If Not ty Then
+				' no? now try module search
+				Local modid$=ident[..i]
+				Local mdecl:TModuleDecl=_env.FindModuleDecl( modid )
+				If Not mdecl Err "Module '"+modid+"' not found"
+				tyid=ident[i+1..]
+				ty=mdecl.FindType( tyid,targs )
+			End If
+		EndIf
+		If Not ty Err "Type '"+tyid+"' not found"
+		
+		If TIdentPtrType(Self) And TObjectType(ty) Then
+
+			If Not (TObjectType(ty).classDecl.attrs & DECL_EXTERN) Err "Only Extern Types can be used in this way."
+
+			ty = New TExternObjectPtrType.Create(TObjectType(ty).classDecl)
+		End If
+		
+		Return ty
+	End Method
 Rem
 	Method FindClass:TClassDecl()
 	
@@ -1193,6 +1296,104 @@ Type TObjectVarPtrType Extends TVarPtrType
 	Method ActualType:TType()
 		If classDecl.actual=classDecl Return Self
 		Return New TObjectVarPtrType.Create( TClassDecl(classDecl.actual) )
+	End Method
+	
+	Method EqualsType:Int( ty:TType )
+		Local objty:TObjectType=TObjectType( ty )
+		Return TNullDecl(classDecl) <> Null Or (objty And (classDecl=objty.classDecl Or classDecl.ExtendsClass( objty.classDecl ))) Or TPointerType( ty )<>Null Or TObjectType(ty)
+	End Method
+	
+	Method ExtendsType:Int( ty:TType )
+		Local objty:TObjectType=TObjectType( ty )
+		If objty Return classDecl.ExtendsClass( objty.classDecl )
+		If TBytePtrType( ty ) Return True
+		Local op$
+		If TBoolType( ty )
+			op="ToBool"
+		Else If TIntType( ty ) 
+			op="ToInt"
+		Else If TFloatType( ty )
+			op="ToFloat"
+		Else If TStringType( ty )
+			op="ToString"
+		Else If TLongType( ty ) ' BaH Long
+			op="ToLong"
+		Else
+			Return False
+		EndIf
+		Local fdecl:TFuncDecl=GetClass().FindFuncDecl( op,Null,True )
+		Return fdecl And fdecl.IsMethod() And fdecl.retType.EqualsType( ty )
+	End Method
+	
+	Method GetClass:TClassDecl()
+		Return classDecl
+	End Method
+	
+	Method ToString$()
+		Return classDecl.ToString()
+	End Method
+End Type
+
+Type TExternObjectType Extends TType
+	Field classDecl:TClassDecl
+	
+	Method Create:TExternObjectType( classDecl:TClassDecl )
+		Self.classDecl=classDecl
+		Return Self
+	End Method
+	
+	Method ActualType:TType()
+		If classDecl.actual=classDecl Return Self
+		Return New TExternObjectType.Create( TClassDecl(classDecl.actual) )
+	End Method
+	
+	Method EqualsType:Int( ty:TType )
+		Local objty:TObjectType=TObjectType( ty )
+		Return TNullDecl(classDecl) <> Null Or (objty And (classDecl=objty.classDecl Or classDecl.ExtendsClass( objty.classDecl ))) Or TObjectType(ty)
+	End Method
+	
+	Method ExtendsType:Int( ty:TType )
+		Local objty:TObjectType=TObjectType( ty )
+		If objty Return classDecl.ExtendsClass( objty.classDecl )
+		If TBytePtrType( ty ) Return True
+		Local op$
+		If TBoolType( ty )
+			op="ToBool"
+		Else If TIntType( ty ) 
+			op="ToInt"
+		Else If TFloatType( ty )
+			op="ToFloat"
+		Else If TStringType( ty )
+			op="ToString"
+		Else If TLongType( ty ) ' BaH Long
+			op="ToLong"
+		Else
+			Return False
+		EndIf
+		Local fdecl:TFuncDecl=GetClass().FindFuncDecl( op,Null,True )
+		Return fdecl And fdecl.IsMethod() And fdecl.retType.EqualsType( ty )
+	End Method
+	
+	Method GetClass:TClassDecl()
+		Return classDecl
+	End Method
+	
+	Method ToString$()
+		Return classDecl.ToString()
+	End Method
+End Type
+
+Type TExternObjectPtrType Extends TPointerType
+	Field classDecl:TClassDecl
+	
+	Method Create:TExternObjectPtrType( classDecl:TClassDecl )
+		Self.classDecl=classDecl
+		Return Self
+	End Method
+	
+	Method ActualType:TType()
+		If classDecl.actual=classDecl Return Self
+		Return New TExternObjectPtrType.Create( TClassDecl(classDecl.actual) )
 	End Method
 	
 	Method EqualsType:Int( ty:TType )
