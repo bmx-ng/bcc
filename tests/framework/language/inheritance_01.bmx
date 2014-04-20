@@ -11,3 +11,4 @@ Import "inheritance_01.extend.bmx"
 local queue:MyTypeQueue = new MyTypeQueue
 
 queue.insert(new MyOtherType)
+print "compiled"
