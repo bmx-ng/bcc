@@ -1017,7 +1017,7 @@ Type TFuncDecl Extends TBlockDecl
 						decl.Semant
 					End If
 					
-					If decl.ident = ident Then
+					If decl.ident.ToLower() = ident.ToLower() Then
 'If ident = "CreateStream" DebugStop
 						found=True
 						If EqualsFunc( decl ) 
@@ -1034,6 +1034,8 @@ Type TFuncDecl Extends TBlockDecl
 				Next
 				If found
 					If Not overrides Err "Overriding method does not match any overridden method."
+					' for overrides, make the ident match that of the superclass
+					ident = overrides.ident
 					Exit
 				EndIf
 				sclass=sclass.superClass

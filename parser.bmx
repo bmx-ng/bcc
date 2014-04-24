@@ -1315,6 +1315,17 @@ Type TParser
 				PushBlock block
 			Else
 				ParseStmt
+				
+				If _toke = "end" Then
+					NextToke
+					If _toke = "try" Then
+						' we are done with the try statement
+						Exit
+					Else
+						ParseEndStmt(False)
+					End If
+				End If
+
 			End If
 		Wend
 		' TODO : handle case of no catch - perhaps throw the exception again.
