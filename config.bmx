@@ -163,14 +163,14 @@ End Type
 
 Type TStringList Extends TList
 	Method Join:String(s:String)
-		Local str:String
+		Local arr:String[] = New String[count()]
+		Local index:Int
 		For Local t:String = EachIn Self
-			If str Then
-				str :+ s
-			End If
-			str:+ t
+			arr[index] = t
+			index :+ 1
 		Next
-		Return str
+		
+		Return s.Join(arr)
 	End Method
 End Type
 
