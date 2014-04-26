@@ -1809,6 +1809,7 @@ Type TAppDecl Extends TScopeDecl
 	Field stringConstCount:Int
 	
 	Field incbins:TList = New TList
+	Field genIncBinHeader:Int = False
 	
 	Method GetPathPrefix:String()
 		If opt_buildtype = BUILDTYPE_MODULE Then

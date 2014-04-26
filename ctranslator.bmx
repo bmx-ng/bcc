@@ -2325,8 +2325,8 @@ End Rem
 				Local val:Int = buf[i]
 				
 				For Local k:Int=1 To 0 Step -1
-					Local n:Int=(val&15)+Asc("0")
-					If n>Asc("9") n=n+(Asc("A")-Asc("9")-1)+32
+					Local n:Int=(val&15)+48
+					If n>57 n:+39
 					hx[k]=n
 					val:Shr 4
 				Next
@@ -2435,6 +2435,109 @@ End Rem
 			
 	End Method
 	
+	Method IncBinRequiresRebuild:Int(file:String, incbins:TList)
+
+		' file doesn't exist?
+		If Not FileType(file) Then
+			Return True
+		End If
+
+		Local timestamp:Int = FileTime(file)
+		
+		' file exists... read header and compare names
+		' read lines until "// ----"
+		' TODO
+		Local files:TList = New TList
+		Local stream:TStream = ReadFile(file)
+		While True
+			Local s:String = ReadLine(stream)
+			If Not s.StartsWith("// ") Or s.StartsWith("// ----") Then
+				Exit
+			End If
+			
+			Local ind:Int = s.Find("// FILE : ")
+			If ind = 0 Then
+				files.AddLast(s[10..].Replace("~q",""))
+			End If
+		Wend
+		stream.Close()
+		
+		' different number of files?
+		If files.Count() <> incbins.Count() Then
+			Return True
+		End If
+		
+		' different file names?
+		Local count:Int
+		For Local s:String = EachIn files
+			For Local ib:TIncbin = EachIn incbins
+				If s = ib.file Then
+					count :+ 1
+					Exit
+				End If
+			Next
+		Next
+		
+		If count <> files.count() Then
+			Return True
+		End If
+
+		count = 0
+		For Local ib:TIncbin = EachIn incbins
+			For Local s:String = EachIn files
+				If s = ib.file Then
+					count :+ 1
+					Exit
+				End If
+			Next
+		Next
+		
+		If count <> incbins.count() Then
+			Return True
+		End If
+
+		For Local ib:TIncbin = EachIn incbins
+			If timestamp < FileTime(ib.path) Then
+				Return True
+			End If
+		Next
+
+		Return False
+	End Method
+	
+	Method TransIncBin(app:TAppDecl)
+		If app.incbins.Count() > 0 Then
+
+			SetOutput("incbin")
+
+			Local mung:String = FileMung(False)
+
+			Local name:String = StripAll(app.mainModule.filepath)
+			Local file:String = name + ".bmx" + mung + ".incbin.h"
+			Local filepath:String = OutputFilePath(opt_filepath, mung, "incbin.h")
+
+			If IncBinRequiresRebuild(filepath, app.incbins) Then
+			
+				app.genIncBinHeader = True
+			
+				For Local ib:TIncbin = EachIn app.incbins
+					Emit "// FILE : " + Enquote(ib.file)
+				Next
+				
+				Emit "// ----"
+
+				For Local ib:TIncbin = EachIn app.incbins
+					EmitIncBinFile(ib)
+				Next
+
+			End If
+
+			SetOutput("source")
+			
+			Emit "#include ~q" + file + "~q"
+		End If
+	End Method
+	
 	Method TransSource(app:TAppDecl)
 
 		SetOutput("source")
@@ -2443,10 +2546,8 @@ End Rem
 		EmitModuleInclude(app.mainModule)
 		
 		' incbins
-		For Local ib:TIncbin = EachIn app.incbins
-			EmitIncBinFile(ib)
-		Next
-
+		TransIncBin(app)
+		
 		' strings
 		For Local s:String = EachIn app.stringConsts.Keys()
 			If s Then

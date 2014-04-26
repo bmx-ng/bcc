@@ -64,6 +64,7 @@ Local mung:String = FileMung(makeApp)
 SaveInterface(opt_filepath, trans, mung)
 SaveHeader(opt_filepath, trans, mung)
 SaveSource(opt_filepath, trans, mung)
+SaveIncBinHeader(opt_filepath, trans, FileMung(False), app)
 
 
 Function SaveInterface(file:String, trans:TCTranslator, mung:String)
@@ -116,5 +117,15 @@ Function SaveSource(file:String, trans:TCTranslator, mung:String)
 	Local path:String = OutputFilePath(file, mung, "c")
 
 	SaveText(trans.JoinLines("source"), path)
+
+End Function
+
+Function SaveIncBinHeader(file:String, trans:TCTranslator, mung:String, app:TAppDecl)
+
+	If app.genIncBinHeader Then
+		Local path:String = OutputFilePath(file, mung, "incbin.h")
+
+		SaveText(trans.JoinLines("incbin"), path)
+	End If
 
 End Function
