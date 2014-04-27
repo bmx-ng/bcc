@@ -23,6 +23,7 @@ SuperStrict
 
 Import BRL.Map
 Import BRL.FileSystem
+Import BRL.Standardio
 
 Type TConfigMap
 	Field values:TMap = CreateMap()
