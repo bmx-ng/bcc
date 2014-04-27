@@ -38,19 +38,20 @@ Type TTranslator
 	Field mungStack:TStack=New TStack'< StringMap<TDecl> >
 	Field funcMungs:TMap=New TMap'<FuncDeclList>
 	Field customVarStack:TStack = New TStack
+	Field varStack:TStack = New TStack
 
 	Field mungedScopes:TMap=New TMap'<StringSet>
 '	Field funcMungs:=New StringMap<FuncDeclList>
 '	Field mungedFuncs:=New StringMap<FuncDecl>
 
-'	Method PushMungScope()
-'		mungStack.Push mungScope
-'		mungScope:TMap=New TMap'<TDecl>
-'	End Method
+	Method PushVarScope()
+		varStack.Push customVarStack
+		customVarStack = New TStack
+	End Method
 	
-'	Method PopMungScope()
-'		mungScope=TMap(mungStack.Pop())
-'	End Method
+	Method PopVarScope()
+		customVarStack=TStack(varStack.Pop())
+	End Method
 	
 	Method MungFuncDecl( fdecl:TFuncDecl )
 
@@ -534,8 +535,22 @@ End Rem
 	
 	Method TransReturnStmt$( stmt:TReturnStmt )
 		Local t$="return"
-		If stmt.expr t:+" "+stmt.expr.Trans()
 		unreachable=True
+		If stmt.expr Then
+'DebugStop
+			If TObjectType(stmt.expr.exprType) And TNullDecl(TObjectType(stmt.expr.exprType).classDecl) Then
+				If TPointerType(stmt.fRetType) Or TNumericType(stmt.fRetType) Then
+					Return t + " 0"
+				End If
+				If TStringType(stmt.fRetType) Then
+					Return t + " &bbEmptyString"
+				End If
+				If TArrayType(stmt.fRetType) Then
+					Return t + " &bbEmptyArray"
+				End If
+			End If
+			t:+" "+stmt.expr.Trans()
+		End If
 		Return t
 	End Method
 	
@@ -695,8 +710,12 @@ End Rem
 			EndIf
 		Else If stmt.elseBlock.stmts.First()
 			Emit "if"+Bra( stmt.expr.Trans() )+"{"
+			FreeVarsIfRequired(False)
+			PushVarScope
 			Local unr:Int=EmitBlock( stmt.thenBlock )
+			PopVarScope
 			Emit "}else{"
+			FreeVarsIfRequired
 			Local unr2:Int=EmitBlock( stmt.elseBlock )
 			Emit "}"
 			If unr And unr2 unreachable=True
@@ -713,10 +732,28 @@ End Rem
 '				End If
 '			Else
 				Emit "if"+Bra( stmt.expr.Trans() )+"{"
+				FreeVarsIfRequired(False)
 '			End If
+			PushVarScope
 			Local unr:Int=EmitBlock( stmt.thenBlock )
+			PopVarScope
 			Emit "}"
+			FreeVarsIfRequired
 		EndIf
+	End Method
+	
+	Method FreeVarsIfRequired(removeFromStack:Int = True)
+		If removeFromStack
+			Local v:String = String(customVarStack.Pop())
+			While v
+				Emit "bbMemFree" + Bra(v) + ";"
+				v = String(customVarStack.Pop())
+			Wend
+		Else
+			For Local v:String = EachIn customVarStack
+				Emit "bbMemFree" + Bra(v) + ";"
+			Next
+		End If
 	End Method
 	
 '	Method TransCondition:String(expr:TExpr)

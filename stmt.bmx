@@ -132,6 +132,7 @@ End Type
 
 Type TReturnStmt Extends TStmt
 	Field expr:TExpr
+	Field fRetType:TType
 
 	Method Create:TReturnStmt( expr:TExpr )
 		Self.expr=expr
@@ -148,6 +149,7 @@ Type TReturnStmt Extends TStmt
 		If expr
 			If fdecl.IsCtor() Err "Constructors may not return a value."
 			If TVoidType( fdecl.retType ) Err "Void functions may not return a value."
+			fRetType = fdecl.retType
 			expr=expr.SemantAndCast( fdecl.retType )
 		Else If fdecl.IsCtor()
 			expr=New TSelfExpr.Semant()

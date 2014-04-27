@@ -142,6 +142,12 @@ Type TExpr
 			If TPointerType( rhs ) Return rhs
 		End If
 		If TIntType( lhs ) Or TIntType( rhs ) Return TType.intType
+		If TObjectType( lhs ) And TNullDecl(TObjectType( lhs ).classDecl) Then
+			Return rhs
+		End If
+		If TObjectType( rhs ) And TNullDecl(TObjectType( rhs ).classDecl) Then
+			Return lhs
+		End If
 		If lhs.ExtendsType( rhs ) Return rhs
 		If rhs.ExtendsType( lhs ) Return lhs
 		Err "Can't balance types "+lhs.ToString()+" and "+rhs.ToString()+"."
@@ -840,6 +846,9 @@ Type TCastExpr Extends TExpr
 			Else If TStringType(src) Then
 				exprType = ty
 				Return Self
+			Else If TObjectType(src) And TVarPtrType(ty) Then
+				exprType = TType.bytePointerType
+				Return Self
 			End If
 		End If
 		
@@ -1098,7 +1107,9 @@ Type TBinaryCompareExpr Extends TBinaryExpr
 
 		ty=BalanceTypes( lhs.exprType,rhs.exprType )
 		If TArrayType( ty )
-			Err "Arrays cannot be compared."
+			If TArrayType(lhs.exprType) And TArrayType(rhs.exprType) Then
+				Err "Arrays cannot be compared."
+			End If
 		EndIf
 
 		lhs=lhs.Cast( ty )

@@ -784,6 +784,7 @@ Type TCTranslator Extends TTranslator
 			If TDoubleType( src ) Return Bra("(BBINT)"+t)
 			If TLongType( src ) Return Bra("(BBINT)"+t)
 			If TStringType( src ) Return "bbStringToInt" + Bra(t)
+			If TIntVarPtrType( src ) Return Bra("*" + t)
 			If TPointerType( src ) Return Bra("(BBINT)"+t)
 		 Else If TLongType( dst )
 			If TByteType( src) Return Bra("(BBLONG)"+t)
@@ -793,6 +794,7 @@ Type TCTranslator Extends TTranslator
 			If TFloatType( src ) Return Bra("(BBLONG)"+t)
 			If TDoubleType( src ) Return Bra("(BBLONG)"+t)
 			If TStringType( src ) Return "bbStringToLong" + Bra(t)
+			If TLongVarPtrType( src ) Return Bra("*" + t)
 			If TPointerType( src ) Return Bra("(BBLONG)"+t)
 		Else If TFloatType( dst )
 			If TByteType( src ) Return Bra("(BBFLOAT)"+t)
@@ -802,6 +804,7 @@ Type TCTranslator Extends TTranslator
 			If TDoubleType( src ) Return Bra("(BBFLOAT)"+t)
 			If TLongType( src ) Return Bra("(BBFLOAT)"+t)
 			If TStringType( src ) Return "bbStringToFloat" + Bra(t)
+			If TFloatVarPtrType( src ) Return Bra("*" + t)
 			If TPointerType( src ) Return Bra("(BBFLOAT)"+t)
 		Else If TDoubleType( dst )
 			If TByteType( src ) Return Bra("(BBDOUBLE)"+t)
@@ -811,6 +814,7 @@ Type TCTranslator Extends TTranslator
 			If TFloatType( src ) Return Bra("(BBDOUBLE)"+t)
 			If TLongType( src ) Return Bra("(BBDOUBLE)"+t)
 			If TStringType( src ) Return "bbStringToDouble" + Bra(t)
+			If TDoubleVarPtrType( src ) Return Bra("*" + t)
 			If TPointerType( src ) Return Bra("(BBDOUBLE)"+t)
 		Else If TStringType( dst )
 			If TBoolType( src ) Return "bbStringFromInt"+Bra( t )
@@ -841,6 +845,7 @@ Type TCTranslator Extends TTranslator
 			If TDoubleType( src ) Return Bra("(BBBYTE)"+t)
 			If TLongType( src ) Return Bra("(BBBYTE)"+t)
 			If TStringType( src ) Return t+".ToByte()"
+			If TByteVarPtrType( src ) Return Bra("*" + t)
 		Else If TShortType( dst )
 			If TShortType( src) Return t
 			If TByteType( src) Return Bra("(BBSHORT)"+t)
@@ -849,6 +854,7 @@ Type TCTranslator Extends TTranslator
 			If TDoubleType( src ) Return Bra("(BBSHORT)"+t)
 			If TLongType( src ) Return Bra("(BBSHORT)"+t)
 			If TStringType( src ) Return "bbStringToShort" + Bra(t)
+			If TShortVarPtrType( src ) Return Bra("*" + t)
 		Else If TVarPtrType( dst )
 			If Not TConstExpr(expr.expr) Then
 				If TInvokeExpr(expr.expr) Return t
@@ -979,6 +985,14 @@ Type TCTranslator Extends TTranslator
 				End If
 				If t_rhs="&bbNullObject" Then
 					t_rhs = "0"
+				End If
+			End If
+			If TArrayType(TBinaryCompareExpr(expr).ty) Then
+				If t_lhs="&bbNullObject" Then
+					t_lhs = "&bbEmptyArray"
+				End If
+				If t_rhs="&bbNullObject" Then
+					t_rhs = "&bbEmptyArray"
 				End If
 			End If
 		End If
@@ -2221,12 +2235,16 @@ End Rem
 			
 			' global
 		For Local gDecl:TGlobalDecl = EachIn classDecl.Decls()
+			gDecl.Semant()
+
 			EmitIfcGlobalDecl(gDecl)
 		Next
 			
 			
 			' field
 		For Local fDecl:TFieldDecl = EachIn classDecl.Decls()
+			fDecl.Semant()
+			
 			EmitIfcFieldDecl(fDecl)
 		Next
 		

@@ -996,13 +996,22 @@ End Rem
 				attrs :~ DECL_CONST
 			End If
 
-
+			' pointer
 			If CParse( "*" ) Then
 
 				If ty = TType.longType Then
 					ty = TType.longPointerType
 				Else
 					ty = TType.intPointerType
+				End If
+
+				' pointer pointer
+				If CParse( "*" ) Then
+					If ty = TType.longPointerType Then
+						ty = TType.longPointerPtrType
+					Else
+						ty = TType.intPointerPtrType
+					End If
 				End If
 				
 			End If
@@ -1018,6 +1027,11 @@ End Rem
 
 			If CParse( "*" ) Then
 				ty = TType.floatPointerType
+
+				' pointer pointer
+				If CParse( "*" ) Then
+					ty = TType.floatPointerPtrType
+				End If
 			End If
 			
 		Case "$"
@@ -1045,11 +1059,22 @@ End Rem
 
 			If CParse( "*" ) Then
 				ty = TType.doublePointerType
+
+				' pointer pointer
+				If CParse( "*" ) Then
+					ty = TType.doublePointerPtrType
+				End If
 			End If
 
 		Case ":"
 			NextToke
 			ty=ParseNewType()
+			
+			If CParse("*") Then
+				If TIdentType(ty) Then
+					ty = New TIdentPtrType.Create(TIdentType(ty).ident, TIdentType(ty).args)
+				End If
+			End If
 			
 			CParse("&")
 		Case "@"
