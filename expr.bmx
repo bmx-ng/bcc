@@ -115,6 +115,13 @@ Type TExpr
 				If Not funcDecl.argDecls[i].IsSemanted() Then
 					funcDecl.argDecls[i].Semant()
 				End If
+
+				If TInvokeExpr(args[i]) And Not TInvokeExpr(args[i]).invokedWithBraces Then
+					If Not TBytePtrType(funcDecl.argDecls[i].ty) And Not TFunctionPtrType(funcDecl.argDecls[i].ty) Then
+						Err "Unable to convert from '" + args[i].exprType.ToString() + "()' to '" + funcDecl.argDecls[i].ty.ToString() + "'"
+					End If
+				End If
+
 				args[i]=args[i].Cast( funcDecl.argDecls[i].ty )
 			Else If funcDecl.argDecls[i].init
 				args[i]=funcDecl.argDecls[i].init
@@ -369,14 +376,16 @@ End Type
 Type TInvokeExpr Extends TExpr
 	Field decl:TFuncDecl
 	Field args:TExpr[]
+	Field invokedWithBraces:Int
 
-	Method Create:TInvokeExpr( decl:TFuncDecl,args:TExpr[]=Null )
+	Method Create:TInvokeExpr( decl:TFuncDecl,args:TExpr[]=Null,invokedWithBraces:Int=True )
 		Self.decl=decl
 		If args Then
 			Self.args=args
 		Else
 			Self.args = New TExpr[0]
 		End If
+		Self.invokedWithBraces = invokedWithBraces
 		Return Self
 	End Method
 
@@ -1594,7 +1603,7 @@ Type TIdentExpr Extends TExpr
 				If scope<>_env Or Not _env.FuncScope() Or _env.FuncScope().IsStatic() Err "Method '"+ident+"' cannot be accessed from here."
 			EndIf
 
-			Return New TInvokeExpr.Create( fdecl,args ).Semant()
+			Return New TInvokeExpr.Create( fdecl,args, False ).Semant()
 		End If
 		
 		IdentErr

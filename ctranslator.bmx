@@ -251,7 +251,7 @@ Type TCTranslator Extends TTranslator
 						Continue
 					End If
 					' some cases where we are passing a function pointer via a void* parameter.
-					If TCastExpr(args[i]) And TInvokeExpr(TCastExpr(args[i]).expr) Then
+					If TCastExpr(args[i]) And TInvokeExpr(TCastExpr(args[i]).expr) And Not TInvokeExpr(TCastExpr(args[i]).expr).invokedWithBraces Then
 						t:+ "&" + TInvokeExpr(TCastExpr(args[i]).expr).decl.munged
 						Continue
 					End If
