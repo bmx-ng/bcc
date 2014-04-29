@@ -815,7 +815,7 @@ End Type
 Type TByteVarPtrType Extends TVarPtrType
 
 	Method EqualsType:Int( ty:TType )
-		Return TByteVarPtrType( ty )<>Null
+		Return TByteVarPtrType( ty )<>Null Or TVarPtrType( ty )<>Null
 	End Method
 	
 	Method ExtendsType:Int( ty:TType )
@@ -878,7 +878,7 @@ End Type
 Type TShortVarPtrType Extends TVarPtrType
 
 	Method EqualsType:Int( ty:TType )
-		Return TShortVarPtrType( ty )<>Null
+		Return TShortVarPtrType( ty )<>Null Or TVarPtrType( ty )<>Null
 	End Method
 	
 	Method ExtendsType:Int( ty:TType )
@@ -941,7 +941,7 @@ End Type
 Type TIntVarPtrType Extends TVarPtrType
 
 	Method EqualsType:Int( ty:TType )
-		Return TIntVarPtrType( ty )<>Null
+		Return TIntVarPtrType( ty )<>Null Or TVarPtrType( ty )<>Null
 	End Method
 	
 	Method ExtendsType:Int( ty:TType )
@@ -1004,7 +1004,7 @@ End Type
 Type TFloatVarPtrType Extends TVarPtrType
 
 	Method EqualsType:Int( ty:TType )
-		Return TFloatVarPtrType( ty )<>Null
+		Return TFloatVarPtrType( ty )<>Null Or TVarPtrType( ty )<>Null
 	End Method
 	
 	Method ExtendsType:Int( ty:TType )
@@ -1067,7 +1067,7 @@ End Type
 Type TDoubleVarPtrType Extends TVarPtrType
 
 	Method EqualsType:Int( ty:TType )
-		Return TDoubleVarPtrType( ty )<>Null
+		Return TDoubleVarPtrType( ty )<>Null Or TVarPtrType( ty )<>Null
 	End Method
 	
 	Method ExtendsType:Int( ty:TType )
@@ -1130,7 +1130,7 @@ End Type
 Type TLongVarPtrType Extends TVarPtrType
 
 	Method EqualsType:Int( ty:TType )
-		Return TLongVarPtrType( ty )<>Null
+		Return TLongVarPtrType( ty )<>Null Or TVarPtrType( ty )<>Null
 	End Method
 	
 	Method ExtendsType:Int( ty:TType )
