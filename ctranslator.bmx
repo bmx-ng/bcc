@@ -2518,6 +2518,9 @@ End Rem
 			If timestamp < FileTime(ib.path) Then
 				Return True
 			End If
+			
+			' set the length, as we will need this later if we aren't loading the files now.
+			ib.length = FileSize(ib.path)
 		Next
 
 		Return False
