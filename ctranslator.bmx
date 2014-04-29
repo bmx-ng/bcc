@@ -429,6 +429,8 @@ Type TCTranslator Extends TTranslator
 			Return decl.munged
 		Else If TFuncDecl(decl.scope)
 			Return decl.munged
+		Else If TGlobalDecl(decl)
+			Return decl.munged
 		EndIf
 		InternalErr
 	End Method
@@ -1555,7 +1557,7 @@ End Rem
 'If decl.ident = "Delete" DebugStop
 
 				decl.Semant()
-'If decl.ident = "chooseCreateFromType" DebugStop
+'If decl.ident = "GetActive" DebugStop
 		' TODO : enable block output
 				EmitBlock decl
 		'		Emit "// TODO : enable block output"
