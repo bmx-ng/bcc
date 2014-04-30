@@ -929,6 +929,10 @@ Type TCTranslator Extends TTranslator
 				If TDoublePtrType( src ) Return Bra("(BBLONG*)"+t)
 				If TLongPtrType( src ) Return t
 			End If
+		Else If TObjectType( dst )
+			If TArrayType( src ) Return Bra("(BBOBJECT)"+t)
+			If TStringType( src ) Return Bra("(BBOBJECT)"+t)
+			If TObjectType( src ) Return t
 		EndIf
 		
 		Return TransPtrCast( dst,src,t,"dynamic" )
