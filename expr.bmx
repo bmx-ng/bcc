@@ -1085,7 +1085,10 @@ Type TBinaryMathExpr Extends TBinaryExpr
 			End Select
 		Else If TStringType( exprType )
 			Select op
-			Case "+" Return lhs+rhs
+			Case "+" 
+				_appInstance.removeStringConst(lhs)
+				_appInstance.removeStringConst(rhs)
+				Return lhs+rhs
 			End Select
 		EndIf
 		InternalErr
