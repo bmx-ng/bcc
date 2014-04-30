@@ -1491,6 +1491,10 @@ End Rem
 		For Local decl:TGlobalDecl = EachIn Decls()
 			decl.Semant()
 		Next
+
+		For Local decl:TFuncDecl = EachIn Decls()
+			decl.Semant()
+		Next
 		
 	End Method
 	
