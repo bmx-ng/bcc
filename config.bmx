@@ -85,6 +85,15 @@ Function Todo()
 	Err "TODO!"
 End Function
 
+Function IsStandardFunc:Int(func:String)
+	func = func.ToLower()
+	
+	Global funcs:String = ";isalnum;isalpha;isascii;isblank;iscntrl;isdigit;isgraph;islower;isprint;ispunct;isspace;isupper;isxdigit;" + ..
+		"strlen;"
+	
+	Return funcs.Find(func) > 0
+End Function
+
 'enquote depending on ENV_LANG
 '
 Function LangEnquote$( str$ )

@@ -281,6 +281,8 @@ Type TCTranslator Extends TTranslator
 					If TConstExpr(decl.argDecls[i].init) And TConstExpr(decl.argDecls[i].init).value = "bbNullObject" Then
 						If TStringType(decl.argDecls[i].ty) Then
 							t :+ "&bbEmptyString"
+						Else If TArrayType(decl.argDecls[i].ty) Then
+							t :+ "&bbEmptyArray"
 						Else
 							t :+ "&bbNullObject"
 						End If
@@ -517,10 +519,17 @@ Type TCTranslator Extends TTranslator
 					'Local class:String = Bra("&" + decl.scope.munged)
 					Return class + "->md_" + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
 				Else If TInvokeMemberExpr(lhs)
-					Local obj:String = Bra("struct " + decl.scope.munged + "_obj*")
-					Local class:String = Bra("(" + obj + TransSubExpr( lhs ) +")->clas")
+					' create a local variable of the inner invocation
+					Local lvar:String = CreateLocal(lhs)
+
+					Local obj:String = TransFuncObj(decl.scope)
+					'Local obj:String = Bra("struct " + decl.scope.munged + "_obj*")
+					'Local class:String = Bra("(" + obj + TransSubExpr( lhs ) +")->clas")
+					Local class:String = Bra("(" + obj + lvar +")->clas")
 					'Local class:String = Bra("&" + decl.scope.munged)
-					Return class + "->md_" + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
+					
+					Return class + "->" + TransFuncPrefix(decl.scope, decl.ident)+ decl.ident+TransArgs( args,decl, lvar )
+					'Return class + "->md_" + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
 				Else If TIndexExpr(lhs) Then
 					Local loc:String = CreateLocal(lhs)
 					Local obj:String = Bra("struct " + decl.scope.munged + "_obj*")
@@ -557,7 +566,7 @@ Type TCTranslator Extends TTranslator
 		Return TransStatic( decl )+TransArgs( args,decl )
 	End Method
 	
-	Method TransFuncObj:String(decl:TClassDecl)
+	Method TransFuncObj:String(decl:TScopeDecl)
 		If decl.ident = "Object"
 			Return Bra("BBOBJECT")
 		Else
@@ -573,7 +582,7 @@ Type TCTranslator Extends TTranslator
 		End If
 	End Method
 
-	Method TransFuncPrefix:String(decl:TClassDecl, ident:String)
+	Method TransFuncPrefix:String(decl:TScopeDecl, ident:String)
 		If decl.ident = "Object" Or ident = "ToString" Or ident = "Compare" Or ident = "SendMessage" Then
 			Return ""
 		Else
@@ -769,9 +778,9 @@ Type TCTranslator Extends TTranslator
 			If TShortType( src ) Return Bra( t+"!=0" )
 			If TIntType( src ) Return Bra( t+"!=0" )
 			If TFloatType( src ) Return Bra( t+"!=0.0f" )
-			If TCastExpr(expr.expr) And (TArrayType( src ) Or TStringType( src ) Or TObjectType( src )) Then
-				Return Bra( t+"!= &bbNullObject" )
-			End If
+			'If TCastExpr(expr.expr) And (TArrayType( src ) Or TStringType( src ) Or TObjectType( src )) Then
+			'	Return Bra( t+"!= &bbNullObject" )
+			'End If
 			If TArrayType( src ) Return Bra( t+"!= &bbEmptyArray" )
 			If TStringType( src ) Return Bra( t+"!= &bbEmptyString" )
 			If TObjectType( src ) Return Bra( t+"!= &bbNullObject" )
@@ -983,6 +992,12 @@ Type TCTranslator Extends TTranslator
 
 		If TBinaryCompareExpr(expr) Then
 			If TStringType(TBinaryCompareExpr(expr).ty) Then
+				If t_lhs="&bbNullObject" Then
+					t_lhs = "&bbEmptyString"
+				End If
+				If t_rhs="&bbNullObject" Then
+					t_rhs = "&bbEmptyString"
+				End If
 				Return "bbStringCompare" + Bra(t_lhs + ", " + t_rhs) + TransBinaryOp(expr.op, "") + "0"
 			End If
 			If TPointerType(TBinaryCompareExpr(expr).ty) Then
@@ -1206,6 +1221,8 @@ Type TCTranslator Extends TTranslator
 			
 			If stmt.op = "+=" Then
 				s :+ lhs+"=bbStringConcat("+lhs+","+rhs+")"
+			Else If rhs = "&bbNullObject" Then
+				s :+ lhs+TransAssignOp( stmt.op )+"&bbEmptyString"
 			Else
 				s :+ lhs+TransAssignOp( stmt.op )+rhs
 			End If
@@ -1224,6 +1241,8 @@ Type TCTranslator Extends TTranslator
 		Else If TArrayType(stmt.lhs.exprType) Then
 			If stmt.op = "+=" Then
 				s :+ lhs+"=bbArrayConcat("+ TransArrayType(TArrayType(stmt.lhs.exprType).elemType) + "," + lhs+","+rhs+")"
+			Else If rhs = "&bbNullObject" Then
+				s :+ lhs+TransAssignOp( stmt.op )+"&bbEmptyArray"
 			Else
 				s :+ lhs+TransAssignOp( stmt.op )+rhs
 			End If
@@ -1531,6 +1550,7 @@ End Rem
 		End If
 
 '		If Not proto Or (proto And Not odecl.IsExtern()) Then
+		If Not IsStandardFunc(decl.munged) Then
 			If Not TFunctionPtrType(odecl.retType) Then
 				If Not odecl.castTo Then
 					Emit pre + TransType( odecl.retType, "" )+" "+id+Bra( args ) + bk
@@ -1552,7 +1572,7 @@ End Rem
 			For Local t$=EachIn argCasts
 				Emit t
 			Next
-'		End If
+		End If
 
 		If Not proto Then
 			If decl.IsAbstract() Then
@@ -1660,6 +1680,8 @@ End Rem
 
 				Local fdecl:TFuncDecl =TFuncDecl( decl )
 				If fdecl
+					fdecl.Semant()
+				
 					If reserved.Find("," + fdecl.ident.ToLower() + ",") = -1 Then
 						EmitClassFuncProto( fdecl )
 						Continue

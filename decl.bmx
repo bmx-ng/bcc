@@ -1005,20 +1005,22 @@ Type TFuncDecl Extends TBlockDecl
 		EndIf
 
 		'check we exactly match an override
-		If sclass And IsMethod()
+		If sclass 'And IsMethod()
 'DebugStop
 'DebugLog ident + "..."
 			While sclass
 'DebugLog "Checking Class : " + sclass.ident
 				Local found:Int
-				For Local decl:TFuncDecl=EachIn sclass.MethodDecls( )
+				For Local decl:TFuncDecl=EachIn sclass.FuncDecls( )
 'DebugLog "Method = " + decl.ident
 					If Not decl.IsSemanted() Then
 						decl.Semant
 					End If
 					
 					If decl.ident.ToLower() = ident.ToLower() Then
-'If ident = "CreateStream" DebugStop
+					
+						If ident.ToLower() = "new" Continue
+'If ident = "Create" DebugStop
 						found=True
 						If EqualsFunc( decl ) 
 'DebugLog "Found"
@@ -1492,9 +1494,10 @@ End Rem
 			decl.Semant()
 		Next
 
-		For Local decl:TFuncDecl = EachIn Decls()
-			decl.Semant()
-		Next
+		' NOTE : we can't semant functions here as they cause cyclic errors.
+		'For Local decl:TFuncDecl = EachIn Decls()
+		'	decl.Semant()
+		'Next
 		
 	End Method
 	
