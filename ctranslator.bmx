@@ -35,7 +35,7 @@ Type TCTranslator Extends TTranslator
 	Method New()
 		_trans = Self
 	End Method
-	
+
 	Method TransArrayType$( ty:TType)
 		If TByteType( ty ) Return "~qb~q"
 		If TShortType( ty ) Return "~qs~q"
@@ -81,7 +81,7 @@ Type TCTranslator Extends TTranslator
 		If TFunctionPtrType( ty ) Then
 'DebugStop
 			TFunctionPtrType(ty).func.Semant
-			
+
 			Local retType:String = TransType(TFunctionPtrType(ty).func.retType, "")
 			Local args:String
 			For Local arg:TArgDecl = EachIn TFunctionPtrType(ty).func.argDecls
@@ -89,7 +89,7 @@ Type TCTranslator Extends TTranslator
 				If args Then
 					args :+ ","
 				End If
-				
+
 				args :+ TransType(arg.ty, "")
 			Next
 			Return retType + Bra("* " + ident) + Bra(args)
@@ -118,7 +118,7 @@ Type TCTranslator Extends TTranslator
 
 		If TExternObjectType( ty ) Return "struct " + TExternObjectType( ty ).classDecl.munged
 		If TExternObjectPtrType( ty ) Return "struct " + TExternObjectPtrType( ty ).classDecl.munged + " *"
-		
+
 		InternalErr
 	End Method
 
@@ -171,7 +171,7 @@ Type TCTranslator Extends TTranslator
 		If TObjectType( ty ) And ty.GetClass().IsInterface() Return "gc_iptr<"+ty.GetClass().actual.munged+">"
 		Return TransType( ty, ident )
 	End Method
-	
+
 	Method TransValue$( ty:TType,value$ )
 		If value
 			If TBoolType( ty ) Return "1"
@@ -223,7 +223,7 @@ Type TCTranslator Extends TTranslator
 		EndIf
 		InternalErr
 	End Method
-	
+
 	Method TransArgs$( args:TExpr[],decl:TFuncDecl, objParam:String = Null )
 'If decl.ident="FromCString" DebugStop
 		Local t$
@@ -266,7 +266,7 @@ Type TCTranslator Extends TTranslator
 						t:+ Bra("(BBBYTE*)" + Bra(args[i].Trans())) + "+" + Bra("sizeof(void*)")
 						Continue
 					End If
-					
+
 				Else If TNumericType(TArgDecl(decl.argDecls[i].actual).ty)  Then
 					If TObjectType(args[i].exprType) And TObjectType(args[i].exprType).classDecl = TClassDecl.nullObjectClass Then
 						t:+ "0"
@@ -292,7 +292,7 @@ Type TCTranslator Extends TTranslator
 				End If
 			End If
 		Next
-		
+
 		Return Bra(t)
 	End Method
 
@@ -343,15 +343,15 @@ Type TCTranslator Extends TTranslator
 		End If
 
 		If Not TObjectType(ty) Or Not TObjectType(src) InternalErr
-		
+
 		Local t$=TransType(ty, "TODO: TransPtrCast")
-		
+
 		If src.GetClass().IsInterface() Or ty.GetClass().IsInterface() cast="dynamic"
-		
+
 		If src.GetClass().IsInterface() And Not ty.GetClass().IsInterface() Then
 			Return cast+"_cast<"+TransType(ty, "TODO: TransPtrCast")+">"+Bra( expr )
 		End If
-		
+
 		'upcast?
 		If src.GetClass().ExtendsClass( ty.GetClass() ) Return expr
 'DebugStop
@@ -360,24 +360,24 @@ Type TCTranslator Extends TTranslator
 		End If
 
 		Return cast+"_cast<"+TransType(ty, "TODO: TransPtrCast")+">"+Bra( expr )
-		
+
 	End Method
-	
+
 	'***** Utility *****
-	
+
 	Method TransLocalDecl$( munged$,init:TExpr )
 		Return TransType( init.exprType, munged )+" "+munged+"="+init.Trans()
 	End Method
 
 	Method TransGlobalDecl$( munged$,init:TExpr, attrs:Int )
-		Local glob:String 
-		
+		Local glob:String
+
 		If Not (attrs & DECL_INITONLY) Then
 			glob :+"static " + TransType( init.exprType, munged )+" "
 		End If
-		
+
 		glob :+ munged+"="
-		
+
 		If TNewObjectExpr(init) Then
 			glob :+ "0;~n"
 			glob :+ indent + "if (" + munged + "==0) {~n"
@@ -390,7 +390,7 @@ Type TCTranslator Extends TTranslator
 				glob :+ "0"
 			End If
 		End If
-		
+
 		Return glob
 	End Method
 
@@ -401,21 +401,21 @@ Type TCTranslator Extends TTranslator
 		customVarStack.Push(tmp.munged)
 		Return tmp.munged
 	End Method
-	
+
 	Method EmitPushErr()
 		Emit "pushErr();"
 	End Method
-	
+
 	Method EmitSetErr( info$ )
 		Emit "errInfo=~q"+info.Replace( "\","/" )+"~q;"
 	End Method
-	
+
 	Method EmitPopErr()
 		Emit "popErr();"
 	End Method
 
 	'***** Declarations *****
-	
+
 	Method TransStatic$( decl:TDecl )
 		If decl.IsExtern() Then
 			If Not decl.munged
@@ -436,24 +436,24 @@ Type TCTranslator Extends TTranslator
 		EndIf
 		InternalErr
 	End Method
-	
+
 	Method TransTemplateCast$( ty:TType,src:TType,expr$ )
 
 		If ty=src Return expr
 
 		ty=ty.ActualType()
 		'src=src.ActualType()
-		
+
 		If ty.EqualsType( src ) Return expr
-		
+
 		Return TransPtrCast( ty,src,expr,"static" )
 
 	End Method
-	
+
 	Method TransGlobal$( decl:TGlobalDecl )
 		Return TransStatic( decl )
 	End Method
-	
+
 	Method TransField$( decl:TFieldDecl,lhs:TExpr )
 		If lhs Then
 			Return TransFieldRef(decl, TransSubExpr( lhs ), lhs.exprType)
@@ -467,7 +467,7 @@ Type TCTranslator Extends TTranslator
 '		If lhs Return TransSubExpr( lhs )+"->"+decl.munged+swiz
 '		Return decl.munged+swiz
 	End Method
-		
+
 	Method TransFunc$( decl:TFuncDecl,args:TExpr[],lhs:TExpr )
 'If decl.ident = "ToString" DebugStop
 		If decl.IsMethod()
@@ -475,17 +475,17 @@ Type TCTranslator Extends TTranslator
 				If lhs.exprType = TType.stringType Then
 					Return decl.munged + TransArgs(args, decl, TransSubExpr( lhs ))
 'If decl.ident = "Print" DebugStop
-'DebugStop		
+'DebugStop
 				Else If lhs.exprType = TType.stringVarPointerType Then
 'DebugStop
 					Return decl.munged + TransArgs(args, decl, "*" + TransSubExpr( lhs ))
 				End If
-				
+
 				If TStmtExpr(lhs) Then
 					lhs = TStmtExpr(lhs).expr
 				End If
 'If decl.ident = "Eof" DebugStop
-				
+
 				If TVarExpr(lhs) Then
 					Local cdecl:TClassDecl = TObjectType(TVarExpr(lhs).decl.ty).classDecl
  					Local obj:String = TransFuncObj(cdecl)
@@ -527,7 +527,7 @@ Type TCTranslator Extends TTranslator
 					'Local class:String = Bra("(" + obj + TransSubExpr( lhs ) +")->clas")
 					Local class:String = Bra("(" + obj + lvar +")->clas")
 					'Local class:String = Bra("&" + decl.scope.munged)
-					
+
 					Return class + "->" + TransFuncPrefix(decl.scope, decl.ident)+ decl.ident+TransArgs( args,decl, lvar )
 					'Return class + "->md_" + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
 				Else If TIndexExpr(lhs) Then
@@ -542,9 +542,9 @@ Type TCTranslator Extends TTranslator
 				'Return TransSubExpr( lhs )+"->"+decl.munged+TransArgs( args,decl )
 				'Return decl.munged+TransArgs( args,decl, TransSubExpr( lhs ) )
 			End If
- 
+
 			' ((brl_standardio_TCStandardIO_obj*)o->clas)->md_Read(o, xxx, xxx)
-			If Not (decl.attrs & FUNC_PTR) Then 
+			If Not (decl.attrs & FUNC_PTR) Then
 				Local obj:String = Bra("struct " + decl.scope.munged + "_obj*")
 				Local class:String = Bra("(" + obj + "o)->clas")
 				'Local class:String = Bra("&" + decl.scope.munged)
@@ -565,7 +565,7 @@ Type TCTranslator Extends TTranslator
 
 		Return TransStatic( decl )+TransArgs( args,decl )
 	End Method
-	
+
 	Method TransFuncObj:String(decl:TScopeDecl)
 		If decl.ident = "Object"
 			Return Bra("BBOBJECT")
@@ -589,7 +589,7 @@ Type TCTranslator Extends TTranslator
 			Return "md_"
 		End If
 	End Method
-	
+
 	Method TransSuperFunc$( decl:TFuncDecl,args:TExpr[] )
 		If decl.IsMethod()
 			Return decl.ClassScope().munged+".md_"+decl.ident+TransArgs( args,decl, "o" )
@@ -633,7 +633,7 @@ Type TCTranslator Extends TTranslator
 				Return "bbStringFromChar" + TransArgs(args, decl)
 		End Select
 	End Method
-	
+
 	Method TransMinExpr:String(expr:TMinExpr)
 		Local isFloat:Int
 		If TFloatType(expr.exprType) Or TDoubleType(expr.exprType) Then
@@ -693,11 +693,11 @@ Type TCTranslator Extends TTranslator
 			If obj Then
 				Return Bra(TVarExpr(expr.expr).decl.munged + "->clas->instance_size-(sizeof(void*))")
 			End If
-			
+
 			If TNumericType(TVarExpr(expr.expr).exprType) Then
 				Return "sizeof" + Bra(TransType(TVarExpr(expr.expr).exprType, ""))
 			End If
-			
+
 		End If
 		InternalErr
 	End Method
@@ -711,13 +711,13 @@ Type TCTranslator Extends TTranslator
 			Return TransValue( expr.exprType,expr.value )
 		End If
 	End Method
-	
+
 	Field stringMap:TMap = New TMap
-	
+
 	Method TransStringConst:String(value:String)
 		Local sc:TStringConst = TStringConst(_app.stringConsts.ValueForKey(value))
 		Local s:String
-		
+
 		If Not sc Then
 			'InternalErr
 			s = "bbEmptyString"
@@ -732,14 +732,14 @@ Type TCTranslator Extends TTranslator
 
 		Return "&" + s
 	End Method
-	
+
 	Method TransNewObjectExpr$( expr:TNewObjectExpr )
 		Local t$ = "bbObjectNew(&" + expr.classDecl.actual.munged + ")"
 		'Local t$="(new "+expr.classDecl.actual.munged+")"
 		'If expr.ctor t:+"->"+expr.ctor.actual.munged+TransArgs( expr.args,expr.ctor )
 		Return t
 	End Method
-	
+
 	Method TransNewArrayExpr$( expr:TNewArrayExpr )
 
 		If expr.expr.length = 1 Then
@@ -747,31 +747,31 @@ Type TCTranslator Extends TTranslator
 		Else
 			' multiple array
 			Local s:String
-			
+
 			For Local i:Int = 0 Until expr.expr.length
 				If i Then
 					s:+ ", "
 				End If
-				
+
 				s:+ expr.expr[i].Trans()
 			Next
-			
+
 			Return "bbArrayNew" + Bra(TransArrayType(expr.ty) + ", " + expr.expr.length + ", " + s)
 		End If
 
 	End Method
-		
+
 	Method TransSelfExpr$( expr:TSelfExpr )
 		Return "o"
 	End Method
-	
+
 	Method TransCastExpr$( expr:TCastExpr )
 'DebugStop
 		Local t$= expr.expr.Trans()
 
 		Local dst:TType=expr.exprType
 		Local src:TType=expr.expr.exprType
-		
+
 		If TBoolType( dst )
 			If TBoolType( src ) Return t
 			If TByteType( src ) Return Bra( t+"!=0" )
@@ -869,7 +869,7 @@ Type TCTranslator Extends TTranslator
 		Else If TVarPtrType( dst )
 			If Not TConstExpr(expr.expr) Then
 				If TInvokeExpr(expr.expr) Return t
-				
+
 				If TByteType( src) Return Bra("&"+t)
 				If TShortType( src) Return Bra("&"+t)
 				If TFloatType( src) Return Bra("&"+t)
@@ -881,20 +881,20 @@ Type TCTranslator Extends TTranslator
 			Else
 				Return Bra(TransValue(TConstExpr(expr.expr).ty, TConstExpr(expr.expr).value))
 			End If
-		
+
 		Else If TPointerType( dst )
 
 			If TArrayType(src) Then
 				Return Bra(Bra(TransType(dst, "")) + "BBARRAYDATA(" + t + "," + t + "->dims)")
 			End If
 			If TByteType( src) Return Bra("&"+t)
-			
+
 			If TStringType(src) Then
 				Local tmp:String = CreateLocal2(TType.bytePointerType, t)
-				
+
 				Return tmp
 			End If
-			
+
 			If TBytePtrType( dst )
 				If TBytePtrType( src) Return t
 				If TShortPtrType( src ) Return Bra("(BBBYTE*)"+t)
@@ -943,16 +943,16 @@ Type TCTranslator Extends TTranslator
 			If TStringType( src ) Return Bra("(BBOBJECT)"+t)
 			If TObjectType( src ) Return t
 		EndIf
-		
+
 		Return TransPtrCast( dst,src,t,"dynamic" )
 
 		Err "C++ translator can't convert "+src.ToString()+" to "+dst.ToString()
 	End Method
-	
+
 	Method TransUnaryExpr$( expr:TUnaryExpr )
 		Local pri:Int=ExprPri( expr )
 		Local t_expr$
-		
+
 		If TVarExpr(expr.expr) Then
 			If TObjectType(TVarExpr(expr.expr).exprType) Then
 				t_expr = Bra( expr.expr.Trans() + "!= &bbNullObject")
@@ -968,7 +968,7 @@ Type TCTranslator Extends TTranslator
 '		TransSubExpr( expr.expr,pri )
 		Return TransUnaryOp( expr.op )+t_expr
 	End Method
-	
+
 	Method TransBinaryExpr$( expr:TBinaryExpr )
 		Local pri:Int=ExprPri( expr )
 
@@ -1020,10 +1020,10 @@ Type TCTranslator Extends TTranslator
 
 		Return bra(t_lhs+TransBinaryOp( expr.op,t_rhs )+t_rhs)
 	End Method
-	
+
 	Method TransIndexExpr$( expr:TIndexExpr )
 		Local t_expr$=TransSubExpr( expr.expr )
-		
+
 		Local t_index$
 		If expr.index.length = 1 Then
 			If TArraySizeExpr(expr.index[0]) Then
@@ -1048,24 +1048,24 @@ Type TCTranslator Extends TTranslator
 				t_index=expr.index[0].Trans()
 			End If
 		End If
-		
+
 		If TStringType( expr.expr.exprType ) Then
-			Return Bra(t_expr) + "->buf[" + t_index + "]" 
+			Return Bra(t_expr) + "->buf[" + t_index + "]"
 			'Return "(BBINT)"+t_expr+"["+t_index+"]"
 		End If
-		
+
 		If TArrayType( expr.expr.exprType ) Then
 			Return Bra("(" + TransType(expr.exprType, "") + "*)BBARRAYDATA(" + t_expr + "," + t_expr + "->dims)") + "[" + t_index + "]"
 		End If
-		
+
 		'Local swiz$
 		'If TObjectType( expr.exprType )And expr.exprType.GetClass().IsInterface() swiz=".p"
-		
+
 		'If ENV_CONFIG="debug" Return t_expr+".At("+t_index+")"+swiz
-		
+
 		Return t_expr+"["+t_index+"]"
 	End Method
-	
+
 	Method TransSliceExpr$( expr:TSliceExpr )
 'DebugStop
 		Local t_expr:String=TransSubExpr( expr.expr )
@@ -1086,7 +1086,7 @@ Type TCTranslator Extends TTranslator
 				t_args :+ "," + t_expr + "->length"
 			End If
 		End If
-		
+
 		If TArrayType(expr.exprType) Then
 			Return "bbArraySlice" + Bra(TransArrayType(TArrayType(expr.exprType).elemType) + "," + t_expr + "," + t_args)
 		Else If TStringVarPtrType(expr.exprType) Then
@@ -1096,7 +1096,7 @@ Type TCTranslator Extends TTranslator
 		End If
 		'Return t_expr+".Slice("+t_args+")"
 	End Method
-	
+
 	Method TransArrayExpr$( expr:TArrayExpr )
 		Local elemType:TType=TArrayType( expr.exprType ).elemType
 
@@ -1105,7 +1105,7 @@ Type TCTranslator Extends TTranslator
 
 		Local tmpArray:TLocalDecl =New TLocalDecl.Create( "",TType.voidType,Null )
 		MungDecl tmpArray
-		
+
 		Local t$
 		Local count:Int
 		For Local elem:TExpr=EachIn expr.exprs
@@ -1113,7 +1113,7 @@ Type TCTranslator Extends TTranslator
 			t:+elem.Trans()
 			count :+ 1
 		Next
-		
+
 		Local tt$
 '		If Not _env tt="static "
 
@@ -1134,16 +1134,16 @@ Type TCTranslator Extends TTranslator
 
 	Method TransIntrinsicExpr$( decl:TDecl,expr:TExpr,args:TExpr[] )
 		Local texpr$,arg0$,arg1$,arg2$
-		
+
 		If expr texpr=TransSubExpr( expr )
-		
+
 		If args.Length>0 And args[0] arg0=args[0].Trans()
 		If args.Length>1 And args[1] arg1=args[1].Trans()
 		If args.Length>2 And args[2] arg2=args[2].Trans()
-		
+
 		Local id$=decl.munged[1..]
 		Local id2$=id[..1].ToUpper()+id[1..]
-		
+
 		Select id
 		'
 		'global functions
@@ -1153,7 +1153,7 @@ Type TCTranslator Extends TTranslator
 		'string/array methods
 		Case "length" Return texpr+".Length()"
 		Case "resize" Return texpr+".Resize"+Bra( arg0 )
-		
+
 		'string methods
 		Case "compare" Return texpr+".Compare"+Bra( arg0 )
 		Case "find" Return texpr+".Find"+Bra( arg0+","+arg1 )
@@ -1168,7 +1168,7 @@ Type TCTranslator Extends TTranslator
 		Case "contains" Return texpr+".Contains"+Bra( arg0 )
 		Case "startswith" Return texpr+".StartsWith"+Bra( arg0 )
 		Case "endswith" Return texpr+".EndsWith"+Bra( arg0 )
-		
+
 		'string functions
 		Case "fromchar" Return "String"+Bra( "(Char)"+Bra(arg0)+",1" )
 
@@ -1205,7 +1205,7 @@ Type TCTranslator Extends TTranslator
 		Local lhs$=stmt.lhs.TransVar()
 
 		Local s:String
-		
+
 '		If ObjectType( stmt.rhs.exprType )
 '			If stmt.rhs.exprType.GetClass().IsInterface() rhs="GC_IPTR"+Bra(rhs)
 '		Endif
@@ -1215,10 +1215,10 @@ Type TCTranslator Extends TTranslator
 
 
 		If TStringType(stmt.lhs.exprType) Then
-'			s:+ "{"	
+'			s:+ "{"
 '			s:+ "BBSTRING tmp=" + lhs + ";~n"
 
-			
+
 			If stmt.op = "+=" Then
 				s :+ lhs+"=bbStringConcat("+lhs+","+rhs+")"
 			Else If rhs = "&bbNullObject" Then
@@ -1229,14 +1229,14 @@ Type TCTranslator Extends TTranslator
 
 '			s :+ ";~nBBRETAIN(" + lhs +")~n"
 '			s :+ "BBRELEASE(tmp)~n"
-			
+
 '			s:+ "}"
 		Else If TVarPtrType(stmt.lhs.exprType) Then
 
 			If TCastExpr(stmt.rhs) And TNumericType(TCastExpr(stmt.rhs).expr.exprType) Then
 				rhs = TCastExpr(stmt.rhs).expr.Trans()
 			End If
-			
+
 			s :+ "*" + lhs+TransAssignOp( stmt.op )+rhs
 		Else If TArrayType(stmt.lhs.exprType) Then
 			If stmt.op = "+=" Then
@@ -1249,31 +1249,31 @@ Type TCTranslator Extends TTranslator
 		Else
 			s :+ lhs+TransAssignOp( stmt.op )+rhs
 		End If
-		
+
 		Return s
 	End Method
-	
+
 	Method TransThrowStmt:String( stmt:TThrowStmt )
 		Local s:String = "bbExThrow("
-		
+
 		s:+ stmt.expr.Trans()
-		
+
 		s :+ ")"
 		Return s
 	End Method
-	
+
 	Method TransEndStmt$( stmt:TEndStmt )
 		Emit "bbEnd();"
 	End Method
 
-	
+
 	'***** Declarations *****
-Rem	
+Rem
 	Method EmitFuncProto( decl:TFuncDecl )
 		PushMungScope
 
 		decl.Semant
-		
+
 		MungDecl decl
 
 		'Find decl we override
@@ -1287,17 +1287,17 @@ Rem
 			If args args:+","
 			args:+TransType( arg.ty )
 		Next
-		
+
 		Local t$=TransType( odecl.retType )+" "+decl.munged+Bra( args )
 		If decl.IsAbstract() t:+"=0"
-		
+
 		Local q$
 		If decl.IsExtern() q:+"extern "
 		If decl.IsMethod() q:+"virtual "
 		If decl.IsStatic() And decl.ClassScope() q:+"static "
-		
+
 		Emit q+t+";"
-		
+
 		PopMungScope
 	End Method
 End Rem
@@ -1306,9 +1306,9 @@ End Rem
 		BeginLocalScope
 'DebugStop
 '		decl.Semant
-		
+
 '		MungDecl decl
-		
+
 		'Find decl we override
 		Local odecl:TFuncDecl=decl
 		If odecl.overrides Then Return
@@ -1319,7 +1319,7 @@ End Rem
 
 		Local id$=decl.munged
 		Local pre:String
-		
+
 		If decl.IsMethod() Then
 			id :+ "_md"
 			pre = "md_"
@@ -1355,7 +1355,7 @@ Rem
 					End If
 				End If
 			End If
-	
+
 			For Local t$=EachIn argCasts
 				Emit t
 			Next
@@ -1368,11 +1368,11 @@ End Rem
 	Method EmitClassFuncProto( decl:TFuncDecl)
 		'PushMungScope
 		BeginLocalScope
-		
+
 		decl.Semant
-		
+
 		MungDecl decl
-		
+
 		'Find decl we override
 		Local odecl:TFuncDecl=decl
 '		If odecl.overrides Then Return
@@ -1413,7 +1413,7 @@ End Rem
 			MungDecl arg
 			argCasts.Push TransType( arg.ty, arg.munged )+" "+arg.munged+"=static_cast<"+TransType(arg.ty, "")+" >"+Bra(t)+";"
 		Next
-		
+
 		Local id$=decl.munged
 
 		Local bk:String = ";"
@@ -1459,7 +1459,7 @@ End Rem
 					End If
 				End If
 			End If
-	
+
 			For Local t$=EachIn argCasts
 				Emit t
 			Next
@@ -1478,7 +1478,7 @@ End Rem
 		BeginLocalScope
 'DebugStop
 		decl.Semant
-		
+
 		MungDecl decl
 
 		' emit nested functions
@@ -1487,7 +1487,7 @@ End Rem
 				EmitFuncDecl(fdecl, proto, classFunc)
 			Next
 		End If
-		
+
 		'Find decl we override
 		Local odecl:TFuncDecl=decl
 		While odecl.overrides
@@ -1527,9 +1527,9 @@ End Rem
 			MungDecl arg
 			argCasts.Push TransType( arg.ty, arg.munged )+" "+arg.munged+"=static_cast<"+TransType(arg.ty, "")+" >"+Bra(t)+";"
 		Next
-		
+
 		Local id$=decl.munged
-		
+
 		If classFunc Then
 			If decl.IsMethod() Then
 				id = "_" + id
@@ -1568,7 +1568,7 @@ End Rem
 					End If
 				End If
 			End If
-	
+
 			For Local t$=EachIn argCasts
 				Emit t
 			Next
@@ -1594,35 +1594,35 @@ End Rem
 		EndLocalScope
 		'PopMungScope
 	End Method
-	
+
 	Method EmitClassFieldsProto(classDecl:TClassDecl)
-	
+
 		If classDecl.superClass Then
 			EmitClassFieldsProto(classDecl.superClass)
 		End If
-		
+
 		For Local decl:TFieldDecl = EachIn classDecl.Decls()
 			decl.Semant()
-			
+
 			If Not TFunctionPtrType(decl.ty) Then
 				Emit TransType(decl.ty, classDecl.actual.munged) + " _" + classDecl.actual.munged.ToLower() + "_" + decl.ident.ToLower() + ";"
 			Else
 				Emit TransType(decl.ty, "_" + classDecl.actual.munged.ToLower() + "_" + decl.ident.ToLower()) + ";"
 			End If
 		Next
-		
+
 	End Method
 
 	Method EmitClassGlobalsProto(classDecl:TClassDecl)
-	
+
 		For Local decl:TGlobalDecl = EachIn classDecl.Decls()
 			decl.Semant()
-			
+
 			Emit "extern "+TransRefType( decl.ty, "" )+" "+ decl.munged+";"	'forward reference...
 		Next
-		
+
 	End Method
-	
+
 	Method EmitBBClassClassFuncProto( classDecl:TClassDecl )
 
 		Local reserved:String = ",New,Delete,ToString,Compare,SendMessage,_reserved1_,_reserved2_,_reserved3_,".ToLower()
@@ -1643,9 +1643,9 @@ End Rem
 				End If
 			EndIf
 		Next
-		
+
 	End Method
-	
+
 	Method EmitClassProto( classDecl:TClassDecl )
 
 		Local classid$=classDecl.munged
@@ -1681,7 +1681,7 @@ End Rem
 				Local fdecl:TFuncDecl =TFuncDecl( decl )
 				If fdecl
 					fdecl.Semant()
-				
+
 					If reserved.Find("," + fdecl.ident.ToLower() + ",") = -1 Then
 						EmitClassFuncProto( fdecl )
 						Continue
@@ -1721,8 +1721,8 @@ End Rem
 			Emit "};~n"
 
 		End If
-		
-		
+
+
 		'Emit "typedef struct " + classid + "_obj {"
 		If classDecl.IsExtern() Then
 			Emit "struct " + classid + " {"
@@ -1732,7 +1732,7 @@ End Rem
 		End If
 
 		BeginLocalScope
-		EmitClassFieldsProto(classDecl)		
+		EmitClassFieldsProto(classDecl)
 		EndLocalScope
 
 		Emit "};"
@@ -1749,13 +1749,13 @@ End Rem
 		For Local decl:TFieldDecl = EachIn classDecl.Decls()
 'DebugStop
 			MungDecl decl
-			
+
 			'Emit "#define " + decl.munged + " " + (OBJECT_BASE_OFFSET + decl.offset)
-		
+
 		Next
 
 	End Method
-	
+
 	Method classHasFunction:Int(classDecl:TClassDecl, func:String)
 'DebugStop
 		For Local decl:TFuncDecl = EachIn classDecl.Decls()
@@ -1765,14 +1765,14 @@ End Rem
 		Next
 		Return False
 	End Method
-	
+
 	Method EmitMark( id$,ty:TType,queue:Int )
-	
+
 		If TObjectType( ty )
-		
+
 			If id.EndsWith( ".p" )
 				If ty.GetClass().IsInterface() id=id[..-2] Else InternalErr
-			Else 
+			Else
 				If ty.GetClass().IsInterface() InternalErr
 			EndIf
 
@@ -1786,25 +1786,25 @@ End Rem
 			Return
 		EndIf
 	End Method
-	
+
 	Method EmitClassDecl( classDecl:TClassDecl )
 
 		'If classDecl.IsTemplateInst()
 		'	Return
 		'EndIf
-		
+
 		If classDecl.IsInterface() Or classDecl.IsExtern()
 			Return
 		EndIf
 
 		Local classid$=classDecl.munged
 		Local superid$=classDecl.superClass.actual.munged
-		
+
 		EmitClassDeclNew(classDecl)
 		EmitClassDeclDelete(classDecl)
-		
-		Rem 
-		'fields ctor		
+
+		Rem
+		'fields ctor
 		Emit classid+"::"+classid+"(){"
 		For Local decl:TDecl=EachIn classDecl.Semanted()
 			Local fdecl:TFieldDecl=TFieldDecl( decl )
@@ -1815,9 +1815,9 @@ End Rem
 		End Rem
 		Local reserved:String = ",New,Delete,".ToLower()
 
-		'methods		
+		'methods
 		For Local decl:TDecl=EachIn classDecl.Decls()
-		
+
 			Local fdecl:TFuncDecl=TFuncDecl( decl )
 			If fdecl
 				If reserved.Find("," + fdecl.ident.ToLower() + ",") = -1 Then
@@ -1825,17 +1825,17 @@ End Rem
 					Continue
 				End If
 			EndIf
-			
+
 			'Local gdecl:TGlobalDecl=TGlobalDecl( decl )
 			'If gdecl
 		'		Emit TransRefType( gdecl.ty )+" "+classid+"::"+gdecl.munged+";"
 		'		Continue
 		'	EndIf
 		Next
-		Rem 
+		Rem
 		'gc_mark
 		Emit "void "+classid+"::mark(){"
-		If classDecl.superClass 
+		If classDecl.superClass
 			Emit classDecl.superClass.actual.munged+"::mark();"
 		EndIf
 		For Local decl:TDecl=EachIn classDecl.Semanted()
@@ -1852,12 +1852,12 @@ End Rem
 				Continue
 			EndIf
 		Next
-	
-	
+
+
 		reserved = ",New,Delete,ToString,Compare,SendMessage,_reserved1_,_reserved2_,_reserved3_,".ToLower()
-	
+
 		Emit "struct BBClass_" + classid + " " + classid + "={"
-		
+
 		' super class
 '		If Not classDecl.superClass Then
 '			Emit "~t&bbObjectClass,"
@@ -1868,23 +1868,23 @@ End Rem
 '			Emit "&_" + classDecl.superClass.munged + ","
 '		End If
 '		End If
-		
+
 		Emit "bbObjectFree,"
-		
+
 		Emit "0,"
 		'Emit "~t" + (OBJECT_BASE_OFFSET + classDecl.lastOffset) + ","
 		Emit "sizeof" + Bra("struct " + classid + "_obj") + ","
-		
-		
+
+
 		Emit "_" + classid + "_New,"
 		Emit "_" + classid + "_Delete,"
-		
+
 		If classHasFunction(classDecl, "ToString") Then
 			Emit "_" + classid + "_ToString,"
 		Else
 			Emit "bbObjectToString,"
 		End If
-		
+
 		If classHasFunction(classDecl, "ObjectCompare") Then
 			Emit "_" + classid + "_ObjectCompare,"
 		Else
@@ -1896,7 +1896,7 @@ End Rem
 		Else
 			Emit "bbObjectSendMessage,"
 		End If
-		
+
 		'Emit "public:"
 
 		'fields
@@ -1911,7 +1911,7 @@ End Rem
 		'fields ctor
 		'Emit classid+"();"
 
-		'methods		
+		'methods
 		'For Local decl:TDecl=EachIn classDecl.Semanted()
 		'
 		'	Local fdecl:TFuncDecl =TFuncDecl( decl )
@@ -1919,7 +1919,7 @@ End Rem
 		'		EmitFuncProto fdecl
 		'		Continue
 		'	EndIf
-		'	
+		'
 		'	Local gdecl:TGlobalDecl =TGlobalDecl( decl )
 		'	If gdecl
 		'		Emit "static "+TransRefType( gdecl.ty )+" "+gdecl.munged+";"
@@ -1941,7 +1941,7 @@ End Rem
 		'For Local decl:TFuncDecl = EachIn classDecl.Decls()
 		For Local decl:TFuncDecl = EachIn fdecls
 			If reserved.Find("," + decl.ident.ToLower() + ",") = -1 Then
-			
+
 				MungDecl decl
 
 				If decl.IsMethod() Then
@@ -1951,36 +1951,36 @@ End Rem
 				End If
 			End If
 		Next
-		
+
 		Emit "};~n"
-	
-	
+
+
 	End Method
-	
+
 	Method EmitClassDeclNew( classDecl:TClassDecl )
 		Local classid$=classDecl.munged
 		Local superid$=classDecl.superClass.actual.munged
-		
+
 		' New
 		If opt_issuperstrict Then
 			Emit "void _" + classid + "_New(BBObject *o) {"
 		Else
 			Emit "int _" + classid + "_New(BBObject *o) {"
 		End If
-		
+
 		If classDecl.superClass.ident = "Object" Then
 			Emit "bbObjectCtor(o);"
 		Else
 			Emit "_" + superid + "_New(o);"
 		End If
-		
+
 		Emit "o->clas = (BBClass*)&" + classid + ";"
-		
+
 		' field initialisation
 		For Local decl:TFieldDecl=EachIn classDecl.Decls()
 			Local fld:String
 
-			' ((int*)((char*)o + 5))[0] = 
+			' ((int*)((char*)o + 5))[0] =
 			fld :+ TransFieldRef(decl, "o")
 
 			If decl.init Then
@@ -1993,7 +1993,7 @@ End Rem
 					fld :+ "= &bbEmptyString;"
 				End If
 			End If
-			
+
 			Emit fld
 		Next
 
@@ -2010,30 +2010,30 @@ End Rem
 	Method EmitClassDeclDelete( classDecl:TClassDecl )
 		Local classid$=classDecl.munged
 		Local superid$=classDecl.superClass.actual.munged
-		
+
 		' New
 		If opt_issuperstrict Then
 			Emit "void _" + classid + "_Delete(BBObject *o) {"
 		Else
 			Emit "int _" + classid + "_Delete(BBObject *o) {"
 		End If
-		
+
 		Local decl:TFuncDecl = classDecl.FindFuncDecl("Delete")
 		If decl Then
 			decl.Semant
 			EmitBlock decl
 		End If
-		
-		
+
+
 		' field cleanup
 		For Local decl:TFieldDecl=EachIn classDecl.Decls()
 
-			
+
 			' String
 			If TStringType(decl.declTy) Then
 				Emit "BBRELEASE(" + TransFieldRef(decl, "o") + ")"
 			End If
-			
+
 			' object
 			' TODO
 
@@ -2045,7 +2045,7 @@ End Rem
 		Else
 			Emit "_" + superid + "_Delete(o);"
 		End If
-		
+
 		'
 		Emit "}"
 	End Method
@@ -2059,7 +2059,7 @@ End Rem
 				Return Bra(variable + "->scales[0]")
 			End If
 		End If
-		
+
 		' string methods
 		If decl.scope And decl.scope.ident = "String" Then
 			If decl.ident = "length" Then
@@ -2070,7 +2070,7 @@ End Rem
 				End If
 			End If
 		End If
-		
+
 		If TObjectVarPtrType(exprType) Then
 			' get the object from the pointer
 			variable = Bra("*" + variable)
@@ -2094,10 +2094,10 @@ End Rem
 		Else If TArrayType(decl.ty) Then
 			s = "((struct " + decl.scope.munged + "_obj*)" + variable + ")->" + decl.munged + " "
 		End If
-		
+
 		Return s
 	End Method
-	
+
 	' " _" + classDecl.actual.munged + "_" + decl.ident.ToLower(
 
 	Method TransIfcArgs:String(funcDecl:TFuncDecl)
@@ -2117,17 +2117,17 @@ End Rem
 				End If
 			End If
 		Next
-			
+
 		Return Bra(args)
 	End Method
-	
+
 	Method EmitIfcClassFuncDecl(funcDecl:TFuncDecl)
 
 		funcDecl.Semant
-	
+
 		Local func:String
-	
-		' method / function	
+
+		' method / function
 		If funcDecl.IsMethod() Then
 			func :+ "-"
 		Else
@@ -2135,12 +2135,12 @@ End Rem
 		End If
 
 		func :+ funcDecl.ident
-		
+
 		func :+ TransIfcType(funcDecl.retType)
-		
+
 		' function args
 		func :+ TransIfcArgs(funcDecl)
-		
+
 		If funcDecl.attrs & DECL_FINAL Then
 			func :+ "F"
 		Else If funcDecl.attrs & DECL_ABSTRACT Then
@@ -2148,50 +2148,50 @@ End Rem
 		End If
 
 		func :+ "="
-		
+
 		func :+ Enquote(funcDecl.munged)
-		
+
 		Emit func
-		
+
 	End Method
 
 	Method EmitIfcFuncDecl(funcDecl:TFuncDecl)
 
 		Local func:String
-	
+
 		func :+ funcDecl.ident
-		
+
 		' ensure the function has been semanted
 		funcDecl.Semant()
-		
+
 		func :+ TransIfcType(funcDecl.retType)
-		
+
 		' function args
 		func :+ TransIfcArgs(funcDecl)
-		
+
 		func :+ "="
-		
+
 		func :+ Enquote(funcDecl.munged)
-		
+
 		If funcDecl.castTo Then
 			func :+ ":" + funcDecl.castTo
 			func :+ " " + funcDecl.munged + "("
-			
+
 			For Local i:Int = 0 Until funcDecl.argDecls.length
 				If i Then
 					func :+ ", "
 				End If
-				
+
 				func :+ funcDecl.argDecls[i].castTo
 			Next
-			
+
 			func :+ ")"
 		End If
-		
+
 		Emit func
-		
+
 	End Method
-	
+
 	Method TransIfcConstExpr:String(expr:TExpr)
 
 		If Not expr.exprType Then
@@ -2210,17 +2210,17 @@ End Rem
 		If TStringType(expr.exprType) Then
 			Return "$" + Enquote(expr.Eval())
 		EndIf
-		
+
 		If TFunctionPtrType(expr.exprType) Then
 			If TCastExpr(expr) Then
 				If TInvokeExpr(TCastExpr(expr).expr) Then
 					Return Enquote(TInvokeExpr(TCastExpr(expr).expr).decl.munged)
 				End If
 			End If
-			
+
 			InternalErr
 		End If
-		
+
 		If TObjectType(expr.exprType) And TNullDecl(TObjectType(expr.exprType).classDecl) Then
 			Return Enquote("bbNullObject")
 		End If
@@ -2233,50 +2233,50 @@ End Rem
 
 		If TExpr(constDecl.init) Then
 			c:+ "=" + TransIfcConstExpr(TExpr(constDecl.init))
-		End If		
-		
+		End If
+
 		Emit c
 	End Method
-	
+
 	Method EmitIfcFieldDecl(fieldDecl:TFieldDecl)
 		Local f:String = "." + fieldDecl.ident + TransIfcType(fieldDecl.ty)
-		
+
 		f :+ "&"
-		
+
 		Emit f
 	End Method
-	
+
 	Method EmitIfcClassDecl(classDecl:TClassDecl)
 
 		Emit classDecl.ident + "^" + classDecl.superClass.ident + "{", False
-		
+
 		'PushMungScope
 		BeginLocalScope
-		
+
 		' fields, globals and consts
 '		For Local decl:TDecl=EachIn classDecl.Decls()
-		
+
 		' const
 		For Local cDecl:TConstDecl = EachIn classDecl.Decls()
 			EmitIfcConstDecl(cDecl)
 		Next
-			
+
 			' global
 		For Local gDecl:TGlobalDecl = EachIn classDecl.Decls()
 			gDecl.Semant()
 
 			EmitIfcGlobalDecl(gDecl)
 		Next
-			
-			
+
+
 			' field
 		For Local fDecl:TFieldDecl = EachIn classDecl.Decls()
 			fDecl.Semant()
-			
+
 			EmitIfcFieldDecl(fDecl)
 		Next
-		
-		
+
+
 		' functions
 		If Not classDecl.IsExtern() Then
 			Emit "-New%()=" + Enquote("_" + classDecl.munged + "_New")
@@ -2303,19 +2303,19 @@ End Rem
 
 		'PopMungScope
 		EndLocalScope
-		
+
 	End Method
-	
+
 	Method EmitIfcGlobalDecl(globalDecl:TGlobalDecl)
-	
+
 		globalDecl.Semant
-		
+
 		Local g:String = globalDecl.ident
 
 		g:+ TransIfcType(globalDecl.ty)
-		
+
 		g:+ "&"
-		
+
 		g :+ "="
 
 		g :+ "mem:p("
@@ -2325,10 +2325,10 @@ End Rem
 			g :+ Enquote(globalDecl.munged)
 		End If
 		g :+ ")"
-		
+
 		Emit g
 	End Method
-	
+
 	Method EmitModuleInclude(moduleDecl:TModuleDecl)
 		If moduleDecl.filepath Then
 			' a module import
@@ -2341,7 +2341,7 @@ End Rem
 '			DebugLog moduleDecl.filepath
 		End If
 	End Method
-	
+
 	Method EmitModuleInit(moduleDecl:TModuleDecl)
 		If moduleDecl.filepath Then
 			' a module import
@@ -2357,19 +2357,19 @@ End Rem
 	Method EmitIncBinFile(ib:TIncbin)
 
 		If FileType(ib.path) = FILETYPE_FILE Then
-		
+
 			Local ident:String = _appInstance.munged + "_ib_" + ib.id
-		
+
 			Local buf:Byte[] = LoadByteArray(ib.path)
 			ib.length = buf.length
-			
+
 			Emit "unsigned char " + ident + "[] = {"
 			Local s:String
-			
+
 			Local hx:Short[2]
 			For Local i:Int = 0 Until buf.length
 				Local val:Int = buf[i]
-				
+
 				For Local k:Int=1 To 0 Step -1
 					Local n:Int=(val&15)+48
 					If n>57 n:+39
@@ -2377,9 +2377,9 @@ End Rem
 					val:Shr 4
 				Next
 				s :+ "0x" + String.FromShorts( hx,2 )
-	
+
 				s :+ ","
-				
+
 				If s.length > 80 Then
 					Emit s
 					s = ""
@@ -2390,17 +2390,17 @@ End Rem
 			Emit "};"
 
 		End If
-	
+
 	End Method
-	
+
 	Method TransHeader(app:TAppDecl)
-	
+
 		SetOutput("head")
-	
+
 		_app = app
-	
+
 		prefix = app.GetPathPrefix()
-	
+
 		' TODO
 
 		If Not opt_apptype Then
@@ -2408,15 +2408,19 @@ End Rem
 		Else
 			app.mainFunc.munged="bb_main"
 		End If
-		
+
 		For Local decl:TModuleDecl=EachIn app.imported.Values()
 			For Local mdecl:TDecl=EachIn decl.imported.Values()
 
 				MungDecl mdecl
 
-				If TModuleDecl(mdecl) And app.mainModule <> mdecl And mdecl.ident <> "brl.classes" And mdecl.ident <> "brl.blitzkeywords" Then
-					EmitModuleInclude(TModuleDecl(mdecl))
-				End If
+				'skip mdecls we are not interested in
+				If not TModuleDecl(mdecl) then continue
+				If app.mainModule = mdecl then continue
+				If mdecl.ident = "brl.classes" then continue
+				If mdecl.ident = "brl.blitzkeywords" Then continue
+
+				EmitModuleInclude(TModuleDecl(mdecl))
 			Next
 		Next
 
@@ -2425,31 +2429,31 @@ End Rem
 		For Local decl:TDecl=EachIn app.Semanted()
 
 			If decl.declImported Continue
-		
+
 			MungDecl decl
 
 			Local cdecl:TClassDecl=TClassDecl( decl )
 			If Not cdecl Continue
 
-' mung, but don't emit			
+' mung, but don't emit
 '			Emit prefix + decl.munged+";"
-			
+
 			'PushMungScope
 			BeginLocalScope
-			
+
 			For Local decl:TDecl=EachIn cdecl.Semanted()
 				MungDecl decl
 			Next
-			
+
 			EndLocalScope
 			'PopMungScope
 		Next
 
 		'prototypes/header!
 		For Local decl:TDecl=EachIn app.Semanted()
-		
+
 			If decl.declImported Continue
-		
+
 			Local gdecl:TGlobalDecl=TGlobalDecl( decl )
 			If gdecl
 				If Not TFunctionPtrType(gdecl.ty) Then
@@ -2460,27 +2464,27 @@ End Rem
 				End If
 				Continue
 			EndIf
-		
+
 			Local fdecl:TFuncDecl=TFuncDecl( decl )
 			If fdecl' And Not fdecl.IsExtern()
 				' don't include the main function - it's handled separately
 				If fdecl = app.mainFunc Then
 					Continue
 				End If
-			
+
 				EmitFuncDecl( fdecl, True)
 				Continue
 			EndIf
-		
+
 			Local cdecl:TClassDecl=TClassDecl( decl )
 			If cdecl
 				EmitClassProto cdecl
 				Continue
 			EndIf
 		Next
-			
+
 	End Method
-	
+
 	Method IncBinRequiresRebuild:Int(file:String, incbins:TList)
 
 		' file doesn't exist?
@@ -2489,7 +2493,7 @@ End Rem
 		End If
 
 		Local timestamp:Int = FileTime(file)
-		
+
 		' file exists... read header and compare names
 		' read lines until "// ----"
 		' TODO
@@ -2500,19 +2504,19 @@ End Rem
 			If Not s.StartsWith("// ") Or s.StartsWith("// ----") Then
 				Exit
 			End If
-			
+
 			Local ind:Int = s.Find("// FILE : ")
 			If ind = 0 Then
 				files.AddLast(s[10..].Replace("~q",""))
 			End If
 		Wend
 		stream.Close()
-		
+
 		' different number of files?
 		If files.Count() <> incbins.Count() Then
 			Return True
 		End If
-		
+
 		' different file names?
 		Local count:Int
 		For Local s:String = EachIn files
@@ -2523,7 +2527,7 @@ End Rem
 				End If
 			Next
 		Next
-		
+
 		If count <> files.count() Then
 			Return True
 		End If
@@ -2537,7 +2541,7 @@ End Rem
 				End If
 			Next
 		Next
-		
+
 		If count <> incbins.count() Then
 			Return True
 		End If
@@ -2546,14 +2550,14 @@ End Rem
 			If timestamp < FileTime(ib.path) Then
 				Return True
 			End If
-			
+
 			' set the length, as we will need this later if we aren't loading the files now.
 			ib.length = FileSize(ib.path)
 		Next
 
 		Return False
 	End Method
-	
+
 	Method TransIncBin(app:TAppDecl)
 		If app.incbins.Count() > 0 Then
 
@@ -2566,13 +2570,13 @@ End Rem
 			Local filepath:String = OutputFilePath(opt_filepath, mung, "incbin.h")
 
 			If IncBinRequiresRebuild(filepath, app.incbins) Then
-			
+
 				app.genIncBinHeader = True
-			
+
 				For Local ib:TIncbin = EachIn app.incbins
 					Emit "// FILE : " + Enquote(ib.file)
 				Next
-				
+
 				Emit "// ----"
 
 				For Local ib:TIncbin = EachIn app.incbins
@@ -2582,56 +2586,56 @@ End Rem
 			End If
 
 			SetOutput("source")
-			
+
 			Emit "#include ~q" + file + "~q"
 		End If
 	End Method
-	
+
 	Method TransSource(app:TAppDecl)
 
 		SetOutput("source")
 
 		' include our header
 		EmitModuleInclude(app.mainModule)
-		
+
 		' incbins
 		TransIncBin(app)
-		
+
 		' strings
 		For Local s:String = EachIn app.stringConsts.Keys()
 			If s Then
 				Local key:TStringConst = TStringConst(app.stringConsts.ValueForKey(s))
-	
+
 				Emit "static BBString " + key.id + "={"
 				Emit "&bbStringClass,"
 				'Emit "2147483647,"
 				Emit s.length + ","
-				
+
 				Local t:String = "{"
-				
+
 				For Local i:Int = 0 Until s.length
 					If i Then
 						t:+ ","
 					End If
 					t:+ s[i]
-					
+
 					If i And Not (i Mod 16) Then
 						Emit t
 						t = ""
 					End If
 				Next
-				
+
 				Emit t + "}"
-				
+
 				Emit "};"
 			End If
 		Next
-		
+
 		'definitions!
 		For Local decl:TDecl=EachIn app.Semanted()
-			
+
 			If decl.declImported Continue
-			
+
 			Local gdecl:TGlobalDecl=TGlobalDecl( decl )
 			If gdecl
 				If Not TFunctionPtrType(gdecl.ty) Then
@@ -2661,10 +2665,10 @@ End Rem
 			EndIf
 		Next
 
-		Emit "static int " + app.munged + "_inited" + " = 0;"	
-		
+		Emit "static int " + app.munged + "_inited" + " = 0;"
+
 		Emit "int " + app.munged + "(){"
-		
+
 		' call any imported mod inits
 		For Local decl:TModuleDecl=EachIn app.imported.Values()
 			For Local mdecl:TDecl=EachIn decl.imported.Values()
@@ -2673,36 +2677,36 @@ End Rem
 				End If
 			Next
 		Next
-		
+
 		' initialise stuff
 		Emit "if (!" + app.munged + "_inited) {"
 		Emit app.munged + "_inited = 1;"
 
 		' register types
 		For Local decl:TDecl=EachIn app.Semanted()
-		
+
 			If decl.declImported Continue
-		
+
 			Local cdecl:TClassDecl=TClassDecl( decl )
 			If cdecl And Not cdecl.IsExtern()
 				Emit "bbObjectRegisterType(&" + cdecl.munged + ");"
 			EndIf
 		Next
 		'
-		
+
 		' register incbins
 		For Local ib:TIncbin = EachIn app.incbins
 			Emit "bbIncbinAdd(&" + TStringConst(app.stringConsts.ValueForKey(ib.file)).id + ",&" + app.munged + "_ib_" + ib.id + "," + ib.length + ");"
 		Next
-		
-		
+
+
 		' initialise globals
 		For Local decl:TGlobalDecl=EachIn app.semantedGlobals
 
 			If decl.declImported Continue
 
 			decl.Semant
-			
+
 			' TODO : what about OnDebugStop etc, who have no init ?
 			If decl.init And Not (decl.attrs & DECL_INITONLY) Then
 				Emit TransGlobal( decl )+"="+decl.init.Trans()+";"
@@ -2712,8 +2716,8 @@ End Rem
 		' now do the local main stuff
 		app.mainFunc.Semant()
 		EmitBlock app.mainFunc
-		
-		
+
+
 		Emit "}"
 		Emit "return 0;"
 		Emit "}"
@@ -2723,9 +2727,9 @@ End Rem
 		'	EmitMark TransGlobal( decl ),decl.ty,False
 		'Next
 		'Emit "}"
-		
+
 	End Method
-	
+
 	Method EmitIfcImports(impMod:TModuleDecl, processed:TMap)
 
 		For Local decl:TDecl=EachIn impMod.imported.Values()
@@ -2750,7 +2754,7 @@ End Rem
 				End If
 			End If
 		Next
-		
+
 	End Method
 
 	Method EmitIfcStructImports(impMod:TModuleDecl, processed:TMap)
@@ -2759,34 +2763,34 @@ End Rem
 			If mdecl Then
 				If mdecl.filepath.EndsWith(".bmx") And _appInstance.mainModule<>mdecl And Not processed.Contains(mdecl)
 					EmitIfcStructImports(mdecl, processed)
-					
+
 					processed.Insert(mdecl, mdecl)
-					
+
 					For Local decl:TDecl=EachIn mdecl._decls
-					
+
 						decl.Semant
-					
+
 						' consts
 						Local cdecl:TConstDecl=TConstDecl( decl )
 						If cdecl
 							EmitIfcConstDecl(cdecl)
 							Continue
 						End If
-			
+
 						' classes
 						Local tdecl:TClassDecl=TClassDecl( decl )
 						If tdecl
 							EmitIfcClassDecl(tdecl)
 							Continue
 						EndIf
-			
+
 						' functions
 						Local fdecl:TFuncDecl=TFuncDecl( decl )
 						If fdecl And fdecl <> _appInstance.mainFunc Then
 							EmitIfcFuncDecl(fdecl)
 							Continue
 						End If
-					
+
 						' globals
 						Local gdecl:TGlobalDecl=TGlobalDecl( decl )
 						If gdecl
@@ -2798,14 +2802,14 @@ End Rem
 				End If
 			End If
 		Next
-		
+
 	End Method
 
 	Method FileHeaderFromFile:String(mdecl:TModuleDecl, includePath:Int = False)
-	
+
 		Local name:String = StripAll(mdecl.filepath)
 		Local dir:String = ExtractDir(mdecl.filePath)
-	
+
 		Local file:String = name + ".bmx" + FileMung(opt_apptype And (Not mdecl.declImported)) + ".h"
 
 		If mdecl.relPath Then
@@ -2814,7 +2818,7 @@ End Rem
 				file = "../" + dir + "/.bmx/" + file
 			End If
 		End If
-	
+
 		Return file
 	End Method
 
@@ -2832,7 +2836,7 @@ End Rem
 		Else
 			result = "_bb_" + mdecl.ident
 		End If
-		
+
 		'remove non-allowed characters
 		result = result.Replace(".", "_").Replace("-", "_")
 		Return result
@@ -2846,7 +2850,7 @@ End Rem
 		For Local info:String = EachIn app.mainModule.modInfo
 			Emit "ModuleInfo " + BmxEnquote(info)
 		Next
-		
+
 		Local processed:TMap = New TMap
 
 		' module imports
@@ -2868,12 +2872,12 @@ End Rem
 				End If
 			End If
 		Next
-		
+
 		' module imports from other files?
 		If opt_buildtype = BUILDTYPE_MODULE And opt_ismain Then
 			EmitIfcImports(app.mainModule, processed)
 		End If
-		
+
 		' other imports
 		For Local s:String = EachIn app.fileImports
 			Emit "import ~q" + s + "~q"
@@ -2909,7 +2913,7 @@ End Rem
 				EmitIfcFuncDecl(fdecl)
 			End If
 		Next
-		
+
 		' globals
 		For Local decl:TDecl=EachIn app.Semanted()
 			Local gdecl:TGlobalDecl=TGlobalDecl( decl )
@@ -2917,22 +2921,22 @@ End Rem
 				EmitIfcGlobalDecl(gdecl)
 			End If
 		Next
-		
+
 	End Method
-	
+
 	Method TransApp( app:TAppDecl )
 
 		If app.mainModule.IsSuperStrict()
 			opt_issuperstrict = True
 		End If
-	
+
 		TransHeader(app)
-	
+
 		TransSource(app)
-		
+
 		TransInterface(app)
-	
+
 	End Method
-	
+
 End Type
 

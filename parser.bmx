@@ -156,9 +156,10 @@ End Type
 Type TParser
 
 	Field _toker:TToker
-	Field _toke$
+	Field _toke:String
 	Field _tokeType:Int
-	Field _tokerStack:TList=New TList'<TToker>
+	'Ronny: _tokerStack is unused
+	'Field _tokerStack:TList=New TList'<TToker>
 
 	Field _block:TBlockDecl
 	Field _blockStack:TList=New TList'<TBlockDecl>
@@ -1315,7 +1316,7 @@ Type TParser
 				PushBlock block
 			Else
 				ParseStmt
-				
+
 				If _toke = "end" Then
 					NextToke
 					If _toke = "try" Then
@@ -1355,12 +1356,12 @@ Type TParser
 
 		_block.AddStmt New TAssertStmt.Create( expr, elseExpr )
 	End Method
-	
+
 	Method ParseEndStmt(eatEnd:Int = True)
 		If eatEnd Then
 			Parse "end"
 		End If
-		
+
 		_block.AddStmt New TEndStmt.Create( )
 	End Method
 
@@ -1402,7 +1403,7 @@ Type TParser
 				Local fin:Int = False
 				While _toke<>"case" And _toke<>"default" And _toke<>"end" And _toke<>"endselect"
 					ParseStmt
-					
+
 					If _toke = "end" Then
 						NextToke
 						If _toke = "select" Then
@@ -1527,84 +1528,84 @@ Type TParser
 	Method ParseStmt()
 		SetErr
 		Select _toke
-		Case ";","~n"
-			NextToke
-		Case "rem"
-			ParseRemStmt()
-		Case "const","local","global"
-			ParseDeclStmts
-		' nested function - needs to get added to the "module"
-		Case "function"
-			_block.InsertDecl ParseFuncDecl( _toke,FUNC_NESTED )
-		Case "return"
-			ParseReturnStmt()
-		Case "exit"
-			ParseExitStmt()
-		Case "continue"
-			ParseContinueStmt()
-		Case "if"
-			ParseIfStmt( "" )
-		Case "while"
-			ParseWhileStmt()
-		Case "repeat"
-			ParseRepeatStmt()
-		Case "for"
-			ParseForStmt()
-		Case "select"
-			ParseSelectStmt()
-		Case "assert"
-			ParseAssertStmt()
-		Case "try"
-			ParseTryStmt()
-		Case "throw"
-			ParseThrowStmt()
-		Case "end"
-			ParseEndStmt()
-		Case "extern"
-			ParseExternBlock(_module)
-		Default
+			Case ";","~n"
+				NextToke
+			Case "rem"
+				ParseRemStmt()
+			Case "const","local","global"
+				ParseDeclStmts
+			' nested function - needs to get added to the "module"
+			Case "function"
+				_block.InsertDecl ParseFuncDecl( _toke,FUNC_NESTED )
+			Case "return"
+				ParseReturnStmt()
+			Case "exit"
+				ParseExitStmt()
+			Case "continue"
+				ParseContinueStmt()
+			Case "if"
+				ParseIfStmt( "" )
+			Case "while"
+				ParseWhileStmt()
+			Case "repeat"
+				ParseRepeatStmt()
+			Case "for"
+				ParseForStmt()
+			Case "select"
+				ParseSelectStmt()
+			Case "assert"
+				ParseAssertStmt()
+			Case "try"
+				ParseTryStmt()
+			Case "throw"
+				ParseThrowStmt()
+			Case "end"
+				ParseEndStmt()
+			Case "extern"
+				ParseExternBlock(_module)
+			Default
 
-			Local expr:TExpr=ParsePrimaryExpr( True )
+				Local expr:TExpr=ParsePrimaryExpr( True )
 
-			Select _toke.ToLower()
-			'"=","*=","/=","+=","-=","&=","|=","~~=","mod","shl","shr"
-			Case "=",":*",":/",":+",":-",":&",":|",":~~","mod","shl","shr", ":shl", ":shr", "sar", ":sar", ":mod"
-'DebugLog _toke
-				' remap symbols...
-				For Local i:Int = 0 Until TToker._symbols.length
-					Local sym$= TToker._symbols[i]
-					If _toke.ToLower() = sym
-						_toke = TToker._symbols_map[i]
-						Exit
+				Select _toke.ToLower()
+				'"=","*=","/=","+=","-=","&=","|=","~~=","mod","shl","shr"
+				Case "=",":*",":/",":+",":-",":&",":|",":~~","mod","shl","shr", ":shl", ":shr", "sar", ":sar", ":mod"
+	'DebugLog _toke
+					' remap symbols...
+					For Local i:Int = 0 Until TToker._symbols.length
+						Local sym$= TToker._symbols[i]
+						If _toke.ToLower() = sym
+							_toke = TToker._symbols_map[i]
+							Exit
+						EndIf
+					Next
+
+
+					If TIdentExpr( expr ) Or TIndexExpr( expr )
+						Local op$=_toke
+						NextToke
+						If Not op.EndsWith( "=" ) And Not op.StartsWith("=")
+							Parse "="
+							op:+"="
+						EndIf
+						_block.AddStmt New TAssignStmt.Create( op,expr,ParseExpr() )
+					Else
+						Err "Assignment operator '"+_toke+"' cannot be used this way."
 					EndIf
-				Next
+					Return
+				End Select
 
+				If TIdentExpr( expr )
 
-				If TIdentExpr( expr ) Or TIndexExpr( expr )
-					Local op$=_toke
-					NextToke
-					If Not op.EndsWith( "=" ) And Not op.StartsWith("=")
-						Parse "="
-						op:+"="
-					EndIf
-					_block.AddStmt New TAssignStmt.Create( op,expr,ParseExpr() )
+					expr=New TFuncCallExpr.Create( expr,ParseArgs( True ) )
+
+				Else If TFuncCallExpr( expr) Or TInvokeSuperExpr( expr ) Or TNewObjectExpr( expr )
+
 				Else
-					Err "Assignment operator '"+_toke+"' cannot be used this way."
+					Err "Expression cannot be used as a statement."
 				EndIf
-				Return
-			End Select
 
-			If TIdentExpr( expr )
-
-				expr=New TFuncCallExpr.Create( expr,ParseArgs( True ) )
-
-			Else If TFuncCallExpr( expr) Or TInvokeSuperExpr( expr ) Or TNewObjectExpr( expr )
-
-			Else
-				Err "Expression cannot be used as a statement."
-			EndIf
-
-			_block.AddStmt New TExprStmt.Create( expr )
+				_block.AddStmt New TExprStmt.Create( expr )
 
 		End Select
 	End Method
@@ -1954,7 +1955,7 @@ End If
 				If (Not meth And CParse("function")) Or (meth And CParse("method"))
 					Exit
 				End If
-				
+
 				' handle "end" statement
 				ParseEndStmt(False)
 			EndIf
@@ -2440,6 +2441,161 @@ End Rem
 
 	End Method
 
+
+	Method ParseCurrentFile:int(path:string, attrs:int)
+
+		LoadExternCasts(path)
+
+		While _toke
+			SetErr
+			Select _toke.toLower()
+			Case "~n"
+				NextToke
+			Case "public"
+				NextToke
+				attrs=0
+			Case "private"
+				NextToke
+				attrs=DECL_PRIVATE
+			Case "extern"
+
+				ParseExternBlock(_module)
+Rem
+				NextToke
+
+				If _tokeType=TOKE_STRINGLIT
+					DebugLog "EXTERN : " + ParseStringLit()
+				End If
+
+
+				attrs=DECL_EXTERN
+				If CParse( "private" ) attrs=attrs|DECL_PRIVATE
+
+
+				While _toke<>"endextern"
+					If CParse( "end" )
+						If Parse("extern")
+							Exit
+						End If
+					EndIf
+
+					SetErr
+					Select _toke
+						Case "~n"
+							NextToke
+						Case "const","global"
+							_module.InsertDecls ParseDecls( _toke,attrs )
+						Case "type"
+							_module.InsertDecl ParseClassDecl( _toke,attrs )
+						Case "function"
+							_module.InsertDecl ParseFuncDecl( _toke,attrs )
+						Case "rem"
+							ParseRemStmt()
+					End Select
+
+				Wend
+
+				attrs = 0
+End Rem
+			Case "const"
+				_module.InsertDecls ParseDecls( _toke,attrs )
+			Case "global"
+				Local list:TList = ParseDecls( _toke,attrs )
+				_module.InsertDecls list
+				For Local gdecl:TGlobalDecl = EachIn list
+					gdecl.attrs :| DECL_INITONLY
+					_block.AddStmt New TDeclStmt.Create( gdecl )
+				Next
+			Case "type"
+				_module.InsertDecl ParseClassDecl( _toke,attrs )
+			'Case "interface"
+			'	_module.InsertDecl ParseClassDecl( _toke,attrs|CLASS_INTERFACE|DECL_ABSTRACT )
+			Case "function"
+				_module.InsertDecl ParseFuncDecl( _toke,attrs )
+			Case "rem"
+				ParseRemStmt()
+			Case "incbin"
+				NextToke
+				Local s:String = ParseStringLit()
+				_app.mapStringConsts(s)
+				_app.incbins.AddLast(New TIncbin.Create(s, path))
+			Case "include"
+				'include command is NOT just a pattern to replace with
+				'content. BlitzMax parses each included file before the
+				'content gets appended to the source (right before
+				'semanting or analyzing content)
+				NextToke
+				Local includeFile:String = ParseStringLit()
+
+				'convert the URI of the to include file as it might be
+				'a relative one
+				includeFile = RealPath(includeFile)
+
+				'instead of merging the data of multiple parsers, the
+				'same parser is used for all included files - but each
+				'of them uses an individual toker
+
+				'instead of "LoadText" "PreProcess" is used to include
+				'handling of conditionals and comments
+				Local includeSource:String = PreProcess(includeFile)
+				Local includeToker:TToker = New TToker.Create(includeFile, includeSource)
+
+				'backup old vars
+				local oldToker:TToker = self._toker
+
+				'assign temporary vars
+				self._toker = includeToker
+
+				'parse the include file
+				parseCurrentFile(includeFile, attrs)
+
+				'restore backup vars
+				self._toker = oldToker
+
+				'move on to next toke (after include "xyz.bmx")
+				NextToke
+
+rem
+	old idea
+				'each parser holds multiple "_blocks" (TBlockDecl) in a
+				'list named "_blockStack" (TList)
+				'so the idea is to parse the included file and append
+				'their blocklist to the calling one
+				'instead of "LoadText" "PreProcess" is used to include
+				'handling of conditionals and comments
+				Local includeSource:String = PreProcess(includeFile)
+				Local includeToker:TToker = New TToker.Create(includeFile, includeSource)
+
+				Local includeParser:TParser = New TParser.Create(includeToker, _app)
+				includeParser.parseMain()
+
+				If includeParser._blockStack
+					For local blockDecl:TBlockDecl = EachIn includeParser._blockStack
+						_blockStack.AddLast(blockDecl)
+					Next
+				Endif
+
+				If includeParser._module and includeParser._module._decls
+					For local decl:TDecl = EachIn includeParser._module._decls
+						'skip "localMain"-function
+						if decl.ident.ToLower() = "LocalMain".toLower() then continue
+
+						print "appending decl: "+decl.ToString()
+						_module._decls.AddLast(decl)
+					Next
+				Endif
+endrem
+
+			Default
+				ParseStmt
+				'Err "Syntax error - expecting declaration."
+			End Select
+		Wend
+
+		return attrs
+	End Method
+
+
 	Method ParseMain()
 
 		SkipEols
@@ -2498,16 +2654,13 @@ End Rem
 			par.ParseModuleImport(_module, "brl.blitz", modulepath("brl.blitz"), , , MODULE_ACTUALMOD)
 		End If
 
-		LoadExternCasts(path)
-
-		Local attrs:Int
-
-
 		Local mainFunc:TFuncDecl = New TFuncDecl.CreateF("LocalMain", New TIntType,Null,0)
 'DebugStop
 		'_app.InsertDecl mainFunc
 		_module.insertDecl(mainFunc)
 		'Local mainBlock:TBlockDecl = New TBlockDecl.Create( _block )
+
+		Local attrs:Int
 
 		'Parse header - imports etc.
 		While _toke
@@ -2597,87 +2750,9 @@ End Rem
 		PushBlock(mainFunc)
 
 		'Parse main app
-		While _toke
-			SetErr
-			Select _toke.toLower()
-			Case "~n"
-				NextToke
-			Case "public"
-				NextToke
-				attrs=0
-			Case "private"
-				NextToke
-				attrs=DECL_PRIVATE
-			Case "extern"
-
-				ParseExternBlock(_module)
-Rem
-				NextToke
-
-				If _tokeType=TOKE_STRINGLIT
-					DebugLog "EXTERN : " + ParseStringLit()
-				End If
-
-
-				attrs=DECL_EXTERN
-				If CParse( "private" ) attrs=attrs|DECL_PRIVATE
-
-
-				While _toke<>"endextern"
-					If CParse( "end" )
-						If Parse("extern")
-							Exit
-						End If
-					EndIf
-
-					SetErr
-					Select _toke
-						Case "~n"
-							NextToke
-						Case "const","global"
-							_module.InsertDecls ParseDecls( _toke,attrs )
-						Case "type"
-							_module.InsertDecl ParseClassDecl( _toke,attrs )
-						Case "function"
-							_module.InsertDecl ParseFuncDecl( _toke,attrs )
-						Case "rem"
-							ParseRemStmt()
-					End Select
-
-				Wend
-
-				attrs = 0
-End Rem
-			Case "const"
-				_module.InsertDecls ParseDecls( _toke,attrs )
-			Case "global"
-				Local list:TList = ParseDecls( _toke,attrs )
-				_module.InsertDecls list
-				For Local gdecl:TGlobalDecl = EachIn list
-					gdecl.attrs :| DECL_INITONLY
-					_block.AddStmt New TDeclStmt.Create( gdecl )
-				Next
-			Case "type"
-				_module.InsertDecl ParseClassDecl( _toke,attrs )
-			'Case "interface"
-			'	_module.InsertDecl ParseClassDecl( _toke,attrs|CLASS_INTERFACE|DECL_ABSTRACT )
-			Case "function"
-				_module.InsertDecl ParseFuncDecl( _toke,attrs )
-			Case "rem"
-				ParseRemStmt()
-			Case "incbin"
-				NextToke
-				Local s:String = ParseStringLit()
-				_app.mapStringConsts(s)
-				_app.incbins.AddLast(New TIncbin.Create(s, path))
-			Default
-				ParseStmt
-				'Err "Syntax error - expecting declaration."
-			End Select
-		Wend
+		attrs = ParseCurrentFile(path, attrs)
 
 		PopBlock
-
 	End Method
 
 	Method ParseModule()
@@ -2792,7 +2867,7 @@ End Rem
 
 			' test for EOF
 			If Not toker.Toke() Exit
-			
+
 			con = 0
 			If Eval( toker,TType.intType ) = "1" con = 1
 
