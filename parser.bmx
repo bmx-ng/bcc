@@ -2534,7 +2534,10 @@ End Rem
 				'instead of merging the data of multiple parsers, the
 				'same parser is used for all included files - but each
 				'of them uses an individual toker
-				Local includeSource:String = LoadText(includeFile)
+
+				'instead of "LoadText" "PreProcess" is used to include
+				'handling of conditionals and comments
+				Local includeSource:String = PreProcess(includeFile)
 				Local includeToker:TToker = New TToker.Create(includeFile, includeSource)
 
 				'backup old vars
