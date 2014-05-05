@@ -375,7 +375,7 @@ End Rem
 	
 	Method TransField$( decl:TFieldDecl,lhs:TExpr ) Abstract
 	
-	Method TransFunc$( decl:TFuncDecl,args:TExpr[],lhs:TExpr ) Abstract
+	Method TransFunc$( decl:TFuncDecl,args:TExpr[],lhs:TExpr, sup:Int = False ) Abstract
 	
 	Method TransSuperFunc$( decl:TFuncDecl,args:TExpr[] ) Abstract
 	
@@ -515,7 +515,7 @@ End Rem
 	End Method
 	
 	Method TransInvokeSuperExpr$( expr:TInvokeSuperExpr )
-		Local decl:TFuncDecl=TFuncDecl( expr.funcDecl.actual ),t$
+		Local decl:TFuncDecl=TFuncDecl( expr.origFuncDecl.actual ),t$
 
 		If decl.munged.StartsWith( "$" ) Return TransIntrinsicExpr( decl,expr )
 		
