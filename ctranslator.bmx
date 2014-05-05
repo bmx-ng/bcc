@@ -477,8 +477,15 @@ Type TCTranslator Extends TTranslator
 '		Return decl.munged+swiz
 	End Method
 
-	Method TransFunc$( decl:TFuncDecl,args:TExpr[],lhs:TExpr )
+	Method TransFunc$( decl:TFuncDecl,args:TExpr[],lhs:TExpr, sup:Int = False )
 'If decl.ident = "ToString" DebugStop
+
+		' for calling the super class method instead
+		Local tSuper:String
+		If sup Then
+			tSuper = "->super"
+		End If
+
 		If decl.IsMethod()
 			If lhs And Not TSelfExpr(lhs) Then
 				If lhs.exprType = TType.stringType Then
@@ -502,7 +509,7 @@ Type TCTranslator Extends TTranslator
 						Return "(" + obj + TransSubExpr( lhs ) + ")->" + decl.munged+TransArgs( args,decl, Null)
 					Else
 'DebugStop
-						Local class:String = Bra("(" + obj + TransSubExpr( lhs ) + ")->clas")
+						Local class:String = Bra("(" + obj + TransSubExpr( lhs ) + ")->clas" + tSuper)
 						'Local class:String = TransFuncClass(cdecl)
 						Return class + "->" + TransFuncPrefix(cdecl, decl.ident) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
 					End If
@@ -513,18 +520,18 @@ Type TCTranslator Extends TTranslator
 				Else If TCastExpr(lhs) Then
 					Local cdecl:TClassDecl = TObjectType(TCastExpr(lhs).ty).classDecl
 					Local obj:String = TransFuncObj(cdecl)
-					Local class:String = Bra("(" + obj + TransSubExpr( lhs ) + ")->clas")
+					Local class:String = Bra("(" + obj + TransSubExpr( lhs ) + ")->clas" + tSuper)
 					'Local class:String = TransFuncClass(cdecl)
 					Return class + "->" + TransFuncPrefix(cdecl, decl.ident) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
 				Else If TMemberVarExpr(lhs) Then
 					Local cdecl:TClassDecl = TObjectType(TMemberVarExpr(lhs).decl.ty).classDecl
 					Local obj:String = TransFuncObj(cdecl)
-					Local class:String = Bra("(" + obj + TransSubExpr( lhs ) + ")->clas")
+					Local class:String = Bra("(" + obj + TransSubExpr( lhs ) + ")->clas" + tSuper)
 					'Local class:String = TransFuncClass(cdecl)
 					Return class + "->" + TransFuncPrefix(cdecl, decl.ident) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
 				Else If TInvokeExpr(lhs) Then
 					Local obj:String = Bra("struct " + decl.scope.munged + "_obj*")
-					Local class:String = Bra("(" + obj + TransSubExpr( lhs ) +")->clas")
+					Local class:String = Bra("(" + obj + TransSubExpr( lhs ) +")->clas" + tSuper)
 					'Local class:String = Bra("&" + decl.scope.munged)
 					Return class + "->" + TransFuncPrefix(decl.scope, decl.ident) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
 				Else If TInvokeMemberExpr(lhs)
@@ -534,7 +541,7 @@ Type TCTranslator Extends TTranslator
 					Local obj:String = TransFuncObj(decl.scope)
 					'Local obj:String = Bra("struct " + decl.scope.munged + "_obj*")
 					'Local class:String = Bra("(" + obj + TransSubExpr( lhs ) +")->clas")
-					Local class:String = Bra("(" + obj + lvar +")->clas")
+					Local class:String = Bra("(" + obj + lvar +")->clas" + tSuper)
 					'Local class:String = Bra("&" + decl.scope.munged)
 
 					Return class + "->" + TransFuncPrefix(decl.scope, decl.ident)+ decl.ident+TransArgs( args,decl, lvar )
@@ -542,7 +549,7 @@ Type TCTranslator Extends TTranslator
 				Else If TIndexExpr(lhs) Then
 					Local loc:String = CreateLocal(lhs)
 					Local obj:String = Bra("struct " + decl.scope.munged + "_obj*")
-					Local class:String = Bra("(" + obj + loc +")->clas")
+					Local class:String = Bra("(" + obj + loc +")->clas" + tSuper)
 					'Local class:String = Bra("&" + decl.scope.munged)
 					Return class + "->" + TransFuncPrefix(decl.scope, decl.ident) + decl.ident+TransArgs( args,decl, loc )
 				Else
@@ -555,7 +562,7 @@ Type TCTranslator Extends TTranslator
 			' ((brl_standardio_TCStandardIO_obj*)o->clas)->md_Read(o, xxx, xxx)
 			If Not (decl.attrs & FUNC_PTR) Then
 				Local obj:String = Bra("struct " + decl.scope.munged + "_obj*")
-				Local class:String = Bra("(" + obj + "o)->clas")
+				Local class:String = Bra("(" + obj + "o)->clas" + tSuper)
 				'Local class:String = Bra("&" + decl.scope.munged)
 				Return class + "->" + TransFuncPrefix(decl.scope, decl.ident) + decl.ident+TransArgs( args,decl, "o" )
 			Else
@@ -600,7 +607,7 @@ Type TCTranslator Extends TTranslator
 	End Method
 
 	Method TransSuperFunc$( decl:TFuncDecl,args:TExpr[] )
-		Return TransFunc(decl, args, Null)
+		Return TransFunc(decl, args, Null, True)
 '		If decl.IsMethod()
 '			Return decl.ClassScope().munged+".md_"+decl.ident+TransArgs( args,decl, "o" )
 '		Else
@@ -953,9 +960,10 @@ Type TCTranslator Extends TTranslator
 				Return "bbArrayCastFromObject" + Bra(t + "," + TransArrayType(TArrayType( dst ).elemType))
 			End If
 		Else If TObjectType( dst )
-			If TArrayType( src ) Return Bra("(BBOBJECT)"+t)
-			If TStringType( src ) Return Bra("(BBOBJECT)"+t)
-			If TObjectType( src ) Return t
+			'If TArrayType( src ) Return Bra("(BBOBJECT)"+t)
+			'If TStringType( src ) Return Bra("(BBOBJECT)"+t)
+			'If TObjectType( src ) Return t
+			Return "bbObjectDowncast" + Bra(t + ",&" + TObjectType( dst ).classDecl.munged)
 		EndIf
 
 		Return TransPtrCast( dst,src,t,"dynamic" )
@@ -1592,7 +1600,7 @@ End Rem
 			If decl.IsAbstract() Then
 				Emit "brl_blitz_NullMethodError();"
 			Else
-'If decl.ident = "Delete" DebugStop
+'If decl.ident = "OpenStream" DebugStop
 
 				decl.Semant()
 'If decl.ident = "GetActive" DebugStop

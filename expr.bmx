@@ -636,6 +636,7 @@ End Type
 Type TInvokeSuperExpr Extends TExpr
 	Field ident$
 	Field args:TExpr[]
+	Field origFuncDecl:TFuncDecl
 	Field funcDecl:TFuncDecl
 	Field classScope:TClassDecl
 	Field superClass:TClassDecl
@@ -665,6 +666,7 @@ Type TInvokeSuperExpr Extends TExpr
 		If Not superClass Err "Type has no super class."
 
 		args=SemantArgs( args )
+		origFuncDecl=classScope.FindFuncDecl(ident,args)
 		funcDecl=superClass.FindFuncDecl( ident,args )
 		If Not funcDecl Err "Can't find superclass method '"+ident+"'."
 		args=CastArgs( args,funcDecl )
