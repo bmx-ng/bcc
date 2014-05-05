@@ -411,6 +411,10 @@ Type TParser
 			End If
 		End Select
 
+		While CParse( "[]" )
+			ty=New TArrayType.Create( ty )
+		Wend
+
 		Return ty
 	End Method
 
@@ -591,7 +595,7 @@ Type TParser
 						eat=True
 						Exit
 					Case ".."
-						NextToke
+						'toker.NextToke
 					End Select
 				Forever
 			Else
@@ -813,8 +817,15 @@ Type TParser
 					_toke=_toker.Toke()
 					_tokeType=_toker.TokeType()
 					expr=New TIdentExpr.Create( ParseIdent() )
+					ty = ParseConstNumberType()
+					
+					If TArrayType(ty) Then
+						If Not TArrayType(ty).elemType Then
+							TArrayType(ty).elemType = New TIdentType.Create(TIdentExpr(expr).ident)
+							expr=New TIdentTypeExpr.Create( ty )
+						End If
+					End If
 
-					ParseConstNumberType()
 				EndIf
 
 				'expr=New TIdentExpr.Create( ParseIdent() )
@@ -2442,7 +2453,7 @@ End Rem
 	End Method
 
 
-	Method ParseCurrentFile:int(path:string, attrs:int)
+	Method ParseCurrentFile:Int(path:String, attrs:Int)
 
 		LoadExternCasts(path)
 
@@ -2541,21 +2552,21 @@ End Rem
 				Local includeToker:TToker = New TToker.Create(includeFile, includeSource)
 
 				'backup old vars
-				local oldToker:TToker = self._toker
+				Local oldToker:TToker = Self._toker
 
 				'assign temporary vars
-				self._toker = includeToker
+				Self._toker = includeToker
 
 				'parse the include file
 				parseCurrentFile(includeFile, attrs)
 
 				'restore backup vars
-				self._toker = oldToker
+				Self._toker = oldToker
 
 				'move on to next toke (after include "xyz.bmx")
 				NextToke
 
-rem
+Rem
 	old idea
 				'each parser holds multiple "_blocks" (TBlockDecl) in a
 				'list named "_blockStack" (TList)
@@ -2592,7 +2603,7 @@ endrem
 			End Select
 		Wend
 
-		return attrs
+		Return attrs
 	End Method
 
 

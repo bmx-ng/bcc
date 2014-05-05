@@ -139,7 +139,6 @@ Type TDecl
 
 	Method Semant()
 		If IsSemanted() Return
-'DebugLog "Semant : " + ident
 		
 		If IsSemanting() Err "Cyclic declaration of '"+ident+"'."
 		
@@ -319,6 +318,10 @@ Type TConstDecl Extends TValDecl
 		End If
 	End Method
 	
+	Method ToString$()
+		Return "Const "+Super.ToString()
+	End Method
+
 End Type
 
 Type TVarDecl Extends TValDecl
@@ -940,7 +943,6 @@ Type TFuncDecl Extends TBlockDecl
 	End Method
 
 	Method OnSemant()
-
 		'semant ret type
 		If Not retTypeExpr Then
 			If Not retType Then ' may have previously been set (if this is a function pointer)
@@ -1012,16 +1014,21 @@ Type TFuncDecl Extends TBlockDecl
 'DebugLog "Checking Class : " + sclass.ident
 				Local found:Int
 				For Local decl:TFuncDecl=EachIn sclass.FuncDecls( )
-'DebugLog "Method = " + decl.ident
-					If Not decl.IsSemanted() Then
-						decl.Semant
-					End If
+					'If Not decl.IsSemanted() Then
+					'	decl.Semant
+					'End If
 					
 					If decl.ident.ToLower() = ident.ToLower() Then
+'DebugLog "Method = " + decl.ident
 					
 						If ident.ToLower() = "new" Continue
 'If ident = "Create" DebugStop
 						found=True
+
+						If Not decl.IsSemanted() Then
+							decl.Semant
+						End If
+
 						If EqualsFunc( decl ) 
 'DebugLog "Found"
 							overrides=TFuncDecl( decl.actual )
@@ -1367,8 +1374,6 @@ End Rem
 	
 	Method OnSemant()
 
-		'Print "Semanting "+ToString()
-		
 		PushEnv Self
 
 		'If Not IsTemplateInst()
@@ -1481,24 +1486,24 @@ End Rem
 		End If
 	End Method
 	
-	Method Semant()
-		If IsSemanted() Return
+	Method SemantParts()
+'		If IsSemanted() Return
 		
-		Super.Semant()
+'		Super.Semant()
 		
 		For Local decl:TConstDecl = EachIn Decls()
 			decl.Semant()
 		Next
-		
+
 		For Local decl:TGlobalDecl = EachIn Decls()
 			decl.Semant()
 		Next
 
 		' NOTE : we can't semant functions here as they cause cyclic errors.
-		'For Local decl:TFuncDecl = EachIn Decls()
-		'	decl.Semant()
-		'Next
-		
+		For Local decl:TFuncDecl = EachIn Decls()
+			decl.Semant()
+		Next
+
 	End Method
 	
 	'Ok, this dodgy looking beast 'resurrects' methods that may not currently be alive, but override methods that ARE.

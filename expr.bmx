@@ -121,7 +121,6 @@ Type TExpr
 						Err "Unable to convert from '" + args[i].exprType.ToString() + "()' to '" + funcDecl.argDecls[i].ty.ToString() + "'"
 					End If
 				End If
-
 				args[i]=args[i].Cast( funcDecl.argDecls[i].ty )
 			Else If funcDecl.argDecls[i].init
 				args[i]=funcDecl.argDecls[i].init
@@ -500,7 +499,7 @@ Type TInvokeMemberExpr Extends TExpr
 
 		If Not decl.IsSemanted() decl.Semant()
 		exprType=decl.retType
-		
+
 		args=SemantArgs( args )
 		args=CastArgs( args,decl )
 
@@ -865,8 +864,14 @@ Type TCastExpr Extends TExpr
 			exprType = ty
 			Return Self
 		End If
+		
+		If TArrayType(ty) And TObjectType(src) And TObjectType(src).classDecl.ident = "Array" Then
+			exprType = ty
+			Return Self
+		End If
 
 		If Not exprType
+			DebugStop
 			Err "Cannot convert from "+src.ToString()+" to "+ty.ToString()+"."
 		EndIf
 

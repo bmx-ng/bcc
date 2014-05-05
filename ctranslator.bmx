@@ -321,10 +321,16 @@ Type TCTranslator Extends TTranslator
 			If Not TStringType(ty).cDecl Then
 				ty.Semant()
 			End If
-			If TObjectType(src).classDecl = TClassDecl.nullObjectClass Then
+			If TNullDecl(TObjectType(src).classDecl) Then
 				Return "&bbEmptyString"
 			End If
 			Return "bbObjectDowncast" + Bra(expr + ",&" + TStringType(ty).cDecl.munged)
+		End If
+
+		If TArrayType(ty) And TObjectType(src) Then
+			If TNullDecl(TObjectType(src).classDecl) Then
+				Return "&bbEmptyArray"
+			End If
 		End If
 
 		If TVarPtrType(src) And TNumericType(ty) Then
@@ -342,7 +348,10 @@ Type TCTranslator Extends TTranslator
 			Return expr
 		End If
 
-		If Not TObjectType(ty) Or Not TObjectType(src) InternalErr
+		If Not TObjectType(ty) Or Not TObjectType(src) Then
+			DebugStop
+			InternalErr
+		End If
 
 		Local t$=TransType(ty, "TODO: TransPtrCast")
 
@@ -444,7 +453,7 @@ Type TCTranslator Extends TTranslator
 		ty=ty.ActualType()
 		'src=src.ActualType()
 
-		If ty.EqualsType( src ) Return expr
+		If src.EqualsType( ty ) Return expr
 
 		Return TransPtrCast( ty,src,expr,"static" )
 
@@ -517,7 +526,7 @@ Type TCTranslator Extends TTranslator
 					Local obj:String = Bra("struct " + decl.scope.munged + "_obj*")
 					Local class:String = Bra("(" + obj + TransSubExpr( lhs ) +")->clas")
 					'Local class:String = Bra("&" + decl.scope.munged)
-					Return class + "->md_" + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
+					Return class + "->" + TransFuncPrefix(decl.scope, decl.ident) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
 				Else If TInvokeMemberExpr(lhs)
 					' create a local variable of the inner invocation
 					Local lvar:String = CreateLocal(lhs)
@@ -535,7 +544,7 @@ Type TCTranslator Extends TTranslator
 					Local obj:String = Bra("struct " + decl.scope.munged + "_obj*")
 					Local class:String = Bra("(" + obj + loc +")->clas")
 					'Local class:String = Bra("&" + decl.scope.munged)
-					Return class + "->md_" + decl.ident+TransArgs( args,decl, loc )
+					Return class + "->" + TransFuncPrefix(decl.scope, decl.ident) + decl.ident+TransArgs( args,decl, loc )
 				Else
 					InternalErr
 				End If
@@ -548,7 +557,7 @@ Type TCTranslator Extends TTranslator
 				Local obj:String = Bra("struct " + decl.scope.munged + "_obj*")
 				Local class:String = Bra("(" + obj + "o)->clas")
 				'Local class:String = Bra("&" + decl.scope.munged)
-				Return class + "->md_" + decl.ident+TransArgs( args,decl, "o" )
+				Return class + "->" + TransFuncPrefix(decl.scope, decl.ident) + decl.ident+TransArgs( args,decl, "o" )
 			Else
 				Local obj:String = Bra("struct " + decl.scope.munged + "_obj*")
 				'Local class:String = Bra("(" + obj + "o)->clas")
@@ -591,11 +600,12 @@ Type TCTranslator Extends TTranslator
 	End Method
 
 	Method TransSuperFunc$( decl:TFuncDecl,args:TExpr[] )
-		If decl.IsMethod()
-			Return decl.ClassScope().munged+".md_"+decl.ident+TransArgs( args,decl, "o" )
-		Else
-			Return decl.ClassScope().munged+".fn_"+decl.ident+TransArgs( args,decl)
-		End If
+		Return TransFunc(decl, args, Null)
+'		If decl.IsMethod()
+'			Return decl.ClassScope().munged+".md_"+decl.ident+TransArgs( args,decl, "o" )
+'		Else
+'			Return decl.ClassScope().munged+".fn_"+decl.ident+TransArgs( args,decl)
+'		End If
 	End Method
 
 	Method TransBuiltin$( decl:TFuncDecl,args:TExpr[] )
@@ -855,7 +865,7 @@ Type TCTranslator Extends TTranslator
 			If TFloatType( src ) Return Bra("(BBBYTE)"+t)
 			If TDoubleType( src ) Return Bra("(BBBYTE)"+t)
 			If TLongType( src ) Return Bra("(BBBYTE)"+t)
-			If TStringType( src ) Return t+".ToByte()"
+			If TStringType( src ) Return "bbStringToInt" + Bra(t)
 			If TByteVarPtrType( src ) Return Bra("*" + t)
 		Else If TShortType( dst )
 			If TShortType( src) Return t
@@ -864,7 +874,7 @@ Type TCTranslator Extends TTranslator
 			If TFloatType( src ) Return Bra("(BBSHORT)"+t)
 			If TDoubleType( src ) Return Bra("(BBSHORT)"+t)
 			If TLongType( src ) Return Bra("(BBSHORT)"+t)
-			If TStringType( src ) Return "bbStringToShort" + Bra(t)
+			If TStringType( src ) Return "bbStringToInt" + Bra(t)
 			If TShortVarPtrType( src ) Return Bra("*" + t)
 		Else If TVarPtrType( dst )
 			If Not TConstExpr(expr.expr) Then
@@ -937,6 +947,10 @@ Type TCTranslator Extends TTranslator
 				If TFloatPtrType( src ) Return Bra("(BBLONG*)"+t)
 				If TDoublePtrType( src ) Return Bra("(BBLONG*)"+t)
 				If TLongPtrType( src ) Return t
+			End If
+		Else If TArrayType( dst )
+			If TObjectType( src) And TObjectType( src ).classDecl.ident = "Array" Then
+				Return "bbArrayCastFromObject" + Bra(t + "," + TransArrayType(TArrayType( dst ).elemType))
 			End If
 		Else If TObjectType( dst )
 			If TArrayType( src ) Return Bra("(BBOBJECT)"+t)
@@ -1637,6 +1651,9 @@ End Rem
 		For Local decl:TDecl=EachIn classDecl.Decls()
 			Local fdecl:TFuncDecl =TFuncDecl( decl )
 			If fdecl
+				If Not fdecl.IsSemanted()
+					fdecl.Semant()
+				End If
 				If reserved.Find("," + fdecl.ident.ToLower() + ",") = -1 Then
 					EmitBBClassFuncProto( fdecl )
 					Continue
@@ -1674,13 +1691,14 @@ End Rem
 
 			Local reserved:String = ",New,Delete,ToString,Compare,SendMessage,_reserved1_,_reserved2_,_reserved3_,".ToLower()
 
+			classDecl.SemantParts()
+
 			'Local fdecls:TFuncDecl[] = classDecl.GetAllFuncDecls(Null, False)
 			For Local decl:TDecl=EachIn classDecl.Decls()
 			'For Local fdecl:TFuncDecl = EachIn fdecls
 
 				Local fdecl:TFuncDecl =TFuncDecl( decl )
 				If fdecl
-					fdecl.Semant()
 
 					If reserved.Find("," + fdecl.ident.ToLower() + ",") = -1 Then
 						EmitClassFuncProto( fdecl )
@@ -1688,11 +1706,12 @@ End Rem
 					End If
 				EndIf
 
-				'Local gdecl:TGlobalDecl =TGlobalDecl( decl )
-				'If gdecl
+				Local gdecl:TGlobalDecl =TGlobalDecl( decl )
+				If gdecl
+					MungDecl gdecl
 				'	Emit "static "+TransRefType( gdecl.ty )+" "+gdecl.munged+";"
-				'	Continue
-				'EndIf
+					Continue
+				EndIf
 			Next
 
 			Emit ""
@@ -2415,10 +2434,10 @@ End Rem
 				MungDecl mdecl
 
 				'skip mdecls we are not interested in
-				If not TModuleDecl(mdecl) then continue
-				If app.mainModule = mdecl then continue
-				If mdecl.ident = "brl.classes" then continue
-				If mdecl.ident = "brl.blitzkeywords" Then continue
+				If Not TModuleDecl(mdecl) Then Continue
+				If app.mainModule = mdecl Then Continue
+				If mdecl.ident = "brl.classes" Then Continue
+				If mdecl.ident = "brl.blitzkeywords" Then Continue
 
 				EmitModuleInclude(TModuleDecl(mdecl))
 			Next
@@ -2443,6 +2462,8 @@ End Rem
 
 			For Local decl:TDecl=EachIn cdecl.Semanted()
 				MungDecl decl
+				
+				cdecl.SemantParts()
 			Next
 
 			EndLocalScope
@@ -2456,6 +2477,8 @@ End Rem
 
 			Local gdecl:TGlobalDecl=TGlobalDecl( decl )
 			If gdecl
+				MungDecl gdecl
+				
 				If Not TFunctionPtrType(gdecl.ty) Then
 					Emit "extern "+TransRefType( gdecl.ty, "" )+" "+gdecl.munged+";"	'forward reference...
 				Else
