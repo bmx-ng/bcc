@@ -71,7 +71,7 @@ Type TType
 	Global stringType:TStringType=New TStringType
 	Global emptyArrayType:TArrayType=New TArrayType.Create( voidType )
 	Global objectType:TIdentType=New TIdentType.Create( "brl.classes.object" )
-	Global nullObjectType:TIdentType=New TIdentType.Create( "" )
+	Global nullObjectType:TNullType=New TNullType
 	Global longType:TLongType=New TLongType ' BaH Long
 	Global doubleType:TDoubleType=New TDoubleType
 	Global byteType:TByteType=New TByteType
@@ -208,6 +208,21 @@ Type TVoidType Extends TType
 	
 	Method ToString$()
 		Return "Void"
+	End Method
+End Type
+
+Type TNullType Extends TType
+
+	Method EqualsType:Int( ty:TType )
+		Return False
+	End Method
+	
+	Method ExtendsType:Int( ty:TType )
+		Return True
+	End Method
+	
+	Method ToString$()
+		Return "NULL"
 	End Method
 End Type
 
@@ -556,7 +571,7 @@ Type TIdentType Extends TType
 	
 	
 	Method Semant:TType()
-		If Not ident Return TClassDecl.nullObjectClass.objectType
+		If Not ident Return TType.nullObjectType
 
 		Local targs:TType[args.Length]
 		For Local i:Int=0 Until args.Length
@@ -651,7 +666,7 @@ Type TIdentPtrType Extends TPointerType
 	
 	
 	Method Semant:TType()
-		If Not ident Return TClassDecl.nullObjectClass.objectType
+		If Not ident Return TType.nullObjectType
 
 		Local targs:TType[args.Length]
 		For Local i:Int=0 Until args.Length

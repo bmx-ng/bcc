@@ -44,6 +44,8 @@ Type TTranslator
 '	Field funcMungs:=New StringMap<FuncDeclList>
 '	Field mungedFuncs:=New StringMap<FuncDecl>
 
+	Field debugOut:String
+
 	Method PushVarScope()
 		varStack.Push customVarStack
 		customVarStack = New TStack
@@ -665,6 +667,11 @@ Rem
 End Rem
 			Local t$=stmt.Trans()
 			If t Emit t+";"
+
+			If DEBUG And debugOut Then
+				Emit debugOut
+				debugOut = Null
+			End If
 			
 			Local v:String = String(customVarStack.Pop())
 			While v
@@ -866,7 +873,81 @@ End Rem
 		LINES = _lines
 		
 	End Method
+
+	Method DebugPrint(text:String, func:String = Null, trans:Int = False)
+		Global count:Int
+		Global lastFunc:String
+		
+		If func Then
+			lastFunc = func
+		End If
+		
+		Local s:String = "fprintf(stderr," + "~q" + lastFunc + " : " + count + " :: " + text + "\n~q)" + ";fflush(stderr);"
+		
+		If trans Then
+			debugOut :+ indent + s + "~n"
+		Else
+			Emit s
+		End If
+		count :+ 1
+	End Method
 	
+	Method DebugString(s:String, func:String = Null, trans:Int = False)
+		' bbNullObject test
+		If trans Then
+			debugOut :+ indent + "if (" + s + "==&bbNullObject) {~n"
+		Else
+			Emit "if (" + s + "==&bbNullObject) {"
+		End If
+		DebugPrint("Invalid Null String : " + s, func, trans)
+		If trans Then
+			debugOut :+ indent + "}~n"
+		Else
+			Emit "}"
+		End If
+	End Method
+
+	Method DebugArray(s:String, func:String = Null, trans:Int = False)
+		' bbNullObject test
+		If trans Then
+			debugOut :+ indent + "if (" + s + "==&bbNullObject) {~n"
+		Else
+			Emit "if (" + s + "==&bbNullObject) {"
+		End If
+		DebugPrint("Invalid Null Array : " + s, func, trans)
+		If trans Then
+			debugOut :+ indent + "}~n"
+		Else
+			Emit "}"
+		End If
+	End Method
+
+	Method DebugObject(ty:TType, id:String, func:String = Null, trans:Int = False)
+		If TObjectType(ty) Or TStringType(ty) Or TArrayType(ty) Then
+			' null test
+			If trans Then
+				debugOut :+ indent + "if (!" + id + ") {~n"
+			Else
+				Emit "if (!" + id + ") {"
+			End If
+			DebugPrint("Null Pointer : " + id, func, trans)
+			If trans Then
+				If ABORT_ON_NULL Then
+					debugOut :+ indent + "abort();~n"
+				End If
+				debugOut :+ indent + "}~n"
+			Else
+				Emit "}"
+			End If
+		End If
+		
+		If TStringType(ty) Then
+			DebugString(id, func, trans)
+		Else If TArrayType(ty) Then
+			DebugArray(id, func, trans)
+		End If
+	End Method
+		
 End Type
 
 
