@@ -29,6 +29,11 @@ Import BRL.FileSystem
 
 Import "options.bmx"
 
+
+' debugging help
+Const DEBUG:Int = False
+Const ABORT_ON_NULL:Int = True
+
 Global ENV_LANG$
 
 Global _errInfo$

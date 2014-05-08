@@ -651,6 +651,15 @@ Method ParseFuncDecl:TFuncDecl( toke$,attrs:Int )
 					Else
 						If Not TFunctionPtrType(ty) Then
 							init = ParseUnaryExpr()
+							If TArrayType(ty) Then
+								If TConstExpr(init) And TConstExpr(init).value="bbEmptyArray" Then
+									init = New TNullExpr.Create(TType.nullObjectType)
+								End If
+							Else If TObjectType(ty) Or TIdentType(ty) Then
+								If TConstExpr(init) And TConstExpr(init).value="bbNullObject" Then
+									init = New TNullExpr.Create(TType.nullObjectType)
+								End If
+							End If
 						Else
 							' munged reference to default function pointer
 							Local defaultFunc:String = ParseStringLit()

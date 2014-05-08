@@ -287,6 +287,7 @@ Type TConstExpr Extends TExpr
 		Local expr:TExpr=Semant()
 		If expr.exprType.EqualsType( ty ) Return expr
 		If value = "bbNullObject" Then
+			Err "bbNullObject"
 			Return expr
 		End If
 		Return New TCastExpr.Create( ty,expr,castFlags ).Semant()
@@ -1926,4 +1927,29 @@ Type TScopeExpr Extends TExpr
 	Method SemantScope:TScopeDecl()
 		Return scope
 	End Method
+End Type
+
+Type TNullExpr Extends TExpr
+
+	Method Create:TNullExpr(ty:TType)
+		exprType = ty
+		Return Self
+	End Method
+
+	Method Copy:TExpr()
+		Return New TNullExpr.Create(exprType)
+	End Method
+
+	Method Semant:TExpr()
+		Return Self
+	End Method
+
+	Method Trans$()
+		Return "NULL"
+	End Method
+
+	Method Eval$()
+		Return ""
+	End Method
+
 End Type

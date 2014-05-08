@@ -223,7 +223,7 @@ Type TCTranslator Extends TTranslator
 		EndIf
 		InternalErr
 	End Method
-
+	
 	Method TransArgs$( args:TExpr[],decl:TFuncDecl, objParam:String = Null )
 'If decl.ident="FromCString" DebugStop
 		Local t$
@@ -233,7 +233,10 @@ Type TCTranslator Extends TTranslator
 		For Local i:Int=0 Until decl.argDecls.Length
 			If t t:+","
 			If i < args.length
-				If TStringVarPtrType(TArgDecl(decl.argDecls[i].actual).ty) Then
+				If TNullExpr(args[i]) Then
+					t :+ TransValue(TArgDecl(decl.argDecls[i].actual).ty, Null)
+					Continue
+				Else If TStringVarPtrType(TArgDecl(decl.argDecls[i].actual).ty) Then
 					If TCastExpr(args[i]) And TStringType(TCastExpr(args[i]).expr.exprType) Then
 						t:+ "&"
 					End If
@@ -256,7 +259,8 @@ Type TCTranslator Extends TTranslator
 						Continue
 					End If
 
-					If TObjectType(args[i].exprType) And TObjectType(args[i].exprType).classDecl = TClassDecl.nullObjectClass Then
+					If TObjectType(args[i].exprType) 'And TObjectType(args[i].exprType).classDecl = TClassDecl.nullObjectClass Then
+					err "NULL"
 						t:+ "0"
 						Continue
 					End If
@@ -268,7 +272,8 @@ Type TCTranslator Extends TTranslator
 					End If
 
 				Else If TNumericType(TArgDecl(decl.argDecls[i].actual).ty)  Then
-					If TObjectType(args[i].exprType) And TObjectType(args[i].exprType).classDecl = TClassDecl.nullObjectClass Then
+					If TObjectType(args[i].exprType) 'And TObjectType(args[i].exprType).classDecl = TClassDecl.nullObjectClass Then
+					err "NULL"
 						t:+ "0"
 						Continue
 					End If
@@ -277,14 +282,21 @@ Type TCTranslator Extends TTranslator
 			Else
 				decl.argDecls[i].Semant()
 				' default values
-				If decl.argDecls[i].init Then
-					If TConstExpr(decl.argDecls[i].init) And TConstExpr(decl.argDecls[i].init).value = "bbNullObject" Then
-						If TStringType(decl.argDecls[i].ty) Then
-							t :+ "&bbEmptyString"
-						Else If TArrayType(decl.argDecls[i].ty) Then
-							t :+ "&bbEmptyArray"
+				Local init:TExpr = decl.argDecls[i].init
+				If init Then
+					If TConstExpr(init) Then
+						If TObjectType(TConstExpr(init).exprType) Then
+t:+"NULLNULLNULL"
+						' And TNullDecl(TObjectType(TConstExpr(init).exprType).classDecl)) Or (TConstExpr(init).value = "bbNullObject") Then
+							If TStringType(decl.argDecls[i].ty) Then
+								t :+ "&bbEmptyString"
+							Else If TArrayType(decl.argDecls[i].ty) Then
+								t :+ "&bbEmptyArray"
+							Else
+								t :+ "&bbNullObject"
+							End If
 						Else
-							t :+ "&bbNullObject"
+							t:+ decl.argDecls[i].init.Trans()
 						End If
 					Else
 						t:+ decl.argDecls[i].init.Trans()
@@ -309,29 +321,34 @@ Type TCTranslator Extends TTranslator
 'DebugStop
 		If TPointerType(ty) Then
 			' TODO : pointer stuff
+			If TNullType(src) Return TransValue(ty, Null)
 			Return expr
 		End If
-
+'If expr = "NULL" DebugStop
 '		If TIntType(ty) And TStringType(src) Then
 'DebugStop
 '			Return "bbObjectDowncast" + Bra(expr + ",&" + TStringType(src).cDecl.munged)
 '		End If
 
+		If TNullType(src)
+			Return TransValue(ty, Null)
+		End If
+
 		If TStringType(ty) And TObjectType(src) Then
 			If Not TStringType(ty).cDecl Then
 				ty.Semant()
 			End If
-			If TNullDecl(TObjectType(src).classDecl) Then
-				Return "&bbEmptyString"
-			End If
+			'If TNullDecl(TObjectType(src).classDecl) Then
+			'	Return "&bbEmptyString"
+			'End If
 			Return "bbObjectDowncast" + Bra(expr + ",&" + TStringType(ty).cDecl.munged)
 		End If
 
-		If TArrayType(ty) And TObjectType(src) Then
-			If TNullDecl(TObjectType(src).classDecl) Then
-				Return "&bbEmptyArray"
-			End If
-		End If
+		'If TArrayType(ty) And TObjectType(src) Then
+		'	If TNullDecl(TObjectType(src).classDecl) Then
+		'		Return "&bbEmptyArray"
+		'	End If
+		'End If
 
 		If TVarPtrType(src) And TNumericType(ty) Then
 			Return "*" + expr
@@ -363,7 +380,6 @@ Type TCTranslator Extends TTranslator
 
 		'upcast?
 		If src.GetClass().ExtendsClass( ty.GetClass() ) Return expr
-'DebugStop
 		If TObjectType(ty) Then
 			Return "bbObjectDowncast" + Bra(expr + ",&" + TObjectType(ty).classDecl.munged)
 		End If
@@ -478,7 +494,7 @@ Type TCTranslator Extends TTranslator
 	End Method
 
 	Method TransFunc$( decl:TFuncDecl,args:TExpr[],lhs:TExpr, sup:Int = False )
-'If decl.ident = "ToString" DebugStop
+'If decl.ident = "ParseModuleImport" DebugStop
 
 		' for calling the super class method instead
 		Local tSuper:String
@@ -530,10 +546,17 @@ Type TCTranslator Extends TTranslator
 					'Local class:String = TransFuncClass(cdecl)
 					Return class + "->" + TransFuncPrefix(cdecl, decl.ident) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
 				Else If TInvokeExpr(lhs) Then
-					Local obj:String = Bra("struct " + decl.scope.munged + "_obj*")
-					Local class:String = Bra("(" + obj + TransSubExpr( lhs ) +")->clas" + tSuper)
+					' create a local variable of the inner invocation
+					Local lvar:String = CreateLocal(lhs)
+
+					Local obj:String = TransFuncObj(decl.scope)
+					Local class:String = Bra("(" + obj + lvar +")->clas" + tSuper)
+					Return class + "->" + TransFuncPrefix(decl.scope, decl.ident)+ decl.ident+TransArgs( args,decl, lvar )
+
+					'Local obj:String = Bra("struct " + decl.scope.munged + "_obj*")
+					'Local class:String = Bra("(" + obj + TransSubExpr( lhs ) +")->clas" + tSuper)
 					'Local class:String = Bra("&" + decl.scope.munged)
-					Return class + "->" + TransFuncPrefix(decl.scope, decl.ident) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
+					'Return class + "->" + TransFuncPrefix(decl.scope, decl.ident) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
 				Else If TInvokeMemberExpr(lhs)
 					' create a local variable of the inner invocation
 					Local lvar:String = CreateLocal(lhs)
@@ -963,6 +986,7 @@ Type TCTranslator Extends TTranslator
 			'If TArrayType( src ) Return Bra("(BBOBJECT)"+t)
 			'If TStringType( src ) Return Bra("(BBOBJECT)"+t)
 			'If TObjectType( src ) Return t
+			If TNullType( src ) Return "&bbNullObject"
 			Return "bbObjectDowncast" + Bra(t + ",&" + TObjectType( dst ).classDecl.munged)
 		EndIf
 
@@ -1015,12 +1039,16 @@ Type TCTranslator Extends TTranslator
 		If TBinaryCompareExpr(expr) Then
 			If TStringType(TBinaryCompareExpr(expr).ty) Then
 				If t_lhs="&bbNullObject" Then
+					err "NULL"
 					t_lhs = "&bbEmptyString"
 				End If
 				If t_rhs="&bbNullObject" Then
+					err "NULL"
 					t_rhs = "&bbEmptyString"
 				End If
-				Return "bbStringCompare" + Bra(t_lhs + ", " + t_rhs) + TransBinaryOp(expr.op, "") + "0"
+				If t_lhs <> "&bbEmptyString" And t_rhs <> "&bbEmptyString" Then
+					Return "bbStringCompare" + Bra(t_lhs + ", " + t_rhs) + TransBinaryOp(expr.op, "") + "0"
+				End If
 			End If
 			If TPointerType(TBinaryCompareExpr(expr).ty) Then
 				If t_lhs="&bbNullObject" Then
@@ -1032,9 +1060,11 @@ Type TCTranslator Extends TTranslator
 			End If
 			If TArrayType(TBinaryCompareExpr(expr).ty) Then
 				If t_lhs="&bbNullObject" Then
+					err "NULL"
 					t_lhs = "&bbEmptyArray"
 				End If
 				If t_rhs="&bbNullObject" Then
+					err "NULL"
 					t_rhs = "&bbEmptyArray"
 				End If
 			End If
@@ -1270,6 +1300,10 @@ Type TCTranslator Extends TTranslator
 			End If
 		Else
 			s :+ lhs+TransAssignOp( stmt.op )+rhs
+		End If
+
+		If DEBUG Then
+			DebugObject(stmt.lhs.exprType, lhs, Null, True)
 		End If
 
 		Return s
@@ -1597,6 +1631,14 @@ End Rem
 		End If
 
 		If Not proto Then
+
+			If DEBUG Then
+				For Local i:Int=0 Until decl.argDecls.Length
+					Local arg:TArgDecl=decl.argDecls[i]
+					DebugObject(arg.ty, arg.munged, id)
+				Next
+			End If
+
 			If decl.IsAbstract() Then
 				Emit "brl_blitz_NullMethodError();"
 			Else
@@ -2238,6 +2280,10 @@ End Rem
 			Return "$" + Enquote(expr.Eval())
 		EndIf
 
+		If TArrayType(expr.exprType) Then
+			Return Enquote("bbEmptyArray")
+		End If
+
 		If TFunctionPtrType(expr.exprType) Then
 			If TCastExpr(expr) Then
 				If TInvokeExpr(TCastExpr(expr).expr) Then
@@ -2248,9 +2294,17 @@ End Rem
 			InternalErr
 		End If
 
-		If TObjectType(expr.exprType) And TNullDecl(TObjectType(expr.exprType).classDecl) Then
-			Return Enquote("bbNullObject")
+		If TObjectType(expr.exprType) Then
+			If TCastExpr(expr) Then
+				If TNullExpr(TCastExpr(expr).expr) Then
+					Return Enquote("bbNullObject")
+				End If
+			End If
 		End If
+
+		'If TObjectType(expr.exprType) And TNullDecl(TObjectType(expr.exprType).classDecl) Then
+		'	Return Enquote("bbNullObject")
+		'End If
 
 	End Method
 
@@ -2968,6 +3022,6 @@ End Rem
 		TransInterface(app)
 
 	End Method
-
+	
 End Type
 

@@ -1089,7 +1089,7 @@ Type TClassDecl Extends TScopeDecl
 
 	Field objectType:TObjectType '"canned" objectType
 
-	Global nullObjectClass:TClassDecl=New TNullDecl.Create( "{NULL}",Null,Null,Null,DECL_ABSTRACT|DECL_EXTERN )
+	'Global nullObjectClass:TClassDecl=New TNullDecl.Create( "{NULL}",Null,Null,Null,DECL_ABSTRACT|DECL_EXTERN )
 	
 	Method Create:TClassDecl( ident$,args:TClassDecl[],superTy:TIdentType,impls:TIdentType[],attrs:Int )
 		Self.ident=ident
@@ -1352,7 +1352,7 @@ End Rem
 	End Method
 	
 	Method ExtendsClass:Int( cdecl:TClassDecl )
-		If Self=nullObjectClass Return True
+		'If Self=nullObjectClass Return True
 		
 '		If cdecl.IsTemplateArg()
 '			cdecl=TType.objectType.FindClass()

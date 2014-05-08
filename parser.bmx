@@ -84,6 +84,14 @@ Type TForEachinStmt Extends TStmt
 			block.AddStmt whileStmt
 
 		Else If TObjectType( expr.exprType )
+			Local tmpDecl:TDeclStmt
+
+			If TInvokeExpr(expr) Or TInvokeMemberExpr(expr) Then
+				Local tmpVar:TLocalDecl=New TLocalDecl.Create( "",expr.exprType,expr )
+				tmpVar.Semant()
+				tmpDecl = New TDeclStmt.Create( tmpVar )
+				expr = New TVarExpr.Create( tmpVar )
+			End If
 
 			Local enumerInit:TExpr=New TFuncCallExpr.Create( New TIdentExpr.Create( "ObjectEnumerator",expr ) )
 			Local enumerTmp:TLocalDecl=New TLocalDecl.Create( "",Null,enumerInit )
@@ -92,7 +100,24 @@ Type TForEachinStmt Extends TStmt
 			Local nextObjExpr:TExpr=New TFuncCallExpr.Create( New TIdentExpr.Create( "NextObject",New TVarExpr.Create( enumerTmp ) ) )
 
 			If varlocal
+'				Local varTmp:TLocalDecl=New TLocalDecl.Create( varid,varty,nextObjExpr )
+'				block.stmts.AddFirst New TDeclStmt.Create( varTmp )
+
+				' local variable
 				Local varTmp:TLocalDecl=New TLocalDecl.Create( varid,varty,nextObjExpr )
+
+				' local var as expression
+				Local expr:TExpr=New TVarExpr.Create( varTmp )
+
+				' var = Null
+				expr=New TBinaryCompareExpr.Create( "=",expr, New TNullExpr.Create(TType.nullObjectType))
+
+				' then continue
+				Local thenBlock:TBlockDecl=New TBlockDecl.Create( block.scope )
+				Local elseBlock:TBlockDecl=New TBlockDecl.Create( block.scope )
+				thenBlock.AddStmt New TContinueStmt
+
+				block.stmts.AddFirst New TIfStmt.Create( expr,thenBlock,elseBlock )
 				block.stmts.AddFirst New TDeclStmt.Create( varTmp )
 			Else
 				block.stmts.AddFirst New TAssignStmt.Create( "=",New TIdentExpr.Create( varid ),nextObjExpr )
@@ -101,6 +126,9 @@ Type TForEachinStmt Extends TStmt
 			Local whileStmt:TWhileStmt=New TWhileStmt.Create( hasNextExpr,block )
 
 			block=New TBlockDecl.Create( block.scope )
+			If tmpDecl Then
+				block.AddStmt tmpDecl
+			End If
 			block.AddStmt New TDeclStmt.Create( enumerTmp )
 			block.AddStmt whileStmt
 
@@ -658,7 +686,8 @@ Type TParser
 			EndIf
 		Case "null"
 			NextToke
-			expr=New TConstExpr.Create( TType.nullObjectType,"" )
+			expr = New TNullExpr.Create(TType.nullObjectType)
+			'expr=New TConstExpr.Create( TType.nullObjectType,"" )
 		Case "true"
 			NextToke
 			expr=New TConstExpr.Create( TType.intType,"1" )
