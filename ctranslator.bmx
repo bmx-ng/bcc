@@ -536,9 +536,13 @@ t:+"NULLNULLNULL"
 				Else If TCastExpr(lhs) Then
 					Local cdecl:TClassDecl = TObjectType(TCastExpr(lhs).ty).classDecl
 					Local obj:String = TransFuncObj(cdecl)
-					Local class:String = Bra("(" + obj + TransSubExpr( lhs ) + ")->clas" + tSuper)
-					'Local class:String = TransFuncClass(cdecl)
-					Return class + "->" + TransFuncPrefix(cdecl, decl.ident) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
+					If decl.attrs & FUNC_PTR Then
+						Return "(" + obj + TransSubExpr( lhs ) + ")->" + decl.munged+TransArgs( args,decl, Null)
+					Else
+						Local class:String = Bra("(" + obj + TransSubExpr( lhs ) + ")->clas" + tSuper)
+						'Local class:String = TransFuncClass(cdecl)
+						Return class + "->" + TransFuncPrefix(cdecl, decl.ident) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
+					End If
 				Else If TMemberVarExpr(lhs) Then
 					Local cdecl:TClassDecl = TObjectType(TMemberVarExpr(lhs).decl.ty).classDecl
 					Local obj:String = TransFuncObj(cdecl)
@@ -590,8 +594,6 @@ t:+"NULLNULLNULL"
 				Return class + "->" + TransFuncPrefix(decl.scope, decl.ident) + decl.ident+TransArgs( args,decl, "o" )
 			Else
 				Local obj:String = Bra("struct " + decl.scope.munged + "_obj*")
-				'Local class:String = Bra("(" + obj + "o)->clas")
-				'Local class:String = Bra("&" + decl.scope.munged)
 				Return Bra(obj + "o") + "->" + decl.munged+TransArgs( args,decl )
 			End If
 		EndIf
@@ -1682,7 +1684,11 @@ End Rem
 		For Local decl:TGlobalDecl = EachIn classDecl.Decls()
 			decl.Semant()
 
-			Emit "extern "+TransRefType( decl.ty, "" )+" "+ decl.munged+";"	'forward reference...
+			If TFunctionPtrType(decl.ty) Then
+				Emit "extern "+TransRefType( decl.ty, decl.munged ) + ";"
+			Else
+				Emit "extern "+TransRefType( decl.ty, "" )+" "+ decl.munged+";"
+			End If
 		Next
 
 	End Method
@@ -1917,7 +1923,11 @@ End Rem
 		For Local decl:TDecl=EachIn classDecl.Semanted()
 			Local gdecl:TGlobalDecl =TGlobalDecl( decl )
 			If gdecl
-				Emit TransRefType( gdecl.ty, "" )+" "+gdecl.munged+";"
+				If TFunctionPtrType(gdecl.ty) Then
+					Emit TransRefType( gdecl.ty, gdecl.munged ) + ";"
+				Else
+					Emit TransRefType( gdecl.ty, "" )+" "+gdecl.munged+";"
+				End If
 				Continue
 			EndIf
 		Next

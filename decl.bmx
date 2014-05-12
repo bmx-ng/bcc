@@ -253,6 +253,8 @@ Type TValDecl Extends TDecl
 						
 						If TFuncCallExpr(declInit) Then
 							expr=declInit.Copy().Semant()
+						Else If TNullExpr(declInit) Then
+							expr = declInit
 						Else
 							Local argExpr:TExpr[] = New TExpr[0]
 							For Local arg:TArgDecl = EachIn TFunctionPtrType(ty).func.argDecls
