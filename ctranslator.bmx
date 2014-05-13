@@ -2311,6 +2311,14 @@ End Rem
 				End If
 			End If
 		End If
+		
+		If TPointerType(expr.exprType) Then
+			If TCastExpr(expr) Then
+				If TNullExpr(TCastExpr(expr).expr) Then
+					Return "0"
+				End If
+			End If
+		End If
 
 		'If TObjectType(expr.exprType) And TNullDecl(TObjectType(expr.exprType).classDecl) Then
 		'	Return Enquote("bbNullObject")
