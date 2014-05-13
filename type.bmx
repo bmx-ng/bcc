@@ -138,6 +138,14 @@ Type TType
 		If TFloatPtrType(ty) Return floatPointerPtrType
 		If TDoublePtrType(ty) Return doublePointerPtrType
 		If TLongPtrType(ty) Return longPointerPtrType
+
+		' var pointer to pointer
+		If TByteVarPtrType(ty) Return bytePointerType
+		If TIntVarPtrType(ty) Return intPointerType
+		If TShortVarPtrType(ty) Return shortPointerType
+		If TFloatVarPtrType(ty) Return floatPointerType
+		If TDoubleVarPtrType(ty) Return doublePointerType
+		If TLongVarPtrType(ty) Return longPointerType
 		
 		Return Null
 	End Function
@@ -1019,7 +1027,7 @@ End Type
 Type TFloatVarPtrType Extends TVarPtrType
 
 	Method EqualsType:Int( ty:TType )
-		Return TFloatVarPtrType( ty )<>Null Or TVarPtrType( ty )<>Null
+		Return TFloatVarPtrType( ty )<>Null
 	End Method
 	
 	Method ExtendsType:Int( ty:TType )
@@ -1028,7 +1036,7 @@ Type TFloatVarPtrType Extends TVarPtrType
 			Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
 			Return ctor And ctor.IsCtor()
 		EndIf
-		Return TPointerType( ty )<>Null Or TStringType( ty )<>Null Or TFloatType( ty )<>Null
+		Return TPointerType( ty )<>Null Or TStringType( ty )<>Null Or TFloatType( ty )<>Null Or TVarPtrType( ty )<>Null
 	End Method
 	
 	Method ToString$()

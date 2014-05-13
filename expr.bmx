@@ -75,7 +75,6 @@ Type TExpr
 
 	'semant and cast
 	Method SemantAndCast:TExpr( ty:TType,castFlags:Int=0 )
-'DebugStop
 		Local expr:TExpr=Semant()
 		If expr.exprType.EqualsType( ty ) Return expr
 		Return New TCastExpr.Create( ty,expr,castFlags ).Semant()
@@ -870,7 +869,7 @@ Type TCastExpr Extends TExpr
 		
 		If TArrayType(ty) And TObjectType(src) And TObjectType(src).classDecl.ident = "Array" Then
 			exprType = ty
-			Return Self
+			Return expr
 		End If
 
 		If Not exprType
@@ -920,6 +919,12 @@ Type TCastExpr Extends TExpr
 
 	Method Trans$()
 		Return _trans.TransCastExpr( Self )
+	End Method
+
+	Method ToString$()
+		Local t$="TCastExpr(" + ty.ToString()
+		If expr t:+","+expr.ToString()
+		Return t+")"
 	End Method
 
 End Type
@@ -990,6 +995,10 @@ Type TBinaryExpr Extends TExpr
 
 	Method Trans$()
 		Return _trans.TransBinaryExpr( Self )
+	End Method
+
+	Method ToString$()
+		Return "(" + lhs.ToString() + " " + op + " " + rhs.ToString() + ")"
 	End Method
 
 End Type
