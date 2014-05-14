@@ -1560,7 +1560,7 @@ Type TIdentExpr Extends TExpr
 		_Semant
 
 		'Local scope:TScopeDecl=IdentScope()
-		Local vdecl:TValDecl=scope.FindValDecl( ident )
+		Local vdecl:TValDecl=scope.FindValDecl( ident, static )
 		If vdecl
 
 			If TConstDecl( vdecl )
