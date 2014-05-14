@@ -70,7 +70,9 @@ Type TCTranslator Extends TTranslator
 		If TStringType( ty ) Return "BBSTRING"
 		If TStringVarPtrType( ty ) Return "BBSTRING *"
 		If TArrayType( ty ) Return "BBARRAY"
-		If TObjectType( ty ) Return "BBOBJECT"
+		If TObjectType( ty ) Then
+			Return TransObject(TObjectType(ty).classdecl)
+		End If
 		If TObjectVarPtrType( ty ) Return "BBOBJECT *"
 		If TBytePtrType( ty ) Return "BBBYTE *"
 		If TShortPtrType( ty ) Return "BBSHORT *"
@@ -520,13 +522,11 @@ t:+"NULLNULLNULL"
 
 				If TVarExpr(lhs) Then
 					Local cdecl:TClassDecl = TObjectType(TVarExpr(lhs).decl.ty).classDecl
- 					Local obj:String = TransFuncObj(cdecl)
+ 					Local obj:String = Bra(TransObject(cdecl))
 					If decl.attrs & FUNC_PTR Then
 						Return "(" + obj + TransSubExpr( lhs ) + ")->" + decl.munged+TransArgs( args,decl, Null)
 					Else
-'DebugStop
-						Local class:String = Bra("(" + obj + TransSubExpr( lhs ) + ")->clas" + tSuper)
-						'Local class:String = TransFuncClass(cdecl)
+						Local class:String = TransSubExpr( lhs ) + "->clas" + tSuper
 						Return class + "->" + TransFuncPrefix(cdecl, decl.ident) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
 					End If
 				Else If TNewObjectExpr(lhs) Then
@@ -535,17 +535,16 @@ t:+"NULLNULLNULL"
 					Return class + "." + TransFuncPrefix(cdecl, decl.ident) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
 				Else If TCastExpr(lhs) Then
 					Local cdecl:TClassDecl = TObjectType(TCastExpr(lhs).ty).classDecl
-					Local obj:String = TransFuncObj(cdecl)
+					Local obj:String = Bra(TransObject(cdecl))
 					If decl.attrs & FUNC_PTR Then
 						Return "(" + obj + TransSubExpr( lhs ) + ")->" + decl.munged+TransArgs( args,decl, Null)
 					Else
 						Local class:String = Bra("(" + obj + TransSubExpr( lhs ) + ")->clas" + tSuper)
-						'Local class:String = TransFuncClass(cdecl)
 						Return class + "->" + TransFuncPrefix(cdecl, decl.ident) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
 					End If
 				Else If TMemberVarExpr(lhs) Then
 					Local cdecl:TClassDecl = TObjectType(TMemberVarExpr(lhs).decl.ty).classDecl
-					Local obj:String = TransFuncObj(cdecl)
+					Local obj:String = Bra(TransObject(cdecl))
 					Local class:String = Bra("(" + obj + TransSubExpr( lhs ) + ")->clas" + tSuper)
 					'Local class:String = TransFuncClass(cdecl)
 					Return class + "->" + TransFuncPrefix(cdecl, decl.ident) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
@@ -553,7 +552,7 @@ t:+"NULLNULLNULL"
 					' create a local variable of the inner invocation
 					Local lvar:String = CreateLocal(lhs)
 
-					Local obj:String = TransFuncObj(decl.scope)
+					Local obj:String = Bra(TransObject(decl.scope))
 					Local class:String = Bra("(" + obj + lvar +")->clas" + tSuper)
 					Return class + "->" + TransFuncPrefix(decl.scope, decl.ident)+ decl.ident+TransArgs( args,decl, lvar )
 
@@ -565,14 +564,9 @@ t:+"NULLNULLNULL"
 					' create a local variable of the inner invocation
 					Local lvar:String = CreateLocal(lhs)
 
-					Local obj:String = TransFuncObj(decl.scope)
-					'Local obj:String = Bra("struct " + decl.scope.munged + "_obj*")
-					'Local class:String = Bra("(" + obj + TransSubExpr( lhs ) +")->clas")
-					Local class:String = Bra("(" + obj + lvar +")->clas" + tSuper)
-					'Local class:String = Bra("&" + decl.scope.munged)
+					Local obj:String = lvar + "->clas" + tSuper
+					Return obj + "->" + TransFuncPrefix(decl.scope, decl.ident)+ decl.ident+TransArgs( args,decl, lvar )
 
-					Return class + "->" + TransFuncPrefix(decl.scope, decl.ident)+ decl.ident+TransArgs( args,decl, lvar )
-					'Return class + "->md_" + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
 				Else If TIndexExpr(lhs) Then
 					Local loc:String = CreateLocal(lhs)
 					Local obj:String = Bra("struct " + decl.scope.munged + "_obj*")
@@ -607,11 +601,11 @@ t:+"NULLNULLNULL"
 		Return TransStatic( decl )+TransArgs( args,decl )
 	End Method
 
-	Method TransFuncObj:String(decl:TScopeDecl)
+	Method TransObject:String(decl:TScopeDecl)
 		If decl.ident = "Object"
-			Return Bra("BBOBJECT")
+			Return "BBOBJECT"
 		Else
-			Return Bra("struct " + decl.munged + "_obj*")
+			Return "struct " + decl.munged + "_obj*"
 		End If
 	End Method
 
@@ -989,7 +983,7 @@ t:+"NULLNULLNULL"
 			'If TStringType( src ) Return Bra("(BBOBJECT)"+t)
 			'If TObjectType( src ) Return t
 			If TNullType( src ) Return "&bbNullObject"
-			Return "bbObjectDowncast" + Bra(t + ",&" + TObjectType( dst ).classDecl.munged)
+			Return Bra(Bra(TransObject(TObjectType(dst).classDecl)) + "bbObjectDowncast" + Bra(t + ",&" + TObjectType(dst).classDecl.munged))
 		EndIf
 
 		Return TransPtrCast( dst,src,t,"dynamic" )
@@ -1443,7 +1437,7 @@ End Rem
 
 		' pass object for method
 		If decl.IsMethod() Then
-			args :+ "BBOBJECT "
+			args :+ TransObject(decl.scope)
 		End If
 
 		Local argCasts:TStack =New TStack
@@ -1557,7 +1551,7 @@ End Rem
 
 		' pass object for method
 		If decl.IsMethod() Then
-			args :+ "BBOBJECT o"
+			args :+ TransObject(decl.scope) + " o"
 		End If
 
 		Local argCasts:TStack =New TStack
@@ -1726,15 +1720,15 @@ End Rem
 
 		If Not classDecl.IsExtern() Then
 			If opt_issuperstrict Then
-				Emit "void _" + classid + "_New(BBOBJECT o);"
-				Emit "void _" + classid + "_Delete(BBOBJECT o);"
+				Emit "void _" + classid + "_New" + Bra(TransObject(classdecl) + " o") + ";"
+				Emit "void _" + classid + "_Delete" + Bra(TransObject(classdecl) + " o") + ";"
 			Else
-				Emit "int _" + classid + "_New(BBOBJECT o);"
-				Emit "int _" + classid + "_Delete(BBOBJECT o);"
+				Emit "int _" + classid + "_New" + Bra(TransObject(classdecl) + " o") + ";"
+				Emit "int _" + classid + "_Delete" + Bra(TransObject(classdecl) + " o") + ";"
 			End If
 
 			If classHasFunction(classDecl, "ToString") Then
-				Emit "BBSTRING _" + classid + "_ToString(BBOBJECT o);"
+				Emit "BBSTRING _" + classid + "_ToString" + Bra(TransObject(classdecl) + " o") + ";"
 			End If
 
 			If classHasFunction(classDecl, "Compare") Then
@@ -2042,9 +2036,9 @@ End Rem
 
 		' New
 		If opt_issuperstrict Then
-			Emit "void _" + classid + "_New(BBObject *o) {"
+			Emit "void _" + classid + "_New" + Bra(TransObject(classdecl) + " o") + " {"
 		Else
-			Emit "int _" + classid + "_New(BBObject *o) {"
+			Emit "int _" + classid + "_New" + Bra(TransObject(classdecl) + " o") + " {"
 		End If
 
 		If classDecl.superClass.ident = "Object" Then
@@ -2092,9 +2086,9 @@ End Rem
 
 		' New
 		If opt_issuperstrict Then
-			Emit "void _" + classid + "_Delete(BBObject *o) {"
+			Emit "void _" + classid + "_Delete" + Bra(TransObject(classdecl) + " o") + " {"
 		Else
-			Emit "int _" + classid + "_Delete(BBObject *o) {"
+			Emit "int _" + classid + "_Delete" + Bra(TransObject(classdecl) + " o") + " {"
 		End If
 
 		Local decl:TFuncDecl = classDecl.FindFuncDecl("Delete")
@@ -2156,22 +2150,15 @@ End Rem
 		End If
 
 		If TNumericType(decl.ty) Then
-			' ((int*)((char*)o + 5))[0]
-			's = "(" + TransType(decl.declTy) + "*((char*)" + variable + "+" + decl.munged + "))[0]"
-			's = "((" + TransType(decl.declTy, "BB") + ")(struct " + decl.scope.munged + "_obj*)" + variable + ")->" + decl.munged + "))"
-			s = "((struct " + decl.scope.munged + "_obj*)" + variable + ")->" + decl.munged + " "
+			s = variable + "->" + decl.munged + " "
 		Else If TStringType(decl.ty) Then
-			' ((BBString*)((char*)o+5))
-			's = "((BBSTRING)(((" + decl.scope.munged + "_obj*)" + variable + ")->" + decl.munged + "))"
-			s = "((struct " + decl.scope.munged + "_obj*)" + variable + ")->" + decl.munged + " "
+			s = variable + "->" + decl.munged + " "
 		Else If TObjectType(decl.ty) Then
-			' ((BBString*)((char*)o+5))
-			's = "((BBSTRING)(((" + decl.scope.munged + "_obj*)" + variable + ")->" + decl.munged + "))"
-			s = "((struct " + decl.scope.munged + "_obj*)" + variable + ")->" + decl.munged + " "
+			s = variable + "->" + decl.munged + " "
 		Else If TPointerType(decl.ty) Then
-			s = "((struct " + decl.scope.munged + "_obj*)" + variable + ")->" + decl.munged + " "
+			s = variable + "->" + decl.munged + " "
 		Else If TArrayType(decl.ty) Then
-			s = "((struct " + decl.scope.munged + "_obj*)" + variable + ")->" + decl.munged + " "
+			s = variable + "->" + decl.munged + " "
 		End If
 
 		Return s
@@ -2524,7 +2511,7 @@ End Rem
 		Next
 
 		Emit "int " + app.munged + "();"
-
+		
 		For Local decl:TDecl=EachIn app.Semanted()
 
 			If decl.declImported Continue
@@ -2548,6 +2535,12 @@ End Rem
 
 			EndLocalScope
 			'PopMungScope
+		Next
+
+		' forward declarations
+		For Local decl:TClassDecl=EachIn app.Semanted()
+			If decl.declImported Continue
+			Emit "struct " + decl.munged + "_obj;"
 		Next
 
 		'prototypes/header!
