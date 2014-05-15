@@ -834,6 +834,7 @@ t:+"NULLNULLNULL"
 			If TIntVarPtrType( src ) Return Bra("*" + t)
 			If TPointerType( src ) Return Bra("(BBINT)"+t)
 		 Else If TLongType( dst )
+			If TBoolType( src ) Return Bra( t )
 			If TByteType( src) Return Bra("(BBLONG)"+t)
 			If TShortType( src) Return Bra("(BBLONG)"+t)
 			If TIntType( src) Return Bra("(BBLONG)"+t)
@@ -844,6 +845,7 @@ t:+"NULLNULLNULL"
 			If TLongVarPtrType( src ) Return Bra("*" + t)
 			If TPointerType( src ) Return Bra("(BBLONG)"+t)
 		Else If TFloatType( dst )
+			If TBoolType( src ) Return Bra( t )
 			If TByteType( src ) Return Bra("(BBFLOAT)"+t)
 			If TIntType( src ) Return Bra("(BBFLOAT)"+t)
 			If TShortType( src ) Return Bra("(BBFLOAT)"+t)
@@ -854,6 +856,7 @@ t:+"NULLNULLNULL"
 			If TFloatVarPtrType( src ) Return Bra("*" + t)
 			If TPointerType( src ) Return Bra("(BBFLOAT)"+t)
 		Else If TDoubleType( dst )
+			If TBoolType( src ) Return Bra( t )
 			If TByteType( src ) Return Bra("(BBDOUBLE)"+t)
 			If TIntType( src ) Return Bra("(BBDOUBLE)"+t)
 			If TShortType( src ) Return Bra("(BBDOUBLE)"+t)
@@ -885,6 +888,7 @@ t:+"NULLNULLNULL"
 		Else If TStringVarPtrType( dst )
 'DebugStop
 		Else If TByteType( dst )
+			If TBoolType( src ) Return Bra( t )
 			If TByteType( src) Return t
 			If TShortType( src ) Return Bra("(BBBYTE)"+t)
 			If TIntType( src ) Return Bra("(BBBYTE)"+t)
@@ -894,6 +898,7 @@ t:+"NULLNULLNULL"
 			If TStringType( src ) Return "bbStringToInt" + Bra(t)
 			If TByteVarPtrType( src ) Return Bra("*" + t)
 		Else If TShortType( dst )
+			If TBoolType( src ) Return Bra( t )
 			If TShortType( src) Return t
 			If TByteType( src) Return Bra("(BBSHORT)"+t)
 			If TIntType( src ) Return Bra("(BBSHORT)"+t)

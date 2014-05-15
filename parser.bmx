@@ -288,7 +288,7 @@ Type TParser
 	End Method
 
 	Method SkipEols()
-		While CParse( "~n" )
+		While CParse( "~n" ) Or CParse(";")
 		Wend
 		SetErr
 	End Method
@@ -810,6 +810,9 @@ Type TParser
 			NextToke
 			expr=ParseExpr()
 			expr=New TCastExpr.Create( TType.varPointerType, expr, CAST_EXPLICIT )
+		Case "pi"
+			NextToke
+			expr=New TConstExpr.Create( TType.doubleType, Pi )
 		Case "self"
 			NextToke
 			expr=New TSelfExpr
@@ -893,6 +896,8 @@ Type TParser
 			Case "."
 				NextToke
 				expr=New TIdentExpr.Create( ParseIdent(),expr )
+				
+				ParseConstNumberType()
 'DebugLog expr.ToString()
 			Case "("
 
@@ -1604,7 +1609,6 @@ Type TParser
 			Case "extern"
 				ParseExternBlock(_module)
 			Default
-
 				Local expr:TExpr=ParsePrimaryExpr( True )
 
 				Select _toke.ToLower()

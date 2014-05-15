@@ -241,7 +241,7 @@ Type TBoolType Extends TType
 	End Method
 	
 	Method ExtendsType:Int( ty:TType )
-		Return TIntType( ty )<>Null Or TBoolType( ty )<>Null Or TStringType( ty )<>Null
+		Return TNumericType( ty )<>Null Or TBoolType( ty )<>Null Or TStringType( ty )<>Null
 	End Method
 	
 	Method ToString$()
