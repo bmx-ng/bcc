@@ -1279,7 +1279,7 @@ t:+"NULLNULLNULL"
 			Emit "}"
 		Else
 			' unhandled exception
-			Emit "bbExThrow(&bbNullObject);"
+			Emit "bbExThrow(ex);"
 		End If
 
 		Emit "}"
