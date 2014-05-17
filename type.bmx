@@ -411,12 +411,12 @@ Type TStringType Extends TType
 	End Method
 
 	Method ExtendsType:Int( ty:TType )	
-		If TObjectType( ty )
-			Local expr:TExpr=New TConstExpr.Create( Self,"" ).Semant()
-			Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
-			Return ctor And ctor.IsCtor()
-		EndIf
-		Return EqualsType( ty ) Or TStringVarPtrType( ty ) <> Null Or TStringCharPtrType(ty) <> Null Or TBytePtrType(ty) <> Null
+'		If TObjectType( ty )
+'			Local expr:TExpr=New TConstExpr.Create( Self,"" ).Semant()
+'			Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
+'			Return ctor And ctor.IsCtor()
+'		EndIf
+		Return EqualsType( ty ) Or TStringVarPtrType( ty ) <> Null Or TStringCharPtrType(ty) <> Null Or TBytePtrType(ty) <> Null Or (TObjectType( ty ) And TObjectType( ty ).classDecl.ident="Object")
 	End Method
 	
 	Method GetClass:TClassDecl()
@@ -466,7 +466,7 @@ Type TArrayType Extends TType
 	
 	Method ExtendsType:Int( ty:TType )
 		Local arrayType:TArrayType=TArrayType( ty )
-		Return (arrayType And ( TVoidType( elemType ) Or elemType.EqualsType( arrayType.elemType ) )) Or TPointerType(ty) <> Null Or TObjectType(ty) <> Null
+		Return (arrayType And ( TVoidType( elemType ) Or elemType.EqualsType( arrayType.elemType ) )) Or TPointerType(ty) <> Null Or (TObjectType( ty ) And TObjectType( ty ).classDecl.ident="Object")
 	End Method
 	
 	Method Semant:TType()

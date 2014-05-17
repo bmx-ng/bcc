@@ -460,6 +460,8 @@ t:+"NULLNULLNULL"
 			Return decl.munged
 		Else If TGlobalDecl(decl)
 			Return decl.munged
+		Else If TBlockDecl(decl.scope)
+			Return decl.munged
 		EndIf
 		InternalErr
 	End Method
@@ -1239,16 +1241,51 @@ t:+"NULLNULLNULL"
 	'***** Statements *****
 
 	Method TransTryStmt$( stmt:TTryStmt )
-		Emit "// TODO : Try/Catch"
-		Emit "//try{//"
+		Emit "do {"
+		Emit "jmp_buf * buf = bbExEnter();"
+		Emit "switch(setjmp(*buf)) {"
+		Emit "case 0: {"
 		EmitBlock( stmt.block )
+		Emit "bbExLeave();"
+		Emit "}"
+		Emit "break;"
+		Emit "case 1:"
+		Emit "{"
+
+		Emit "BBOBJECT ex = bbExObject();"
+		Local s:String = ""
 		For Local c:TCatchStmt=EachIn stmt.catches
 			MungDecl c.init
-			Emit "//}catch("+TransType( c.init.ty, "" )+" "+c.init.munged+"){//"
-			'dbgLocals.Push c.init
-			'EmitBlock( c.block )
+			If TStringType(c.init.ty) Then
+				Emit s + "if (bbObjectDowncast(ex,&bbStringClass) != &bbEmptyString) {"
+				Emit TransType( c.init.ty, c.init.munged )+" "+ c.init.munged + "=(BBSTRING)ex;" 
+			Else If TArrayType(c.init.ty) Then
+				Emit s + "if (bbObjectDowncast(ex,&bbArrayClass) != &bbEmptyArray) {"
+				Emit TransType( c.init.ty, c.init.munged )+" "+ c.init.munged + "=(BBARRAY)ex;" 
+			Else If TObjectType(c.init.ty) Then
+				Emit s + "if (bbObjectDowncast(ex,&"+TObjectType(c.init.ty).classDecl.munged+") != &bbNullObject) {"
+				Emit TransType( c.init.ty, c.init.munged )+" "+ c.init.munged + "=" + Bra(TransType( c.init.ty, c.init.munged )) + "ex;" 
+			Else
+				Err "Not an object"
+			End If
+			
+			EmitBlock( c.block )
+			s = "} else "
 		Next
-		Emit "//}"
+		If s Then
+			Emit s + " {"
+			' unhandled exception
+			Emit "bbExThrow(ex);"
+			Emit "}"
+		Else
+			' unhandled exception
+			Emit "bbExThrow(&bbNullObject);"
+		End If
+
+		Emit "}"
+		Emit "break;"
+		Emit "}"
+		Emit "} while(0);"
 	End Method
 
 	Method TransAssignStmt$( stmt:TAssignStmt )

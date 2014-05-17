@@ -185,8 +185,17 @@ Type TTryStmt Extends TStmt
 	
 	Method OnSemant()
 		block.Semant
+		Local hasObject:Int = False
 		For Local i:Int = 0 Until catches.Length
 			catches[i].Semant
+			If hasObject Then
+				PushErr catches[i].errInfo
+				Err "Catch variable class extends earlier catch variable class"
+			End If
+			If TObjectType(catches[i].init.ty) And TObjectType(catches[i].init.ty).classdecl.ident = "Object" Then
+				hasObject = True
+				Continue
+			End If
 			For Local j:Int = 0 Until i
 				If catches[i].init.ty.ExtendsType( catches[j].init.ty )
 					PushErr catches[i].errInfo

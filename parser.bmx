@@ -309,7 +309,7 @@ Type TParser
 	Method ParseIdent$()
 		Select _toke
 		Case "@" NextToke
-		Case "string","array","object"
+		Case "string","object"
 		Default
 			If _tokeType<>TOKE_IDENT Err "Syntax error - expecting identifier."
 		End Select
@@ -694,7 +694,7 @@ Type TParser
 		Case "false"
 			NextToke
 			expr=New TConstExpr.Create( TType.intType,"" )
-		Case "int","long","float","double","array","object","short","byte"
+		Case "int","long","float","double","object","short","byte"
 
 			Local id$=_toke
 			Local ty:TType=ParseType()
@@ -1346,7 +1346,7 @@ Type TParser
 		Parse "try"
 
 		Local block:TBlockDecl=New TBlockDecl.Create( _block )
-		Local catches:TStack=New TStack
+		Local catches:Tlist=New TList
 
 		PushBlock block
 		While _toke<>"end"
@@ -1356,7 +1356,7 @@ Type TParser
 				Local ty:TType=ParseType()
 				Local init:TLocalDecl=New TLocalDecl.Create( id,ty,Null,0 )
 				Local block:TBlockDecl=New TBlockDecl.Create( _block )
-				catches.Push New TCatchStmt.Create( init,block )
+				catches.AddLast(New TCatchStmt.Create( init,block ))
 				PopBlock
 				PushBlock block
 			Else

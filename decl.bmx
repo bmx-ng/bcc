@@ -257,13 +257,20 @@ Type TValDecl Extends TDecl
 							expr = declInit
 						Else
 							Local argExpr:TExpr[] = New TExpr[0]
+
 							For Local arg:TArgDecl = EachIn TFunctionPtrType(ty).func.argDecls
-								Local aexp:TIdentTypeExpr = New TIdentTypeExpr.Create(arg.declTy)
-								aexp._Semant()
+								Local ldecl:TLocalDecl = New TLocalDecl.Create(arg.ident, arg.declTy, Null, 0)
+								ldecl.Semant()
+								Local aexp:TVarExpr = New TVarExpr.Create(ldecl)
+								'Local aexp:TIdentTypeExpr = New TIdentTypeExpr.Create(arg.declTy)
+								aexp.Semant()
 								argExpr :+ [aexp]
 							Next
 
-							expr=declInit.Copy().SemantFunc(argExpr)
+							expr=declInit.Copy().SemantFunc(argExpr, False)
+							If Not expr Then
+								expr = declInit.Copy().Semant()
+							End If
 						End If
 						
 						If expr.exprType.EqualsType( ty ) Then

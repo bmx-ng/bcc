@@ -41,7 +41,7 @@ Type TExpr
 		Err ToString()+" cannot be assigned to."
 	End Method
 
-	Method SemantFunc:TExpr( args:TExpr[] )
+	Method SemantFunc:TExpr( args:TExpr[] , throwError:Int = True )
 		Err ToString()+" cannot be invoked."
 	End Method
 
@@ -1460,7 +1460,7 @@ Type TIdentTypeExpr Extends TExpr
 		Err "Expression can't be used in this way"
 	End Method
 
-	Method SemantFunc:TExpr( args:TExpr[] )
+	Method SemantFunc:TExpr( args:TExpr[] , throwError:Int = True )
 		_Semant
 		If args.Length=1 And args[0] Return args[0].Cast( cdecl.objectType,CAST_EXPLICIT )
 		Err "Illegal number of arguments for type conversion"
@@ -1629,7 +1629,7 @@ Type TIdentExpr Extends TExpr
 		IdentErr
 	End Method
 
-	Method SemantFunc:TExpr( args:TExpr[] )
+	Method SemantFunc:TExpr( args:TExpr[], throwError:Int = True )
 
 		_Semant
 
@@ -1664,7 +1664,7 @@ Type TIdentExpr Extends TExpr
 			Err "Illegal number of arguments for type conversion"
 		End If
 
-		IdentErr
+		If throwError IdentErr
 	End Method
 
 	Method SemantScope:TScopeDecl()
