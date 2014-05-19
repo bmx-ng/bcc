@@ -261,11 +261,11 @@ Type TCTranslator Extends TTranslator
 						Continue
 					End If
 
-					If TObjectType(args[i].exprType) 'And TObjectType(args[i].exprType).classDecl = TClassDecl.nullObjectClass Then
-					err "NULL"
-						t:+ "0"
-						Continue
-					End If
+					'If TObjectType(args[i].exprType) 'And TObjectType(args[i].exprType).classDecl = TClassDecl.nullObjectClass Then
+					'err "NULL"
+					'	t:+ "0"
+					'	Continue
+					'End If
 
 					' Object -> Byte Ptr
 					If TBytePtrType(TArgDecl(decl.argDecls[i].actual).ty) And TObjectType(args[i].exprType) Then
@@ -877,7 +877,12 @@ t:+"NULLNULLNULL"
 			If TFloatType( src ) Return "bbStringFromFloat"+Bra( t )
 			If TDoubleType( src ) Return "bbStringFromDouble"+Bra( t )
 			If TStringType( src ) Return t
-			If TStringVarPtrType( src ) Return "*" + t
+			If TStringVarPtrType( src ) Then
+				If TSliceExpr( expr.expr ) Then
+					Return t
+				End If
+				Return "*" + t
+			End If
 			If TStringCharPtrType( src ) Return "bbStringFromCString"+Bra( t )
 			If TVarPtrType( src ) Then
 				If TByteVarPtrType( src ) Return "bbStringFromInt"+Bra( "*" + t )
@@ -1032,7 +1037,7 @@ t:+"NULLNULLNULL"
 		End If
 
 		If expr.op = "+" Then
-			If TStringType(expr.exprType) Then
+			If TStringType(expr.exprType) Or TStringVarPtrType(expr.exprType) Then
 				Return "bbStringConcat(" + t_lhs + "," + t_rhs + ")"
 			Else If TArrayType(expr.exprType) Then
 				Return "bbArrayConcat(" + TransArrayType(TArrayType(expr.lhs.exprType).elemType) + "," + t_lhs + "," + t_rhs + ")"
@@ -1293,6 +1298,10 @@ t:+"NULLNULLNULL"
 
 		Local rhs$=stmt.rhs.Trans()
 		Local lhs$=stmt.lhs.TransVar()
+		
+		If TVarPtrType(stmt.lhs.exprType) Then
+			lhs = "*" + lhs
+		End If
 
 		Local s:String
 
@@ -1304,10 +1313,9 @@ t:+"NULLNULLNULL"
 		End If
 
 
-		If TStringType(stmt.lhs.exprType) Then
+		If TStringType(stmt.lhs.exprType) Or TStringVarPtrType(stmt.lhs.exprType) Then
 '			s:+ "{"
 '			s:+ "BBSTRING tmp=" + lhs + ";~n"
-
 
 			If stmt.op = "+=" Then
 				s :+ lhs+"=bbStringConcat("+lhs+","+rhs+")"
@@ -1327,7 +1335,7 @@ t:+"NULLNULLNULL"
 				rhs = TCastExpr(stmt.rhs).expr.Trans()
 			End If
 
-			s :+ "*" + lhs+TransAssignOp( stmt.op )+rhs
+			s :+ lhs+TransAssignOp( stmt.op )+rhs
 		Else If TArrayType(stmt.lhs.exprType) Then
 			If stmt.op = "+=" Then
 				s :+ lhs+"=bbArrayConcat("+ TransArrayType(TArrayType(stmt.lhs.exprType).elemType) + "," + lhs+","+rhs+")"

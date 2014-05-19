@@ -1262,7 +1262,7 @@ Type TIndexExpr Extends TExpr
 			index[i]=index[i].SemantAndCast( TType.intType )
 		Next
 
-		If TStringType( expr.exprType )
+		If TStringType( expr.exprType ) Or TStringVarPtrType( expr.exprType )
 			exprType=TType.intType
 			If index.length > 1 Then
 				Err "Illegal subexpression for string index"
