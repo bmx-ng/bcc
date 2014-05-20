@@ -26,6 +26,8 @@ SuperStrict
 Import BRL.MaxUtil
 
 Import "toker.bmx"
+Import "base.stringhelper.bmx"
+
 Rem
 Global globalMod:TModuleDecl = New TModuleDecl.Create("brl.global", "bbGlobal", "", 0)
 
@@ -174,12 +176,13 @@ DebugLog "FILE NOT FOUND : " + ipath
 							If dir.EndsWith(".mod") Then
 								dir = ""
 							Else
-								dir = dir.Replace(".", "_").Replace("-", "_") + "_"
+								dir :+ "_"
 							End If
 							Local file:String = StripDir(origPath).ToLower()
 			
 							modpath = opt_modulename + "_" + dir + StripExt(file)
-							modpath = modpath.ToLower().Replace(".", "_").Replace("-", "_")
+							'sanitize the path, remove non-allowed chars
+							modpath = TStringHelper.Sanitize(modpath.ToLower())
 						Else
 							' todo file imports for apps
 							'internalErr

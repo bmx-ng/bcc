@@ -28,6 +28,7 @@ Import BRL.Map
 Import BRL.FileSystem
 
 Import "options.bmx"
+Import "base.stringhelper.bmx"
 
 
 ' debugging help
@@ -218,19 +219,18 @@ End Function
 
 Function BuildHeaderName:String(path:String)
 	If opt_buildtype = BUILDTYPE_MODULE Then
-		path = opt_modulename + "." + StripDir(path)
+		path = opt_modulename + "_" + StripDir(path)
 	Else
 		Local dir:String = ExtractDir(path).ToLower().Replace("/.bmx","")
 		dir = dir[dir.findLast("/") + 1..]
 		If dir.EndsWith(".mod") Then
 			dir = dir.Replace(".mod", "")
 		End If
-		dir = dir.Replace(".", "_").Replace("-", "_")
 		Local file:String = StripDir(path).ToLower()
 		path = dir + "_" + file
 	End If
 	
-	Return path
+	Return TStringHelper.Sanitize(path)
 End Function
 
 Rem
