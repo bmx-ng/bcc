@@ -26,23 +26,6 @@ SuperStrict
 Import BRL.MaxUtil
 
 Import "toker.bmx"
-Import "base.stringhelper.bmx"
-
-Rem
-Global globalMod:TModuleDecl = New TModuleDecl.Create("brl.global", "bbGlobal", "", 0)
-
-Local m:String = "brl.blitz"
-Local path:String = modulepath(m)
-
-' "/Volumes/Multimedia1TB/programming/BlitzMax/mod/bah.mod/crypto.mod/crypto.release.macos.x86.i"
-
-Local par:TIParser = New TIParser
-par.ParseModuleImport(globalMod, m, path, "blitz_classes.i")
-par.ParseModuleImport(globalMod, m, path)
-End Rem
-'m = "bah.freeimage"
-'path = modulepath(m)
-'par.ParseModuleImport(globalMod, m, path)
 
 
 Const DECL_GLOBAL:Int = $10
@@ -109,6 +92,10 @@ Type TIParser
 		'Local ipath:String = path + "\" + ModuleIdent(modpath) + ".release.macos.x86.i"
 		If imp Then
 			ipath = imp
+
+			' add to imports
+			pmod.imported.Insert(ipath, _mod)
+			_appInstance.globalImports.Insert(ipath, _mod)
 		Else
 			ipath = path + "/" + ModuleIdent(modpath) + FileMung() + ".i"
 		End If
