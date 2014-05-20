@@ -2983,9 +2983,8 @@ End Rem
 			result = "_bb_" + mdecl.ident
 		End If
 
-		'remove non-allowed characters
-		result = result.Replace(".", "_").Replace("-", "_")
-		Return result
+		'return with all non-allowed chars (like "-" or " ") removed
+		Return TStringHelper.Sanitize(result)
 	End Method
 
 	Method TransInterface(app:TAppDecl)

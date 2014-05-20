@@ -131,7 +131,6 @@ Type TTranslator
 
 			If TModuleDecl( decl )
 				munged=decl.ModuleScope().munged+"_"+id
-				munged = munged.Replace(".", "_").Replace("-", "_")
 			EndIf
 
 '		End Select
@@ -153,16 +152,20 @@ Type TTranslator
 			EndIf
 		EndIf
 		
+		'sanitize non-mung-able characters
+		munged = TStringHelper.Sanitize(munged)
+
+
+		'add an increasing number to identifier if already used  
 		If mungScope.Contains( munged )
-			Local t$,i:Int=1
+			Local i:Int=1
 			Repeat
 				i:+1
-				t=munged+i
-			Until Not mungScope.Contains( t )
-			munged=t
+			Until Not mungScope.Contains( munged + i )
+			munged :+ i
 		EndIf
 
-		mungScope.Insert munged,decl
+		mungScope.Insert(munged, decl)
 		decl.munged=munged
 		
 		' a function pointers' real function is stored in "func" - need to set its munged to match the parent.

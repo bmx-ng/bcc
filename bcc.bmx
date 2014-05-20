@@ -26,6 +26,7 @@ SuperStrict
 Framework brl.StandardIO
 
 Import "ctranslator.bmx"
+Import "base.stringhelper.bmx"
 
 Local args:String[] = ParseArgs(AppArgs[1..])
 
@@ -96,7 +97,7 @@ Function SaveHeader(file:String, trans:TCTranslator, mung:String)
 
 	Local path:String = OutputFilePath(file, mung, "h")
 
-	Local header:String = BuildHeaderName(path).ToUpper().Replace(".", "_").Replace("-","_")
+	Local header:String = BuildHeaderName(path).ToUpper()
 	Local text:String = HeaderComment()
 	text :+ "#ifndef " + header + "~n"
 	text :+ "#define " + header + "~n~n"

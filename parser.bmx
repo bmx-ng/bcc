@@ -2237,16 +2237,17 @@ End Rem
 				If dir.EndsWith(".mod") Then
 					dir = ""
 				Else
-					dir = dir.Replace(".", "_").Replace("-", "_") + "_"
+					dir :+ "_"
 				End If
 				Local file:String = StripDir(origPath).ToLower()
 
 				modpath = opt_modulename + "_" + dir + StripExt(file)
-				modpath = modpath.ToLower().Replace(".", "_").Replace("-", "_")
 			Else
 				modpath = StripExt(filepath)
-				modpath = modpath.ToLower().Replace(".", "_").Replace("-", "_")
 			End If
+
+			'sanitize the path, remove non-allowed chars
+			modpath = TStringHelper.Sanitize(modpath.ToLower())
 
 			' try to import interface
 			Local par:TIParser = New TIParser
@@ -2363,12 +2364,13 @@ End Rem
 				If dir.EndsWith(".mod") Then
 					dir = dir.Replace(".mod", "")
 				End If
-				dir = dir.Replace(".", "_").Replace("-", "_")
 				Local file:String = StripDir(opt_filepath).ToLower()
 				app.munged = "_bb_" + dir + "_" + StripExt(file)
 			End If
 		End If
-		app.munged = app.munged.Replace(".", "_").Replace("-", "_")
+
+		'sanitize, remove non-allowed chars
+		app.munged = TStringHelper.Sanitize(app.munged)
 	End Method
 
 	' load external cast defs
@@ -2662,10 +2664,11 @@ endrem
 			Else
 				dir :+ "_"
 			End If
-			dir = dir.Replace(".", "_").Replace("-", "_")
 
 			munged = opt_modulename + "_" + dir + ident
-			munged = munged.ToLower().Replace(".", "_").Replace("-", "_")
+
+			'sanitize, remove non-allowed chars
+			munged = TStringHelper.Sanitize(munged.ToLower())
 		End If
 
 		If opt_ismain Then 'And opt_modulename <> "brl.blitz" Then
@@ -2762,7 +2765,8 @@ endrem
 					Err "Module does not match commandline module"
 				End If
 
-				_module.munged = m.Replace(".", "_").Replace("-", "_")
+				'sanitize, remove non-allowed chars
+				_module.munged = TStringHelper.Sanitize(m)
 			Case "rem"
 				ParseRemStmt()
 			Case "nodebug"
@@ -3017,10 +3021,10 @@ Function ParseApp:TAppDecl( path$ )
 End Function
 
 Function MungModuleName:String(ident:Object)
+	local mung:String
 	If String(ident) Then
 		Local id:String = String(ident)
-		Local mung:String = "__bb_" + id + "_" + id[id.Find(".") + 1..]
-		Return mung.Replace(".", "_").Replace("-", "_")
+		mung = "__bb_" + id + "_" + id[id.Find(".") + 1..]
 	Else
 		Local mdecl:TModuleDecl = TModuleDecl(ident)
 		If mdecl Then
@@ -3032,10 +3036,12 @@ Function MungModuleName:String(ident:Object)
 			Else
 				dir :+ "_"
 			End If
-			Local mung:String = "__bb_" + id + "_" + dir + id[id.Find(".") + 1..]
-			Return mung.Replace(".", "_").Replace("-", "_")
+			mung = "__bb_" + id + "_" + dir + id[id.Find(".") + 1..]
 		End If
 	End If
+
+	'return sanitized, remove non-allowed chars
+	return TStringHelper.Sanitize(mung)
 End Function
 
 Function EvalS$( source$,ty:TType )
