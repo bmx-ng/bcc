@@ -26,7 +26,6 @@ SuperStrict
 Framework brl.StandardIO
 
 Import "ctranslator.bmx"
-Import "base.stringhelper.bmx"
 
 Local args:String[] = ParseArgs(AppArgs[1..])
 
