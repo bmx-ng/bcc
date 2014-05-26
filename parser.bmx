@@ -718,6 +718,11 @@ Type TParser
 				ty = TType.MapToPointerType(ty)
 			End If
 
+			' array
+			While CParse( "[]" )
+				ty=New TArrayType.Create( ty)
+			Wend
+
 			' optional brackets
 			If CParse( "(" )
 				expr=ParseExpr()
@@ -797,6 +802,11 @@ Type TParser
 			If CParse("ptr") Then
 				ty = TType.MapToPointerType(ty)
 			End If
+
+			' string array
+			While CParse( "[]" )
+				ty=New TArrayType.Create( ty)
+			Wend
 
 			If CParse( "(" )
 				expr=ParseExpr()
@@ -1346,7 +1356,7 @@ Type TParser
 		Parse "try"
 
 		Local block:TBlockDecl=New TBlockDecl.Create( _block )
-		Local catches:Tlist=New TList
+		Local catches:TList=New TList
 
 		PushBlock block
 		While _toke<>"end"
@@ -2009,7 +2019,7 @@ End If
 		PopBlock
 
 		NextToke
-		If toke CParse toke
+		'If toke CParse toke
 
 		Return funcDecl
 	End Method
@@ -3021,7 +3031,7 @@ Function ParseApp:TAppDecl( path$ )
 End Function
 
 Function MungModuleName:String(ident:Object)
-	local mung:String
+	Local mung:String
 	If String(ident) Then
 		Local id:String = String(ident)
 		mung = "__bb_" + id + "_" + id[id.Find(".") + 1..]
@@ -3041,7 +3051,7 @@ Function MungModuleName:String(ident:Object)
 	End If
 
 	'return sanitized, remove non-allowed chars
-	return TStringHelper.Sanitize(mung)
+	Return TStringHelper.Sanitize(mung)
 End Function
 
 Function EvalS$( source$,ty:TType )

@@ -267,7 +267,7 @@ Type TValDecl Extends TDecl
 								argExpr :+ [aexp]
 							Next
 
-							expr=declInit.Copy().SemantFunc(argExpr, False)
+							expr=declInit.Copy().SemantFunc(argExpr, False, False)
 							If Not expr Then
 								expr = declInit.Copy().Semant()
 							End If
@@ -790,6 +790,14 @@ End Rem
 			If _err Err _err
 			If explicit Return Null
 		EndIf
+
+		' last try... maybe we are trying to use it as a function pointer? (no args)
+		If Not match Then
+			If func And Not argExprs Then
+				match = func
+				match.maybeFunctionPtr = True
+			End If
+		End If
 		
 		If Not match
 			Local t$
@@ -868,6 +876,8 @@ Type TFuncDecl Extends TBlockDecl
 	Field castTo:String
 	Field noCastGen:Int
 	
+	Field maybeFunctionPtr:Int
+	
 	Method CreateF:TFuncDecl( ident$,ty:TType,argDecls:TArgDecl[],attrs:Int )
 		Self.ident=ident
 		Self.retTypeExpr=ty
@@ -889,6 +899,13 @@ Type TFuncDecl Extends TBlockDecl
 		For Local stmt:TStmt=EachIn stmts
 			t.AddStmt stmt.Copy( t )
 		Next
+		t.retType = retType
+		t.scope = scope
+		t.overrides = overrides
+		t.superCtor = superCtor
+		t.castTo = castTo
+		t.noCastGen = noCastGen
+		t.munged = munged
 		Return  t
 	End Method
 
@@ -1934,9 +1951,9 @@ pushenv Self
 		If value Then
 			Local sc:TStringConst = TStringConst(stringConsts.ValueForKey(value))
 			If sc Then
-				sc.count :- 1
-				If sc.count = 0 Then
-					stringConsts.Remove(value)
+				If sc.count > 0 Then
+					sc.count :- 1
+					'stringConsts.Remove(value)
 				End If
 			End If
 		End If

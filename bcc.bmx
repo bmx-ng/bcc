@@ -116,7 +116,10 @@ Function SaveSource(file:String, trans:TCTranslator, mung:String)
 
 	Local path:String = OutputFilePath(file, mung, "c")
 
-	SaveText(trans.JoinLines("source"), path)
+	Local pre:String = trans.JoinLines("pre_source")
+	Local src:String = trans.JoinLines("source")
+
+	SaveText(pre + "~n" + src, path)
 
 End Function
 

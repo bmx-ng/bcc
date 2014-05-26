@@ -93,7 +93,7 @@ Type TTranslator
 		funcs.AddLast fdecl
 	End Method
 	
-	Method MungDecl( decl:TDecl )
+	Method MungDecl( decl:TDecl, allowDupes:Int = False )
 
 		If decl.munged Return
 
@@ -363,7 +363,7 @@ End Rem
 
 	Method TransLocalDecl$( munged$,init:TExpr ) Abstract
 
-	Method TransGlobalDecl$( munged$,init:TExpr, attrs:Int ) Abstract
+	Method TransGlobalDecl$( munged$,init:TExpr, attrs:Int, ty:TType ) Abstract
 	
 	Method EmitPushErr()
 	End Method
@@ -702,7 +702,7 @@ End Rem
 		Local gdecl:TGlobalDecl=TGlobalDecl( stmt.decl )
 		If gdecl Then
 			MungDecl gdecl
-			Return TransGlobalDecl( gdecl.munged, gdecl.init, gdecl.attrs )
+			Return TransGlobalDecl( gdecl.munged, gdecl.init, gdecl.attrs, gdecl.ty )
 		End If
 		InternalErr
 	End Method

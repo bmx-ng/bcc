@@ -55,6 +55,10 @@ Type TType
 	Method ToString$()
 		Return "??Type??"
 	End Method
+	
+	Method GetSize:Int()
+		Return WORD_SIZE
+	End Method
 
 	Method ArrayOf:TArrayType()
 		If Not _arrayOf Then
@@ -248,6 +252,10 @@ Type TBoolType Extends TType
 		Return "Bool"
 	End Method
 
+	Method GetSize:Int()
+		Return 4
+	End Method
+
 End Type
 
 Type TNumericType Extends TType
@@ -278,6 +286,11 @@ Type TIntType Extends TNumericType
 	Method ToString$()
 		Return "Int"
 	End Method
+
+	Method GetSize:Int()
+		Return 4
+	End Method
+
 End Type
 
 Type TByteType Extends TNumericType
@@ -302,6 +315,11 @@ Type TByteType Extends TNumericType
 	Method ToString$()
 		Return "Byte"
 	End Method
+
+	Method GetSize:Int()
+		Return 1
+	End Method
+
 End Type
 
 Type TShortType Extends TNumericType
@@ -326,6 +344,11 @@ Type TShortType Extends TNumericType
 	Method ToString$()
 		Return "Short"
 	End Method
+
+	Method GetSize:Int()
+		Return 2
+	End Method
+
 End Type
 
 Type TLongType Extends TNumericType ' BaH Long
@@ -373,6 +396,10 @@ Type TFloatType Extends TNumericType
 	
 	Method ToString$()
 		Return "Float"
+	End Method
+
+	Method GetSize:Int()
+		Return 4
 	End Method
 
 End Type

@@ -41,7 +41,7 @@ Type TExpr
 		Err ToString()+" cannot be assigned to."
 	End Method
 
-	Method SemantFunc:TExpr( args:TExpr[] , throwError:Int = True )
+	Method SemantFunc:TExpr( args:TExpr[] , throwError:Int = True, funcCall:Int = False )
 		Err ToString()+" cannot be invoked."
 	End Method
 
@@ -867,9 +867,14 @@ Type TCastExpr Extends TExpr
 			Return Self
 		End If
 		
-		If TArrayType(ty) And TObjectType(src) And TObjectType(src).classDecl.ident = "Array" Then
-			exprType = ty
-			Return expr
+		If TArrayType(ty) And TObjectType(src) 
+			If TObjectType(src).classDecl.ident = "Array" Then
+				exprType = ty
+				Return expr
+			Else If  TObjectType(src).classDecl.ident = "Object" Then
+				exprType = ty
+				Return Self
+			End If
 		End If
 
 		If Not exprType
@@ -1460,7 +1465,7 @@ Type TIdentTypeExpr Extends TExpr
 		Err "Expression can't be used in this way"
 	End Method
 
-	Method SemantFunc:TExpr( args:TExpr[] , throwError:Int = True )
+	Method SemantFunc:TExpr( args:TExpr[] , throwError:Int = True, funcCall:Int = False )
 		_Semant
 		If args.Length=1 And args[0] Return args[0].Cast( cdecl.objectType,CAST_EXPLICIT )
 		Err "Illegal number of arguments for type conversion"
@@ -1506,7 +1511,10 @@ Type TIdentExpr Extends TExpr
 			Else
 				expr=expr.Semant()
 				scope=expr.exprType.GetClass()
-				If Not scope Err "Expression has no scope"
+				If Not scope Then
+					DebugStop
+					Err "Expression has no scope"
+				End If
 			End If
 		Else
 			scope=_env
@@ -1616,8 +1624,10 @@ Type TIdentExpr Extends TExpr
 		Local fdecl:TFuncDecl=scope.FindFuncDecl( ident,args, , isArg )
 
 		If fdecl
-			If _env.ModuleScope().IsStrict() And Not fdecl.IsProperty() And Not isArg Err "Identifier '"+ident+"' cannot be used in this way."
+			If _env.ModuleScope().IsStrict() And Not fdecl.IsProperty() And Not isArg And Not fdecl.maybeFunctionPtr Err "Identifier '"+ident+"' cannot be used in this way."
 
+			fdecl.maybeFunctionPtr = False
+			
 			If Not fdecl.IsStatic()
 				If expr Return New TInvokeMemberExpr.Create( expr,fdecl,args ).Semant()
 				If scope<>_env Or Not _env.FuncScope() Or _env.FuncScope().IsStatic() Err "Method '"+ident+"' cannot be accessed from here."
@@ -1629,7 +1639,7 @@ Type TIdentExpr Extends TExpr
 		IdentErr
 	End Method
 
-	Method SemantFunc:TExpr( args:TExpr[], throwError:Int = True )
+	Method SemantFunc:TExpr( args:TExpr[], throwError:Int = True, funcCall:Int = False )
 
 		_Semant
 
@@ -1650,7 +1660,7 @@ Type TIdentExpr Extends TExpr
 				If expr Return New TInvokeMemberExpr.Create( expr,fdecl,args ).Semant()
 				'If scope<>_env Or _env.FuncScope().IsStatic() Err "Method '"+ident+"' cannot be accessed from here."
 			EndIf
-			Return New TInvokeExpr.Create( fdecl,args ).Semant()
+			Return New TInvokeExpr.Create( fdecl,args, funcCall ).Semant()
 		EndIf
 
 		'If args.Length=1 And args[0] And TObjectType( args[0].exprType )
@@ -1908,7 +1918,7 @@ Type TFuncCallExpr Extends TExpr
 
 	Method Semant:TExpr()
 		args=SemantArgs( args )
-		Return expr.SemantFunc( args )
+		Return expr.SemantFunc( args, True, True )
 	End Method
 
 End Type
