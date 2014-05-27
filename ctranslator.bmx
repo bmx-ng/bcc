@@ -343,7 +343,6 @@ t:+"NULLNULLNULL"
 	End Method
 
 	Method TransPtrCast$( ty:TType,src:TType,expr$,cast$ )
-'DebugStop
 		If TPointerType(ty) Then
 			' TODO : pointer stuff
 			If TNullType(src) Return TransValue(ty, Null)
@@ -983,6 +982,7 @@ t:+"NULLNULLNULL"
 				If TFloatPtrType( src ) Return Bra("(BBBYTE*)"+t)
 				If TDoublePtrType( src ) Return Bra("(BBBYTE*)"+t)
 				If TLongPtrType( src ) Return Bra("(BBBYTE*)"+t)
+				If TNumericType( src ) Return Bra("(BBBYTE*)"+t)
 			Else If TShortPtrType( dst )
 				If TBytePtrType( src) Return Bra("(BBSHORT*)"+t)
 				If TShortPtrType( src ) Return t
@@ -990,6 +990,7 @@ t:+"NULLNULLNULL"
 				If TFloatPtrType( src ) Return Bra("(BBSHORT*)"+t)
 				If TDoublePtrType( src ) Return Bra("(BBSHORT*)"+t)
 				If TLongPtrType( src ) Return Bra("(BBSHORT*)"+t)
+				If TNumericType( src ) Return Bra("(BBSHORT*)"+t)
 			Else If TIntPtrType( dst )
 				If TBytePtrType( src) Return Bra("(BBINT*)"+t)
 				If TShortPtrType( src ) Return Bra("(BBINT*)"+t)
@@ -997,6 +998,7 @@ t:+"NULLNULLNULL"
 				If TFloatPtrType( src ) Return Bra("(BBINT*)"+t)
 				If TDoublePtrType( src ) Return Bra("(BBINT*)"+t)
 				If TLongPtrType( src ) Return Bra("(BBINT*)"+t)
+				If TNumericType( src ) Return Bra("(BBINT*)"+t)
 			Else If TFloatPtrType( dst )
 				If TBytePtrType( src) Return Bra("(BBFLOAT*)"+t)
 				If TShortPtrType( src ) Return Bra("(BBFLOAT*)"+t)
@@ -1004,6 +1006,7 @@ t:+"NULLNULLNULL"
 				If TFloatPtrType( src ) Return t
 				If TDoublePtrType( src ) Return Bra("(BBFLOAT*)"+t)
 				If TLongPtrType( src ) Return Bra("(BBFLOAT*)"+t)
+				If TNumericType( src ) Return Bra("(BBFLOAT*)"+t)
 			Else If TDoublePtrType( dst )
 				If TBytePtrType( src) Return Bra("(BBDOUBLE*)"+t)
 				If TShortPtrType( src ) Return Bra("(BBDOUBLE*)"+t)
@@ -1011,6 +1014,7 @@ t:+"NULLNULLNULL"
 				If TFloatPtrType( src ) Return Bra("(BBDOUBLE*)"+t)
 				If TDoublePtrType( src ) Return t
 				If TLongPtrType( src ) Return Bra("(BBDOUBLE*)"+t)
+				If TNumericType( src ) Return Bra("(BBDOUBLE*)"+t)
 			Else If TLongPtrType( dst )
 				If TBytePtrType( src) Return Bra("(BBLONG*)"+t)
 				If TShortPtrType( src ) Return Bra("(BBLONG*)"+t)
@@ -1018,6 +1022,16 @@ t:+"NULLNULLNULL"
 				If TFloatPtrType( src ) Return Bra("(BBLONG*)"+t)
 				If TDoublePtrType( src ) Return Bra("(BBLONG*)"+t)
 				If TLongPtrType( src ) Return t
+				If TNumericType( src ) Return Bra("(BBLONG*)"+t)
+				
+			Else If TIntPtrPtrType( dst )
+				If TBytePtrType( src) Return Bra("(BBINT**)"+t)
+				If TShortPtrType( src ) Return Bra("(BBINT**)"+t)
+				If TIntPtrType( src ) Return Bra("(BBINT**)"+t)
+				If TFloatPtrType( src ) Return Bra("(BBINT**)"+t)
+				If TDoublePtrType( src ) Return Bra("(BBINT**)"+t)
+				If TLongPtrType( src ) Return Bra("(BBINT**)"+t)
+				If TNumericType( src ) Return Bra("(BBINT**)"+t)
 			End If
 		Else If TArrayType( dst )
 			If TObjectType( src) And (TObjectType( src ).classDecl.ident = "Array" Or TObjectType( src ).classDecl.ident = "Object") Then
@@ -2037,9 +2051,9 @@ End Rem
 			End If
 			Emit Enquote(s) + ","
 			If decl.IsMethod() Then
-				Emit "_" + decl.munged
+				Emit "&_" + decl.munged
 			Else
-				Emit decl.munged
+				Emit "&" + decl.munged
 			End If
 			Emit "},"
 	End Method
@@ -2077,23 +2091,19 @@ End Rem
 		
 		EmitClassStandardMethodDebugScope("New", ret, "_" + classid + "_New")
 	
-		If classHierarchyHasFunction(classDecl, "Delete") Then
-			EmitClassStandardMethodDebugScope("Delete", ret, "_" + classid + "_Delete")
-		End If
-
 		If classHasFunction(classDecl, "ToString") Then
 			EmitClassStandardMethodDebugScope("ToString", "()$", "_" + classid + "_ToString")
-			Emit "_" + classid + "_ToString,"
+			'Emit "_" + classid + "_ToString,"
 		End If
 
 		If classHasFunction(classDecl, "ObjectCompare") Then
 			EmitClassStandardMethodDebugScope("ObjectCompare", "(:Object)i", "_" + classid + "_ObjectCompare")
-			Emit "_" + classid + "_ObjectCompare,"
+			'Emit "_" + classid + "_ObjectCompare,"
 		End If
 
 		If classHasFunction(classDecl, "SendMessage") Then
 			EmitClassStandardMethodDebugScope("SendMessage", "(:Object):Object", "_" + classid + "_SendMessage")
-			Emit "_" + classid + "_SendMessage,"
+			'Emit "_" + classid + "_SendMessage,"
 		End If
 
 		EmitBBClassClassFuncsDebugScope(classDecl)
@@ -2109,6 +2119,67 @@ End Rem
 			Emit "&" + decl.munged
 			Emit "},"
 		Next
+	End Method
+
+	Method CountBBClassClassFuncsDebugScope(classDecl:TClassDecl, count:Int Var)
+		Local reserved:String = ",New,Delete,ToString,Compare,SendMessage,_reserved1_,_reserved2_,_reserved3_,".ToLower()
+
+		If classDecl.superClass Then
+			CountBBClassClassFuncsDebugScope(classDecl.superClass, count)
+		End If
+
+		For Local decl:TDecl=EachIn classDecl.Decls()
+			Local fdecl:TFuncDecl =TFuncDecl( decl )
+			If fdecl
+				If fdecl.overrides Then
+					Continue
+				End If
+				If reserved.Find("," + fdecl.ident.ToLower() + ",") = -1 Then
+					count :+ 1
+				End If
+			End If
+		Next
+	End Method
+
+	Method CountClassFieldsDebugScope(classDecl:TClassDecl, count:Int Var)
+
+		If classDecl.superClass Then
+			CountClassFieldsDebugScope(classDecl.superClass, count)
+		End If
+
+		For Local decl:TFieldDecl = EachIn classDecl.Decls()
+			count :+ 1
+		Next
+	End Method
+	
+	Method DebugScopeDeclCount:Int(classDecl:TClassDecl)
+		Local count:Int = 1 ' "New" counts as first one
+		
+		' fields
+		CountClassFieldsDebugScope(classDecl, count)
+		
+		' standard methods
+		If classHasFunction(classDecl, "ToString") Then
+			count :+ 1
+		End If
+
+		If classHasFunction(classDecl, "ObjectCompare") Then
+			count :+ 1
+		End If
+
+		If classHasFunction(classDecl, "SendMessage") Then
+			count :+ 1
+		End If
+		
+		' methods and functions
+		CountBBClassClassFuncsDebugScope(classDecl, count)
+		
+		' class globals
+		For Local decl:TGlobalDecl = EachIn classDecl.Decls()
+			count :+ 1
+		Next
+		
+		Return count
 	End Method
 
 	Method EmitClassDecl( classDecl:TClassDecl )
@@ -2187,11 +2258,26 @@ End Rem
 
 		reserved = ",New,Delete,ToString,Compare,SendMessage,_reserved1_,_reserved2_,_reserved3_,".ToLower()
 
+		'
+Rem
+struct BBDebugScope{
+	int				kind;
+	const char		*name;
+	BBDebugDecl		decls[1];
+};
+End Rem
+		Emit "struct _" + classid + "_DebugScope{"
+		Emit "int kind;"
+		Emit "const char *name;"
+		Emit "BBDebugDecl decls[" + DebugScopeDeclCount(classDecl) + "];"
+		Emit "};"
 		' debugscope
-		Emit "BBDebugScope " + classid + "_scope={"
+		Emit "struct _" + classid + "_DebugScope " + classid + "_scope={"
 		Emit "BBDEBUGSCOPE_USERTYPE,"
 		Emit EnQuote(classDecl.ident) + ","
 
+		Emit "{"
+		
 		' debug field decls
 		EmitClassFieldsDebugScope(classDecl, WORD_SIZE)
 		
@@ -2202,6 +2288,7 @@ End Rem
 		EmitClassFuncsDebugScope(classDecl)
 		
 		Emit "BBDEBUGDECL_END"
+		Emit "}"
 
 		Emit "};"
 

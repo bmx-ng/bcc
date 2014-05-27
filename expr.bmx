@@ -1047,11 +1047,22 @@ Type TBinaryMathExpr Extends TBinaryExpr
 				EndIf
 			Else If Not TNumericType( exprType ) And Not TPointerType( exprType ) And Not TArrayType( exprType )
 				Err "Illegal expression type."
+			Else If TPointerType( exprType ) And op <> "+" And op <> "-" Then
+				Err "Illegal expression type."
 			EndIf
 		End Select
 
-		lhs=lhs.Cast( exprType )
-		rhs=rhs.Cast( exprType )
+		If (op = "+" Or op = "-") And TPointerType(exprType) And TNumericType(lhs.exprType) Then
+			' with pointer addition we don't cast the numeric to a pointer
+		Else
+			lhs=lhs.Cast( exprType )
+		End If
+		
+		If (op = "+" Or op = "-") And TPointerType(exprType) And TNumericType(rhs.exprType) Then
+			' with pointer addition we don't cast the numeric to a pointer
+		Else
+			rhs=rhs.Cast( exprType )
+		End If
 
 		If TConstExpr( lhs ) And TConstExpr( rhs ) Return EvalConst()
 

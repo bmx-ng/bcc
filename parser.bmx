@@ -718,6 +718,10 @@ Type TParser
 				ty = TType.MapToPointerType(ty)
 			End If
 
+			If CParse("ptr") Then
+				ty = TType.MapToPointerType(ty)
+			End If
+
 			' array
 			While CParse( "[]" )
 				ty=New TArrayType.Create( ty)

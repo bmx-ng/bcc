@@ -98,7 +98,11 @@ Type TAssignStmt Extends TStmt
 		If TInvokeExpr( lhs ) Or TInvokeMemberExpr( lhs )
 			rhs=Null
 		Else
-			rhs=rhs.Cast( lhs.exprType )
+			If TPointerType(lhs.exprType) And TNumericType(rhs.exprType) Then
+				' with pointer assignment we don't cast the numeric to a pointer
+			Else
+				rhs=rhs.Cast( lhs.exprType )
+			End If
 		EndIf
 	End Method
 	
