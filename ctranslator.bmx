@@ -1838,7 +1838,7 @@ End Rem
 			End If
 
 			If classHasFunction(classDecl, "Compare") Then
-				Emit "BBINT _" + classid + "_ObjectCompare(BBOBJECT o, BBOBJECT otherObject);"
+				Emit "BBINT _" + classid + "_Compare(" + TransObject(classdecl) + " o, BBOBJECT otherObject);"
 			End If
 
 			If classHasFunction(classDecl, "SendMessage") Then
@@ -2096,8 +2096,8 @@ End Rem
 			'Emit "_" + classid + "_ToString,"
 		End If
 
-		If classHasFunction(classDecl, "ObjectCompare") Then
-			EmitClassStandardMethodDebugScope("ObjectCompare", "(:Object)i", "_" + classid + "_ObjectCompare")
+		If classHasFunction(classDecl, "Compare") Then
+			EmitClassStandardMethodDebugScope("Compare", "(:Object)i", "_" + classid + "_Compare")
 			'Emit "_" + classid + "_ObjectCompare,"
 		End If
 
@@ -2153,7 +2153,7 @@ End Rem
 	End Method
 	
 	Method DebugScopeDeclCount:Int(classDecl:TClassDecl)
-		Local count:Int = 1 ' "New" counts as first one
+		Local count:Int = 2 ' "New" counts as first one
 		
 		' fields
 		CountClassFieldsDebugScope(classDecl, count)
@@ -2163,7 +2163,7 @@ End Rem
 			count :+ 1
 		End If
 
-		If classHasFunction(classDecl, "ObjectCompare") Then
+		If classHasFunction(classDecl, "Compare") Then
 			count :+ 1
 		End If
 
@@ -2317,8 +2317,8 @@ End Rem
 			Emit "bbObjectToString,"
 		End If
 
-		If classHasFunction(classDecl, "ObjectCompare") Then
-			Emit "_" + classid + "_ObjectCompare,"
+		If classHasFunction(classDecl, "Compare") Then
+			Emit "_" + classid + "_Compare,"
 		Else
 			Emit "bbObjectCompare,"
 		End If
