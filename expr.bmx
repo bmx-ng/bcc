@@ -155,6 +155,18 @@ Type TExpr
 		End If
 		If lhs.ExtendsType( rhs ) Return rhs
 		If rhs.ExtendsType( lhs ) Return lhs
+		' balance arrays - only for objects... to the lowest common denominator.
+		' either Object or superclass (TODO)
+		If TArrayType( lhs ) And TArrayType( rhs ) Then
+			' lhs = Object[]
+			If TObjectType(TArrayType( lhs ).elemType) And TObjectType(TArrayType( lhs ).elemType).classDecl.ident = "Object" Then
+				Return lhs
+			End If
+			' rhs = Object[]
+			If TObjectType(TArrayType( rhs ).elemType) And TObjectType(TArrayType( rhs ).elemType).classDecl.ident = "Object" Then
+				Return rhs
+			End If
+		End If
 		Err "Can't balance types "+lhs.ToString()+" and "+rhs.ToString()+"."
 	End Method
 
@@ -865,6 +877,16 @@ Type TCastExpr Extends TExpr
 		If TStringCharPtrType(src) And TStringType(ty) Then
 			exprType = ty
 			Return Self
+		End If
+		
+		' cast from "some kind of object" array to Object[]
+		If TArrayType(ty) And TArrayType(src)
+			If (TObjectType(TArrayType(src).elemType) Or TStringType(TArrayType(src).elemType) Or TArrayType(TArrayType(src).elemType)) And TObjectType(TArrayType(ty).elemType) Then
+				If TObjectType(TArrayType(ty).elemType).classDecl.ident = "Object" Then
+					exprType = ty
+					Return Self
+				End If
+			End If
 		End If
 		
 		If TArrayType(ty) And TObjectType(src) 

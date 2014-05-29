@@ -1034,6 +1034,15 @@ t:+"NULLNULLNULL"
 				If TNumericType( src ) Return Bra("(BBINT**)"+t)
 			End If
 		Else If TArrayType( dst )
+			If TArrayType( src ) Then
+				If TObjectType( TArrayType( dst ).elemType ) And TObjectType( TArrayType( dst ).elemType ).classDecl.ident = "Object" Then
+					' if we are casting to Object[], don't actually cast.
+					Return Bra(t)
+				Else
+					Return "bbArrayCastFromObject" + Bra(t + "," + TransArrayType(TArrayType( dst ).elemType))
+				End If
+			End If
+			
 			If TObjectType( src) And (TObjectType( src ).classDecl.ident = "Array" Or TObjectType( src ).classDecl.ident = "Object") Then
 				Return "bbArrayCastFromObject" + Bra(t + "," + TransArrayType(TArrayType( dst ).elemType))
 			End If

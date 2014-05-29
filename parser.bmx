@@ -1262,6 +1262,10 @@ Type TParser
 		Else
 			varlocal=False
 			varid=ParseIdent()
+
+			' eat any type stuff
+			ParseConstNumberType()
+
 			Parse "="
 		EndIf
 
