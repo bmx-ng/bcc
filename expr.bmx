@@ -1489,7 +1489,11 @@ Type TIdentTypeExpr Extends TExpr
 	Method _Semant()
 		If cdecl Return
 		exprType=exprType.Semant()
-		cdecl=exprType.GetClass()
+		If TArrayType(exprType) And TObjectType(TArrayType(exprType).elemType) Then
+			cdecl=TObjectType(TArrayType(exprType).elemType).classDecl
+		Else
+			cdecl=exprType.GetClass()
+		End If
 		If Not cdecl InternalErr
 	End Method
 
@@ -1500,7 +1504,13 @@ Type TIdentTypeExpr Extends TExpr
 
 	Method SemantFunc:TExpr( args:TExpr[] , throwError:Int = True, funcCall:Int = False )
 		_Semant
-		If args.Length=1 And args[0] Return args[0].Cast( cdecl.objectType,CAST_EXPLICIT )
+		If args.Length=1 And args[0] Then
+			If TArrayType(exprType) Then
+				Return args[0].Cast( exprType,CAST_EXPLICIT )
+			Else
+				Return args[0].Cast( cdecl.objectType,CAST_EXPLICIT )
+			End If
+		End If
 		Err "Illegal number of arguments for type conversion"
 	End Method
 
