@@ -929,9 +929,9 @@ End Rem
 		If TObjectType(ty) Or TStringType(ty) Or TArrayType(ty) Then
 			' null test
 			If trans Then
-				debugOut :+ indent + "if (!" + id + ") {~n"
+				debugOut :+ indent + "if (" + id + "==NULL) {~n"
 			Else
-				Emit "if (!" + id + ") {"
+				Emit "if (" + id + "==NULL) {"
 			End If
 			DebugPrint("Null Pointer : " + id, func, trans)
 			If trans Then
@@ -940,6 +940,9 @@ End Rem
 				End If
 				debugOut :+ indent + "}~n"
 			Else
+				If ABORT_ON_NULL Then
+					Emit "abort();~n"
+				End If
 				Emit "}"
 			End If
 		End If
