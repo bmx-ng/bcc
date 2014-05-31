@@ -324,6 +324,9 @@ Type TConstDecl Extends TValDecl
 		'If Not IsExtern() value=init.Eval()
 		If init Then
 			value=init.Eval()
+			If TStringType(ty) And Not _appInstance.hasStringConst(value) Then
+				_appInstance.mapStringConsts(value)
+			End If
 		End If
 	End Method
 	
@@ -1922,6 +1925,10 @@ pushenv Self
 		For Local cdecl:TClassDecl=EachIn semantedClasses
 			cdecl.FinalizeClass
 		Next
+	End Method
+	
+	Method hasStringConst:Int(value:String)
+		Return stringConsts.ValueForKey(value) <> Null
 	End Method
 	
 	Method mapStringConsts(value:String)
