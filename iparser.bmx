@@ -948,12 +948,12 @@ End Rem
 					
 					If ty = TType.stringType
 						If CParse("$") Then
-					init = ParseUnaryExpr()
+							decl.declInit = ParseUnaryExpr()
 '							decl.init=New TConstExpr.Create(ty, ParseStringLit())
 						End If
 					Else
 						' a default value ?
-						decl.init = ParseUnaryExpr()
+						decl.declInit = ParseUnaryExpr()
 '					Local value:String
 						
 						'_toker.NextToke()
