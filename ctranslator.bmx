@@ -804,7 +804,13 @@ t:+"NULLNULLNULL"
 	End Method
 
 	Method TransNewObjectExpr$( expr:TNewObjectExpr )
-		Local t$ = "bbObjectNew(&" + expr.classDecl.actual.munged + ")"
+		Local t$
+
+		If ClassHasObjectField(expr.classDecl) Then
+			t = "bbObjectNew(&" + expr.classDecl.actual.munged + ")"
+		Else
+			t = "bbObjectAtomicNew(&" + expr.classDecl.actual.munged + ")"
+		End If
 		'Local t$="(new "+expr.classDecl.actual.munged+")"
 		'If expr.ctor t:+"->"+expr.ctor.actual.munged+TransArgs( expr.args,expr.ctor )
 		Return t
@@ -1426,6 +1432,26 @@ t:+"NULLNULLNULL"
 	Method TransEndStmt$( stmt:TEndStmt )
 		Emit "bbEnd();"
 	End Method
+	
+	Method ClassHasObjectField:Int(classDecl:TClassDecl)
+	
+		If classDecl.superClass Then
+			If ClassHasObjectField(classDecl.superClass) Then
+				Return True
+			End If
+		End If
+
+		For Local decl:TFieldDecl = EachIn classDecl.Decls()
+			If Not decl.IsSemanted() Then
+				decl.Semant()
+			End If
+			If TStringType(decl.ty) Or TArrayType(decl.ty) Or TObjectType(decl.ty) Then
+				Return True
+			End If
+		Next
+		
+		Return False
+	End Method
 
 
 	'***** Declarations *****
@@ -1999,10 +2025,10 @@ End Rem
 		Return offset
 	End Method
 	
-	Method EmitClassFieldsDebugScope:Int(classDecl:TClassDecl, offset:Int)
+	Method EmitClassFieldsDebugScope(classDecl:TClassDecl)
 
 		If classDecl.superClass Then
-			offset = EmitClassFieldsDebugScope(classDecl.superClass, offset)
+			EmitClassFieldsDebugScope(classDecl.superClass)
 		End If
 
 		For Local decl:TFieldDecl = EachIn classDecl.Decls()
@@ -2010,7 +2036,8 @@ End Rem
 			Emit "BBDEBUGDECL_FIELD,"
 			Emit Enquote(decl.ident) + ","
 			Emit Enquote(TransDebugScopeType(decl.ty)) + ","
-			offset = TransDebugScopeAlignedOffset(decl.ty, offset)
+			'offset = TransDebugScopeAlignedOffset(decl.ty, offset)
+			Local offset:String = "offsetof" + Bra("struct " + classDecl.munged + "_obj," + decl.munged)
 			If WORD_SIZE = 8 Then
 				Emit Bra("BBLONG") + offset
 			Else
@@ -2023,10 +2050,10 @@ End Rem
 			'End If
 			Emit "},"
 			
-			offset:+ decl.ty.GetSize()
+			'offset:+ decl.ty.GetSize()
 		Next
 
-		Return offset
+		'Return offset
 	End Method
 	
 	Method EmitClassStandardMethodDebugScope(ident:String, ty:String, munged:String)
@@ -2288,7 +2315,7 @@ End Rem
 		Emit "{"
 		
 		' debug field decls
-		EmitClassFieldsDebugScope(classDecl, WORD_SIZE)
+		EmitClassFieldsDebugScope(classDecl)
 		
 		' debug global decls
 		EmitClassGlobalDebugScope(classDecl)
