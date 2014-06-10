@@ -324,16 +324,17 @@ End Rem
 			InternalErr
 		Else If TBinaryExpr( expr )
 			Select TBinaryExpr( expr ).op
-			Case "*","/","mod" Return 4
-			Case "+","-" Return 5
-			Case "shl","shr", "sar" Return 6
-			Case "<","<=",">",">=", "=<", "=>" Return 7
-			Case "=","<>" Return 8
-			Case "&" Return 9
-			Case "~~" Return 10
-			Case "|" Return 11
-			Case "and" Return 12
-			Case "or" Return 13
+			Case "^" Return 4
+			Case "*","/","mod" Return 5
+			Case "+","-" Return 6
+			Case "shl","shr", "sar" Return 7
+			Case "<","<=",">",">=", "=<", "=>" Return 8
+			Case "=","<>" Return 9
+			Case "&" Return 10
+			Case "~~" Return 11
+			Case "|" Return 12
+			Case "and" Return 13
+			Case "or" Return 14
 			End Select
 			InternalErr
 		EndIf

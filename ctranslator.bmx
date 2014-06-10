@@ -1105,6 +1105,10 @@ t:+"NULLNULLNULL"
 				Return "bbArrayConcat(" + TransArrayType(TArrayType(expr.lhs.exprType).elemType) + "," + t_lhs + "," + t_rhs + ")"
 			End If
 		End If
+		
+		If expr.op = "^" Then
+			Return "pow" + Bra(t_lhs + ", " + t_rhs)
+		End If
 
 		If TBinaryCompareExpr(expr) Then
 			If TStringType(TBinaryCompareExpr(expr).ty) Then

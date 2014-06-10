@@ -982,7 +982,7 @@ Type TParser
 		Repeat
 			Local op$=_toke
 			Select op
-			Case "*","/","mod","shl","shr", "sar"
+			Case "^","*","/","mod","shl","shr", "sar"
 				NextToke
 				Local rhs:TExpr=ParseUnaryExpr()
 				expr=New TBinaryMathExpr.Create( op,expr,rhs )
