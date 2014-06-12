@@ -68,7 +68,7 @@ Function InternalErr()
 End Function
 
 Function IsSpace:Int( ch:Int )
-	Return ch<=Asc(" ")
+	Return ch<=Asc(" ") Or ch=$A0 ' NO-BREAK SPACE (U+00A0)
 End Function
 
 Function IsDigit:Int( ch:Int )
