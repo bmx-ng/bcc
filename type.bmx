@@ -535,16 +535,17 @@ Type TObjectType Extends TType
 		If objty Return classDecl.ExtendsClass( objty.classDecl )
 		If TBytePtrType( ty ) Return True
 		Local op$
-		If TBoolType( ty )
-			op="ToBool"
-		Else If TIntType( ty ) 
-			op="ToInt"
-		Else If TFloatType( ty )
-			op="ToFloat"
-		Else If TStringType( ty )
+'		If TBoolType( ty )
+'			op="ToBool"
+'		Else If TIntType( ty ) 
+'			op="ToInt"
+'		Else If TFloatType( ty )
+'			op="ToFloat"
+'		Else
+		If TStringType( ty )
 			op="ToString"
-		Else If TLongType( ty ) ' BaH Long
-			op="ToLong"
+'		Else If TLongType( ty ) ' BaH Long
+'			op="ToLong"
 		Else
 			Return False
 		EndIf
