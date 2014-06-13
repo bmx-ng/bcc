@@ -2512,7 +2512,7 @@ End Rem
 		Next
 
 		' finally, call super delete
-		If classDecl.superClass.ident = "Object" Then
+		If classDecl.superClass.ident = "Object" Or Not classHierarchyHasFunction(classDecl.superClass, "Delete") Then
 			Emit "bbObjectDtor(o);"
 		Else
 			Emit "_" + superid + "_Delete(o);"
