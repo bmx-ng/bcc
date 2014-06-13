@@ -448,7 +448,7 @@ Type TAssertStmt Extends TStmt
 	End Method
 	
 	Method OnSemant()
-		expr=expr.SemantAndCast( TType.intType,CAST_EXPLICIT )
+		expr=expr.SemantAndCast( TType.boolType,CAST_EXPLICIT )
 		If elseExpr Then
 			elseExpr = elseExpr.SemantAndCast(TType.stringType,CAST_EXPLICIT)
 		End If
