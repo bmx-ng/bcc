@@ -1988,6 +1988,14 @@ End Rem
 		Return False
 	End Method
 
+	Method classidForFunction:String(classDecl:TClassDecl, func:String)
+		If classHasFunction(classDecl, func) Return classDecl.munged
+		If classDecl.superClass And classDecl.superClass.munged <> "bbObjectClass" Then
+			Return classidForFunction(classDecl.superClass, func)
+		End If
+		Return Null
+	End Method
+
 	Method EmitMark( id$,ty:TType,queue:Int )
 
 		If TObjectType( ty )
@@ -2131,18 +2139,18 @@ End Rem
 		
 		EmitClassStandardMethodDebugScope("New", ret, "_" + classid + "_New")
 	
-		If classHasFunction(classDecl, "ToString") Then
-			EmitClassStandardMethodDebugScope("ToString", "()$", "_" + classid + "_ToString")
+		If classHierarchyHasFunction(classDecl, "ToString") Then
+			EmitClassStandardMethodDebugScope("ToString", "()$", "_" + classidForFunction(classDecl, "ToString") + "_ToString")
 			'Emit "_" + classid + "_ToString,"
 		End If
 
-		If classHasFunction(classDecl, "Compare") Then
-			EmitClassStandardMethodDebugScope("Compare", "(:Object)i", "_" + classid + "_Compare")
+		If classHierarchyHasFunction(classDecl, "Compare") Then
+			EmitClassStandardMethodDebugScope("Compare", "(:Object)i", "_" + classidForFunction(classDecl, "Compare") + "_Compare")
 			'Emit "_" + classid + "_ObjectCompare,"
 		End If
 
-		If classHasFunction(classDecl, "SendMessage") Then
-			EmitClassStandardMethodDebugScope("SendMessage", "(:Object):Object", "_" + classid + "_SendMessage")
+		If classHierarchyHasFunction(classDecl, "SendMessage") Then
+			EmitClassStandardMethodDebugScope("SendMessage", "(:Object):Object", "_" + classidForFunction(classDecl, "SendMessage") + "_SendMessage")
 			'Emit "_" + classid + "_SendMessage,"
 		End If
 
@@ -2351,20 +2359,20 @@ End Rem
 			Emit "_" + classid + "_Delete,"
 		End If
 
-		If classHasFunction(classDecl, "ToString") Then
-			Emit "_" + classid + "_ToString,"
+		If classHierarchyHasFunction(classDecl, "ToString") Then
+			Emit "_" + classidForFunction(classDecl, "ToString") + "_ToString,"
 		Else
 			Emit "bbObjectToString,"
 		End If
 
-		If classHasFunction(classDecl, "Compare") Then
-			Emit "_" + classid + "_Compare,"
+		If classHierarchyHasFunction(classDecl, "Compare") Then
+			Emit "_" + classidForFunction(classDecl, "Compare") + "_Compare,"
 		Else
 			Emit "bbObjectCompare,"
 		End If
 
-		If classHasFunction(classDecl, "SendMessage") Then
-			Emit "_" + classid + "_SendMessage,"
+		If classHierarchyHasFunction(classDecl, "SendMessage") Then
+			Emit "_" + classidForFunction(classDecl, "SendMessage") + "_SendMessage,"
 		Else
 			Emit "bbObjectSendMessage,"
 		End If
