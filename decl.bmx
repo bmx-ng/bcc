@@ -64,6 +64,7 @@ Type TDecl
 	Field actual:TDecl
 	Field scope:TScopeDecl
 	Field attrs:Int
+	Field metadata:String
 	
 	Field declImported:Int = False
 	

@@ -103,11 +103,7 @@ End Function
 'enquote depending on ENV_LANG
 '
 Function LangEnquote$( str$ )
-	str=str.Replace( "\","\\" )
-	str=str.Replace( "~q","\~q" )
-	str=str.Replace( "~n","\n" )
-	str=str.Replace( "~r","\r" )
-	str=str.Replace( "~t","\t" )
+	str=EscapeString(str)
 '	str=str.Replace( "~0","\0" )	'Fix me?
 	For Local i:Int=0 Until str.Length
 		If str[i]>=32 And str[i]<128 Continue
@@ -130,6 +126,15 @@ Function LangEnquote$( str$ )
 	Next
 	str="~q"+str+"~q"
 	If ENV_LANG="cpp" str="L"+str
+	Return str
+End Function
+
+Function EscapeString$(str$)
+	str=str.Replace( "\","\\" )
+	str=str.Replace( "~q","\~q" )
+	str=str.Replace( "~n","\n" )
+	str=str.Replace( "~r","\r" )
+	str=str.Replace( "~t","\t" )
 	Return str
 End Function
 

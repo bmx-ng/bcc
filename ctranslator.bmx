@@ -2017,26 +2017,6 @@ End Rem
 		EndIf
 	End Method
 
-	Method TransDebugScopeAlignedOffset:Int(ty:TType, offset:Int)
-		If TByteType(ty) Then
-			' nothing
-		Else If TShortType(ty) Then
-			If offset Mod 2 Then
-				offset :+ offset Mod 2
-			End If
-		Else If TIntType(ty) Or TFloatType(ty) Then
-			If offset Mod 4 Then
-				offset :+ (4 - offset Mod 4)
-			End If
-		Else
-			If offset Mod WORD_SIZE Then
-				offset :+ (WORD_SIZE - offset Mod WORD_SIZE)
-			End If
-		End If
-		
-		Return offset
-	End Method
-	
 	Method EmitClassFieldsDebugScope(classDecl:TClassDecl)
 
 		If classDecl.superClass Then
@@ -2047,8 +2027,8 @@ End Rem
 			Emit "{"
 			Emit "BBDEBUGDECL_FIELD,"
 			Emit Enquote(decl.ident) + ","
-			Emit Enquote(TransDebugScopeType(decl.ty)) + ","
-			'offset = TransDebugScopeAlignedOffset(decl.ty, offset)
+			Emit Enquote(TransDebugScopeType(decl.ty) + TransDebugMetaData(decl.metadata)) + ","
+
 			Local offset:String = "offsetof" + Bra("struct " + classDecl.munged + "_obj," + decl.munged)
 			If WORD_SIZE = 8 Then
 				Emit Bra("BBLONG") + offset
@@ -2076,6 +2056,12 @@ End Rem
 			Emit "&" + munged
 			Emit "},"
 	End Method
+	
+	Method TransDebugMetaData:String(meta:String)
+		If meta Then
+			Return "{" + meta + "}"
+		End If
+	End Method
 
 	Method EmitBBClassFuncsDebugScope(decl:TFuncDecl)
 			Emit "{"
@@ -2094,9 +2080,13 @@ End Rem
 				s:+ TransDebugScopeType(decl.argDecls[i].ty)
 			Next
 			s:+ ")"
+
 			If decl.retType Then
 				s:+ TransDebugScopeType(decl.retType)
 			End If
+
+			s:+ TransDebugMetaData(decl.metadata)
+
 			Emit Enquote(s) + ","
 			If decl.IsMethod() Then
 				Emit "&_" + decl.munged
@@ -2322,7 +2312,7 @@ End Rem
 		' debugscope
 		Emit "struct _" + classid + "_DebugScope " + classid + "_scope={"
 		Emit "BBDEBUGSCOPE_USERTYPE,"
-		Emit EnQuote(classDecl.ident) + ","
+		Emit EnQuote(classDecl.ident + TransDebugMetaData(classDecl.metadata)) + ","
 
 		Emit "{"
 		

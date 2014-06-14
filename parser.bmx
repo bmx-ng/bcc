@@ -1777,7 +1777,7 @@ Type TParser
 		'meta data for variables
 		If CParse( "{" ) Then
 			'print "meta for variable: "+id+ " -> "+ParseMetaData()
-			ParseMetaData()
+			decl.metadata = ParseMetaData()
 		EndIf
 
 		Return decl
@@ -1824,6 +1824,7 @@ Type TParser
 	End Method
 
 	'should return a specific "metadata object" ?
+	' metadata is in the form : {key key=value key="value"}
 	Method ParseMetaData:String()
 		Local metaDataString:String = ""
 		SkipEols
@@ -1831,12 +1832,47 @@ Type TParser
 		Repeat
 			'concat lines connected with ".."
 			If _toke =".." Then HandleDotsLineConnector()
-
+			
+			If metaDataString Then
+				metaDataString :+ " "
+			End If
+			
+			Select _tokeType
+				Case TOKE_INTLIT
+					Err "Expecting '}' but encountered integer literal"
+				Case TOKE_FLOATLIT
+					Err "Expecting '}' but encountered floating point literal"
+				Case TOKE_STRINGLIT
+					Err "Expecting '}' but encountered string literal"
+				Case TOKE_SYMBOL
+					Err "Expecting '}' but encountered " + _toke
+			End Select
+			
 			'append current token to metaDataString
 			metaDataString :+ _toke
+
 			'read next token
 			NextToke()
 
+			If _toke =".." Then HandleDotsLineConnector()
+			
+			' got a value
+			If CParse("=") Then
+				
+				If _toke =".." Then HandleDotsLineConnector()
+				
+				If _tokeType = TOKE_IDENT Then
+					Err "Meta data must be literal constant"
+				End If
+				
+				metaDataString :+ "=" + _toke
+
+				'read next token
+				NextToke()
+			Else
+				metaDataString :+ "=1"	
+			End If
+			
 			'reached end of meta data declaration
 			If _toke="}" Then Exit
 		Forever
@@ -1857,6 +1893,7 @@ Type TParser
 		Local id$
 		Local ty:TType
 		Local meth:Int = attrs & FUNC_METHOD
+		Local meta:String
 
 		If attrs & FUNC_METHOD
 			If _toke="new"
@@ -1943,7 +1980,7 @@ Type TParser
 				' TODO : do something with the metadata
 				'meta data for functions/methods
 				'print "meta for func/meth: "+id+ " -> "+ParseMetaData()
-				ParseMetaData()
+				meta = ParseMetaData()
 			Else
 				Exit
 			EndIf
@@ -1953,6 +1990,9 @@ If Not ty Then
 End If
 
 		Local funcDecl:TFuncDecl=New TFuncDecl.CreateF( id,ty,args,attrs )
+		If meta Then
+			funcDecl.metadata = meta
+		End If
 
 		If funcDecl.IsExtern() Or (attrs & FUNC_PTR)
 			funcDecl.munged=funcDecl.ident
@@ -2041,6 +2081,7 @@ End If
 		Local args:TClassDecl[]
 		Local superTy:TIdentType
 		Local imps:TIdentType[]
+		Local meta:String
 
 		If (attrs & CLASS_INTERFACE) And (attrs & DECL_EXTERN)
 			Err "Interfaces cannot be extern."
@@ -2155,11 +2196,15 @@ End Rem
 			' TODO : do something with the metadata
 			'metadata for "type"s
 			'print "meta for type: "+id+ " -> "+ParseMetaData()
-			ParseMetaData()
+			meta = ParseMetaData()
 		End If
 
 
 		Local classDecl:TClassDecl=New TClassDecl.Create( id,args,superTy,imps,attrs )
+		
+		If meta Then
+			classDecl.metadata = meta
+		End If
 
 		If classDecl.IsExtern()
 			classDecl.munged=classDecl.ident
