@@ -191,6 +191,10 @@ Type TDecl
 			PopEnv
 		EndIf
 		
+		If TValDecl(Self) And TValDecl(Self).deferInit Then
+			TValDecl(Self).SemantInit
+		End If
+		
 		PopErr
 	End Method
 	
@@ -220,6 +224,8 @@ Type TValDecl Extends TDecl
 	Field ty:TType
 	Field init:TExpr
 	
+	Field deferInit:Int = False
+	
 	Method ToString$()
 		Local t$=Super.ToString()
 		If ty Return t+":"+ty.ToString()
@@ -242,6 +248,22 @@ Type TValDecl Extends TDecl
 				End If
 			End If
 			
+			If Not deferInit Then
+				SemantInit()
+			End If
+			
+		Else If declInit
+			If Not deferInit Then
+				SemantInit()
+			End If
+		Else
+			InternalErr
+		EndIf
+		
+	End Method
+	
+	Method SemantInit()
+		If declTy
 			If declInit Then
 				If TFunctionPtrType(ty) Then
 					
@@ -288,9 +310,7 @@ Type TValDecl Extends TDecl
 		Else If declInit
 			init=declInit.Copy().Semant()
 			ty=init.exprType
-		Else
-			InternalErr
-		EndIf
+		End If		
 	End Method
 	
 End Type
@@ -394,6 +414,7 @@ End Type
 Type TGlobalDecl Extends TVarDecl
 	
 	Method Create:TGlobalDecl( ident$,ty:TType,init:TExpr,attrs:Int=0 )
+		Self.deferInit = True
 		Self.ident=ident
 		Self.declTy=ty
 		Self.declInit=init
