@@ -1926,7 +1926,7 @@ Type TParser
 				' handle end-of-line "dot dot return"
 				If _toke =".." Then HandleDotsLineConnector()
 
-				Local id$=ParseIdent()
+				Local argId$=ParseIdent()
 
 				Local ty:TType=ParseDeclType()
 				Local init:TExpr
@@ -1944,11 +1944,11 @@ Type TParser
 						TFunctionPtrType(ty).func = fdecl
 					End If
 
-					TFunctionPtrType(ty).func.ident = id
+					TFunctionPtrType(ty).func.ident = argId
 
 				End If
 				If CParse( "=" ) init=ParseExpr()
-				Local arg:TArgDecl=New TArgDecl.Create( id,ty,init )
+				Local arg:TArgDecl=New TArgDecl.Create( argId,ty,init )
 				If args.Length=nargs args=args + New TArgDecl[10]
 				args[nargs]=arg
 				nargs:+1
@@ -1981,6 +1981,10 @@ Type TParser
 				'meta data for functions/methods
 				'print "meta for func/meth: "+id+ " -> "+ParseMetaData()
 				meta = ParseMetaData()
+			Else If _tokeType=TOKE_STRINGLIT
+				' "win32", etc
+				' TODO ? something with this??
+				ParseStringLit()
 			Else
 				Exit
 			EndIf
@@ -2478,8 +2482,6 @@ End Rem
 				ParseToker(toker, "(")
 
 				If CParseToker(toker, ")") Then
-
-					NextTokeToker(toker)
 
 					' don't generate header extern
 					If CParseToker(toker, "!") Then

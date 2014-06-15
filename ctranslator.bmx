@@ -143,6 +143,7 @@ Type TCTranslator Extends TTranslator
 
 		If TExternObjectType( ty ) Return "struct " + TExternObjectType( ty ).classDecl.munged
 		If TExternObjectPtrType( ty ) Return "struct " + TExternObjectPtrType( ty ).classDecl.munged + " *"
+		If TExternObjectPtrPtrType( ty ) Return "struct " + TExternObjectPtrPtrType( ty ).classDecl.munged + " **"
 
 		InternalErr
 	End Method
@@ -189,6 +190,7 @@ Type TCTranslator Extends TTranslator
 		If TObjectVarPtrType( ty ) Return ":" + TObjectVarPtrType(ty).classDecl.ident + " Var"
 		If TExternObjectType( ty ) Return ":" + TExternObjectType(ty).classDecl.ident
 		If TExternObjectPtrType( ty ) Return ":" + TExternObjectPtrType(ty).classDecl.ident + "*"
+		If TExternObjectPtrPtrType( ty ) Return ":" + TExternObjectPtrPtrType(ty).classDecl.ident + "**"
 		InternalErr
 	End Method
 
@@ -1939,17 +1941,17 @@ End Rem
 
 		'Emit "typedef struct " + classid + "_obj {"
 		If classDecl.IsExtern() Then
-			Emit "struct " + classid + " {"
+			'Emit "struct " + classid + " {"
 		Else
 			Emit "struct " + classid + "_obj {"
 			Emit "struct BBClass_" + classid + "* clas;"
+
+			BeginLocalScope
+			EmitClassFieldsProto(classDecl)
+			EndLocalScope
+
+			Emit "};"
 		End If
-
-		BeginLocalScope
-		EmitClassFieldsProto(classDecl)
-		EndLocalScope
-
-		Emit "};"
 
 
 
@@ -2942,7 +2944,7 @@ End Rem
 
 		' forward declarations
 		For Local decl:TClassDecl=EachIn app.Semanted()
-			If decl.declImported Continue
+			If decl.declImported Or decl.IsExtern() Continue
 			Emit "struct " + decl.munged + "_obj;"
 		Next
 
