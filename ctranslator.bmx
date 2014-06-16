@@ -1380,7 +1380,12 @@ t:+"NULLNULLNULL"
 			rhs = "0"
 		End If
 
-
+		If stmt.op = "%=" Then
+			If TDecimalType(stmt.lhs.exprType) Or TDecimalType(stmt.rhs.exprType) Then
+				Return lhs + "=fmod" + Bra(lhs + "," + rhs)
+			End If
+		End If
+		
 		If TStringType(stmt.lhs.exprType) Or TStringVarPtrType(stmt.lhs.exprType) Then
 '			s:+ "{"
 '			s:+ "BBSTRING tmp=" + lhs + ";~n"
@@ -3279,7 +3284,7 @@ End Rem
 					For Local decl:TDecl=EachIn mdecl._decls
 
 						decl.Semant
-
+						
 						' consts
 						Local cdecl:TConstDecl=TConstDecl( decl )
 						If cdecl
@@ -3401,6 +3406,8 @@ End Rem
 
 		' consts
 		For Local decl:TDecl=EachIn app.Semanted()
+			If decl.IsPrivate() Continue
+
 			Local cdecl:TConstDecl=TConstDecl( decl )
 			If cdecl And Not cdecl.declImported
 				EmitIfcConstDecl(cdecl)
@@ -3409,6 +3416,8 @@ End Rem
 
 		' classes
 		For Local decl:TDecl=EachIn app.Semanted()
+			If decl.IsPrivate() Continue
+
 			Local cdecl:TClassDecl=TClassDecl( decl )
 			If cdecl And Not cdecl.declImported
 				EmitIfcClassDecl(cdecl)
@@ -3417,6 +3426,8 @@ End Rem
 
 		' functions
 		For Local decl:TDecl=EachIn app.Semanted()
+			If decl.IsPrivate() Continue
+
 			Local fdecl:TFuncDecl=TFuncDecl( decl )
 			If fdecl And fdecl <> app.mainFunc  And Not fdecl.declImported Then
 				EmitIfcFuncDecl(fdecl)
@@ -3425,6 +3436,8 @@ End Rem
 
 		' globals
 		For Local decl:TDecl=EachIn app.Semanted()
+			If decl.IsPrivate() Continue
+
 			Local gdecl:TGlobalDecl=TGlobalDecl( decl )
 			If gdecl And Not gdecl.declImported
 				EmitIfcGlobalDecl(gdecl)

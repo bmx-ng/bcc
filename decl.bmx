@@ -112,6 +112,8 @@ Type TDecl
 	
 	Method ModuleScope:TModuleDecl()
 		If TModuleDecl( Self ) Return TModuleDecl( Self )
+		' "app" is a module container
+		If TAppDecl( Self ) Return TAppDecl( Self).mainModule
 		If scope Return scope.ModuleScope()
 	End Method
 	

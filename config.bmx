@@ -55,10 +55,15 @@ Function PopErr()
 End Function
 
 Function Err( err$ )
-	Print _errInfo+" : Error : "+err
+	WriteStderr "Compile Error: "+err + "~n"
+	WriteStderr _errInfo + "~n"
 '	Print _errInfo+" "+err
 DebugStop
 	End
+End Function
+
+Function FormatError:String(path:String, line:Int, char:Int)
+	Return "[" + path + ";" + line + ";" + char + "]"
 End Function
 
 Function InternalErr()

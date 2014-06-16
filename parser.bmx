@@ -200,7 +200,7 @@ Type TParser
 
 	Method SetErr()
 		If _toker.Path()
-			_errInfo=_toker.Path()+"<"+_toker.Line()+">"
+			_errInfo=FormatError(_toker.Path(),_toker.Line(),0)
 		EndIf
 	End Method
 
@@ -1551,7 +1551,7 @@ Type TParser
 
 	End Method
 
-	Method ParseExternBlock(mdecl:TModuleDecl)
+	Method ParseExternBlock(mdecl:TModuleDecl, attrs:Int)
 
 		NextToke
 
@@ -1560,7 +1560,7 @@ Type TParser
 		End If
 
 
-		Local attrs:Int=DECL_EXTERN
+		attrs = attrs | DECL_EXTERN
 		If CParse( "private" ) attrs=attrs|DECL_PRIVATE
 
 
@@ -1625,12 +1625,12 @@ Type TParser
 			Case "end"
 				ParseEndStmt()
 			Case "extern"
-				ParseExternBlock(_module)
+				ParseExternBlock(_module, 0)
 			Default
 				Local expr:TExpr=ParsePrimaryExpr( True )
 
 				Select _toke.ToLower()
-				'"=","*=","/=","+=","-=","&=","|=","~~=","mod","shl","shr"
+				'"=","*=","/=","+=","-=","&=","|=","~~=","Mod","Shl","Shr"
 				Case "=",":*",":/",":+",":-",":&",":|",":~~","mod","shl","shr", ":shl", ":shr", "sar", ":sar", ":mod"
 	'DebugLog _toke
 					' remap symbols...
@@ -2330,47 +2330,24 @@ End Rem
 
 	End Method
 
-	Method ImportModule( modpath$,attrs:Int )
-' TODO
+	Method ImportAllModules(attrs:Int)
 
+		' get all brl and pub modules
+		Local mods:TList = EnumModules("brl")
+		mods = EnumModules("pub", mods)
+
+		For Local m:String = EachIn mods
+			ImportModule(m, attrs)
+		Next
+
+	End Method
+	
+	Method ImportModule( modpath$,attrs:Int )
+		SetErr
+		
 		modpath = modpath.ToLower()
 		Local basepath:String = ModulePath(modpath.ToLower())
 
-
-'DebugStop
-
-Rem
-		Local filepath$
-
-		Local cd$=CurrentDir()
-		ChangeDir ExtractDir( _toker.Path() )
-
-		For Local dir:String=EachIn ENV_MODPATH.Split( ";" )
-
-			filepath=RealPath( dir )+"/"+modpath.Replace( ".","/" )+"."+FILE_EXT			'/blah/etc.monkey
-			Local filepath2$=StripExt( filepath )+"/"+StripDir( filepath )					'/blah/etc/etc.monkey
-
-			If FileType( filepath )=FILETYPE_FILE
-				If FileType( filepath2 )<>FILETYPE_FILE Exit
-				Err "Duplicate module file: '"+filepath+"' and '"+filepath2+"'."
-			EndIf
-
-			filepath=filepath2
-			If FileType( filepath )=FILETYPE_FILE Exit
-
-			filepath=""
-		Next
-
-		ChangeDir cd
-
-		If Not filepath Err "Module '"+modpath+"' not found."
-
-		'Note: filepath needs to be an *exact* match.
-		'
-		'Would be nice to have a version of realpath that fixed case and normalized separators for this.
-		'
-		'Currently, frontend is assumed to have done this with main src path, proj dir and mod dir.
-End Rem
 		If _module.imported.Contains( basepath ) Return
 
 		' try to import interface
@@ -2564,13 +2541,13 @@ End Rem
 				NextToke
 			Case "public"
 				NextToke
-				attrs=0
+				attrs=attrs & ~DECL_PRIVATE
 			Case "private"
 				NextToke
-				attrs=DECL_PRIVATE
+				attrs=attrs | DECL_PRIVATE
 			Case "extern"
 
-				ParseExternBlock(_module)
+				ParseExternBlock(_module, attrs)
 Rem
 				NextToke
 
@@ -2772,6 +2749,13 @@ endrem
 		_module.insertDecl(mainFunc)
 		'Local mainBlock:TBlockDecl = New TBlockDecl.Create( _block )
 
+
+		' import all brl and pub modules if we haven't specified one
+		If opt_buildtype <> BUILDTYPE_MODULE And Not opt_framework Then
+			ImportAllModules MODULE_ACTUALMOD
+		End If
+
+
 		Local attrs:Int
 
 		'Parse header - imports etc.
@@ -2782,10 +2766,10 @@ endrem
 				NextToke
 			Case "public"
 				NextToke
-				attrs=0
+				attrs=attrs & ~DECL_PRIVATE
 			Case "private"
 				NextToke
-				attrs=DECL_PRIVATE
+				attrs=attrs | DECL_PRIVATE
 			Case "import"
 				NextToke
 				If _tokeType=TOKE_STRINGLIT

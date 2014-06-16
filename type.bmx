@@ -376,7 +376,10 @@ Type TLongType Extends TNumericType ' BaH Long
 	End Method
 End Type
 
-Type TFloatType Extends TNumericType
+Type TDecimalType Extends TNumericType
+End Type
+
+Type TFloatType Extends TDecimalType
 	
 	Method EqualsType:Int( ty:TType )
 		Return TFloatType( ty )<>Null
@@ -405,7 +408,7 @@ Type TFloatType Extends TNumericType
 
 End Type
 
-Type TDoubleType Extends TNumericType
+Type TDoubleType Extends TDecimalType
 	
 	Method EqualsType:Int( ty:TType )
 		Return TDoubleType( ty )<>Null

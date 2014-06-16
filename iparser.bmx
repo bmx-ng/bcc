@@ -101,15 +101,14 @@ Type TIParser
 		End If
 		
 		If Not iData Then
-DebugLog ipath
+
 			If Not FileType(ipath) Then
-DebugLog "TODO : missing .i file..."
-DebugLog "FILE NOT FOUND : " + ipath
+				Err "Can't find interface for module '" + modpath + "'"
 				Return False
 			End If
-	
+
 			'Local ifile:String[] = LoadString(ipath).Split("~n")
-		
+
 			_toker = New TToker.Create( ipath,LoadString( ipath ) )
 		Else
 			_toker = New TToker.Create( ipath, iData)
@@ -143,6 +142,8 @@ DebugLog "FILE NOT FOUND : " + ipath
 				If toker.TokeType()=TOKE_STRINGLIT
 
 					Local iRelPath:String = ParseStringLit()
+
+					SetErr
 					
 					If iRelPath.EndsWith(".bmx") Then
 							
@@ -177,7 +178,7 @@ DebugLog "FILE NOT FOUND : " + ipath
 
 
 '					Local mdecl:TDecl=TDecl(pmod.GetDecl( modpath ))
-	
+
 '					If Not mdecl
 						New TIParser.ParseModuleImport( _mod, modpath, origPath, iPath, , , iRelPath)
 '					Else
@@ -200,6 +201,7 @@ DebugLog "FILE NOT FOUND : " + ipath
 					
 					m :+ "." + toker._toke
 					
+					SetErr
 					Local mdecl:TDecl=TDecl(pmod.GetDecl( m ))
 	
 					If Not mdecl
@@ -364,7 +366,7 @@ DebugLog "FILE NOT FOUND : " + ipath
 	End Method
 
 	Method ParseClassDecl:TClassDecl( toke$,attrs:Int )
-		'SetErr
+		SetErr
 
 		'If toke Parse toke
 		
@@ -553,7 +555,7 @@ DebugLog "FILE NOT FOUND : " + ipath
 			End If
 		Wend
 		
-		'SetErr
+		SetErr
 	End Method
 
 	Method ParseStringLit$()
@@ -564,8 +566,8 @@ DebugLog "FILE NOT FOUND : " + ipath
 		Return str
 	End Method
 
-Method ParseFuncDecl:TFuncDecl( toke$,attrs:Int )
-		'SetErr
+	Method ParseFuncDecl:TFuncDecl( toke$,attrs:Int )
+		SetErr
 
 		'If toke Parse toke
 	
@@ -834,7 +836,7 @@ Method ParseFuncDecl:TFuncDecl( toke$,attrs:Int )
 	End Method
 	
 	Method ParseDecl:TDecl( toke$,attrs:Int )
-		'SetErr
+		SetErr
 		Local pos:Int, tokeType:Int
 		pos = _toker._tokePos
 		tokeType = _toker._tokeType
@@ -1174,6 +1176,12 @@ End Rem
 			Return TType.doubleType
 		End If
 		Return ParseIdentType()
+	End Method
+
+	Method SetErr()
+		If _toker.Path()
+			_errInfo=FormatError(_toker.Path(), _toker.Line(), 0)
+		EndIf
 	End Method
 
 End Type
