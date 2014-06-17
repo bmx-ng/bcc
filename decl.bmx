@@ -415,6 +415,8 @@ Type TArgDecl Extends TLocalDecl
 End Type
 
 Type TGlobalDecl Extends TVarDecl
+
+	Field inited:Int
 	
 	Method Create:TGlobalDecl( ident$,ty:TType,init:TExpr,attrs:Int=0 )
 		Self.deferInit = True

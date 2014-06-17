@@ -426,14 +426,14 @@ t:+"NULLNULLNULL"
 
 	Method TransGlobalDecl$( munged$,init:TExpr, attrs:Int, ty:TType )
 		Local glob:String
-
+		
 		If Not (attrs & DECL_INITONLY) Then
 			glob :+"static " + TransType( init.exprType, munged )+" "
 		End If
 
 		glob :+ munged+"="
 
-		If TNewObjectExpr(init) Then
+		If TNewObjectExpr(init) And Not (attrs & DECL_INITONLY) Then
 			glob :+ "0;~n"
 			glob :+ indent + "if (" + munged + "==0) {~n"
 			glob :+ indent + "~t" + munged + "=" + init.Trans() + ";~n"
@@ -859,6 +859,8 @@ t:+"NULLNULLNULL"
 			'If TCastExpr(expr.expr) And (TArrayType( src ) Or TStringType( src ) Or TObjectType( src )) Then
 			'	Return Bra( t+"!= &bbNullObject" )
 			'End If
+			If TLongType( src ) Return Bra( t+"!=0" )
+			If TDoubleType( src ) Return Bra( t+"!=0.0f" )
 			If TArrayType( src ) Return Bra( t+"!= &bbEmptyArray" )
 			If TStringType( src ) Return Bra( t+"!= &bbEmptyString" )
 			If TObjectType( src ) Return Bra( t+"!= &bbNullObject" )
@@ -3099,6 +3101,14 @@ End Rem
 
 	Method TransSource(app:TAppDecl)
 
+		SetOutput("pre_source")
+
+		' include our header
+		EmitModuleInclude(app.mainModule)
+
+		' incbins
+		TransIncBin(app)
+
 		SetOutput("source")
 		
 		'definitions!
@@ -3109,7 +3119,12 @@ End Rem
 			Local gdecl:TGlobalDecl=TGlobalDecl( decl )
 			If gdecl
 				If Not TFunctionPtrType(gdecl.ty) Then
-					Emit TransRefType( gdecl.ty, "WW" )+" "+gdecl.munged+";"
+					If TConstExpr(gdecl.init) Then
+						Emit TransRefType( gdecl.ty, "WW" )+" "+TransGlobalDecl(gdecl.munged, gdecl.init, gdecl.attrs, gdecl.ty)+";"
+						gdecl.inited = True
+					Else
+						Emit TransRefType( gdecl.ty, "WW" )+" "+gdecl.munged+";"
+					End If
 				Else
 					Emit TransRefType( gdecl.ty, gdecl.munged ) + ";"
 				End If
@@ -3169,7 +3184,6 @@ End Rem
 			Emit "bbIncbinAdd(&" + TStringConst(app.stringConsts.ValueForKey(ib.file)).id + ",&" + app.munged + "_ib_" + ib.id + "," + ib.length + ");"
 		Next
 
-
 		' initialise globals
 		For Local decl:TGlobalDecl=EachIn app.semantedGlobals
 
@@ -3179,6 +3193,7 @@ End Rem
 
 			' TODO : what about OnDebugStop etc, who have no init ?
 			If decl.init And Not (decl.attrs & DECL_INITONLY) Then
+
 				If TFunctionPtrType(decl.ty) Then
 					If TInvokeExpr(decl.init) And Not TInvokeExpr(decl.init).invokedWithBraces Then
 						Emit TransGlobal( decl )+"="+TInvokeExpr(decl.init).decl.munged + ";"
@@ -3200,16 +3215,8 @@ End Rem
 		Emit "return 0;"
 		Emit "}"
 
-
-
-
+		' redirect string generation to the top of the source
 		SetOutput("pre_source")
-
-		' include our header
-		EmitModuleInclude(app.mainModule)
-
-		' incbins
-		TransIncBin(app)
 
 		' strings
 		For Local s:String = EachIn app.stringConsts.Keys()

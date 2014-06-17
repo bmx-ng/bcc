@@ -703,6 +703,7 @@ End Rem
 		Local gdecl:TGlobalDecl=TGlobalDecl( stmt.decl )
 		If gdecl Then
 			MungDecl gdecl
+			If gdecl.inited Return Null
 			Return TransGlobalDecl( gdecl.munged, gdecl.init, gdecl.attrs, gdecl.ty )
 		End If
 		InternalErr
