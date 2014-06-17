@@ -1806,8 +1806,18 @@ Type TParser
 	'handle end-of-line "dot dot return"-line connector
 	'-> skips EOL tokens
 	Method HandleDotsLineConnector()
+
 		Local tok:TToker = New TToker.Copy(_toker)
+
 		Local t:String = tok.NextToke()
+
+		Local count:Int = tok.SkipSpace()
+		For Local i:Int = 0 Until count
+			NextToke
+		Next
+		
+		t = tok._toke
+
 		If t = "~r" Then
 			t = tok.NextToke()
 			If t = "~n" Then

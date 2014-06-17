@@ -227,10 +227,13 @@ Type TToker
 		Return _tokeType
 	End Method
 	
-	Method SkipSpace()
+	Method SkipSpace:Int()
+		Local count:Int
 		While _tokeType=TOKE_SPACE
 			NextToke
+			count :+ 1
 		Wend
+		Return count
 	End Method
 	
 'Private
