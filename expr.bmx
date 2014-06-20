@@ -415,8 +415,16 @@ Type TInvokeExpr Extends TExpr
 	Method Semant:TExpr()
 		If exprType Return Self
 
-		' handle Asc and Chr keywords/functions for const values
+		' handle Sgn, Asc and Chr keywords/functions for const values
 		Select decl.ident.ToLower()
+			Case "sgn"
+				Local arg:TExpr = args[0]
+				If TConstExpr(arg) Then
+					Local expr:TExpr = New TConstExpr.Create(TType.intType, Sgn(Int(TConstExpr(arg).value)))
+					_appInstance.removeStringConst(TConstExpr(arg).value)
+					expr.Semant()
+					Return expr
+				End If
 			Case "asc"
 				Local arg:TExpr = args[0]
 				If TConstExpr(arg) Then
@@ -460,6 +468,14 @@ Type TInvokeExpr Extends TExpr
 
 	Method Eval$()
 		Select decl.ident.ToLower()
+			Case "sgn"
+				If args.length = 1 Then
+					Local v:String = String(args[0].Eval())
+					If v Then
+						Return Sgn(int(v))
+					End If
+				End If
+				DebugStop
 			Case "asc"
 				If args.length = 1 Then
 					Local v:String = String(args[0].Eval())
@@ -1847,6 +1863,24 @@ Type TAscExpr Extends TBuiltinExpr
 
 	Method ToString$()
 		Return "TAscExpr("+expr.ToString()+")"
+	End Method
+
+End Type
+
+Type TSgnExpr Extends TBuiltinExpr
+
+	Method Create:TSgnExpr( expr:TExpr )
+		Self.id="sgn"
+		Self.expr=expr
+		Return Self
+	End Method
+
+	Method Copy:TExpr()
+		Return New TSgnExpr.Create( CopyExpr(expr) )
+	End Method
+
+	Method ToString$()
+		Return "TSgnExpr("+expr.ToString()+")"
 	End Method
 
 End Type

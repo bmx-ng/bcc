@@ -583,6 +583,7 @@ End Rem
 		If TMaxExpr(expr) Return TransMaxExpr(TMaxExpr(expr))
 		If TAbsExpr(expr) Return TransAbsExpr(TAbsExpr(expr))
 		If TAscExpr(expr) Return TransAscExpr(TAscExpr(expr))
+		If TSgnExpr(expr) Return TransSgnExpr(TSgnExpr(expr))
 		If TLenExpr(expr) Return TransLenExpr(TLenExpr(expr))
 		If TSizeOfExpr(expr) Return TransSizeOfExpr(TSizeOfExpr(expr))
 		Err "TODO : TransBuiltinExpr()"
@@ -598,6 +599,9 @@ End Rem
 	End Method
 
 	Method TransAscExpr:String(expr:TAscExpr)
+	End Method
+
+	Method TransSgnExpr:String(expr:TSgnExpr)
 	End Method
 
 	Method TransLenExpr:String(expr:TLenExpr)

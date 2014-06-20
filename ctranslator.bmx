@@ -633,7 +633,7 @@ t:+"NULLNULLNULL"
 
 		' built-in functions
 		Select decl.ident.ToLower()
-			Case "min", "max", "len", "asc", "chr"
+			Case "min", "max", "len", "asc", "chr", "sgn"
 				Return TransBuiltin(decl, args)
 		End Select
 
@@ -699,6 +699,10 @@ t:+"NULLNULLNULL"
 						Return TCastExpr(arg).expr.Trans() + "->scales[0]"
 					End If
 				End If
+			Case "sgn"
+				Local arg:TExpr = args[0]
+				If TConstExpr(arg) InternalErr ' we should have handled this case already
+				Return "bbStringSgn" + TransArgs(args, decl)
 			Case "asc"
 				Local arg:TExpr = args[0]
 				If TConstExpr(arg) InternalErr ' we should have handled this case already
@@ -736,6 +740,9 @@ t:+"NULLNULLNULL"
 	End Method
 
 	Method TransAscExpr:String(expr:TAscExpr)
+	End Method
+
+	Method TransSgnExpr:String(expr:TSgnExpr)
 	End Method
 
 	Method TransAbsExpr:String(expr:TAbsExpr)
