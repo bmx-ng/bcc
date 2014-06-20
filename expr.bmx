@@ -1807,11 +1807,13 @@ Type TLenExpr Extends TBuiltinExpr
 		If exprType Return Self
 
 		expr=expr.Semant()
-		
+
 		' anything other than a string or array will become "1", and
 		' return a length of 1 accordingly.
 		If not TStringType(expr.exprType) and not TArrayType(expr.exprType) Then
-			expr = New TConstExpr.Create( TType.stringType, "1" ).Semant()
+			expr = New TConstExpr.Create( TType.intType, 1 ).Semant()
+			'this is not useful for numerics
+			'expr = New TConstExpr.Create( TType.stringType, "1" ).Semant()
 			_appInstance.mapStringConsts(TConstExpr(expr).value)
 		End If
 

@@ -690,6 +690,7 @@ t:+"NULLNULLNULL"
 				End If
 			Case "len"
 				Local arg:TExpr = args[0]
+
 				If TStringType(arg.exprType) Then
 					Return TVarExpr(arg).decl.munged + "->length"
 				Else If TArrayType(arg.exprType) Then
@@ -698,6 +699,9 @@ t:+"NULLNULLNULL"
 					If TArrayType(TCastExpr(arg).expr.exprType) Then
 						Return TCastExpr(arg).expr.Trans() + "->scales[0]"
 					End If
+				'other types just have a length of "1"
+				Else
+					Return "1"
 				End If
 			Case "sgn"
 				Local arg:TExpr = args[0]
@@ -768,6 +772,14 @@ t:+"NULLNULLNULL"
 	End Method
 
 	Method TransLenExpr:String(expr:TLenExpr)
+		'constant strings do not have "->length", so we use the
+		'precalculated value
+		if TConstExpr(expr.expr) Then
+			if TStringType(expr.expr.exprType) Then
+				Return TConstExpr(expr.expr).value.Length
+			End If
+		End If
+		
 		If TStringType(expr.expr.exprType) Then
 			Return expr.expr.Trans() + "->length"
 		Else If TArrayType(expr.expr.exprType) Then
@@ -776,6 +788,9 @@ t:+"NULLNULLNULL"
 			If TArrayType(TCastExpr(expr.expr).expr.exprType) Then
 				Return TCastExpr(expr.expr).expr.Trans() + "->scales[0]"
 			End If
+		'other types just have a length of "1"
+		Else
+			Return "1"
 		End If
 	End Method
 
