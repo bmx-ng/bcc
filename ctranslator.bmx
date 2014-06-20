@@ -701,8 +701,20 @@ t:+"NULLNULLNULL"
 				End If
 			Case "sgn"
 				Local arg:TExpr = args[0]
-				If TConstExpr(arg) InternalErr ' we should have handled this case already
-				Return "bbStringSgn" + TransArgs(args, decl)
+				'should be handled already
+				If TConstExpr(arg) then InternalErr
+
+				'decide whether to use float or int (cast done BEFORE
+				'sgn() is executed)
+				'bbFloatSng/bbIntSng call "Sgn#(v#)" as defined
+				'in config.bmx -> keywords
+				If TFloatType(arg.exprType) Or TDoubleType(arg.exprType)
+					'decl.ident contains "sgn", same like "bbFloatSng"
+					Return "bbFloat" + decl.ident + TransArgsTypes(args, [TType.floatType])
+				Else
+					' TODO : Long support
+					Return "bbInt" + decl.ident + TransArgs(args, decl)
+				End If
 			Case "asc"
 				Local arg:TExpr = args[0]
 				If TConstExpr(arg) InternalErr ' we should have handled this case already

@@ -420,7 +420,16 @@ Type TInvokeExpr Extends TExpr
 			Case "sgn"
 				Local arg:TExpr = args[0]
 				If TConstExpr(arg) Then
-					Local expr:TExpr = New TConstExpr.Create(TType.intType, Sgn(Int(TConstExpr(arg).value)))
+					'use different calls to only return a "float sgn"
+					'when param is a float
+					Local val:string = TConstExpr(arg).value
+					Local expr:TExpr
+					If string(int(val)) = val
+						expr = New TConstExpr.Create(TType.intType, Sgn(Int(TConstExpr(arg).value)))
+					Else
+						expr = New TConstExpr.Create(TType.intType, Sgn(Float(TConstExpr(arg).value)))
+					End If
+					
 					_appInstance.removeStringConst(TConstExpr(arg).value)
 					expr.Semant()
 					Return expr
@@ -470,9 +479,13 @@ Type TInvokeExpr Extends TExpr
 		Select decl.ident.ToLower()
 			Case "sgn"
 				If args.length = 1 Then
+					'use different calls to only return a "float sgn"
+					'when param is a float
 					Local v:String = String(args[0].Eval())
-					If v Then
-						Return Sgn(int(v))
+					If string(int(v)) = v
+						Return Sgn(Int(v))
+					Else
+						Return Sgn(Float(v))
 					End If
 				End If
 				DebugStop
