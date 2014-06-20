@@ -1745,6 +1745,9 @@ End Rem
 		If proto Then
 			If odecl.IsExtern() Then
 				pre = "extern "
+				If TFunctionPtrType(odecl.retType) Then
+					pre = ""
+				End If
 			End If
 			bk = ";"
 		End If
@@ -1827,7 +1830,7 @@ End Rem
 			decl.Semant()
 
 			If TFunctionPtrType(decl.ty) Then
-				Emit "extern "+TransRefType( decl.ty, decl.munged ) + ";"
+				Emit TransRefType( decl.ty, decl.munged ) + ";"
 			Else
 				Emit "extern "+TransRefType( decl.ty, "" )+" "+ decl.munged+";"
 			End If
@@ -2968,7 +2971,7 @@ End Rem
 					Emit "extern "+TransRefType( gdecl.ty, "" )+" "+gdecl.munged+";"	'forward reference...
 				Else
 'DebugStop
-					Emit "extern "+TransRefType( gdecl.ty, gdecl.munged )+";"	'forward reference...
+					Emit TransRefType( gdecl.ty, gdecl.munged )+";"	'forward reference...
 				End If
 				Continue
 			EndIf
@@ -3126,7 +3129,7 @@ End Rem
 						Emit TransRefType( gdecl.ty, "WW" )+" "+gdecl.munged+";"
 					End If
 				Else
-					Emit TransRefType( gdecl.ty, gdecl.munged ) + ";"
+					'Emit TransRefType( gdecl.ty, gdecl.munged ) + ";"
 				End If
 				Continue
 			EndIf

@@ -622,21 +622,34 @@ Type TScopeDecl Extends TDecl
 		If adecl.CheckAccess() Return adecl.decl
 	End Method
 	
-	Method FindDecl:Object( ident$, static:Int = False )
-		Local decl:Object=GetDecl( ident )
+
+	Method FindDecl:Object( ident$ )
+	
+		If _env<>Self Return GetDecl( ident )
 		
-		If Not static Or Not decl Then
+		Local tscope:TScopeDecl=Self
+		While tscope
+			Local decl:TDecl=TDecl(tscope.GetDecl( ident ))
 			If decl Return decl
-		Else
-			If Not TFieldDecl(decl) And Not (TFuncDecl(decl) And TFuncDecl(decl).IsMethod()) Then
-				Return decl
-			End If
-		End If
-		If scope Return scope.FindDecl( ident, static )
+			tscope=tscope.scope
+		Wend
 	End Method
+
+'	Method FindDecl:Object( ident$, static:Int = False )
+'		Local decl:Object=GetDecl( ident )
+'		
+'		If Not static Or Not decl Then
+'			If decl Return decl
+'		Else
+'			If Not TFieldDecl(decl) And Not (TFuncDecl(decl) And TFuncDecl(decl).IsMethod()) Then
+'				Return decl
+'			End If
+'		End If
+'		If scope Return scope.FindDecl( ident, static )
+'	End Method
 	
 	Method FindValDecl:TValDecl( ident$, static:Int = False )
-		Local decl:TValDecl=TValDecl( FindDecl( ident, static ) )
+		Local decl:TValDecl=TValDecl( FindDecl( ident ) )
 		If Not decl Return Null
 		decl.AssertAccess
 		decl.Semant
