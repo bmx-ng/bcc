@@ -1596,6 +1596,8 @@ Type TIdentExpr Extends TExpr
 			End If
 		Else
 			scope=_env
+			' determines if access is via static (like Function, or via a Type)
+			' However, for Field->Field access this is not strictly true.
 			static=_env.FuncScope()=Null Or _env.FuncScope().IsStatic()
 		End If
 
