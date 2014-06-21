@@ -215,6 +215,9 @@ Type TCTranslator Extends TTranslator
 				Else If value = "-inf.0" Then
 					Return "bbNEGINFf"
 				Else
+					If value.ToLower().Find("e") Then
+						Return value
+					End If
 					If value.Find(".") < 0 Then
 						value :+ ".0"
 					End If
@@ -231,6 +234,9 @@ Type TCTranslator Extends TTranslator
 				Else If value = "-inf.0" Then
 					Return "bbNEGINFd"
 				Else
+					If value.ToLower().Find("e") Then
+						Return value
+					End If
 					If value.Find(".") < 0 Then
 						value :+ ".0"
 					End If
@@ -706,7 +712,7 @@ t:+"NULLNULLNULL"
 			Case "sgn"
 				Local arg:TExpr = args[0]
 				'should be handled already
-				If TConstExpr(arg) then InternalErr
+				If TConstExpr(arg) Then InternalErr
 
 				'decide whether to use float or int (cast done BEFORE
 				'sgn() is executed)
@@ -730,29 +736,27 @@ t:+"NULLNULLNULL"
 	End Method
 
 	Method TransMinExpr:String(expr:TMinExpr)
-		Local isFloat:Int
-		If TFloatType(expr.exprType) Or TDoubleType(expr.exprType) Then
-			isFloat = True
-		End If
-		If isFloat Then
-			Return "bbFloatMin" + Bra(expr.expr.trans() + "," + expr.expr2.Trans())
+		Local s:String
+		If TDecimalType(expr.exprType) Then
+			s = "bbFloatMin"
+		Else If TLongType(expr.exprType) Then
+			s = "bbLongMin"
 		Else
-			' TODO : Long support
-			Return "bbIntMin" + Bra(expr.expr.trans() + "," + expr.expr2.Trans())
+			s = "bbIntMin"
 		End If
+		Return s + Bra(expr.expr.trans() + "," + expr.expr2.Trans())
 	End Method
 
 	Method TransMaxExpr:String(expr:TMaxExpr)
-		Local isFloat:Int
-		If TFloatType(expr.exprType) Or TDoubleType(expr.exprType) Then
-			isFloat = True
-		End If
-		If isFloat Then
-			Return "bbFloatMax" + Bra(expr.expr.trans() + "," + expr.expr2.Trans())
+		Local s:String
+		If TDecimalType(expr.exprType) Then
+			s = "bbFloatMax"
+		Else If TLongType(expr.exprType) Then
+			s = "bbLongMax"
 		Else
-			' TODO : Long support
-			Return "bbIntMax" + Bra(expr.expr.trans() + "," + expr.expr2.Trans())
+			s = "bbIntMax"
 		End If
+		Return s + Bra(expr.expr.trans() + "," + expr.expr2.Trans())
 	End Method
 
 	Method TransAscExpr:String(expr:TAscExpr)
@@ -762,20 +766,22 @@ t:+"NULLNULLNULL"
 	End Method
 
 	Method TransAbsExpr:String(expr:TAbsExpr)
-		If TDoubleType(expr.exprType) Then
-			Return "bbFloatAbs" + Bra(expr.expr.Trans())
+		Local s:String
+		If TDecimalType(expr.exprType) Then
+			s = "bbFloatAbs"
 		Else If TLongType(expr.exprType)
-			Return "bbLongAbs" + Bra(expr.expr.Trans())
+			s = "bbLongAbs"
 		Else
-			Return "bbIntAbs" + Bra(expr.expr.Trans())
+			s = "bbIntAbs"
 		End If
+		Return s + Bra(expr.expr.Trans())
 	End Method
 
 	Method TransLenExpr:String(expr:TLenExpr)
 		'constant strings do not have "->length", so we use the
 		'precalculated value
-		if TConstExpr(expr.expr) Then
-			if TStringType(expr.expr.exprType) Then
+		If TConstExpr(expr.expr) Then
+			If TStringType(expr.expr.exprType) Then
 				Return TConstExpr(expr.expr).value.Length
 			End If
 		End If
@@ -797,12 +803,12 @@ t:+"NULLNULLNULL"
 	Method TransSizeOfExpr:String(expr:TSizeOfExpr)
 		'ATTENTION:
 		'current assumption is: 2 Bytes per unicode character are used
-		local bytesPerChar:int = 2
+		Local bytesPerChar:Int = 2
 		            
 	
 		If TVarExpr(expr.expr) Then
 			'objects
-			If TObjectType(TVarExpr(expr.expr).exprType) then
+			If TObjectType(TVarExpr(expr.expr).exprType) Then
 				Return Bra(TVarExpr(expr.expr).decl.munged + "->clas->instance_size-(sizeof(void*))")
 
 			'numeric types are able to use sizeof(BBINT|BBFLOAT...)
@@ -818,7 +824,7 @@ t:+"NULLNULLNULL"
 			ElseIf TArrayType(TVarExpr(expr.expr).exprType) Then
 				'normal exprType is something like "int[]" that
 				'is why it has to be checked against elemType
-				local elemType:TType = TArrayType( TVarExpr(expr.expr).exprType ).elemType
+				Local elemType:TType = TArrayType( TVarExpr(expr.expr).exprType ).elemType
 
 				'numerics
 				If TNumericType(elemType) Then
@@ -861,7 +867,7 @@ t:+"NULLNULLNULL"
 			ElseIf TArrayType(TConstExpr(expr.expr).exprType) Then
 				'normal exprType is something like "int[]" that
 				'is why it has to be checked against elemType
-				local elemType:TType = TArrayType( TConstExpr(expr.expr).exprType ).elemType
+				Local elemType:TType = TArrayType( TConstExpr(expr.expr).exprType ).elemType
 
 				'numerics
 				If TNumericType(elemType) Then

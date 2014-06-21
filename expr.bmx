@@ -146,6 +146,7 @@ Type TExpr
 			If TPointerType( lhs ) Return lhs
 			If TPointerType( rhs ) Return rhs
 		End If
+		If TLongType( lhs ) Or TLongType( rhs ) Return TType.longType
 		If TIntType( lhs ) Or TIntType( rhs ) Return TType.intType
 		If TObjectType( lhs ) And TNullDecl(TObjectType( lhs ).classDecl) Then
 			Return rhs
@@ -422,9 +423,9 @@ Type TInvokeExpr Extends TExpr
 				If TConstExpr(arg) Then
 					'use different calls to only return a "float sgn"
 					'when param is a float
-					Local val:string = TConstExpr(arg).value
+					Local val:String = TConstExpr(arg).value
 					Local expr:TExpr
-					If string(int(val)) = val
+					If String(Int(val)) = val
 						expr = New TConstExpr.Create(TType.intType, Sgn(Int(TConstExpr(arg).value)))
 					Else
 						expr = New TConstExpr.Create(TType.intType, Sgn(Float(TConstExpr(arg).value)))
@@ -482,7 +483,7 @@ Type TInvokeExpr Extends TExpr
 					'use different calls to only return a "float sgn"
 					'when param is a float
 					Local v:String = String(args[0].Eval())
-					If string(int(v)) = v
+					If String(Int(v)) = v
 						Return Sgn(Int(v))
 					Else
 						Return Sgn(Float(v))
@@ -1812,7 +1813,7 @@ Type TLenExpr Extends TBuiltinExpr
 
 		' anything other than a string or array will become "1", and
 		' return a length of 1 accordingly.
-		If not TStringType(expr.exprType) and not TArrayType(expr.exprType) Then
+		If Not TStringType(expr.exprType) And Not TArrayType(expr.exprType) Then
 			expr = New TConstExpr.Create( TType.intType, 1 ).Semant()
 			'this is not useful for numerics
 			'expr = New TConstExpr.Create( TType.stringType, "1" ).Semant()
@@ -1920,7 +1921,7 @@ Type TMinExpr Extends TBuiltinExpr
 		expr=expr.Semant()
 		expr2=expr2.Semant()
 
-		exprType=TType.intType
+		exprType=BalanceTypes(expr.exprType, expr2.exprType)
 		Return Self
 	End Method
 
@@ -1951,7 +1952,7 @@ Type TMaxExpr Extends TBuiltinExpr
 		expr=expr.Semant()
 		expr2=expr2.Semant()
 
-		exprType=TType.intType
+		exprType=BalanceTypes(expr.exprType, expr2.exprType)
 		Return Self
 	End Method
 
