@@ -343,6 +343,9 @@ End Rem
 	
 	Method TransSubExpr$( expr:TExpr,pri:Int=2 )
 		Local t_expr$=expr.Trans()
+		If expr.exprType._flags & TTYPE.T_VAR Then
+			t_expr = Bra("*" + t_expr)
+		End If
 		If ExprPri( expr )>pri t_expr=Bra( t_expr )
 		Return t_expr
 	End Method
@@ -545,7 +548,7 @@ End Rem
 		If stmt.expr Then
 'DebugStop
 			If TObjectType(stmt.expr.exprType) And TNullDecl(TObjectType(stmt.expr.exprType).classDecl) Then
-				If TPointerType(stmt.fRetType) Or TNumericType(stmt.fRetType) Then
+				If IsPointerType(stmt.fRetType, 0, TType.T_POINTER) Or IsNumericType(stmt.fRetType) Then
 					Return t + " 0"
 				End If
 				If TStringType(stmt.fRetType) Then

@@ -58,14 +58,14 @@ Type TForEachinStmt Extends TStmt
 		If TArrayType( expr.exprType ) Or TStringType( expr.exprType )
 
 			Local exprTmp:TLocalDecl=New TLocalDecl.Create( "",Null,expr )
-			Local indexTmp:TLocalDecl=New TLocalDecl.Create( "",Null,New TConstExpr.Create( TType.intType,"0" ) )
+			Local indexTmp:TLocalDecl=New TLocalDecl.Create( "",Null,New TConstExpr.Create( New TIntType,"0" ) )
 
 			Local lenExpr:TExpr=New TIdentExpr.Create( "Length",New TVarExpr.Create( exprTmp ) )
 
 			Local cmpExpr:TExpr=New TBinaryCompareExpr.Create( "<",New TVarExpr.Create( indexTmp ),lenExpr )
 
 			Local indexExpr:TExpr=New TIndexExpr.Create( New TVarExpr.Create( exprTmp ),[New TVarExpr.Create( indexTmp )] )
-			Local addExpr:TExpr=New TBinaryMathExpr.Create( "+",New TVarExpr.Create( indexTmp ),New TConstExpr.Create( TType.intType,"1" ) )
+			Local addExpr:TExpr=New TBinaryMathExpr.Create( "+",New TVarExpr.Create( indexTmp ),New TConstExpr.Create( New TIntType,"1" ) )
 
 			block.stmts.AddFirst New TAssignStmt.Create( "=",New TVarExpr.Create( indexTmp ),addExpr )
 
@@ -369,35 +369,35 @@ Type TParser
 	End Method
 
 	Method CParsePrimitiveType:TType()
-		If CParse( "short" ) Return TType.shortType
-		If CParse( "byte" ) Return TType.byteType
-		If CParse( "int" ) Return TType.intType
-		If CParse( "float" ) Return TType.floatType
-		If CParse( "string" ) Return TType.stringType
-		If CParse( "object" ) Return TType.objectType
-		If CParse( "long" ) Return TType.longType ' BaH Long
-		If CParse( "double" ) Return TType.doubleType
+		If CParse( "short" ) Return New TShortType
+		If CParse( "byte" ) Return New TByteType
+		If CParse( "int" ) Return New TIntType
+		If CParse( "float" ) Return New TFloatType
+		If CParse( "string" ) Return New TStringType
+		If CParse( "object" ) Return New TIdentType.Create( "brl.classes.object" )
+		If CParse( "long" ) Return New TLongType
+		If CParse( "double" ) Return New TDoubleType
 	End	Method
 
 	Method CParsePrimitiveNumberType:TType()
-		If CParse( "short" ) Return TType.shortType
-		If CParse( "byte" ) Return TType.byteType
-		If CParse( "int" ) Return TType.intType
-		If CParse( "float" ) Return TType.floatType
-		If CParse( "long" ) Return TType.longType ' BaH Long
-		If CParse( "double" ) Return TType.doubleType
+		If CParse( "short" ) Return New TShortType
+		If CParse( "byte" ) Return New TByteType
+		If CParse( "int" ) Return New TIntType
+		If CParse( "float" ) Return New TFloatType
+		If CParse( "long" ) Return New TLongType
+		If CParse( "double" ) Return New TDoubleType
 	End	Method
 
 	Method ParseNewType:TType()
-		If CParse( "void" ) Return TType.voidType
-		If CParse( "short" ) Return TType.shortType
-		If CParse( "byte" ) Return TType.byteType
-		If CParse( "int" ) Return TType.intType
-		If CParse( "float" ) Return TType.floatType
-		If CParse( "string" ) Return TType.stringType
-		If CParse( "object" ) Return TType.objectType
-		If CParse( "long" ) Return TType.longType ' BaH Long
-		If CParse( "double" ) Return TType.doubleType
+		If CParse( "void" ) Return New TVoidType
+		If CParse( "short" ) Return New TShortType
+		If CParse( "byte" ) Return New TByteType
+		If CParse( "int" ) Return New TIntType
+		If CParse( "float" ) Return New TFloatType
+		If CParse( "string" ) Return New TStringType
+		If CParse( "object" ) Return New TIdentType.Create( "brl.classes.object" )
+		If CParse( "long" ) Return New TLongType
+		If CParse( "double" ) Return New TDoubleType
 		Return ParseIdentType()
 	End Method
 
@@ -412,25 +412,25 @@ Type TParser
 		Select _toke
 		Case "@"
 			NextToke
-			ty=TType.byteType
+			ty=New TByteType
 		Case "@@"
 			NextToke
-			ty=TType.shortType
+			ty=New TShortType
 		Case "%"
 			NextToke
-			ty=TType.intType
+			ty=New TIntType
 		Case "#"
 			NextToke
-			ty=TType.floatType
+			ty=New TFloatType
 		Case "$"
 			NextToke
-			ty=TType.stringType
+			ty=New TStringType
 		Case "!"
 			NextToke
-			ty=TType.doubleType
+			ty=New TDoubleType
 		Case "%%"
 			NextToke
-			ty=TType.longType
+			ty=New TLongType
 		Case ":"
 			NextToke
 			ty=CParsePrimitiveNumberType()
@@ -454,69 +454,56 @@ Type TParser
 		'	ty=TType.boolType
 		Case "@"
 			NextToke
-			ty=TType.byteType
+			ty=New TByteType
 
-			If CParse("var") Then
-				ty = TType.MapToVarPointerType(ty)
-			Else If CParse("ptr") Then
+			If CParse("ptr") Then
 				ty = TType.MapToPointerType(ty)
 			End If
 		Case "@@"
 			NextToke
-			ty=TType.shortType
+			ty=New TShortType
 
-			If CParse("var") Then
-				ty = TType.MapToVarPointerType(ty)
-			Else If CParse("ptr") Then
+			If CParse("ptr") Then
 				ty = TType.MapToPointerType(ty)
 			End If
 		Case "%"
 			NextToke
-			ty=TType.intType
+			ty=New TIntType
 
-			If CParse("var") Then
-				ty = TType.MapToVarPointerType(ty)
-			Else If CParse("ptr") Then
+			If CParse("ptr") Then
 				ty = TType.MapToPointerType(ty)
 			End If
 		Case "%%"
 			NextToke
-			ty=TType.longType
+			ty=New TLongType
 
-			If CParse("var") Then
-				ty = TType.MapToVarPointerType(ty)
-			Else If CParse("ptr") Then
+			If CParse("ptr") Then
 				ty = TType.MapToPointerType(ty)
 			End If
 		Case "#"
 			NextToke
-			ty=TType.floatType
+			ty=New TFloatType
 
-			If CParse("var") Then
-				ty = TType.MapToVarPointerType(ty)
-			Else If CParse("ptr") Then
+			If CParse("ptr") Then
 				ty = TType.MapToPointerType(ty)
 			End If
 		Case "$"
 			NextToke
-			ty=TType.stringType
+			ty=New TStringType
 
 			If CParse("z") Then
-				ty = TType.stringToCharPointerType
+				ty._flags :| TType.T_CHAR_PTR
+				'ty = TType.stringToCharPointerType
 			Else If CParse("w") Then
-				ty = TType.stringToShortPointerType
+				ty._flags :| TType.T_SHORT_PTR
+				'ty = TType.stringToShortPointerType
 			End If
 
-			If CParse("var") Then
-				ty = TType.MapToVarPointerType(ty)
-			End If
 		Case "!"
 			NextToke
-			ty=TType.doubleType
+			ty=New TDoubleType
 
-			If CParse("var") Then
-				ty = TType.MapToVarPointerType(ty)
-			Else If CParse("ptr") Then
+			If CParse("ptr") Then
 				ty = TType.MapToPointerType(ty)
 			End If
 		Case ":"
@@ -534,35 +521,28 @@ Type TParser
 				If Not ty DoErr "Invalid Pointer type."
 			End If
 
-			If CParse("var") Then
-				ty = TType.MapToVarPointerType(ty)
-			End If
-
-' TODO
-'		Case "!" ' BaH Double
-'			NextToke
-'			ty=TType.doubleType
 		Case "("
 			' nothing to see here.
 			If _module.IsSuperStrict() Then
 				' BaH : default return type when not defined
-				ty=TType.voidType
+				ty=New TVoidType
 			Else
-				ty=TType.intType
+				ty=New TIntType
 			End If
 		Default
 			If _module.IsSuperStrict() Err "Illegal type expression."
-			ty=TType.intType
+			ty=New TIntType
 
-			If CParse("var") Then
-				ty = TType.MapToVarPointerType(ty)
-			Else If CParse("ptr") Then
+			If CParse("ptr") Then
 				ty = TType.MapToPointerType(ty)
 			End If
 		End Select
+		
+		' array ?
 		While CParse( "[]" )
 			ty=New TArrayType.Create( ty )
 		Wend
+		
 		Return ty
 	End Method
 
@@ -690,10 +670,10 @@ Type TParser
 			'expr=New TConstExpr.Create( TType.nullObjectType,"" )
 		Case "true"
 			NextToke
-			expr=New TConstExpr.Create( TType.intType,"1" )
+			expr=New TConstExpr.Create( New TIntType,"1" )
 		Case "false"
 			NextToke
-			expr=New TConstExpr.Create( TType.intType,"" )
+			expr=New TConstExpr.Create( New TIntType,"" )
 		Case "int","long","float","double","object","short","byte"
 
 			Local id$=_toke
@@ -702,15 +682,15 @@ Type TParser
 			If TIntType(ty) And id.ToLower() <> "int" Then
 				Select id.ToLower()
 					Case "byte"
-						ty = TType.byteType
+						ty = New TByteType
 					Case "short"
-						ty = TType.shortType
+						ty = New TShortType
 					Case "long"
-						ty = TType.longType
+						ty = New TLongType
 					Case "float"
-						ty = TType.floatType
+						ty = New TFloatType
 					Case "double"
-						ty = TType.doubleType
+						ty = New TDoubleType
 				End Select
 			End If
 
@@ -823,10 +803,10 @@ Type TParser
 		Case "varptr"
 			NextToke
 			expr=ParseExpr()
-			expr=New TCastExpr.Create( TType.varPointerType, expr, CAST_EXPLICIT )
+			expr=New TCastExpr.Create( New TVarPtrType, expr, CAST_EXPLICIT )
 		Case "pi"
 			NextToke
-			expr=New TConstExpr.Create( TType.doubleType, Pi )
+			expr=New TConstExpr.Create( New TDoubleType, Pi )
 		Case "self"
 			NextToke
 			expr=New TSelfExpr
@@ -877,7 +857,7 @@ Type TParser
 				'expr=New TIdentExpr.Create( ParseIdent() )
 			Case TOKE_INTLIT
 
-				expr=New TConstExpr.Create( TType.intType,_toke )
+				expr=New TConstExpr.Create( New TIntType,_toke )
 				NextToke
 
 				Local ty:TType = ParseConstNumberType()
@@ -885,10 +865,10 @@ Type TParser
 					TConstExpr(expr).ty = ty
 				End If
 			Case TOKE_LONGLIT
-				expr=New TConstExpr.Create( TType.longType,_toke )
+				expr=New TConstExpr.Create( New TLongType,_toke )
 				NextToke
 			Case TOKE_FLOATLIT
-				expr=New TConstExpr.Create( TType.floatType,_toke )
+				expr=New TConstExpr.Create( New TFloatType,_toke )
 				NextToke
 
 				Local ty:TType = ParseConstNumberType()
@@ -896,7 +876,7 @@ Type TParser
 					TConstExpr(expr).ty = ty
 				End If
 			Case TOKE_STRINGLIT
-				expr=New TConstExpr.Create( TType.stringType,BmxUnquote( _toke ) )
+				expr=New TConstExpr.Create( New TStringType,BmxUnquote( _toke ) )
 				_app.mapStringConsts(BmxUnquote( _toke ))
 				NextToke
 			Default
@@ -1238,7 +1218,7 @@ Type TParser
 			expr=ParseExpr()
 		Else
 			Parse "forever"
-			expr=New TConstExpr.Create( TType.boolType,"" )
+			expr=New TConstExpr.Create( New TBoolType,"" )
 		EndIf
 
 		Local stmt:TRepeatStmt=New TRepeatStmt.Create( block,expr )
@@ -1308,7 +1288,7 @@ Type TParser
 		If CParse( "step" )
 			stp=ParseExpr()
 		Else
-			stp=New TConstExpr.Create( TType.intType,"1" )
+			stp=New TConstExpr.Create( New TIntType,"1" )
 		EndIf
 
 		Local init:TStmt,expr:TExpr,incr:TStmt
@@ -1939,6 +1919,12 @@ Type TParser
 				Local argId$=ParseIdent()
 
 				Local ty:TType=ParseDeclType()
+
+				' var argument?
+				If CParse("var") Then
+					ty = TType.MapToVarType(ty)
+				End If
+
 				Local init:TExpr
 				' function pointer ?
 				If _toke = "(" Then
@@ -2153,12 +2139,12 @@ End Rem
 					nimps:+1
 				Until Not CParse(",")
 				imps=imps[..nimps]
-				superTy=TType.objectType
+				superTy=New TIdentType.Create( "brl.classes.object" )
 			Else
 				superTy=ParseIdentType()
 			EndIf
 		Else
-			superTy=TType.objectType
+			superTy=New TIdentType.Create( "brl.classes.object" )
 		EndIf
 Rem
 		If CParse( "implements" )
@@ -2976,7 +2962,7 @@ End Rem
 			If Not toker.Toke() Exit
 
 			con = 0
-			If Eval( toker,TType.intType ) = "1" con = 1
+			If Eval( toker,New TIntType ) = "1" con = 1
 
 Rem
 		Case "macos", "macosx86", "x86", "littleendian", "bigendian"
@@ -3122,38 +3108,38 @@ LittleEndian
 End Rem
 
 	' debug/release
-	env.InsertDecl New TConstDecl.Create( "debug",TType.intType,New TConstExpr.Create( TType.intType,opt_debug ),0 )
+	env.InsertDecl New TConstDecl.Create( "debug",New TIntType,New TConstExpr.Create( New TIntType,opt_debug ),0 )
 	'env.InsertDecl New TConstDecl.Create( "release",TType.intType,New TConstExpr.Create( TType.intType,opt_release ),0 )
 
 	' threaded
-	env.InsertDecl New TConstDecl.Create( "threaded",TType.intType,New TConstExpr.Create( TType.intType,opt_threaded ),0 )
+	env.InsertDecl New TConstDecl.Create( "threaded",New TIntType,New TConstExpr.Create( New TIntType,opt_threaded ),0 )
 
 	' macos
-	env.InsertDecl New TConstDecl.Create( "macos",TType.intType,New TConstExpr.Create( TType.intType,opt_platform="macos" ),0 )
-	env.InsertDecl New TConstDecl.Create( "macosx86",TType.intType,New TConstExpr.Create( TType.intType,opt_platform="macos" And opt_arch="x86"),0 )
-	env.InsertDecl New TConstDecl.Create( "macosppc",TType.intType,New TConstExpr.Create( TType.intType,opt_platform="macos" And opt_arch="ppc"),0 )
-	env.InsertDecl New TConstDecl.Create( "macosx64",TType.intType,New TConstExpr.Create( TType.intType,opt_platform="macos" And opt_arch="x64"),0 )
+	env.InsertDecl New TConstDecl.Create( "macos",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="macos" ),0 )
+	env.InsertDecl New TConstDecl.Create( "macosx86",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="macos" And opt_arch="x86"),0 )
+	env.InsertDecl New TConstDecl.Create( "macosppc",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="macos" And opt_arch="ppc"),0 )
+	env.InsertDecl New TConstDecl.Create( "macosx64",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="macos" And opt_arch="x64"),0 )
 
 	' windows
-	env.InsertDecl New TConstDecl.Create( "win32",TType.intType,New TConstExpr.Create( TType.intType,opt_platform="win32" ),0 )
-	env.InsertDecl New TConstDecl.Create( "win32x64",TType.intType,New TConstExpr.Create( TType.intType,(opt_platform="win64" And opt_arch="x64") Or (opt_platform="win32" And opt_arch="x64")),0 )
-	env.InsertDecl New TConstDecl.Create( "win64",TType.intType,New TConstExpr.Create( TType.intType,(opt_platform="win64" And opt_arch="x64") Or (opt_platform="win32" And opt_arch="x64")),0 )
+	env.InsertDecl New TConstDecl.Create( "win32",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="win32" ),0 )
+	env.InsertDecl New TConstDecl.Create( "win32x64",New TIntType,New TConstExpr.Create( New TIntType,(opt_platform="win64" And opt_arch="x64") Or (opt_platform="win32" And opt_arch="x64")),0 )
+	env.InsertDecl New TConstDecl.Create( "win64",New TIntType,New TConstExpr.Create( New TIntType,(opt_platform="win64" And opt_arch="x64") Or (opt_platform="win32" And opt_arch="x64")),0 )
 
 	' linux
-	env.InsertDecl New TConstDecl.Create( "linux",TType.intType,New TConstExpr.Create( TType.intType,opt_platform="linux" ),0 )
-	env.InsertDecl New TConstDecl.Create( "linuxx86",TType.intType,New TConstExpr.Create( TType.intType,opt_platform="linux" And opt_arch="x86"),0 )
-	env.InsertDecl New TConstDecl.Create( "linuxx64",TType.intType,New TConstExpr.Create( TType.intType,opt_platform="linux" And opt_arch="x64"),0 )
-	env.InsertDecl New TConstDecl.Create( "linuxARM",TType.intType,New TConstExpr.Create( TType.intType,opt_platform="linux" And opt_arch="arm"),0 )
+	env.InsertDecl New TConstDecl.Create( "linux",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="linux" ),0 )
+	env.InsertDecl New TConstDecl.Create( "linuxx86",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="linux" And opt_arch="x86"),0 )
+	env.InsertDecl New TConstDecl.Create( "linuxx64",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="linux" And opt_arch="x64"),0 )
+	env.InsertDecl New TConstDecl.Create( "linuxARM",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="linux" And opt_arch="arm"),0 )
 
 	' arch
-	env.InsertDecl New TConstDecl.Create( "ppc",TType.intType,New TConstExpr.Create( TType.intType,opt_arch="ppc" ),0 )
-	env.InsertDecl New TConstDecl.Create( "x86",TType.intType,New TConstExpr.Create( TType.intType,opt_arch="x86" ),0 )
-	env.InsertDecl New TConstDecl.Create( "x64",TType.intType,New TConstExpr.Create( TType.intType,opt_arch="x64" ),0 )
-	env.InsertDecl New TConstDecl.Create( "arm",TType.intType,New TConstExpr.Create( TType.intType,opt_arch="arm" ),0 )
+	env.InsertDecl New TConstDecl.Create( "ppc",New TIntType,New TConstExpr.Create( New TIntType,opt_arch="ppc" ),0 )
+	env.InsertDecl New TConstDecl.Create( "x86",New TIntType,New TConstExpr.Create( New TIntType,opt_arch="x86" ),0 )
+	env.InsertDecl New TConstDecl.Create( "x64",New TIntType,New TConstExpr.Create( New TIntType,opt_arch="x64" ),0 )
+	env.InsertDecl New TConstDecl.Create( "arm",New TIntType,New TConstExpr.Create( New TIntType,opt_arch="arm" ),0 )
 
 	' endian
-	env.InsertDecl New TConstDecl.Create( "bigendian",TType.intType,New TConstExpr.Create( TType.intType,opt_arch="ppc" ),0 )
-	env.InsertDecl New TConstDecl.Create( "littleendian",TType.intType,New TConstExpr.Create( TType.intType,opt_arch<>"ppc" ),0 )
+	env.InsertDecl New TConstDecl.Create( "bigendian",New TIntType,New TConstExpr.Create( New TIntType,opt_arch="ppc" ),0 )
+	env.InsertDecl New TConstDecl.Create( "littleendian",New TIntType,New TConstExpr.Create( New TIntType,opt_arch<>"ppc" ),0 )
 
 '	env.InsertDecl New TConstDecl.Create( "LANG",TType.stringType,New TConstExpr.Create( TType.stringType,ENV_LANG ),0 )
 '	env.InsertDecl New TConstDecl.Create( "TARGET",TType.stringType,New TConstExpr.Create( TType.stringType,ENV_TARGET ),0 )

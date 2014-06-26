@@ -346,16 +346,16 @@ Type TIParser
 			'Case TOKE_IDENT
 			'	expr=New TIdentExpr.Create( ParseIdent() )
 			Case TOKE_INTLIT
-				expr=New TConstExpr.Create( TType.intType,_toke )
+				expr=New TConstExpr.Create( New TIntType,_toke )
 				NextToke
 			Case TOKE_LONGLIT
-				expr=New TConstExpr.Create( TType.longType,_toke )
+				expr=New TConstExpr.Create( New TLongType,_toke )
 				NextToke
 			Case TOKE_FLOATLIT
-				expr=New TConstExpr.Create( TType.floatType,_toke )
+				expr=New TConstExpr.Create( New TFloatType,_toke )
 				NextToke
 			Case TOKE_STRINGLIT
-				expr=New TConstExpr.Create( TType.stringType,BmxUnquote( _toke ) )
+				expr=New TConstExpr.Create( New TStringType,BmxUnquote( _toke ) )
 				NextToke
 			Default
 				Err "Syntax error - unexpected token '"+_toke+"'"
@@ -390,7 +390,7 @@ Type TIParser
 				'EndIf
 			EndIf
 		Else
-			superTy = TType.objectType
+			superTy = New TIdentType.Create( "brl.classes.object" )
 		EndIf
 'DebugStop
 		Local classDecl:TClassDecl=New TClassDecl.Create( id,args,superTy,imps,attrs )
@@ -632,7 +632,7 @@ Type TIParser
 				End If
 				
 				If CParse("Var") Then
-					ty = TType.MapToVarPointerType(ty)
+					ty = TType.MapToVarType(ty)
 				End If
 
 				If CParse( "=" ) Then
@@ -948,7 +948,7 @@ End Rem
 				Else
 '					init = ParseUnaryExpr()
 					
-					If ty = TType.stringType
+					If TStringType(ty)
 						If CParse("$") Then
 							decl.declInit = ParseUnaryExpr()
 '							decl.init=New TConstExpr.Create(ty, ParseStringLit())
@@ -989,10 +989,10 @@ End Rem
 		'	ty=TType.boolType
 		Case "%"
 			NextToke
-			ty=TType.intType
+			ty=New TIntType
 
 			If CParse("%") Then
-				ty = TType.longType
+				ty = New TLongType
 			End If
 			
 			If CParse("&") And Not (attrs & DECL_FIELD) Then
@@ -1003,26 +1003,28 @@ End Rem
 			' pointer
 			If CParse( "*" ) Then
 
-				If ty = TType.longType Then
-					ty = TType.longPointerType
-				Else
-					ty = TType.intPointerType
-				End If
+				ty = TType.MapToPointerType(ty)
+				'If ty = TType.longType Then
+				'	ty = TType.longPointerType
+				'Else
+				'	ty = TType.intPointerType
+				'End If
 
 				' pointer pointer
 				If CParse( "*" ) Then
-					If ty = TType.longPointerType Then
-						ty = TType.longPointerPtrType
-					Else
-						ty = TType.intPointerPtrType
-					End If
+					ty = TType.MapToPointerType(ty)
+					'If ty = TType.longPointerType Then
+					'	ty = TType.longPointerPtrType
+					'Else
+					'	ty = TType.intPointerPtrType
+					'End If
 				End If
 				
 			End If
 			
 		Case "#"
 			NextToke
-			ty=TType.floatType
+			ty=New TFloatType
 
 			If CParse("&")  And Not (attrs & DECL_FIELD) Then
 				attrs :| DECL_GLOBAL
@@ -1030,22 +1032,24 @@ End Rem
 			End If
 
 			If CParse( "*" ) Then
-				ty = TType.floatPointerType
+				ty = TType.MapToPointerType(ty)
+				'ty = TType.floatPointerType
 
 				' pointer pointer
 				If CParse( "*" ) Then
-					ty = TType.floatPointerPtrType
+					ty = TType.MapToPointerType(ty)
+					'ty = TType.floatPointerPtrType
 				End If
 			End If
 			
 		Case "$"
 			NextToke
-			ty=TType.stringType
+			ty=New TStringType
 
 			If CParse("z") Then
-				ty = TType.stringToCharPointerType
+				ty._flags :| TType.T_CHAR_PTR
 			Else If CParse("w") Then
-				ty = TType.stringToShortPointerType
+				ty._flags :| TType.T_SHORT_PTR
 			End If
 
 			If CParse( "&" )  And Not (attrs & DECL_FIELD)
@@ -1054,7 +1058,7 @@ End Rem
 			End If
 		Case "!"
 			NextToke
-			ty=TType.doubleType
+			ty=New TDoubleType
 
 			If CParse("&")  And Not (attrs & DECL_FIELD) Then
 				attrs :| DECL_GLOBAL
@@ -1062,11 +1066,13 @@ End Rem
 			End If
 
 			If CParse( "*" ) Then
-				ty = TType.doublePointerType
+				ty = TType.MapToPointerType(ty)
+				'ty = TType.doublePointerType
 
 				' pointer pointer
 				If CParse( "*" ) Then
-					ty = TType.doublePointerPtrType
+					ty = TType.MapToPointerType(ty)
+					'ty = TType.doublePointerPtrType
 				End If
 			End If
 
@@ -1076,17 +1082,18 @@ End Rem
 			
 			If CParse("*") Then
 				If TIdentType(ty) Then
-					ty = New TIdentPtrType.Create(TIdentType(ty).ident, TIdentType(ty).args)
+					ty = TType.MapToPointerType(ty)
+					'ty = New TIdentPtrType.Create(TIdentType(ty).ident, TIdentType(ty).args)
 				End If
 			End If
 			
 			CParse("&")
 		Case "@"
 			NextToke
-			ty=TType.byteType
+			ty=New TByteType
 			
 			If CParse("@") Then
-				ty = TType.shortType
+				ty = New TShortType
 			End If
 
 			
@@ -1096,19 +1103,21 @@ End Rem
 			
 			If CParse( "*" ) Then
 
-				If ty = TType.byteType Then
-					ty = TType.bytePointerType
-				Else
-					ty = TType.shortPointerType
-				End If
+				ty = TType.MapToPointerType(ty)
+				'If ty = TType.byteType Then
+				'	ty = TType.bytePointerType
+				'Else
+				'	ty = TType.shortPointerType
+				'End If
 				
 				' byte pointer pointer ?
 				If CParse("*")  Then
-					If ty = TType.byteType Then
-						ty = TType.bytePointerPtrType
-					Else
-						ty = TType.shortPointerPtrType
-					End If
+					ty = TType.MapToPointerType(ty)
+					'If ty = TType.byteType Then
+					'	ty = TType.bytePointerPtrType
+					'Else
+					'	ty = TType.shortPointerPtrType
+					'End If
 				End If
 				
 			End If
@@ -1119,7 +1128,7 @@ End Rem
 		Default
 			'If _module.IsStrict() Err "Illegal type expression."
 'DebugStop
-			ty=TType.intType
+			ty=New TIntType
 		End Select
 		While CParse( "[]" )
 			ty=New TArrayType.Create( ty )
@@ -1137,43 +1146,48 @@ End Rem
 
 	Method ParseNewType:TType()
 		If CParse( "byte" ) Or CParse( "@" )
-'DebugStop
+			Local ty:TType = New TByteType
 			If CParse("ptr") Or CParse( "*" ) Then
-				Return TType.bytePointerType
+				Return TType.MapToPointerType(ty)
 			End If
-			Return TType.byteType
+			Return ty
 		End If
-		If CParse( "short" ) 
+		If CParse( "short" )
+			Local ty:TType = New TShortType
 			If CParse("ptr") Then
-				Return TType.bytePointerType
+				Return TType.MapToPointerType(ty)
 			End If
-			Return TType.shortType
+			Return ty
 		End If
 		If CParse( "int" ) Or CParse( "%" )
+			Local ty:TType = New TIntType
 			If CParse("ptr") Or CParse( "*" ) Then
-				Return TType.bytePointerType
+				Return TType.MapToPointerType(ty)
 			End If
-			Return TType.intType
+			Return ty
 		End If
 		If CParse( "float" )
+			Local ty:TType = New TFloatType
 			If CParse("ptr") Then
-				Return TType.bytePointerType
+				Return TType.MapToPointerType(ty)
 			End If
-			Return TType.floatType
+			Return ty
 		End If
-		If CParse( "string" ) Return TType.stringType
-		If CParse( "object" ) Return TType.objectType
+		If CParse( "string" ) Return New TStringType
+		If CParse( "object" ) Return New TIdentType.Create( "brl.classes.object" )
 		If CParse( "long" )
+			Local ty:TType = New TLongType
 			If CParse("ptr") Then
-				Return TType.bytePointerType
+				Return TType.MapToPointerType(ty)
 			End If
-			Return TType.longType ' BaH Long
+			Return ty
 		End If
 		If CParse( "double" )
+			Local ty:TType = New TDoubleType
 			If CParse("ptr") Then
-				Return TType.bytePointerType
+				Return TType.MapToPointerType(ty)
 			End If
-			Return TType.doubleType
+			Return ty
 		End If
 		Return ParseIdentType()
 	End Method

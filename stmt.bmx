@@ -98,7 +98,7 @@ Type TAssignStmt Extends TStmt
 		If TInvokeExpr( lhs ) Or TInvokeMemberExpr( lhs )
 			rhs=Null
 		Else
-			If TPointerType(lhs.exprType) And TNumericType(rhs.exprType) Then
+			If IsPointerType(lhs.exprType, 0, TType.T_POINTER | TType.T_VAR | TType.T_VARPTR) And TNumericType(rhs.exprType) Then
 				' with pointer assignment we don't cast the numeric to a pointer
 			Else
 				rhs=rhs.Cast( lhs.exprType )
@@ -316,7 +316,7 @@ Type TIfStmt Extends TStmt
 	End Method
 	
 	Method OnSemant()
-		expr=expr.SemantAndCast( TType.boolType,CAST_EXPLICIT )
+		expr=expr.SemantAndCast( New TBoolType,CAST_EXPLICIT )
 		thenBlock.Semant
 		elseBlock.Semant
 	End Method
@@ -341,7 +341,7 @@ Type TWhileStmt Extends TStmt
 	End Method
 	
 	Method OnSemant()
-		expr=expr.SemantAndCast( TType.boolType,CAST_EXPLICIT )
+		expr=expr.SemantAndCast( New TBoolType,CAST_EXPLICIT )
 		_loopnest:+1
 		block.Semant
 		_loopnest:-1
@@ -370,7 +370,7 @@ Type TRepeatStmt Extends TStmt
 		_loopnest:+1
 		block.Semant
 		_loopnest:-1
-		expr=expr.SemantAndCast( TType.boolType,CAST_EXPLICIT )
+		expr=expr.SemantAndCast( New TBoolType,CAST_EXPLICIT )
 	End Method
 	
 	Method Trans$()
@@ -448,9 +448,9 @@ Type TAssertStmt Extends TStmt
 	End Method
 	
 	Method OnSemant()
-		expr=expr.SemantAndCast( TType.boolType,CAST_EXPLICIT )
+		expr=expr.SemantAndCast( New TBoolType,CAST_EXPLICIT )
 		If elseExpr Then
-			elseExpr = elseExpr.SemantAndCast(TType.stringType,CAST_EXPLICIT)
+			elseExpr = elseExpr.SemantAndCast(New TStringType,CAST_EXPLICIT)
 		End If
 	End Method
 	

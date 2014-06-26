@@ -116,7 +116,7 @@ Type TExpr
 				End If
 
 				If TInvokeExpr(args[i]) And Not TInvokeExpr(args[i]).invokedWithBraces Then
-					If Not TBytePtrType(funcDecl.argDecls[i].ty) And Not TFunctionPtrType(funcDecl.argDecls[i].ty) Then
+					If Not IsPointerType(funcDecl.argDecls[i].ty, TType.T_BYTE) And Not TFunctionPtrType(funcDecl.argDecls[i].ty) Then
 						Err "Unable to convert from '" + args[i].exprType.ToString() + "()' to '" + funcDecl.argDecls[i].ty.ToString() + "'"
 					End If
 				End If
@@ -131,23 +131,28 @@ Type TExpr
 	End Method
 
 	Method BalanceTypes:TType( lhs:TType,rhs:TType )
-		If TVarPtrType(lhs) Then
-			lhs = TType.MapVarPointerToPrim(lhs)
-		End If
+'DebugStop
+		'If lhs._flags & TType.T_VAR Then
+		'	lhs = TType.MapVarPointerToPrim(lhs)
+		'End If
 
-		If TVarPtrType(rhs) Then
-			rhs = TType.MapVarPointerToPrim(rhs)
-		End If
+		'If rhs._flags & TType.T_VAR Then
+		'	rhs = TType.MapVarPointerToPrim(rhs)
+		'End If
 
-		If TStringType( lhs ) Or TStringType( rhs ) Return TType.stringType
-		If TDoubleType( lhs ) Or TDoubleType( rhs ) Return TType.floatType
-		If TFloatType( lhs ) Or TFloatType( rhs ) Return TType.floatType
-		If TPointerType( lhs ) Or TPointerType( rhs ) Then
-			If TPointerType( lhs ) Return lhs
-			If TPointerType( rhs ) Return rhs
+		If TStringType( lhs ) Or TStringType( rhs ) Return New TStringType
+		If TDoubleType( lhs ) Or TDoubleType( rhs ) Return New TFloatType
+		If TFloatType( lhs ) Or TFloatType( rhs ) Return New TFloatType
+		If IsPointerType( lhs, 0, TType.T_POINTER ) Or IsPointerType( rhs, 0, TType.T_POINTER ) Then
+			If IsPointerType( lhs, 0, TType.T_POINTER ) Return lhs
+			If IsPointerType( rhs, 0, TType.T_POINTER ) Return rhs
 		End If
-		If TLongType( lhs ) Or TLongType( rhs ) Return TType.longType
-		If TIntType( lhs ) Or TIntType( rhs ) Return TType.intType
+		If TFunctionPtrType( lhs ) Or TFunctionPtrType( rhs ) Then
+			If TFunctionPtrType( lhs ) Return lhs
+			If TFunctionPtrType( rhs ) Return rhs
+		End If
+		If TLongType( lhs ) Or TLongType( rhs ) Return New TLongType
+		If TIntType( lhs ) Or TIntType( rhs ) Return New TIntType
 		If TObjectType( lhs ) And TNullDecl(TObjectType( lhs ).classDecl) Then
 			Return rhs
 		End If
@@ -426,9 +431,9 @@ Type TInvokeExpr Extends TExpr
 					Local val:String = TConstExpr(arg).value
 					Local expr:TExpr
 					If String(Int(val)) = val
-						expr = New TConstExpr.Create(TType.intType, Sgn(Int(TConstExpr(arg).value)))
+						expr = New TConstExpr.Create(New TIntType, Sgn(Int(TConstExpr(arg).value)))
 					Else
-						expr = New TConstExpr.Create(TType.intType, Sgn(Float(TConstExpr(arg).value)))
+						expr = New TConstExpr.Create(New TIntType, Sgn(Float(TConstExpr(arg).value)))
 					End If
 					
 					_appInstance.removeStringConst(TConstExpr(arg).value)
@@ -438,7 +443,7 @@ Type TInvokeExpr Extends TExpr
 			Case "asc"
 				Local arg:TExpr = args[0]
 				If TConstExpr(arg) Then
-					Local expr:TExpr = New TConstExpr.Create(TType.intType, Asc(TConstExpr(arg).value))
+					Local expr:TExpr = New TConstExpr.Create(New TIntType, Asc(TConstExpr(arg).value))
 					_appInstance.removeStringConst(TConstExpr(arg).value)
 					expr.Semant()
 					Return expr
@@ -446,7 +451,7 @@ Type TInvokeExpr Extends TExpr
 			Case "chr"
 				Local arg:TExpr = args[0]
 				If TConstExpr(arg) Then
-					Local expr:TConstExpr = New TConstExpr.Create(TType.stringType, Chr(Int(TConstExpr(arg).value)))
+					Local expr:TConstExpr = New TConstExpr.Create(New TStringType, Chr(Int(TConstExpr(arg).value)))
 					expr.Semant()
 					_appInstance.mapStringConsts(expr.value)
 					Return expr
@@ -663,7 +668,7 @@ Type TNewArrayExpr Extends TExpr
 		ty=ty.Semant()
 		exprType=New TArrayType.Create( ty )
 		For Local i:Int = 0 Until expr.length
-			expr[i]=expr[i].SemantAndCast( TType.intType )
+			expr[i]=expr[i].SemantAndCast( New TIntType )
 		Next
 		Return Self
 	End Method
@@ -778,6 +783,11 @@ Type TCastExpr Extends TExpr
 			If TArrayType(src) And TVoidType( TArrayType(src).elemType )
 				Return New TConstExpr.Create( ty,"" ).Semant()
 			EndIf
+			
+			If src._flags & TType.T_VARPTR Then
+				exprType = ty
+				Return Self
+			End If
 
 
 			If TStringType(src) And TObjectType(ty)
@@ -804,7 +814,7 @@ Type TCastExpr Extends TExpr
 					op="ToFloat"
 				Else If TStringType( ty )
 					op="ToString"
-				Else If TBytePtrType( ty )
+				Else If IsPointerType( ty, TType.T_BYTE )
 					exprType = ty
 					Return expr
 				Else
@@ -854,13 +864,13 @@ Type TCastExpr Extends TExpr
 			Return expr
 		End If
 
-		If TIntType(ty) And TPointerType(src) Then
+		If TIntType(ty) And Not IsPointerType(ty, 0, TType.T_POINTER) And IsPointerType(src, 0, TType.T_POINTER) Then
 			exprType = ty
 			Return expr
 		End If
 
 		' explicit cast to number
-		If TNumericType(ty) And TPointerType(src) And flags = CAST_EXPLICIT Then
+		If IsNumericType(ty) And IsPointerType(src, 0, TType.T_POINTER) And flags = CAST_EXPLICIT Then
 			exprType = ty
 			Return Self
 		End If
@@ -881,30 +891,12 @@ Type TCastExpr Extends TExpr
 			Return expr
 		End If
 
-		If TPointerType(ty) Then
-'DebugStop
-			If TNumericType(src) Then
-				If TType.pointerType = ty Then
-					exprType = TNumericType(src).ToPointer()
-				Else
-					exprType = ty
-				End If
-				Return Self
-			Else If TArrayType(src) Then
-				If TNumericType(TArrayType(src).elemType) Then
-					exprType = TNumericType(TArrayType(src).elemType).ToPointer()
-					Return Self
-				End If
-			Else If TStringType(src) Then
-				exprType = ty
-				Return Self
-			Else If TObjectType(src) And TVarPtrType(ty) Then
-				exprType = TType.bytePointerType
-				Return Self
-			End If
+		If TObjectType(src) And (ty._flags & TType.T_VAR) Then ' TODO : May be VARPTR instead?
+			exprType = NewPointerType(TType.T_BYTE)
+			Return Self
 		End If
 		
-		If TStringCharPtrType(src) And TStringType(ty) Then
+		If TStringType(src) And (src._flags & TType.T_CHAR_PTR) And TStringType(ty) Then
 			exprType = ty
 			Return Self
 		End If
@@ -927,6 +919,39 @@ Type TCastExpr Extends TExpr
 				exprType = ty
 				Return Self
 			End If
+		End If
+
+		If IsPointerType(ty, 0, TType.T_POINTER | TType.T_CHAR_PTR) Then
+			If IsNumericType(src) And Not (src._flags & TType.T_VARPTR) Then
+				'If IsPointerType(ty,0,TType.T_POINTER) Then
+				'	exprType = TNumericType(src).ToPointer()
+				'Else
+					exprType = ty
+				'End If
+				Return Self
+			Else If TNumericType(src) And (src._flags & TType.T_VARPTR) Then
+				exprType = expr.exprType
+			Else If TArrayType(src) Then
+				If TNumericType(TArrayType(src).elemType) Then
+					exprType = TNumericType(TArrayType(src).elemType).ToPointer()
+					Return Self
+				End If
+			Else If TStringType(src) Then
+				exprType = ty
+				Return Self
+			End If
+		End If
+		
+		If TStringType(src) And TStringType(ty) And (ty._flags & TType.T_VAR) Then
+			exprType = ty
+			Return Self
+		End If
+
+		If TVarPtrType(ty) And TNumericType(src) Then
+			exprType = TNumericType(src).Copy()
+			exprType._flags :| TType.T_VARPTR
+			ty = exprType
+			Return Self
 		End If
 
 		If Not exprType
@@ -1009,11 +1034,11 @@ Type TUnaryExpr Extends TExpr
 			If Not TNumericType( expr.exprType ) Err expr.ToString()+" must be numeric for use with unary operator '"+op+"'"
 			exprType=expr.exprType
 		Case "~~"
-			expr=expr.SemantAndCast( TType.intType )
-			exprType=TType.intType
+			expr=expr.SemantAndCast( New TIntType )
+			exprType=New TIntType
 		Case "not"
-			expr=expr.SemantAndCast( TType.boolType,CAST_EXPLICIT )
-			exprType=TType.boolType
+			expr=expr.SemantAndCast( New TBoolType,CAST_EXPLICIT )
+			exprType=New TBoolType
 		Default
 			InternalErr
 		End Select
@@ -1083,36 +1108,36 @@ Type TBinaryMathExpr Extends TBinaryExpr
 		Select op
 		Case "&","~~","|","mod","shl","shr"
 			If TDoubleType(lhs.exprType) Then
-				exprType=TType.longType
+				exprType=New TLongType
 			Else If TFloatType(lhs.exprType) Then
-				exprType=TType.intType
+				exprType=New TIntType
 			Else If TNumericType(lhs.exprType) Then
 				exprType=lhs.exprType
 			Else
-				exprType=TType.intType
+				exprType=New TIntType
 			End If
 		Case "^"
-			exprType=TType.doubleType
+			exprType=New TDoubleType
 		Default
 			exprType=BalanceTypes( lhs.exprType,rhs.exprType )
 			If TStringType( exprType )
 				If op<>"+"
 					Err "Illegal string operator."
 				EndIf
-			Else If Not TNumericType( exprType ) And Not TPointerType( exprType ) And Not TArrayType( exprType )
+			Else If Not TNumericType( exprType ) And Not IsPointerType( exprType, 0, TType.T_POINTER ) And Not TArrayType( exprType )
 				Err "Illegal expression type."
-			Else If TPointerType( exprType ) And op <> "+" And op <> "-" Then
+			Else If IsPointerType( exprType, 0, TType.T_POINTER ) And op <> "+" And op <> "-" Then
 				Err "Illegal expression type."
 			EndIf
 		End Select
 
-		If (op = "+" Or op = "-") And TPointerType(exprType) And TNumericType(lhs.exprType) Then
+		If (op = "+" Or op = "-") And IsPointerType(exprType, 0, TType.T_POINTER) And TNumericType(lhs.exprType) Then
 			' with pointer addition we don't cast the numeric to a pointer
 		Else
 			lhs=lhs.Cast( exprType )
 		End If
 		
-		If (op = "+" Or op = "-") And TPointerType(exprType) And TNumericType(rhs.exprType) Then
+		If (op = "+" Or op = "-") And IsPointerType(exprType, 0, TType.T_POINTER) And TNumericType(rhs.exprType) Then
 			' with pointer addition we don't cast the numeric to a pointer
 		Else
 			rhs=rhs.Cast( exprType )
@@ -1218,7 +1243,7 @@ Type TBinaryCompareExpr Extends TBinaryExpr
 		lhs=lhs.Cast( ty )
 		rhs=rhs.Cast( ty )
 
-		exprType=TType.boolType
+		exprType=New TBoolType
 
 		If TConstExpr( lhs ) And TConstExpr( rhs ) Return EvalConst()
 
@@ -1291,10 +1316,10 @@ Type TBinaryLogicExpr Extends TBinaryExpr
 	Method Semant:TExpr()
 		If exprType Return Self
 
-		lhs=lhs.SemantAndCast( TType.boolType,CAST_EXPLICIT )
-		rhs=rhs.SemantAndCast( TType.boolType,CAST_EXPLICIT )
+		lhs=lhs.SemantAndCast( New TBoolType,CAST_EXPLICIT )
+		rhs=rhs.SemantAndCast( New TBoolType,CAST_EXPLICIT )
 
-		exprType=TType.boolType
+		exprType=New TBoolType
 
 		If TConstExpr( lhs ) And TConstExpr( rhs ) Return EvalConst()
 
@@ -1333,21 +1358,21 @@ Type TIndexExpr Extends TExpr
 
 		expr=expr.Semant()
 		For Local i:Int = 0 Until index.length
-			index[i]=index[i].SemantAndCast( TType.intType )
+			index[i]=index[i].SemantAndCast( New TIntType )
 		Next
 
-		If TStringType( expr.exprType ) Or TStringVarPtrType( expr.exprType )
-			exprType=TType.intType
+		If TStringType( expr.exprType )
+			exprType=New TIntType
 			If index.length > 1 Then
 				Err "Illegal subexpression for string index"
 			End If
 		Else If TArrayType( expr.exprType )
-			exprType=TArrayType( expr.exprType ).elemType
+			exprType= TArrayType( expr.exprType ).elemType
 
 			If TArrayType( expr.exprType ).dims > 1 Then
 				Local sizeExpr:TExpr = New TArraySizeExpr.Create(expr, Null, index)
 				index = [sizeExpr]
-				Local tmp:TLocalDecl=New TLocalDecl.Create( "", TType.intPointerType, sizeExpr )
+				Local tmp:TLocalDecl=New TLocalDecl.Create( "", NewPointerType(TType.T_INT), sizeExpr )
 				TArraySizeExpr(sizeExpr).val = tmp
 				Local stmt:TExpr = New TStmtExpr.Create( New TDeclStmt.Create( tmp ), Self ).Semant()
 				stmt.exprType = exprType
@@ -1360,8 +1385,8 @@ Type TIndexExpr Extends TExpr
 			'	stmt.exprType = exprType
 			'	Return stmt
 			'End If
-		Else If TPointerType( expr.exprType) And Not TFunctionPtrType( expr.exprType )
-			exprType=TType.MapPointerToPrim(expr.exprType)
+		Else If TNumericType(expr.exprType) And IsPointerType( expr.exprType, 0 , TType.T_POINTER | TType.T_VARPTR)' And Not TFunctionPtrType( expr.exprType )
+			exprType=TType.MapPointerToPrim(TNumericType(expr.exprType))
 			'exprType=TType.intType
 		Else
 			Err "Only strings, arrays and pointers may be indexed."
@@ -1405,9 +1430,9 @@ Type TSliceExpr Extends TExpr
 		If exprType Return Self
 
 		expr=expr.Semant()
-		If TArrayType( expr.exprType ) Or TStringType( expr.exprType )  Or TStringVarPtrType( expr.exprType )
-			If from from=from.SemantAndCast( TType.intType )
-			If term term=term.SemantAndCast( TType.intType )
+		If TArrayType( expr.exprType ) Or TStringType( expr.exprType )
+			If from from=from.SemantAndCast( New TIntType )
+			If term term=term.SemantAndCast( New TIntType )
 			exprType=expr.exprType
 		Else
 			Err "Slices can only be used on strings or arrays."
@@ -1497,10 +1522,10 @@ Type TArraySizeExpr Extends TExpr
 		expr=expr.Semant()
 		
 		For Local i:Int = 0 Until index.length
-			index[i]=index[i].SemantAndCast( TType.intType )
+			index[i]=index[i].SemantAndCast( New TIntType )
 		Next
 		
-		exprType=TType.intPointerType
+		exprType=NewPointerType(TType.T_INT)
 		Return Self
 	End Method
 
@@ -1814,13 +1839,13 @@ Type TLenExpr Extends TBuiltinExpr
 		' anything other than a string or array will become "1", and
 		' return a length of 1 accordingly.
 		If Not TStringType(expr.exprType) And Not TArrayType(expr.exprType) Then
-			expr = New TConstExpr.Create( TType.intType, 1 ).Semant()
+			expr = New TConstExpr.Create( New TIntType, 1 ).Semant()
 			'this is not useful for numerics
 			'expr = New TConstExpr.Create( TType.stringType, "1" ).Semant()
 			_appInstance.mapStringConsts(TConstExpr(expr).value)
 		End If
 
-		exprType=TType.intType
+		exprType=New TIntType
 		Return Self
 	End Method
 
@@ -1848,11 +1873,11 @@ Type TAbsExpr Extends TBuiltinExpr
 		expr=expr.Semant()
 
 		If TIntType(expr.exprType) Or TByteType(expr.exprType) Or TShortType(expr.exprType) Then
-			exprType=TType.intType
+			exprType=New TIntType
 		Else If TLongType(expr.exprType) Then
-			exprType=TType.longType
+			exprType=New TLongType
 		Else
-			exprType=TType.doubleType
+			exprType=New TDoubleType
 		End If
 
 		Return Self
@@ -1978,7 +2003,7 @@ Type TSizeOfExpr Extends TBuiltinExpr
 		If exprType Return Self
 
 		expr=expr.Semant()
-		exprType=TType.intType
+		exprType=New TIntType
 		Return Self
 	End Method
 

@@ -142,7 +142,7 @@ Type TDecl
 
 	Method Semant()
 		If IsSemanted() Return
-		
+
 		If IsSemanting() Err "Cyclic declaration of '"+ident+"'."
 		
 		If actual<>Self
@@ -241,6 +241,7 @@ Type TValDecl Extends TDecl
 	End Method
 	
 	Method OnSemant()
+
 		If declTy
 			ty=declTy.Semant()
 			
@@ -716,7 +717,7 @@ End Rem
 	
 	Method FindFuncDecl:TFuncDecl( ident$,argExprs:TExpr[] = Null,explicit:Int=False, isArg:Int = False )
 'DebugLog "FindFuncDecl : " + ident
-'If ident = "cairo_user_to_device" Then DebugStop
+'If ident = "png_create_read_struct" Then DebugStop
 		'Local funcs:TFuncDeclList=TFuncDeclList( FindDecl( ident ) )
 		Local f:TDecl = TDecl(findDecl(ident))
 		If Not f Then Return Null
@@ -780,7 +781,7 @@ End Rem
 					End If
 
 					' not ideal - since the arg is configured as a Byte Ptr, we can't check that the function is of the correct type.
-					If TBytePtrType(declTy) And TInvokeExpr(argExprs[i]) Then
+					If IsPointerType(declTy, TType.T_BYTE) And TInvokeExpr(argExprs[i]) Then
 						Continue
 					End If
 					
