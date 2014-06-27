@@ -66,6 +66,8 @@ Type TType
 		End If
 		Return _arrayOf
 	End Method
+
+	Method OnCopy:TType() Abstract
 	
 	Global voidType:TVoidType=New TVoidType
 	Global emptyArrayType:TArrayType=New TArrayType.Create( voidType )
@@ -159,6 +161,14 @@ Type TType
 	Const T_ARRAY:Int       = $080
 	Const T_FUNCTIONPTR:Int = $100
 
+
+	Method Copy:TType()
+		Local ty:TType = OnCopy()
+		ty._flags = _flags
+		ty._arrayOf = _arrayOf
+		Return ty
+	End Method
+	
 End Type
 
 Function NewType:TType(kind:Int = 0)
@@ -248,6 +258,11 @@ Type TVoidType Extends TType
 	Method ToString$()
 		Return "Void"
 	End Method
+
+	Method OnCopy:TType()
+		Return New TVoidType
+	End Method
+
 End Type
 
 Type TNullType Extends TType
@@ -263,6 +278,11 @@ Type TNullType Extends TType
 	Method ToString$()
 		Return "NULL"
 	End Method
+
+	Method OnCopy:TType()
+		Return New TNullType
+	End Method
+
 End Type
 
 Type TBoolType Extends TType
@@ -283,22 +303,18 @@ Type TBoolType Extends TType
 		Return 4
 	End Method
 
+	Method OnCopy:TType()
+		Return New TBoolType
+	End Method
+
 End Type
 
 Type TNumericType Extends TType
 
-	Method OnCopy:TType() Abstract
 
 	Method ToPointer:TType()
 		Local ty:TType = Copy()
 		Return MapToPointerType(ty)
-	End Method
-	
-	Method Copy:TType()
-		Local ty:TType = OnCopy()
-		ty._flags = _flags
-		ty._arrayOf = _arrayOf
-		Return ty
 	End Method
 	
 End Type
@@ -487,7 +503,8 @@ Type TStringType Extends TType
 
 	Method ExtendsType:Int( ty:TType )	
 		Return EqualsType( ty ) Or (TObjectType( ty ) And TObjectType( ty ).classDecl.ident="Object") Or (TStringType(ty) And (_flags & T_VAR)) ..
-			Or (TStringType(ty) And (ty._flags & T_VAR)) Or (TStringType(ty) And (ty._flags & T_CHAR_PTR)) Or (TStringType(ty) And (ty._flags & T_SHORT_PTR))
+			Or (TStringType(ty) And (ty._flags & T_VAR)) Or (TStringType(ty) And (ty._flags & T_CHAR_PTR)) Or (TStringType(ty) And (ty._flags & T_SHORT_PTR)) ..
+			Or IsPointerType(ty)
 	End Method
 	
 	Method GetClass:TClassDecl()
@@ -508,7 +525,13 @@ Type TStringType Extends TType
 		GetClass()
 		Return Self
 	End Method
-	
+
+	Method OnCopy:TType()
+		Local ty:TStringType = New TStringType
+		ty.cdecl = cdecl
+		Return ty
+	End Method
+
 	Method ToString$()
 		Return "String"
 	End Method
@@ -550,7 +573,14 @@ Type TArrayType Extends TType
 		'Return _env.FindClassDecl( "array" )
 		Return TClassDecl( _env.FindDecl( "array" ) )
 	End Method
-	
+
+	Method OnCopy:TType()
+		Local ty:TArrayType = New TArrayType
+		ty.elemType = elemType
+		ty.dims = dims
+		Return ty
+	End Method
+
 	Method ToString$()
 		Return elemType.ToString()+"[]"
 	End Method
@@ -604,6 +634,13 @@ Type TObjectType Extends TType
 	Method ToString$()
 		Return classDecl.ToString()
 	End Method
+
+	Method OnCopy:TType()
+		Local ty:TObjectType = New TObjectType
+		ty.classDecl = classDecl
+		Return ty
+	End Method
+
 End Type
 
 Type TIdentType Extends TType
@@ -713,6 +750,14 @@ Type TIdentType Extends TType
 		If t Return "$"+ident+"<"+t.Replace("$","")+">"
 		Return "$"+ident
 	End Method
+
+	Method OnCopy:TType()
+		Local ty:TIdentType = New TIdentType
+		ty.ident = ident
+		ty.args = args
+		Return ty
+	End Method
+
 End Type
 
 Type TExternObjectType Extends TType
@@ -761,6 +806,12 @@ Type TExternObjectType Extends TType
 	
 	Method ToString$()
 		Return classDecl.ToString()
+	End Method
+
+	Method OnCopy:TType()
+		Local ty:TExternObjectType = New TExternObjectType
+		ty.classDecl = classDecl
+		Return ty
 	End Method
 End Type
 
@@ -812,8 +863,17 @@ Type TFunctionPtrType Extends TType
 		Return "Function Ptr"
 	End Method
 
+	Method OnCopy:TType()
+		Local ty:TFunctionPtrType = New TFunctionPtrType
+		ty.func = func
+		Return ty
+	End Method
+
 End Type
 
 ' a holder during parsing which becomes the "real" var ptr type during semanting
 Type TVarPtrType Extends TType
+	Method OnCopy:TType()
+		Return New TVarPtrType
+	End Method
 End Type

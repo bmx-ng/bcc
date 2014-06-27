@@ -230,7 +230,13 @@ Type TCTranslator Extends TTranslator
 			If TNumericType( ty ) Return "0" ' numeric and pointers
 			If TStringType( ty ) Return "&bbEmptyString"
 			If TArrayType( ty ) Return "&bbEmptyArray"
-			If TObjectType( ty ) Return "&bbNullObject"
+			If TObjectType( ty ) Then
+				If TObjectType( ty ).classDecl.IsExtern() Then
+					Return "0"
+				Else
+					Return "&bbNullObject"
+				End If
+			End If
 			If TFunctionPtrType( ty) Return "0" ' todo ??
 			'If TByteType( ty ) Return "0"
 		EndIf
@@ -967,6 +973,13 @@ t:+"NULLNULLNULL"
 				If TLongType( src) Return Bra("&"+t)
 				If TDoubleType( src) Return Bra("&"+t)
 
+				If TObjectType(src) Then
+					If TObjectType(src).classDecl.IsExtern() Then
+						Return Bra("&" + t)
+					Else
+						Return Bra("(BBBYTE*)" + Bra("&" + t)) + "+" + Bra("sizeof(void*)")
+					End If
+				End If
 				'If TPointerType( src) Return Bra("&"+t)
 			Else
 				Return Bra(TransValue(TConstExpr(expr.expr).ty, TConstExpr(expr.expr).value))
@@ -2071,7 +2084,13 @@ End Rem
 
 		'Emit "typedef struct " + classid + "_obj {"
 		If classDecl.IsExtern() Then
-			'Emit "struct " + classid + " {"
+			Emit "struct " + classid + "_obj {"
+
+			BeginLocalScope
+			EmitClassFieldsProto(classDecl)
+			EndLocalScope
+
+			Emit "};"
 		Else
 			Emit "struct " + classid + "_obj {"
 			Emit "struct BBClass_" + classid + "* clas;"
@@ -2358,7 +2377,7 @@ End Rem
 		'	Return
 		'EndIf
 
-		If classDecl.IsInterface() Or classDecl.IsExtern()
+		If classDecl.IsInterface() Or classDecl.IsExtern() Then
 			Return
 		EndIf
 
@@ -2394,8 +2413,8 @@ End Rem
 				End If
 			EndIf
 
-			'Local gdecl:TGlobalDecl=TGlobalDecl( decl )
-			'If gdecl
+		'Local gdecl:TGlobalDecl=TGlobalDecl( decl )
+		'If gdecl
 		'		Emit TransRefType( gdecl.ty )+" "+classid+"::"+gdecl.munged+";"
 		'		Continue
 		'	EndIf
@@ -2411,7 +2430,7 @@ End Rem
 			If fdecl EmitMark TransField(fdecl,Null),fdecl.ty,True
 		Next
 		Emit "}"
-	End Rem
+		End Rem
 
 		For Local decl:TDecl=EachIn classDecl.Semanted()
 			Local gdecl:TGlobalDecl =TGlobalDecl( decl )
@@ -2428,14 +2447,6 @@ End Rem
 
 		reserved = ",New,Delete,ToString,Compare,SendMessage,_reserved1_,_reserved2_,_reserved3_,".ToLower()
 
-		'
-Rem
-struct BBDebugScope{
-	int				kind;
-	const char		*name;
-	BBDebugDecl		decls[1];
-};
-End Rem
 		Emit "struct _" + classid + "_DebugScope{"
 		Emit "int kind;"
 		Emit "const char *name;"

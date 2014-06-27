@@ -267,6 +267,15 @@ Type TValDecl Extends TDecl
 	End Method
 	
 	Method SemantInit()
+		' for field initialisation, create a stub New() method to use as current scope
+		' since fields are initialised in New(). Otherwise the scope would be "class", which is
+		' incorrect for processing field inits.
+		If TFieldDecl(Self) And declInit Then
+			Local newScope:TFuncDecl = New TFuncDecl.CreateF( "new", Null,Null,FUNC_METHOD )
+			newScope.scope = _env
+			PushEnv(newScope)
+		End If
+	
 		If declTy
 			If declInit Then
 				If TFunctionPtrType(ty) Then
@@ -314,7 +323,12 @@ Type TValDecl Extends TDecl
 		Else If declInit
 			init=declInit.Copy().Semant()
 			ty=init.exprType
-		End If		
+		End If
+		
+		' remove the temporary scope
+		If TFieldDecl(Self) And declInit Then
+			PopEnv()
+		End If
 	End Method
 	
 End Type
@@ -717,7 +731,7 @@ End Rem
 	
 	Method FindFuncDecl:TFuncDecl( ident$,argExprs:TExpr[] = Null,explicit:Int=False, isArg:Int = False )
 'DebugLog "FindFuncDecl : " + ident
-'If ident = "png_create_read_struct" Then DebugStop
+'If ident = "sqlite3_prepare_v2" Then DebugStop
 		'Local funcs:TFuncDeclList=TFuncDeclList( FindDecl( ident ) )
 		Local f:TDecl = TDecl(findDecl(ident))
 		If Not f Then Return Null

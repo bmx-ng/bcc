@@ -947,8 +947,8 @@ Type TCastExpr Extends TExpr
 			Return Self
 		End If
 
-		If TVarPtrType(ty) And TNumericType(src) Then
-			exprType = TNumericType(src).Copy()
+		If TVarPtrType(ty) Then
+			exprType = src.Copy()
 			exprType._flags :| TType.T_VARPTR
 			ty = exprType
 			Return Self

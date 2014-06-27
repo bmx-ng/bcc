@@ -263,6 +263,10 @@ Type TIParser
 								End If
 							Else
 								Parse "0"
+								If Not class.munged Then
+									class.munged = class.ident
+									
+								End If
 							End If
 						EndIf
 
