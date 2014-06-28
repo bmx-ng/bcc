@@ -535,22 +535,20 @@ t:+"NULLNULLNULL"
 		If sup Then
 			tSuper = "->super"
 		End If
+		
+		If Not decl.munged
+			MungDecl decl
+		End If
 
 		If decl.IsMethod()
 			If lhs And Not TSelfExpr(lhs) Then
 				If TStringType(lhs.exprType) Then
 					Return decl.munged + TransArgs(args, decl, TransSubExpr( lhs ))
-'If decl.ident = "Print" DebugStop
-'DebugStop
-				'Else If lhs.exprType = TType.stringVarPointerType Then
-'DebugStop
-				'	Return decl.munged + TransArgs(args, decl, "*" + TransSubExpr( lhs ))
 				End If
 
 				If TStmtExpr(lhs) Then
 					lhs = TStmtExpr(lhs).expr
 				End If
-'If decl.ident = "Eof" DebugStop
 
 				If TVarExpr(lhs) Then
 					Local cdecl:TClassDecl
@@ -561,7 +559,8 @@ t:+"NULLNULLNULL"
 					End If
  					Local obj:String = Bra(TransObject(cdecl))
 					If decl.attrs & FUNC_PTR Then
-						Return "(" + obj + TransSubExpr( lhs ) + ")->" + decl.munged+TransArgs( args,decl, Null)
+						'Return "(" + obj + TransSubExpr( lhs ) + ")->" + decl.munged+TransArgs( args,decl, Null)
+						Return TransSubExpr( lhs ) + "->" + decl.munged+TransArgs( args,decl, Null)
 					Else
 						Local class:String = TransSubExpr( lhs ) + "->clas" + tSuper
 						Return class + "->" + TransFuncPrefix(cdecl, decl.ident) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
@@ -2714,6 +2713,10 @@ End Rem
 
 	Method TransIfcArgs:String(funcDecl:TFuncDecl)
 		Local args:String
+
+		If Not funcDecl.IsSemanted() Then
+			funcDecl.Semant()
+		End If
 
 		For Local i:Int=0 Until funcDecl.argDecls.Length
 			Local arg:TArgDecl = funcDecl.argDecls[i]
