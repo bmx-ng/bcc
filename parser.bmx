@@ -649,6 +649,11 @@ Type TParser
 'DebugStop
 			NextToke
 			Local ty:TType=ParseType()
+
+			While CParse("ptr")
+				ty = TType.MapToPointerType(ty)
+			Wend
+
 			If CParse( "[" )
 				Local ln:TExpr[]
 				Repeat
@@ -1543,7 +1548,6 @@ Type TParser
 		attrs = attrs | DECL_EXTERN
 		If CParse( "private" ) attrs=attrs|DECL_PRIVATE
 
-
 		While _toke<>"endextern"
 			If CParse( "end" )
 				Parse "extern"
@@ -1565,6 +1569,10 @@ Type TParser
 			End Select
 
 		Wend
+		
+		If _toke="endextern" Then
+			NextToke
+		End If
 
 	End Method
 
