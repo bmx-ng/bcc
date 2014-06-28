@@ -143,7 +143,9 @@ Type TTranslator
 				If decl.scope Then
 					munged = decl.scope.munged + "_" + id
 					
-					If TFieldDecl(decl) Then
+					' fields are lowercase with underscore prefix.
+					' a function pointer with FUNC_METHOD is a field function pointer.
+					If TFieldDecl(decl) Or (TFuncDecl(decl) And (decl.attrs & FUNC_METHOD) And (decl.attrs & FUNC_PTR)) Then
 						munged = "_" + munged.ToLower()
 					End If
 				Else
@@ -543,6 +545,7 @@ End Rem
 	End Method
 	
 	Method TransReturnStmt$( stmt:TReturnStmt )
+
 		Local t$="return"
 		unreachable=True
 		If stmt.expr Then
