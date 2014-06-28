@@ -380,7 +380,7 @@ Type TIParser
 		Local imps:TIdentType[]
 
 		DebugLog "Found Class :  " + id
-'End If
+
 		If CParse( "^" )
 
 			If CParse( "null" )
@@ -868,6 +868,10 @@ Type TIParser
 					ty = New TFunctionPtrType
 					TFunctionPtrType(ty).func = decl
 					
+					If attrs & DECL_FIELD Then
+						decl.attrs :| FUNC_METHOD
+					End If
+					
 				End If
 
 Rem
@@ -1144,6 +1148,9 @@ End Rem
 		While CParse( "[]" )
 			ty=New TArrayType.Create( ty )
 		Wend
+
+		If CParse( "&" ) Then
+		End If
 		
 		Return ty
 	End Method
