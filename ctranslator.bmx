@@ -528,7 +528,7 @@ t:+"NULLNULLNULL"
 '		Return decl.munged+swiz
 	End Method
 
-	Method TransFunc$( decl:TFuncDecl,args:TExpr[],lhs:TExpr, sup:Int = False )
+	Method TransFunc$( decl:TFuncDecl,args:TExpr[],lhs:TExpr, sup:Int = False, scope:TScopeDecl = Null )
 'If decl.ident = "png_destroy_read_struct" DebugStop
 		' for calling the super class method instead
 		Local tSuper:String
@@ -554,10 +554,10 @@ t:+"NULLNULLNULL"
 					Local cdecl:TClassDecl
 					If TObjectType(TVarExpr(lhs).decl.ty) Then
 						cdecl = TObjectType(TVarExpr(lhs).decl.ty).classDecl
-					'Else If TObjectVarPtrType(TVarExpr(lhs).decl.ty) Then
-					'	cdecl = TObjectVarPtrType(TVarExpr(lhs).decl.ty).classDecl
+					Else If TArrayType(TVarExpr(lhs).decl.ty) Then
+						Return decl.munged+TransArgs( args,decl, TransSubExpr( lhs ) )
 					End If
- 					Local obj:String = Bra(TransObject(cdecl))
+
 					If decl.attrs & FUNC_PTR Then
 						'Return "(" + obj + TransSubExpr( lhs ) + ")->" + decl.munged+TransArgs( args,decl, Null)
 						Return TransSubExpr( lhs ) + "->" + decl.munged+TransArgs( args,decl, Null)
@@ -619,10 +619,24 @@ t:+"NULLNULLNULL"
 
 			' ((brl_standardio_TCStandardIO_obj*)o->clas)->md_Read(o, xxx, xxx)
 			If Not (decl.attrs & FUNC_PTR) Then
-				Local obj:String = Bra("struct " + decl.scope.munged + "_obj*")
-				Local class:String = Bra("(" + obj + "o)->clas" + tSuper)
+			
+				Local class:String
+				
+				If Not scope Then
+					scope = decl.scope
+
+					Local obj:String = Bra("struct " + scope.munged + "_obj*")
+					class = "(" + obj + "o)->clas" + tSuper
+				Else
+
+					class = Bra("&" + scope.munged) + tSuper
+
+				End If
+				
+				'Local obj:String = Bra("struct " + scope.munged + "_obj*")
+				'Local class:String = Bra("(" + obj + "o)->clas" + tSuper)
 				'Local class:String = Bra("&" + decl.scope.munged)
-				Return class + "->" + TransFuncPrefix(decl.scope, decl.ident) + decl.ident+TransArgs( args,decl, "o" )
+				Return class + "->" + TransFuncPrefix(scope, decl.ident) + decl.ident+TransArgs( args,decl, "o" )
 			Else
 				Local obj:String = Bra("struct " + decl.scope.munged + "_obj*")
 				Return Bra(obj + "o") + "->" + decl.munged+TransArgs( args,decl )
@@ -655,15 +669,15 @@ t:+"NULLNULLNULL"
 	End Method
 
 	Method TransFuncPrefix:String(decl:TScopeDecl, ident:String)
-		If decl.ident = "Object" Or ident = "ToString" Or ident = "Compare" Or ident = "SendMessage" Then
+		If Not decl Or decl.ident = "Object" Or ident = "ToString" Or ident = "Compare" Or ident = "SendMessage" Then
 			Return ""
 		Else
 			Return "md_"
 		End If
 	End Method
 
-	Method TransSuperFunc$( decl:TFuncDecl,args:TExpr[] )
-		Return TransFunc(decl, args, Null, True)
+	Method TransSuperFunc$( decl:TFuncDecl,args:TExpr[], scope:TScopeDecl )
+		Return TransFunc(decl, args, Null, True, scope)
 '		If decl.IsMethod()
 '			Return decl.ClassScope().munged+".md_"+decl.ident+TransArgs( args,decl, "o" )
 '		Else
@@ -886,12 +900,12 @@ t:+"NULLNULLNULL"
 
 		'class instances properties (fields)
 		ElseIf TMemberVarExpr(expr.expr) Then
-			local instanceName:string = TVarExpr(TMemberVarExpr(expr.expr).expr).decl.munged
-			local propertyName:string = TMemberVarExpr(expr.expr).decl.ident
-			local propertyType:TType = TMemberVarExpr(expr.expr).decl.declTy
+			Local instanceName:String = TVarExpr(TMemberVarExpr(expr.expr).expr).decl.munged
+			Local propertyName:String = TMemberVarExpr(expr.expr).decl.ident
+			Local propertyType:TType = TMemberVarExpr(expr.expr).decl.declTy
 
 			'objects
-			If TObjectType(propertyType) then
+			If TObjectType(propertyType) Then
 				Return Bra(instanceName + "->clas->instance_size-(sizeof(void*))")
 
 			'numeric types are able to use sizeof(BBINT|BBFLOAT...)
@@ -907,7 +921,7 @@ t:+"NULLNULLNULL"
 			ElseIf TArrayType(propertyType) Then
 				'normal exprType is something like "int[]" that
 				'is why it has to be checked against elemType
-				local elemType:TType = TArrayType( propertyType ).elemType
+				Local elemType:TType = TArrayType( propertyType ).elemType
 
 				'numerics
 				If TNumericType(elemType) Then
@@ -940,7 +954,7 @@ t:+"NULLNULLNULL"
 			'Return "sizeof(void*)"
 			InternalErr
 
-rem
+Rem
 			'I think this part should contain some "temporary variable"
 			'creation - which then can get handled like all other
 			'variables
@@ -999,7 +1013,7 @@ endrem
 			'Return "sizeof(void*)"
 			InternalErr
 
-rem
+Rem
 			'I think this part should contain some "temporary variable"
 			'creation - which then can get handled like all other
 			'variables

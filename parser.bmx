@@ -566,7 +566,6 @@ Type TParser
 	End Method
 
 	Method ParseArgs:TExpr[]( stmt:Int )
-
 		Local args:TExpr[]
 'DebugStop
 		If stmt
@@ -594,7 +593,7 @@ Type TParser
 						toker.NextToke
 						toker.SkipSpace
 						Select toker.Toke().ToLower()
-						Case ".","(","[","",";","~n","Else"
+						Case ".","(","[","",";","~n","else"
 							eat=True
 						End Select
 						Exit
@@ -1352,11 +1351,16 @@ Type TParser
 		Local catches:TList=New TList
 
 		PushBlock block
-		While _toke<>"end"
+		While _toke<>"end" And _toke<>"endtry"
 			If CParse( "catch" )
 				Local id:String=ParseIdent()
-				Parse ":"
-				Local ty:TType=ParseType()
+				Local ty:TType
+				If Not CParse(":") Then
+					Parse "$"
+					ty=New TStringType
+				Else
+					ty=ParseType()
+				End If
 				Local init:TLocalDecl=New TLocalDecl.Create( id,ty,Null,0 )
 				Local block:TBlockDecl=New TBlockDecl.Create( _block )
 				catches.AddLast(New TCatchStmt.Create( init,block ))
@@ -1377,11 +1381,15 @@ Type TParser
 
 			End If
 		Wend
-		' TODO : handle case of no catch - perhaps throw the exception again.
-		'If Not catches.Length() Err "Try block must have at least one catch block"
+
 		PopBlock
-		NextToke
-		CParse "try"
+		
+		If Not CParse("endtry") Then
+			' TODO : handle case of no catch - perhaps throw the exception again.
+			'If Not catches.Length() Err "Try block must have at least one catch block"
+			NextToke
+			CParse "try"
+		End If
 
 		_block.AddStmt New TTryStmt.Create( block,TCatchStmt[](catches.ToArray()) )
 	End Method

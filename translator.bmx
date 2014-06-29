@@ -386,9 +386,9 @@ End Rem
 	
 	Method TransField$( decl:TFieldDecl,lhs:TExpr ) Abstract
 	
-	Method TransFunc$( decl:TFuncDecl,args:TExpr[],lhs:TExpr, sup:Int = False ) Abstract
+	Method TransFunc$( decl:TFuncDecl,args:TExpr[],lhs:TExpr, sup:Int = False, scope:TScopeDecl = Null ) Abstract
 	
-	Method TransSuperFunc$( decl:TFuncDecl,args:TExpr[] ) Abstract
+	Method TransSuperFunc$( decl:TFuncDecl,args:TExpr[], scope:TScopeDecl ) Abstract
 	
 	
 	'***** Expressions *****
@@ -530,7 +530,7 @@ End Rem
 
 		If decl.munged.StartsWith( "$" ) Return TransIntrinsicExpr( decl,expr )
 		
-		If decl Return TransSuperFunc( TFuncDecl( decl ),expr.args )
+		If decl Return TransSuperFunc( TFuncDecl( decl ),expr.args, expr.classScope )
 		
 		InternalErr
 	End Method

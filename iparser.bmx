@@ -343,7 +343,7 @@ Type TIParser
 	End Method
 
 	Method ParsePrimaryExpr:TExpr( stmt:Int )
-	
+
 		Local expr:TExpr
 
 			Select _tokeType
@@ -1138,15 +1138,15 @@ End Rem
 'DebugStop
 			ty=New TIntType
 		End Select
-		While CParse( "[]" )
-			ty=New TArrayType.Create( ty )
-		Wend
-		
+
 		If CParse( "&" ) Then
 		End If
 
 		While CParse( "[]" )
 			ty=New TArrayType.Create( ty )
+
+			If CParse( "&" ) Then
+			End If
 		Wend
 
 		If CParse( "&" ) Then
