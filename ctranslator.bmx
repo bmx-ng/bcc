@@ -883,6 +883,175 @@ t:+"NULLNULLNULL"
 			Else
 				Return "sizeof(void*)"
 			End If
+
+		'class instances properties (fields)
+		ElseIf TMemberVarExpr(expr.expr) Then
+			local instanceName:string = TVarExpr(TMemberVarExpr(expr.expr).expr).decl.munged
+			local propertyName:string = TMemberVarExpr(expr.expr).decl.ident
+			local propertyType:TType = TMemberVarExpr(expr.expr).decl.declTy
+
+			'objects
+			If TObjectType(propertyType) then
+				Return Bra(instanceName + "->clas->instance_size-(sizeof(void*))")
+
+			'numeric types are able to use sizeof(BBINT|BBFLOAT...)
+			ElseIf TNumericType(propertyType) Then
+				Return "sizeof" + Bra(TransType(propertyType, ""))
+
+			'strings
+			ElseIf TStringType(propertyType) Then
+				'unicode chars each take 2 bytes
+				Return instanceName + "->" + propertyName + "->length * " + bytesPerChar
+
+			'arrays
+			ElseIf TArrayType(propertyType) Then
+				'normal exprType is something like "int[]" that
+				'is why it has to be checked against elemType
+				local elemType:TType = TArrayType( propertyType ).elemType
+
+				'numerics
+				If TNumericType(elemType) Then
+					'multiply element count * size of element type
+					Return expr.expr.Trans() + "->scales[0] * sizeof" + Bra(TransType(elemType, ""))
+
+				'strings
+				ElseIf TStringType(elemType) Then
+					'arrays of strings are of size: elementCount * pointerSize
+					Return expr.expr.Trans() + "->scales[0] * sizeof(void*)"
+
+				'non-numeric elements are just connected through "pointers"
+				'so they could be merged with the string type but to
+				'keep it extendable easily, keep it split
+				Else
+					'arrays of objects are of size: elementCount * pointerSize
+					Return expr.expr.Trans() + "->scales[0] * sizeof(void*)"
+				EndIf
+
+			'objects, pointers, ... seem to just occupy 1 pointerSize
+			'it it does not matter what kind of pointer is used
+			Else
+				Return "sizeof(void*)"
+			End If
+			
+		'class instances method calls
+		ElseIf TInvokeMemberExpr(expr.expr) Then
+			'Throw ("Implement TInvokeMemberExpr(expr.expr)")
+			Print "Implement TInvokeMemberExpr(expr.expr) handling: typeInstance.method() calls"
+			'Return "sizeof(void*)"
+			InternalErr
+
+rem
+			'I think this part should contain some "temporary variable"
+			'creation - which then can get handled like all other
+			'variables
+
+			local instanceName:string = TVarExpr(TInvokeMemberExpr(expr.expr).expr).decl.munged
+			local returnName:string = ""
+			local returnType:TType = TInvokeMemberExpr(expr.expr).decl.retType
+
+			'objects
+			If TObjectType(returnType) then
+				Return Bra(instanceName + "->clas->instance_size-(sizeof(void*))")
+
+			'numeric types are able to use sizeof(BBINT|BBFLOAT...)
+			ElseIf TNumericType(returnType) Then
+				Return "sizeof" + Bra(TransType(returnType, ""))
+
+			'strings
+			ElseIf TStringType(returnType) Then
+				'unicode chars each take 2 bytes
+				Return instanceName + "->" + returnName + "->length * " + bytesPerChar
+
+			'arrays
+			ElseIf TArrayType(returnType) Then
+				'normal exprType is something like "int[]" that
+				'is why it has to be checked against elemType
+				local elemType:TType = TArrayType( returnType ).elemType
+
+				'numerics
+				If TNumericType(elemType) Then
+					'multiply element count * size of element type
+					Return expr.expr.Trans() + "->scales[0] * sizeof" + Bra(TransType(elemType, ""))
+
+				'strings
+				ElseIf TStringType(elemType) Then
+					'arrays of strings are of size: elementCount * pointerSize
+					Return expr.expr.Trans() + "->scales[0] * sizeof(void*)"
+
+				'non-numeric elements are just connected through "pointers"
+				'so they could be merged with the string type but to
+				'keep it extendable easily, keep it split
+				Else
+					'arrays of objects are of size: elementCount * pointerSize
+					Return expr.expr.Trans() + "->scales[0] * sizeof(void*)"
+				EndIf
+
+			'objects, pointers, ... seem to just occupy 1 pointerSize
+			'it it does not matter what kind of pointer is used
+			Else
+				Return "sizeof(void*)"
+			End If
+endrem
+		'class instances function calls
+		ElseIf TInvokeExpr(expr.expr) Then
+			'Throw ("Implement TInvokeMemberExpr(expr.expr)")
+			Print "Implement TInvokeExpr(expr.expr) handling: type.function()-calls "
+			'Return "sizeof(void*)"
+			InternalErr
+
+rem
+			'I think this part should contain some "temporary variable"
+			'creation - which then can get handled like all other
+			'variables
+
+			local instanceName:string = TVarExpr(TInvokeExpr(expr.expr).expr).decl.munged
+			local returnName:string = ""
+			local returnType:TType = TInvokeExpr(expr.expr).decl.retType
+
+			'objects
+			If TObjectType(returnType) then
+				Return Bra(instanceName + "->clas->instance_size-(sizeof(void*))")
+
+			'numeric types are able to use sizeof(BBINT|BBFLOAT...)
+			ElseIf TNumericType(returnType) Then
+				Return "sizeof" + Bra(TransType(returnType, ""))
+
+			'strings
+			ElseIf TStringType(returnType) Then
+				'unicode chars each take 2 bytes
+				Return instanceName + "->" + returnName + "->length * " + bytesPerChar
+
+			'arrays
+			ElseIf TArrayType(returnType) Then
+				'normal exprType is something like "int[]" that
+				'is why it has to be checked against elemType
+				local elemType:TType = TArrayType( returnType ).elemType
+
+				'numerics
+				If TNumericType(elemType) Then
+					'multiply element count * size of element type
+					Return expr.expr.Trans() + "->scales[0] * sizeof" + Bra(TransType(elemType, ""))
+
+				'strings
+				ElseIf TStringType(elemType) Then
+					'arrays of strings are of size: elementCount * pointerSize
+					Return expr.expr.Trans() + "->scales[0] * sizeof(void*)"
+
+				'non-numeric elements are just connected through "pointers"
+				'so they could be merged with the string type but to
+				'keep it extendable easily, keep it split
+				Else
+					'arrays of objects are of size: elementCount * pointerSize
+					Return expr.expr.Trans() + "->scales[0] * sizeof(void*)"
+				EndIf
+
+			'objects, pointers, ... seem to just occupy 1 pointerSize
+			'it it does not matter what kind of pointer is used
+			Else
+				Return "sizeof(void*)"
+			End If
+endrem
+
 		End If
 		
 		InternalErr
