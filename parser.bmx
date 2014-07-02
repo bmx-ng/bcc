@@ -67,13 +67,57 @@ Type TForEachinStmt Extends TStmt
 			Local indexExpr:TExpr=New TIndexExpr.Create( New TVarExpr.Create( exprTmp ),[New TVarExpr.Create( indexTmp )] )
 			Local addExpr:TExpr=New TBinaryMathExpr.Create( "+",New TVarExpr.Create( indexTmp ),New TConstExpr.Create( New TIntType,"1" ) )
 
-			block.stmts.AddFirst New TAssignStmt.Create( "=",New TVarExpr.Create( indexTmp ),addExpr )
 
 			If varlocal
-				Local varTmp:TLocalDecl=New TLocalDecl.Create( varid,varty,indexExpr )
-				block.stmts.AddFirst New TDeclStmt.Create( varTmp )
+			
+				block.stmts.AddFirst New TAssignStmt.Create( "=",New TVarExpr.Create( indexTmp ),addExpr )
+
+				' array of object ?
+				
+				If TObjectType(TArrayType( expr.exprType ).elemType) Then
+
+					' local variable
+					Local varTmp:TLocalDecl=New TLocalDecl.Create( varid,varty,indexExpr )
+
+					' local var as expression
+					Local expr:TExpr=New TVarExpr.Create( varTmp )
+
+					' var = Null
+					expr=New TBinaryCompareExpr.Create( "=",expr, New TNullExpr.Create(TType.nullObjectType))
+
+					' then continue
+					Local thenBlock:TBlockDecl=New TBlockDecl.Create( block.scope )
+					Local elseBlock:TBlockDecl=New TBlockDecl.Create( block.scope )
+					thenBlock.AddStmt New TContinueStmt
+
+					block.stmts.AddFirst New TIfStmt.Create( expr,thenBlock,elseBlock )
+					block.stmts.AddFirst New TDeclStmt.Create( varTmp )
+
+				Else
+					Local varTmp:TLocalDecl=New TLocalDecl.Create( varid,varty,indexExpr )
+					block.stmts.AddFirst New TDeclStmt.Create( varTmp )
+				End If
 			Else
+				
+				If TObjectType(TArrayType( expr.exprType ).elemType) Then
+				' var = Null
+					expr=New TBinaryCompareExpr.Create( "=",New TIdentExpr.Create( varid ), New TNullExpr.Create(TType.nullObjectType))
+
+					' then continue
+					Local thenBlock:TBlockDecl=New TBlockDecl.Create( block.scope )
+					Local elseBlock:TBlockDecl=New TBlockDecl.Create( block.scope )
+					thenBlock.AddStmt New TContinueStmt
+
+					block.stmts.AddFirst New TIfStmt.Create( expr,thenBlock,elseBlock )
+					'block.stmts.AddFirst New TDeclStmt.Create( varTmp )
+				
+				End If
+				
+
+				block.stmts.AddFirst New TAssignStmt.Create( "=",New TVarExpr.Create( indexTmp ),addExpr )
+
 				block.stmts.AddFirst New TAssignStmt.Create( "=",New TIdentExpr.Create( varid ),indexExpr )
+
 			EndIf
 
 			Local whileStmt:TWhileStmt=New TWhileStmt.Create( cmpExpr,block )
