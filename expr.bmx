@@ -956,7 +956,7 @@ Type TCastExpr Extends TExpr
 
 		If Not exprType
 			DebugStop
-			Err "Cannot convert from "+src.ToString()+" to "+ty.ToString()+"."
+			Err "Unable to convert from "+src.ToString()+" to "+ty.ToString()+"."
 		EndIf
 
 		If TConstExpr( expr ) Return EvalConst()

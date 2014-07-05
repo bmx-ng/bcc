@@ -252,7 +252,11 @@ End Function
 Type TVoidType Extends TType
 
 	Method EqualsType:Int( ty:TType )
-		Return TVoidType( ty )<>Null Or TIntType( ty) <> Null ' TODO : Void and int are interchangable...
+		If opt_issuperstrict Then
+			Return TVoidType( ty )<>Null
+		Else
+			Return TVoidType( ty )<>Null Or TIntType( ty) <> Null
+		End If
 	End Method
 	
 	Method ToString$()
