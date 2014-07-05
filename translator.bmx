@@ -808,11 +808,19 @@ End Rem
 	Method TransRepeatStmt$( stmt:TRepeatStmt )
 		Local nbroken:Int=broken
 
+		SetOutputTemp()
+
 		Emit "do{"
 		
 		Local unr:Int=EmitBlock( stmt.block )
 		
-		Emit "}while(!"+Bra( stmt.expr.Trans() )+");"
+		SetOutput("source")
+		
+		Local s:String = "}while(!"+Bra( stmt.expr.Trans() )+");"
+		
+		SetOutputTemp(True)
+		
+		Emit s
 
 		If broken=nbroken And TConstExpr( stmt.expr ) And Not TConstExpr( stmt.expr ).value unreachable=True
 		broken=nbroken
@@ -887,6 +895,24 @@ End Rem
 		
 		LINES = _lines
 		
+	End Method
+
+	Method SetOutputTemp( fin:Int = False )
+		If Not fin Then
+			Local _lines:TStringList = New TStringList
+			outputFiles.Insert("tmp", _lines)
+	
+			LINES = _lines
+		Else
+			Local _lines:TStringList = TStringList(outputFiles.ValueForKey("tmp"))
+			
+			If _lines Then
+				For Local line:String = EachIn _lines
+					LINES.AddLast(line)
+				Next
+			End If
+			
+		End If
 	End Method
 
 	Method DebugPrint(text:String, func:String = Null, trans:Int = False)
