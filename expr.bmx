@@ -624,14 +624,28 @@ Type TNewObjectExpr Extends TExpr
 
 		If it Then
 			Local i:Int=it.ident.FindLast( "." )
-			If i > 0 Then
-				Local fdecl:TFuncDecl = classDecl.FindFuncDecl(it.ident[i+1..], iArgs)
+			Local n:Int = it.ident.length
+			While i > 0
+				' find member function.method
+				Local fdecl:TFuncDecl = classDecl.FindFuncDecl(it.ident[i+1..n], iArgs)
 				If fdecl Then
 					Return New TInvokeMemberExpr.Create( Self,fdecl, iArgs ).Semant()
 				End If
-			End If
+				' find other member decl (field, etc)
+				Local decl:TVarDecl = TVarDecl(classDecl.GetDecl(it.ident[i+1..n]))
+				If decl Then
+					i = it.ident[i+1..].FindLast(".")
+					
+				
+					Local tmp:TLocalDecl=New TLocalDecl.Create( "", objTy, Self )
+					Local varExpr:TExpr = New TMemberVarExpr.Create(New TVarExpr.Create( tmp ), decl).Semant()
+					Return New TStmtExpr.Create( New TDeclStmt.Create( tmp ), varExpr ).Semant()
+				End If
+				
+				n = i
+				i = it.ident[..i].FindLast(".")
+			Wend
 		End If
-
 
 		Return Self
 	End Method

@@ -1112,6 +1112,7 @@ Type TFuncDecl Extends TBlockDecl
 'DebugLog "Method = " + decl.ident
 					
 						If ident.ToLower() = "new" Continue
+						If ident.ToLower() = "delete" Continue
 'If ident = "Create" DebugStop
 						found=True
 

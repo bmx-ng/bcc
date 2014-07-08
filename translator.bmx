@@ -898,13 +898,25 @@ End Rem
 	End Method
 
 	Method SetOutputTemp( fin:Int = False )
+		Global tmpLevel:Int = 0
+	
 		If Not fin Then
+			tmpLevel :+ 1
+
 			Local _lines:TStringList = New TStringList
-			outputFiles.Insert("tmp", _lines)
+			outputFiles.Insert("tmp" + tmpLevel, _lines)
 	
 			LINES = _lines
 		Else
-			Local _lines:TStringList = TStringList(outputFiles.ValueForKey("tmp"))
+			Local _lines:TStringList = TStringList(outputFiles.ValueForKey("tmp" + tmpLevel))
+			
+			tmpLevel :- 1
+		
+			If Not tmpLevel Then
+				SetOutput("source")
+			Else
+				LINES = TStringList(outputFiles.ValueForKey("tmp" + tmpLevel))
+			End If
 			
 			If _lines Then
 				For Local line:String = EachIn _lines

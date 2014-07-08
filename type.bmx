@@ -612,23 +612,12 @@ Type TObjectType Extends TType
 		Local objty:TObjectType=TObjectType( ty )
 		If objty Return classDecl.ExtendsClass( objty.classDecl )
 		If IsPointerType( ty, T_BYTE ) Return True
-		Local op$
-'		If TBoolType( ty )
-'			op="ToBool"
-'		Else If TIntType( ty ) 
-'			op="ToInt"
-'		Else If TFloatType( ty )
-'			op="ToFloat"
-'		Else
-		If TStringType( ty )
-			op="ToString"
-'		Else If TLongType( ty ) ' BaH Long
-'			op="ToLong"
+		' we only "extend" String if we are a basic Object
+		If TStringType( ty ) And classDecl.ident="Object" Then
+			Return True
 		Else
 			Return False
 		EndIf
-		Local fdecl:TFuncDecl=GetClass().FindFuncDecl( op,Null,True )
-		Return fdecl And fdecl.IsMethod() And fdecl.retType.EqualsType( ty )
 	End Method
 	
 	Method GetClass:TClassDecl()
@@ -716,17 +705,27 @@ Type TIdentType Extends TType
 				Next
 			End If
 		Else
+			i = ident.Find( "." )
+						
 			' try scope search first
 			tyid=ident[..i]
 			ty=_env.FindType( tyid,targs )
-
+			
 			If Not ty Then
-				' no? now try module search
-				Local modid$=ident[..i]
-				Local mdecl:TModuleDecl=_env.FindModuleDecl( modid )
-				If Not mdecl Err "Module '"+modid+"' not found"
-				tyid=ident[i+1..]
-				ty=mdecl.FindType( tyid,targs )
+				i = ident.FindLast( "." )
+		
+				' try scope search first
+				tyid=ident[..i]
+				ty=_env.FindType( tyid,targs )				
+
+				If Not ty Then
+					' no? now try module search
+					Local modid$=ident[..i]
+					Local mdecl:TModuleDecl=_env.FindModuleDecl( modid )
+					If Not mdecl Err "Module '"+modid+"' not found"
+					tyid=ident[i+1..]
+					ty=mdecl.FindType( tyid,targs )
+				End If
 			End If
 		EndIf
 		If Not ty Err "Type '"+tyid+"' not found"

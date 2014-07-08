@@ -500,30 +500,30 @@ Type TParser
 			NextToke
 			ty=New TByteType
 
-			If CParse("ptr") Then
+			While CParse("ptr")
 				ty = TType.MapToPointerType(ty)
-			End If
+			Wend
 		Case "@@"
 			NextToke
 			ty=New TShortType
 
-			If CParse("ptr") Then
+			While CParse("ptr")
 				ty = TType.MapToPointerType(ty)
-			End If
+			Wend
 		Case "%"
 			NextToke
 			ty=New TIntType
 
-			If CParse("ptr") Then
+			While CParse("ptr")
 				ty = TType.MapToPointerType(ty)
-			End If
+			Wend
 		Case "%%"
 			NextToke
 			ty=New TLongType
 
-			If CParse("ptr") Then
+			While CParse("ptr")
 				ty = TType.MapToPointerType(ty)
-			End If
+			Wend
 		Case "#"
 			NextToke
 			ty=New TFloatType
@@ -547,9 +547,9 @@ Type TParser
 			NextToke
 			ty=New TDoubleType
 
-			If CParse("ptr") Then
+			While CParse("ptr")
 				ty = TType.MapToPointerType(ty)
-			End If
+			Wend
 		Case ":"
 			NextToke
 			ty=ParseType()
@@ -557,10 +557,9 @@ Type TParser
 			If CParse("ptr") Then
 				ty = TType.MapToPointerType(ty)
 
-				' pointer pointer
-				If CParse("ptr") Then
+				While CParse("ptr")
 					ty = TType.MapToPointerType(ty)
-				End If
+				Wend
 
 				If Not ty DoErr "Invalid Pointer type."
 			End If
@@ -577,9 +576,9 @@ Type TParser
 			If _module.IsSuperStrict() Err "Illegal type expression."
 			ty=New TIntType
 
-			If CParse("ptr") Then
+			While CParse("ptr")
 				ty = TType.MapToPointerType(ty)
-			End If
+			Wend
 		End Select
 		
 		' array ?
@@ -2080,7 +2079,9 @@ End If
 						funcDecl.noCastGen = True
 					End If
 					For Local i:Int = 0 Until cdets.args.length
-						funcDecl.argDecls[i].castTo = cdets.args[i]
+						If i < funcDecl.argDecls.length Then
+							funcDecl.argDecls[i].castTo = cdets.args[i]
+						End If
 					Next
 				End If
 			End If
