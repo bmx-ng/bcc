@@ -244,7 +244,7 @@ Type TCTranslator Extends TTranslator
 	End Method
 	
 	Method TransArgs$( args:TExpr[],decl:TFuncDecl, objParam:String = Null )
-'If decl.ident="ReadBytes" DebugStop
+'If decl.ident="addConnection" DebugStop
 		Local t$
 		If objParam Then
 			t:+ objParam
@@ -270,7 +270,24 @@ Type TCTranslator Extends TTranslator
 						If IsPointerType(ty, TType.T_BYTE) Then
 							t:+ TInvokeExpr(args[i]).Trans()
 						Else
-							t:+ "&" + TInvokeExpr(args[i]).decl.munged
+							' need to test scopes to see if we need to use the current instance's function or not
+							Local fdecl:TFuncDecl = TInvokeExpr(args[i]).decl
+
+							If TClassDecl(fdecl.scope) Then
+								' current scope is related to function scope?
+								If TClassDecl(_env.scope) And TFuncDecl(_env) And TFuncDecl(_env).IsMethod() Then
+									'If TClassDecl(decl.scope).ExtendsClass(TClassDecl(fdecl.scope)) Then
+									Local scope:TScopeDecl = _env.scope
+									Local obj:String = Bra("struct " + scope.munged + "_obj*")
+									Local class:String = "(" + obj + "o)->clas"
+				
+									t:+ class + "->fn_" + fdecl.ident
+								Else
+									t:+ "&" + fdecl.munged
+								End If
+							Else
+								t:+ "&" + fdecl.munged
+							End If
 						End If
 						Continue
 					End If
@@ -2102,6 +2119,8 @@ End Rem
 			End If
 
 			If decl.IsAbstract() Then
+				' TODO : remove following line when generation stablises.
+				Emit "printf(~qAbstract method called : " + decl.ident + "\n~q);fflush(stdout);"
 				Emit "brl_blitz_NullMethodError();"
 			Else
 'If decl.ident = "OpenStream" DebugStop
@@ -3027,6 +3046,9 @@ End Rem
 				If TNullExpr(TCastExpr(expr).expr) Then
 					Return "0"
 				End If
+				If TConstExpr(TCastExpr(expr).expr) Then
+					Return TConstExpr(TCastExpr(expr).expr).value
+				End If
 			End If
 		End If
 
@@ -3149,14 +3171,29 @@ End Rem
 		Emit g
 	End Method
 
-	Method EmitModuleInclude(moduleDecl:TModuleDecl)
+	Method EmitModuleInclude(moduleDecl:TModuleDecl, included:TMap = Null)
 		If moduleDecl.filepath Then
 			' a module import
 			If FileType(moduleDecl.filepath) = FILETYPE_DIR Or (opt_ismain And moduleDecl.ident = opt_modulename) Then
-				Emit "#include <" + ModuleHeaderFromIdent(moduleDecl.ident, True) + ">"
+
+				Local inc:String = ModuleHeaderFromIdent(moduleDecl.ident, True)
+
+				If Not included Or (included And Not included.Contains(inc)) Then
+					Emit "#include <" + inc + ">"
+					If included Then
+						included.Insert(inc, inc)
+					End If
+				End If
 			Else
-				' maybe a file import...
-				Emit "#include ~q" + FileHeaderFromFile(moduleDecl, False) + "~q"
+				' a file import...
+				Local inc:String = FileHeaderFromFile(moduleDecl, False)
+
+				If Not included Or (included And Not included.Contains(inc)) Then
+					Emit "#include ~q" + inc + "~q"
+					If included Then
+						included.Insert(inc, inc)
+					End If
+				End If
 			End If
 '			DebugLog moduleDecl.filepath
 		End If
@@ -3229,6 +3266,9 @@ End Rem
 			app.mainFunc.munged="bb_main"
 		End If
 
+		' track what's been included so far - avoid duplicates
+		Local included:TMap = New TMap
+
 		For Local decl:TModuleDecl=EachIn app.imported.Values()
 			For Local mdecl:TDecl=EachIn decl.imported.Values()
 
@@ -3240,7 +3280,7 @@ End Rem
 				If mdecl.ident = "brl.classes" Then Continue
 				If mdecl.ident = "brl.blitzkeywords" Then Continue
 
-				EmitModuleInclude(TModuleDecl(mdecl))
+				EmitModuleInclude(TModuleDecl(mdecl), included)
 			Next
 		Next
 

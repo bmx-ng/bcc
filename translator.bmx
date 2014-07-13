@@ -481,7 +481,7 @@ End Rem
 	
 	Method TransVarExpr$( expr:TVarExpr )
 		Local decl:TVarDecl=TVarDecl( expr.decl.actual )
-		
+
 		If decl.munged.StartsWith( "$" ) Return TransIntrinsicExpr( decl,Null )
 		
 		If TLocalDecl( decl ) Return decl.munged
@@ -506,6 +506,10 @@ End Rem
 	Method TransInvokeExpr$( expr:TInvokeExpr )
 		Local decl:TFuncDecl=TFuncDecl( expr.decl.actual ),t$
 'If decl.ident = "OnDebugStop" DebugStop	
+		If Not decl.munged Then
+			MungDecl decl
+		End If
+
 		If (decl.attrs & FUNC_PTR) And (decl.attrs & FUNC_INIT) Return decl.munged
 		
 		If decl.munged.StartsWith( "$" ) Return TransIntrinsicExpr( decl,Null,expr.args )

@@ -598,7 +598,7 @@ Type TIParser
 			id=ParseIdent()
 			ty=ParseDeclType(attrs)
 		EndIf
-		
+
 		If attrs & FUNC_METHOD
 'DebugLog "Found Method :  " + id
 		Else
@@ -705,7 +705,7 @@ Type TIParser
 		If CParse("&") Then
 			funcDecl.attrs :| DECL_POINTER
 		End If
-		
+
 		'If funcDecl.IsExtern()
 		If Not (funcDecl.attrs & (FUNC_PTR | FUNC_INIT)) Then
 		'	funcDecl.munged=funcDecl.ident
@@ -716,10 +716,6 @@ Type TIParser
 						If CParse("p")
 							If CParse("(") Then
 								
-								'DebugStop
-
-								'_toker.NextToke()
-								
 								funcDecl.munged = ParseStringLit()
 								
 								Cparse(")")
@@ -728,24 +724,10 @@ Type TIParser
 						End If
 					End If
 				Else
-					'If Not (funcDecl.attrs & (FUNC_PTR | FUNC_INIT)) Then
-						funcDecl.munged=ParseStringLit()
-					'Else
-'DebugStop
-					'	funcDecl.init = ParseStringLit()
-					'End If
-					
+					funcDecl.munged=ParseStringLit()
 				End If
 
-
-
-				
-				'Array $resize hack!
-				'If funcDecl.munged="$resize"
-				'	funcDecl.retTypeExpr=TType.emptyArrayType
-				'EndIf
-				
-			EndIf
+			End If
 		End If
 		
 		' read function cast stuff
@@ -899,7 +881,7 @@ Rem
 			EndIf
 End Rem
 		EndIf
-		
+
 		Local decl:TValDecl
 		
 		If attrs & DECL_GLOBAL
@@ -915,10 +897,11 @@ End Rem
 '		If decl.IsExtern() 
 			If CParse( "=" )
 				'decl.munged=ParseStringLit()
-				
+
 				If CParse("mem")
-					' change to global
-'DebugStop
+					' Change to global
+					' Until this point, it was "probably" a const, but now we know for sure
+					' that it must be a global.
 					If attrs & DECL_CONST Then
 						attrs :| DECL_GLOBAL
 						attrs :~ DECL_CONST
@@ -929,27 +912,24 @@ End Rem
 					If CParse(":")
 						If CParse("p")
 							If CParse("(") Then
-								
-'								DebugStop
 
-								'_toker.NextToke()
-								
 								decl.munged = ParseStringLit()
-								
-								Cparse(")")
+
+								' for function pointers, ensure actual function reference is set too.
+								If TFunctionPtrType(decl.declTy) Then
+									TFunctionPtrType(decl.declTy).func.munged = decl.munged
+								End If
+
+								Parse(")")
 
 							EndIf
 						End If
 					Else
 						If CParse("(") Then
-								
-'							DebugStop
 
-								'_toker.NextToke()
-								
 							decl.munged = ParseStringLit()
-							
-							Cparse(")")
+
+							Parse(")")
 
 						EndIf
 					End If
