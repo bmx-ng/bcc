@@ -152,7 +152,13 @@ Type TCTranslator Extends TTranslator
 			p :+ " Var"
 		End If
 		
-		If TVoidType( ty ) Or Not ty Return "%" + p
+		If TVoidType( ty ) Or Not ty Then
+			If opt_issuperstrict Then
+				Return p
+			Else
+				Return "%" + p
+			End If
+		End If
 		If TByteType( ty ) Return "@" + p
 		If TShortType( ty ) Return "@@" + p
 		If TIntType( ty ) Return "%" + p
@@ -223,7 +229,7 @@ Type TCTranslator Extends TTranslator
 					Return value+"f"
 				End If
 			End If
-			If TStringType( ty ) Return "String("+Enquote( value )+")"
+			If TStringType( ty ) Return TransStringConst(value )
 			If TByteType( ty ) Return value
 		Else
 			If TBoolType( ty ) Return "0"

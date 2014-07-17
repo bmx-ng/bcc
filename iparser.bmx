@@ -589,14 +589,14 @@ Type TIParser
 				NextToke
 				attrs:|FUNC_CTOR
 				attrs:&~FUNC_METHOD
-				ty=ParseDeclType(attrs)
+				ty=ParseDeclType(attrs, True)
 			Else
 				id=ParseIdent()
-				ty=ParseDeclType(attrs)
+				ty=ParseDeclType(attrs, True)
 			EndIf
 		Else
 			id=ParseIdent()
-			ty=ParseDeclType(attrs)
+			ty=ParseDeclType(attrs, True)
 		EndIf
 
 		If attrs & FUNC_METHOD
@@ -969,7 +969,7 @@ End Rem
 		Return decl
 	End Method
 
-	Method ParseDeclType:TType(attrs:Int Var)
+	Method ParseDeclType:TType(attrs:Int Var, fn:Int = False)
 		Local ty:TType
 		Select _toker._toke
 		'Case "?"
@@ -1071,7 +1071,9 @@ End Rem
 		Default
 			'If _module.IsStrict() Err "Illegal type expression."
 'DebugStop
-			ty=New TIntType
+			If Not fn Then
+				ty=New TIntType
+			End If
 		End Select
 
 		If CParse( "&" ) Then

@@ -967,6 +967,11 @@ Type TCastExpr Extends TExpr
 			ty = exprType
 			Return Self
 		End If
+		
+		If TFunctionPtrType(ty) And IsPointerType(src, 0, TType.T_POINTER) Then
+			exprType = ty
+			Return Self
+		End If
 
 		If Not exprType
 			DebugStop
@@ -1126,7 +1131,7 @@ Type TBinaryMathExpr Extends TBinaryExpr
 			Else If TFloatType(lhs.exprType) Then
 				exprType=New TIntType
 			Else If TNumericType(lhs.exprType) Then
-				exprType=lhs.exprType
+				exprType=lhs.exprType.OnCopy()
 			Else
 				exprType=New TIntType
 			End If
@@ -1620,6 +1625,7 @@ Type TIdentExpr Extends TExpr
 	End Method
 
 	Method _Semant()
+
 		If scope Return
 
 		If expr Then

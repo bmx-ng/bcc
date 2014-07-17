@@ -191,12 +191,17 @@ Type TDecl
 			
 			EndIf
 			
+			If TValDecl(Self) And TValDecl(Self).deferInit Then
+				TValDecl(Self).SemantInit
+			End If
+
 			PopEnv
+		Else
+			If TValDecl(Self) And TValDecl(Self).deferInit Then
+				TValDecl(Self).SemantInit
+			End If
 		EndIf
 		
-		If TValDecl(Self) And TValDecl(Self).deferInit Then
-			TValDecl(Self).SemantInit
-		End If
 		
 		PopErr
 	End Method
@@ -731,7 +736,7 @@ End Rem
 	
 	Method FindFuncDecl:TFuncDecl( ident$,argExprs:TExpr[] = Null,explicit:Int=False, isArg:Int = False )
 'DebugLog "FindFuncDecl : " + ident
-'If ident = "sqlite3_prepare_v2" Then DebugStop
+'If ident = "lua_pushcclosure" Then DebugStop
 		'Local funcs:TFuncDeclList=TFuncDeclList( FindDecl( ident ) )
 		Local f:TDecl = TDecl(findDecl(ident))
 		If Not f Then Return Null
@@ -795,7 +800,11 @@ End Rem
 					End If
 
 					' not ideal - since the arg is configured as a Byte Ptr, we can't check that the function is of the correct type.
-					If IsPointerType(declTy, TType.T_BYTE) And TInvokeExpr(argExprs[i]) Then
+					If IsPointerType(declTy, TType.T_BYTE) And TInvokeExpr(argExprs[i]) And TInvokeExpr(argExprs[i]).invokedWithBraces = 0 Then
+						Continue
+					End If
+					
+					If TFunctionPtrType(declTy) And IsPointerType(exprTy, TType.T_BYTE) Then
 						Continue
 					End If
 					
