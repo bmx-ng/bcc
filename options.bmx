@@ -25,7 +25,7 @@ SuperStrict
 
 Import "base.configmap.bmx"
 
-Const version:String = "0.12"
+Const version:String = "0.13"
 
 Const BUILDTYPE_APP:Int = 0
 Const BUILDTYPE_MODULE:Int = 1
@@ -142,6 +142,12 @@ Function ParseArgs:String[](args:String[])
 					CmdError "Command line error - Missing arg for '-o'"
 				End If
 				opt_outfile = args[count]
+			Case "p"
+				count:+1
+				If count = args.length Then
+					CmdError "Command line error - Missing arg for '-p'"
+				End If
+				opt_platform = args[count].ToLower()
 			Case "t"
 				count:+1
 				If count = args.length Then
