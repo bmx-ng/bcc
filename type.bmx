@@ -169,6 +169,28 @@ Type TType
 		Return ty
 	End Method
 	
+	Method ToStringParts:String()
+		Local s:String
+		
+		If _flags & T_PTR Then
+			s:+ " Ptr"
+		End If
+
+		If _flags & T_PTRPTR Then
+			s:+ " Ptr"
+		End If
+
+		If _flags & T_PTRPTRPTR Then
+			s:+ " Ptr"
+		End If
+
+		If _flags & T_VAR Then
+			s:+ " Var"
+		End If
+		
+		Return s
+	End Method
+	
 End Type
 
 Function NewType:TType(kind:Int = 0)
@@ -344,7 +366,7 @@ Type TIntType Extends TNumericType
 	End Method
 
 	Method ToString$()
-		Return "Int"
+		Return "Int" + ToStringParts()
 	End Method
 
 	Method GetSize:Int()
@@ -374,7 +396,7 @@ Type TByteType Extends TNumericType
 	End Method
 
 	Method ToString$()
-		Return "Byte"
+		Return "Byte" + ToStringParts()
 	End Method
 
 	Method GetSize:Int()
@@ -404,7 +426,7 @@ Type TShortType Extends TNumericType
 	End Method
 
 	Method ToString$()
-		Return "Short"
+		Return "Short" + ToStringParts()
 	End Method
 
 	Method GetSize:Int()
@@ -434,7 +456,7 @@ Type TLongType Extends TNumericType ' BaH Long
 	End Method
 
 	Method ToString$()
-		Return "Long"
+		Return "Long" + ToStringParts()
 	End Method
 End Type
 
@@ -462,7 +484,7 @@ Type TFloatType Extends TDecimalType
 	End Method
 	
 	Method ToString$()
-		Return "Float"
+		Return "Float" + ToStringParts()
 	End Method
 
 	Method GetSize:Int()
@@ -492,7 +514,7 @@ Type TDoubleType Extends TDecimalType
 	End Method
 
 	Method ToString$()
-		Return "Double"
+		Return "Double" + ToStringParts()
 	End Method
 
 End Type
@@ -537,7 +559,7 @@ Type TStringType Extends TType
 	End Method
 
 	Method ToString$()
-		Return "String"
+		Return "String" + ToStringParts()
 	End Method
 End Type
 
