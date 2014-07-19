@@ -833,7 +833,6 @@ t:+"NULLNULLNULL"
 		'ATTENTION:
 		'current assumption is: 2 Bytes per unicode character are used
 		Local bytesPerChar:Int = 2
-		            
 	
 		If TVarExpr(expr.expr) Then
 			'objects
@@ -1087,8 +1086,10 @@ Rem
 			Else
 				Return "sizeof(void*)"
 			End If
-endrem
-
+EndRem
+		Else If TIdentTypeExpr(expr.expr) Then
+			' doing something like : SizeOf TMyType
+			Return Bra(TIdentTypeExpr(expr.expr).cdecl.munged + ".instance_size-(sizeof(void*))")
 		End If
 		
 		InternalErr

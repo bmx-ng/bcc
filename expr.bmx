@@ -1762,6 +1762,15 @@ Type TIdentExpr Extends TExpr
 			Return New TInvokeExpr.Create( fdecl,args, False ).Semant()
 		End If
 		
+		' maybe it's a classdecl?
+		Local cdecl:TClassDecl = TClassDecl(scope.FindDecl(ident))
+		
+		If cdecl Then
+			Local e:TIdentTypeExpr = New TIdentTypeExpr.Create(cdecl.objectType)
+			e.cdecl = cdecl
+			Return e
+		End If
+		
 		IdentErr
 	End Method
 
@@ -2021,7 +2030,6 @@ Type TSizeOfExpr Extends TBuiltinExpr
 
 	Method Semant:TExpr()
 		If exprType Return Self
-
 		expr=expr.Semant()
 		exprType=New TIntType
 		Return Self
