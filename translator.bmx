@@ -510,7 +510,7 @@ End Rem
 			MungDecl decl
 		End If
 
-		If (decl.attrs & FUNC_PTR) And (decl.attrs & FUNC_INIT) Return decl.munged
+		If (decl.attrs & FUNC_PTR) And (decl.attrs & FUNC_INIT) And Not expr.InvokedWithBraces Return decl.munged
 		
 		If decl.munged.StartsWith( "$" ) Return TransIntrinsicExpr( decl,Null,expr.args )
 		
