@@ -252,7 +252,7 @@ Type TCTranslator Extends TTranslator
 	Method TransArgs$( args:TExpr[],decl:TFuncDecl, objParam:String = Null )
 'If decl.ident="addConnection" DebugStop
 		Local t$
-		If objParam Then
+		If objParam And decl.IsMethod() Then
 			t:+ objParam
 		End If
 		For Local i:Int=0 Until decl.argDecls.Length
@@ -552,7 +552,7 @@ t:+"NULLNULLNULL"
 	End Method
 
 	Method TransFunc$( decl:TFuncDecl,args:TExpr[],lhs:TExpr, sup:Int = False, scope:TScopeDecl = Null )
-'If decl.ident = "png_destroy_read_struct" DebugStop
+'If decl.ident = "Close" DebugStop
 		' for calling the super class method instead
 		Local tSuper:String
 		If sup Then
@@ -563,7 +563,7 @@ t:+"NULLNULLNULL"
 			MungDecl decl
 		End If
 
-		If decl.IsMethod()
+		'If decl.IsMethod()
 			If lhs And Not TSelfExpr(lhs) Then
 				If TStringType(lhs.exprType) Then
 					Return decl.munged + TransArgs(args, decl, TransSubExpr( lhs ))
@@ -586,12 +586,12 @@ t:+"NULLNULLNULL"
 						Return TransSubExpr( lhs ) + "->" + decl.munged+TransArgs( args,decl, Null)
 					Else
 						Local class:String = TransSubExpr( lhs ) + "->clas" + tSuper
-						Return class + "->" + TransFuncPrefix(cdecl, decl.ident) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
+						Return class + "->" + TransFuncPrefix(cdecl, decl) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
 					End If
 				Else If TNewObjectExpr(lhs) Then
 					Local cdecl:TClassDecl = TNewObjectExpr(lhs).classDecl
 					Local class:String = cdecl.munged
-					Return class + "." + TransFuncPrefix(cdecl, decl.ident) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
+					Return class + "." + TransFuncPrefix(cdecl, decl) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
 				Else If TCastExpr(lhs) Then
 					Local cdecl:TClassDecl = TObjectType(TCastExpr(lhs).ty).classDecl
 					Local obj:String = Bra(TransObject(cdecl))
@@ -599,21 +599,21 @@ t:+"NULLNULLNULL"
 						Return "(" + obj + TransSubExpr( lhs ) + ")->" + decl.munged+TransArgs( args,decl, Null)
 					Else
 						Local class:String = Bra("(" + obj + TransSubExpr( lhs ) + ")->clas" + tSuper)
-						Return class + "->" + TransFuncPrefix(cdecl, decl.ident) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
+						Return class + "->" + TransFuncPrefix(cdecl, decl) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
 					End If
 				Else If TMemberVarExpr(lhs) Then
 					Local cdecl:TClassDecl = TObjectType(TMemberVarExpr(lhs).decl.ty).classDecl
 					Local obj:String = Bra(TransObject(cdecl))
 					Local class:String = Bra("(" + obj + TransSubExpr( lhs ) + ")->clas" + tSuper)
 					'Local class:String = TransFuncClass(cdecl)
-					Return class + "->" + TransFuncPrefix(cdecl, decl.ident) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
+					Return class + "->" + TransFuncPrefix(cdecl, decl) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
 				Else If TInvokeExpr(lhs) Then
 					' create a local variable of the inner invocation
 					Local lvar:String = CreateLocal(lhs)
 
 					Local obj:String = Bra(TransObject(decl.scope))
 					Local class:String = Bra("(" + obj + lvar +")->clas" + tSuper)
-					Return class + "->" + TransFuncPrefix(decl.scope, decl.ident)+ decl.ident+TransArgs( args,decl, lvar )
+					Return class + "->" + TransFuncPrefix(decl.scope, decl)+ decl.ident+TransArgs( args,decl, lvar )
 
 					'Local obj:String = Bra("struct " + decl.scope.munged + "_obj*")
 					'Local class:String = Bra("(" + obj + TransSubExpr( lhs ) +")->clas" + tSuper)
@@ -624,7 +624,7 @@ t:+"NULLNULLNULL"
 					Local lvar:String = CreateLocal(lhs)
 
 					Local obj:String = lvar + "->clas" + tSuper
-					Return obj + "->" + TransFuncPrefix(decl.scope, decl.ident)+ decl.ident+TransArgs( args,decl, lvar )
+					Return obj + "->" + TransFuncPrefix(decl.scope, decl)+ decl.ident+TransArgs( args,decl, lvar )
 
 				Else If TIndexExpr(lhs) Then
 					Local loc:String = CreateLocal(lhs)
@@ -632,7 +632,7 @@ t:+"NULLNULLNULL"
 					'Local class:String = Bra("(" + obj + loc +")->clas" + tSuper)
 					'Local class:String = Bra("&" + decl.scope.munged)
 					Local class:String = Bra(loc + "->clas" + tSuper)
-					Return class + "->" + TransFuncPrefix(decl.scope, decl.ident) + decl.ident+TransArgs( args,decl, loc )
+					Return class + "->" + TransFuncPrefix(decl.scope, decl) + decl.ident+TransArgs( args,decl, loc )
 				Else
 					InternalErr
 				End If
@@ -641,7 +641,8 @@ t:+"NULLNULLNULL"
 			End If
 
 			' ((brl_standardio_TCStandardIO_obj*)o->clas)->md_Read(o, xxx, xxx)
-			If Not (decl.attrs & FUNC_PTR) Then
+		If decl.IsMethod() Then
+			If  Not (decl.attrs & FUNC_PTR) Then
 			
 				Local class:String
 				
@@ -659,13 +660,13 @@ t:+"NULLNULLNULL"
 				'Local obj:String = Bra("struct " + scope.munged + "_obj*")
 				'Local class:String = Bra("(" + obj + "o)->clas" + tSuper)
 				'Local class:String = Bra("&" + decl.scope.munged)
-				Return class + "->" + TransFuncPrefix(scope, decl.ident) + decl.ident+TransArgs( args,decl, "o" )
+				Return class + "->" + TransFuncPrefix(scope, decl) + decl.ident+TransArgs( args,decl, "o" )
 			Else
 				Local obj:String = Bra("struct " + decl.scope.munged + "_obj*")
 				Return Bra(obj + "o") + "->" + decl.munged+TransArgs( args,decl )
 			End If
-		EndIf
-
+		End If
+		
 		' built-in functions
 		Select decl.ident.ToLower()
 			Case "min", "max", "len", "asc", "chr", "sgn"
@@ -691,11 +692,16 @@ t:+"NULLNULLNULL"
 		End If
 	End Method
 
-	Method TransFuncPrefix:String(decl:TScopeDecl, ident:String)
+	Method TransFuncPrefix:String(decl:TScopeDecl, fdecl:TFuncDecl)
+		Local ident:String = fdecl.ident
 		If Not decl Or decl.ident = "Object" Or ident = "ToString" Or ident = "Compare" Or ident = "SendMessage" Then
 			Return ""
 		Else
-			Return "md_"
+			If fdecl.IsMethod() Then
+				Return "md_"
+			Else
+				Return "fn_"
+			End If
 		End If
 	End Method
 

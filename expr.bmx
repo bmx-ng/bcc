@@ -1795,7 +1795,11 @@ Type TIdentExpr Extends TExpr
 				If expr Return New TInvokeMemberExpr.Create( expr,fdecl,args ).Semant()
 				'If scope<>_env Or _env.FuncScope().IsStatic() Err "Method '"+ident+"' cannot be accessed from here."
 			EndIf
-			Return New TInvokeExpr.Create( fdecl,args, funcCall ).Semant()
+			If expr And Not static Then
+				Return New TInvokeMemberExpr.Create( expr,fdecl,args ).Semant()
+			Else
+				Return New TInvokeExpr.Create( fdecl,args, funcCall ).Semant()
+			End If
 		EndIf
 
 		'If args.Length=1 And args[0] And TObjectType( args[0].exprType )
