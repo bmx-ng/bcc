@@ -34,6 +34,7 @@ Import "base.stringhelper.bmx"
 ' debugging help
 Const DEBUG:Int = False
 Const ABORT_ON_NULL:Int = True
+Const PROFILER:Int = False
 
 Global ENV_LANG$
 

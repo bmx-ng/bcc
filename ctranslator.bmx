@@ -552,7 +552,7 @@ t:+"NULLNULLNULL"
 	End Method
 
 	Method TransFunc$( decl:TFuncDecl,args:TExpr[],lhs:TExpr, sup:Int = False, scope:TScopeDecl = Null )
-'If decl.ident = "Close" DebugStop
+'If decl.ident = "ToString" DebugStop
 		' for calling the super class method instead
 		Local tSuper:String
 		If sup Then
@@ -649,7 +649,7 @@ t:+"NULLNULLNULL"
 				If Not scope Then
 					scope = decl.scope
 
-					Local obj:String = Bra("struct " + scope.munged + "_obj*")
+					Local obj:String = Bra(TransObject(scope))
 					class = "(" + obj + "o)->clas" + tSuper
 				Else
 
@@ -662,7 +662,7 @@ t:+"NULLNULLNULL"
 				'Local class:String = Bra("&" + decl.scope.munged)
 				Return class + "->" + TransFuncPrefix(scope, decl) + decl.ident+TransArgs( args,decl, "o" )
 			Else
-				Local obj:String = Bra("struct " + decl.scope.munged + "_obj*")
+				Local obj:String = Bra(TransObject(decl.scope))
 				Return Bra(obj + "o") + "->" + decl.munged+TransArgs( args,decl )
 			End If
 		End If
@@ -1791,6 +1791,30 @@ EndRem
 		Emit "bbEnd();"
 	End Method
 	
+	Method TransFullName:String(decl:TDecl)
+		Local s:String
+		
+		If decl.scope Then
+			s:+ TransFullName(decl.scope)
+		End If
+		
+		If s Then
+			s :+ " : "
+		End If
+		
+		If TModuleDecl(decl) Then
+			s:+ decl.ModuleScope().munged
+		Else
+			s :+ decl.ident
+		End If
+		
+		If TFuncDecl(decl) Then
+			s:+ "()"
+		End If
+		
+		Return s
+	End Method
+	
 	Method ClassHasObjectField:Int(classDecl:TClassDecl)
 	
 		If classDecl.superClass Then
@@ -2124,6 +2148,10 @@ End Rem
 
 		If Not proto Then
 
+			If PROFILER Then
+				DebugPrint("", TransFullName(decl))
+			End If
+				
 			If DEBUG Then
 				For Local i:Int=0 Until decl.argDecls.Length
 					Local arg:TArgDecl=decl.argDecls[i]
@@ -2136,14 +2164,10 @@ End Rem
 				Emit "printf(~qAbstract method called : " + decl.ident + "\n~q);fflush(stdout);"
 				Emit "brl_blitz_NullMethodError();"
 			Else
-'If decl.ident = "OpenStream" DebugStop
 
 				decl.Semant()
-'If decl.ident = "GetActive" DebugStop
-		' TODO : enable block output
+
 				EmitBlock decl
-		'		Emit "// TODO : enable block output"
-		'		Emit "printf(~qTODO : " + decl.munged + "\n~q);fflush(stdout);"
 
 			End If
 			Emit "}"

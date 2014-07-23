@@ -55,6 +55,13 @@ Type TIParser
 			' add import to the scope (so we can find decls in it later)
 			pmod.imported.Insert(modpath, _appInstance.globalImports.ValueForKey(modpath))
 			Return False
+		Else If imp Then
+			' if "imp" is set, this is a file import. We need to check for it too, or we may end up importing it twice.
+			If _appInstance.IsImported(imp)
+				' add import to the scope (so we can find decls in it later)
+				pmod.imported.Insert(imp, _appInstance.globalImports.ValueForKey(imp))
+				Return False
+			End If
 		End If
 		
 		Local _mod:TModuleDecl = New TModuleDecl.Create(modpath, "bb" + modpath, path, attrs)
