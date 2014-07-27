@@ -73,6 +73,7 @@ Type TType
 	Global emptyArrayType:TArrayType=New TArrayType.Create( voidType )
 	Global objectType:TIdentType=New TIdentType.Create( "brl.classes.object" )
 	Global nullObjectType:TNullType=New TNullType
+	Global stringType:TStringType=New TStringType
 
 	Rem
 	bbdoc: map to a pointer type

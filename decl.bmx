@@ -424,7 +424,10 @@ Type TArgDecl Extends TLocalDecl
 	End Method
 	
 	Method OnCopy:TDecl()
-		Return New TArgDecl.Create( ident,ty,CopyInit(),attrs )
+		Local d:TArgDecl = New TArgDecl.Create( ident,ty,CopyInit(),attrs )
+		d.ty = d.declTy
+		d.init = d.declInit
+		Return d
 	End Method
 	
 	Method ToString$()

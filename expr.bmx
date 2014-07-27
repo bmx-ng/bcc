@@ -723,12 +723,14 @@ Type TInvokeSuperExpr Extends TExpr
 
 		classScope=_env.ClassScope()
 		superClass=classScope.superClass
-
+		
 		If Not superClass Err "Type has no super class."
 
 		args=SemantArgs( args )
 		origFuncDecl=classScope.FindFuncDecl(ident,args)
 		funcDecl=superClass.FindFuncDecl( ident,args )
+		' ensure the super function has been semanted
+		funcDecl.Semant()
 		If Not funcDecl Err "Can't find superclass method '"+ident+"'."
 		args=CastArgs( args,funcDecl )
 		exprType=funcDecl.retType
@@ -1418,6 +1420,17 @@ Type TIndexExpr Extends TExpr
 		Return Semant()
 		'Return Self
 	End Method
+	
+	Method SemantFunc:TExpr( args:TExpr[] , throwError:Int = True, funcCall:Int = False )
+		Local ex:TExpr = Semant()
+		
+		If TArrayType( expr.exprType ) And TFunctionPtrType(exprType) Then
+			exprType = TFunctionPtrType(exprType).func.retType
+		End If
+		
+		Return ex
+	End Method
+
 
 	Method Trans$()
 		Return _trans.TransIndexExpr( Self )
@@ -1494,11 +1507,36 @@ Type TArrayExpr Extends TExpr
 
 		exprs[0]=exprs[0].Semant()
 		Local ty:TType=exprs[0].exprType
+		
+		If TInvokeExpr(exprs[0]) And Not TInvokeExpr(exprs[0]).invokedWithBraces Then
+			ty = New TFunctionPtrType
+			Local cp:TDecl = TInvokeExpr(exprs[0]).decl
+			TInvokeExpr(exprs[0]).decl = TFuncDecl(TInvokeExpr(exprs[0]).decl.Copy())
+			TInvokeExpr(exprs[0]).decl.actual = cp
+			TInvokeExpr(exprs[0]).decl.attrs :| FUNC_PTR
+			TFunctionPtrType(ty).func = TInvokeExpr(exprs[0]).decl
 
-		For Local i:Int=1 Until exprs.Length
-			exprs[i]=exprs[i].Semant()
-			ty=BalanceTypes( ty,exprs[i].exprType )
-		Next
+			For Local i:Int=1 Until exprs.Length
+				exprs[i]=exprs[i].Semant()
+				
+				If TInvokeExpr(exprs[i]) And Not TInvokeExpr(exprs[i]).invokedWithBraces
+					cp = TInvokeExpr(exprs[i]).decl
+					
+					TInvokeExpr(exprs[i]).decl = TFuncDecl(TInvokeExpr(exprs[i]).decl.Copy())
+					TInvokeExpr(exprs[i]).decl.actual = cp
+					TInvokeExpr(exprs[i]).decl.attrs :| FUNC_PTR
+					
+					ty=BalanceTypes( ty, New TFunctionPtrType )
+				Else
+					ty=BalanceTypes( ty,exprs[i].exprType )
+				End If
+			Next
+		Else
+			For Local i:Int=1 Until exprs.Length
+				exprs[i]=exprs[i].Semant()
+				ty=BalanceTypes( ty,exprs[i].exprType )
+			Next
+		End If
 
 		For Local i:Int=0 Until exprs.Length
 			exprs[i]=exprs[i].Cast( ty )
@@ -2077,7 +2115,17 @@ Type TFuncCallExpr Extends TExpr
 
 	Method Semant:TExpr()
 		args=SemantArgs( args )
-		Return expr.SemantFunc( args, True, True )
+		If TIndexExpr(expr) Then
+			expr = expr.SemantFunc( args, True, True )
+			exprType = expr.exprType
+			Return Self
+		Else
+			Return expr.SemantFunc( args, True, True )
+		End If
+	End Method
+
+	Method Trans$()
+		Return _trans.TransFuncCallExpr( Self )
 	End Method
 
 End Type

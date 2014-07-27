@@ -40,6 +40,8 @@ Type TTranslator
 	Field customVarStack:TStack = New TStack
 	Field varStack:TStack = New TStack
 
+	Field tryStack:TStack = New TStack
+
 	Field mungedScopes:TMap=New TMap'<StringSet>
 '	Field funcMungs:=New StringMap<FuncDeclList>
 '	Field mungedFuncs:=New StringMap<FuncDecl>
@@ -416,6 +418,8 @@ End Rem
 	Method TransArraySizeExpr$ ( expr:TArraySizeExpr ) Abstract
 	
 	Method TransIntrinsicExpr$( decl:TDecl,expr:TExpr,args:TExpr[]=Null ) Abstract
+	
+	Method TransArgs$( args:TExpr[],decl:TFuncDecl, objParam:String = Null ) Abstract
 
 	Method BeginLocalScope()
 		mungStack.Push mungScope
@@ -512,6 +516,8 @@ End Rem
 
 		If (decl.attrs & FUNC_PTR) And (decl.attrs & FUNC_INIT) And Not expr.InvokedWithBraces Return decl.munged
 		
+		If ((decl.attrs & FUNC_PTR) Or (expr.decl.attrs & FUNC_PTR)) And Not expr.InvokedWithBraces Return decl.munged
+		
 		If decl.munged.StartsWith( "$" ) Return TransIntrinsicExpr( decl,Null,expr.args )
 		
 		If decl Return TransFunc( TFuncDecl(decl),expr.args,Null )
@@ -535,6 +541,18 @@ End Rem
 		If decl.munged.StartsWith( "$" ) Return TransIntrinsicExpr( decl,expr )
 		
 		If decl Return TransSuperFunc( TFuncDecl( decl ),expr.args, expr.classScope )
+		
+		InternalErr
+	End Method
+	
+	Method TransFuncCallExpr:String( expr:TFuncCallExpr )
+
+		If TIndexExpr(expr.expr) And TArrayType(TIndexExpr(expr.expr).expr.exprType) And TFunctionPtrType(TArrayType(TIndexExpr(expr.expr).expr.exprType).elemType) Then
+			Local decl:TDecl = TFunctionPtrType(TArrayType(TIndexExpr(expr.expr).expr.exprType).elemType).func.actual
+			decl.Semant()
+			expr.args=expr.CastArgs( expr.args,TFuncDecl(decl) )
+			Return expr.expr.Trans() + TransArgs(expr.args, TFuncDecl(decl))
+		End If
 		
 		InternalErr
 	End Method
@@ -567,6 +585,9 @@ End Rem
 			End If
 			t:+" "+stmt.expr.Trans()
 		End If
+		
+		EmitTryStack()
+
 		Return t
 	End Method
 	
@@ -583,6 +604,8 @@ End Rem
 	
 	Method TransTryStmt$( stmt:TTryStmt )
 	End Method
+	
+	Method EmitTryStack() Abstract
 
 	Method TransThrowStmt$( stmt:TThrowStmt )
 	End Method

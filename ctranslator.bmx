@@ -74,6 +74,7 @@ Type TCTranslator Extends TTranslator
 		If TStringType( ty ) Return "~q$~q"
 		If TArrayType( ty ) Return "~q[~q"
 		If TObjectType( ty ) Return "~q:~q"
+		If TFunctionPtrType( ty ) Return "~q*b~q" ' TODO : use "(" instead? (it's mentioned in blitz array source somewhere)
 
 	End Method
 	
@@ -289,17 +290,17 @@ Type TCTranslator Extends TTranslator
 				
 									t:+ class + "->fn_" + fdecl.ident
 								Else
-									t:+ "&" + fdecl.munged
+									t:+ fdecl.munged
 								End If
 							Else
-								t:+ "&" + fdecl.munged
+								t:+ fdecl.munged
 							End If
 						End If
 						Continue
 					End If
 					' some cases where we are passing a function pointer via a void* parameter.
 					If TCastExpr(args[i]) And TInvokeExpr(TCastExpr(args[i]).expr) And Not TInvokeExpr(TCastExpr(args[i]).expr).invokedWithBraces Then
-						t:+ "&" + TInvokeExpr(TCastExpr(args[i]).expr).decl.munged
+						t:+ TInvokeExpr(TCastExpr(args[i]).expr).decl.munged
 						Continue
 					End If
 
@@ -341,6 +342,10 @@ t:+"NULLNULLNULL"
 							End If
 						Else
 							t:+ decl.argDecls[i].init.Trans()
+						End If
+					Else If TFunctionPtrType(ty) Then
+						If TInvokeExpr(init) Then
+							t:+ TInvokeExpr(init).decl.munged
 						End If
 					Else
 						t:+ decl.argDecls[i].init.Trans()
@@ -1321,6 +1326,16 @@ EndRem
 			'If TDoubleVarPtrType( src ) Return Bra("*" + t)
 			'If TPointerType( src ) Return Bra("(BBDOUBLE)"+t)
 		Else If TStringType( dst )
+
+			If src._flags & TType.T_VAR Then
+				If TByteType( src ) Return "bbStringFromInt"+Bra( "*" + t )
+				If TShortType( src ) Return "bbStringFromInt"+Bra( "*" + t )
+				If TIntType( src ) Return "bbStringFromInt"+Bra( "*" + t )
+				If TLongType( src ) Return "bbStringFromLong"+Bra( "*" + t )
+				If TFloatType( src ) Return "bbStringFromFloat"+Bra( "*" + t )
+				If TDoubleType( src ) Return "bbStringFromDouble"+Bra( "*" + t )
+			End If
+
 			If TBoolType( src ) Return "bbStringFromInt"+Bra( t )
 			If TByteType( src ) Return "bbStringFromInt"+Bra( t )
 			If TShortType( src ) Return "bbStringFromInt"+Bra( t )
@@ -1347,14 +1362,6 @@ EndRem
 			'	Return "*" + t
 			'End If
 			'If TStringCharPtrType( src ) Return "bbStringFromCString"+Bra( t )
-			If src._flags & TType.T_VAR Then
-				If TByteType( src ) Return "bbStringFromInt"+Bra( "*" + t )
-				If TShortType( src ) Return "bbStringFromInt"+Bra( "*" + t )
-				If TIntType( src ) Return "bbStringFromInt"+Bra( "*" + t )
-				If TLongType( src ) Return "bbStringFromLong"+Bra( "*" + t )
-				If TFloatType( src ) Return "bbStringFromFloat"+Bra( "*" + t )
-				If TDoubleType( src ) Return "bbStringFromDouble"+Bra( "*" + t )
-			End If
 		'Else If TStringVarPtrType( dst )
 'DebugStop
 		Else If TByteType( dst )
@@ -1530,7 +1537,11 @@ EndRem
 		End If
 
 		If TArrayType( expr.expr.exprType ) Then
-			Return Bra("(" + TransType(expr.exprType, "") + "*)BBARRAYDATA(" + t_expr + "," + t_expr + "->dims)") + "[" + t_index + "]"
+			If TFunctionPtrType(TArrayType( expr.expr.exprType ).elemType) Then
+				Return Bra(Bra(TransType(TArrayType( expr.expr.exprType).elemType, "")) + Bra(Bra("(void**)BBARRAYDATA(" + t_expr + "," + t_expr + "->dims)") + "[" + t_index + "]"))
+			Else
+				Return Bra("(" + TransType(expr.exprType, "") + "*)BBARRAYDATA(" + t_expr + "," + t_expr + "->dims)") + "[" + t_index + "]"
+			End If
 		End If
 
 		'Local swiz$
@@ -1592,7 +1603,12 @@ EndRem
 		Local tt$
 '		If Not _env tt="static "
 
-		Emit tt+TransType( elemType, tmpData.munged )+" "+tmpData.munged+"[]={"+t+"};"
+		If Not TFunctionPtrType(elemType) Then
+			tt :+ TransType( elemType, tmpData.munged ) + " "+tmpData.munged + "[]"
+		Else
+			tt :+ TransType( elemType, tmpData.munged + "[]" ) 
+		End If
+		Emit tt+"={"+t+"};"
 		Emit "BBARRAY " + tmpArray.munged + " = bbArrayFromData" + Bra(TransArrayType(elemType) + "," + count + "," + tmpData.munged ) + ";"
 
 		Return tmpArray.munged
@@ -1665,7 +1681,9 @@ EndRem
 		Emit "jmp_buf * buf = bbExEnter();"
 		Emit "switch(setjmp(*buf)) {"
 		Emit "case 0: {"
+		tryStack.Push("")
 		EmitBlock( stmt.block )
+		tryStack.Pop()
 		Emit "bbExLeave();"
 		Emit "}"
 		Emit "break;"
@@ -1706,6 +1724,12 @@ EndRem
 		Emit "break;"
 		Emit "}"
 		Emit "} while(0);"
+	End Method
+	
+	Method EmitTryStack()
+		For Local i:Int = 0 Until tryStack.Length()
+			Emit "bbExLeave();"
+		Next
 	End Method
 
 	Method TransAssignStmt$( stmt:TAssignStmt )
@@ -2842,6 +2866,8 @@ End Rem
 					fld :+ "= 0;"
 				Else If TStringType(decl.ty) Then
 					fld :+ "= &bbEmptyString;"
+				Else If TArrayType(decl.ty) Then
+					fld :+ "= &bbEmptyArray;"
 				End If
 			End If
 
@@ -2926,10 +2952,10 @@ End Rem
 			End If
 		End If
 
-		If TObjectType(exprType) And (exprType._flags & TType.T_VAR) Then
-			' get the object from the pointer
-			variable = Bra("*" + variable)
-		End If
+		'If TObjectType(exprType) And (exprType._flags & TType.T_VAR) Then
+		'	' get the object from the pointer
+		'	variable = Bra("*" + variable)
+		'End If
 
 		If IsNumericType(decl.ty) Then
 			s = variable + "->" + decl.munged + " "

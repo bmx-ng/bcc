@@ -417,7 +417,7 @@ Type TParser
 		If CParse( "byte" ) Return New TByteType
 		If CParse( "int" ) Return New TIntType
 		If CParse( "float" ) Return New TFloatType
-		If CParse( "string" ) Return New TStringType
+		If CParse( "string" ) Return TType.stringType
 		If CParse( "object" ) Return New TIdentType.Create( "brl.classes.object" )
 		If CParse( "long" ) Return New TLongType
 		If CParse( "double" ) Return New TDoubleType
@@ -438,7 +438,7 @@ Type TParser
 		If CParse( "byte" ) Return New TByteType
 		If CParse( "int" ) Return New TIntType
 		If CParse( "float" ) Return New TFloatType
-		If CParse( "string" ) Return New TStringType
+		If CParse( "string" ) Return TType.stringType
 		If CParse( "object" ) Return New TIdentType.Create( "brl.classes.object" )
 		If CParse( "long" ) Return New TLongType
 		If CParse( "double" ) Return New TDoubleType
@@ -923,7 +923,7 @@ Type TParser
 					TConstExpr(expr).ty = ty
 				End If
 			Case TOKE_STRINGLIT
-				expr=New TConstExpr.Create( New TStringType,BmxUnquote( _toke ) )
+				expr=New TConstExpr.Create( TType.stringType,BmxUnquote( _toke ) )
 				_app.mapStringConsts(BmxUnquote( _toke ))
 				NextToke
 			Default
@@ -1400,7 +1400,7 @@ Type TParser
 				Local ty:TType
 				If Not CParse(":") Then
 					Parse "$"
-					ty=New TStringType
+					ty= TType.stringType
 				Else
 					ty=ParseType()
 				End If
@@ -1779,6 +1779,10 @@ Type TParser
 				End If
 
 				TFunctionPtrType(ty).func.ident = ""
+
+				While CParse( "[]" )
+					ty=New TArrayType.Create(ty)
+				Wend
 
 				' check for function pointer init
 				If CParse("=") Then
