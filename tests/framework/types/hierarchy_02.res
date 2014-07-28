@@ -1,5 +1,4 @@
 Super.GetProp: A  =  A
-Super.GetProp: A  =  A
 Self.GetProp : B =/= A
 Self.prop    : B =/= A
 Self.prop2   : A  =  A
