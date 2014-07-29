@@ -244,7 +244,7 @@ Type TCTranslator Extends TTranslator
 					Return "&bbNullObject"
 				End If
 			End If
-			If TFunctionPtrType( ty) Return "0" ' todo ??
+			If TFunctionPtrType( ty) Return "&brl_blitz_NullFunctionError" ' todo ??
 			'If TByteType( ty ) Return "0"
 		EndIf
 		InternalErr
@@ -473,7 +473,11 @@ t:+"NULLNULLNULL"
 					glob :+ init.Trans()
 				End If
 			Else
-				glob :+ "0"
+				If TFunctionPtrType(ty) Then
+					glob :+ "&brl_blitz_NullFunctionError"
+				Else
+					glob :+ "0"
+				End If
 			End If
 		End If
 
@@ -1244,7 +1248,7 @@ EndRem
 			'	If TNumericType( src ) Return Bra("(BBINT**)"+t)
 			End If
 		Else If TBoolType( dst )
-			If TFunctionPtrType(src) Return Bra( t )
+			If TFunctionPtrType(src) Return Bra( t+"!=&brl_blitz_NullFunctionError" )
 			If IsPointerType( src, 0, TType.T_POINTER ) Return Bra( t )
 			If TBoolType( src ) Return t
 			If TByteType( src ) Return Bra( t+"!=0" )
@@ -2862,8 +2866,10 @@ End Rem
 				' initial value
 				fld :+ "= " + decl.init.Trans() + ";";
 			Else
-				If TNumericType(decl.ty) Or TObjectType(decl.ty) Or TFunctionPtrType(decl.ty) Or IsPointerType(decl.ty, 0, TType.T_POINTER) Then
+				If TNumericType(decl.ty) Or TObjectType(decl.ty) Or IsPointerType(decl.ty, 0, TType.T_POINTER) Then
 					fld :+ "= 0;"
+				Else If TFunctionPtrType(decl.ty) Then
+					fld :+ "= &brl_blitz_NullFunctionError;"
 				Else If TStringType(decl.ty) Then
 					fld :+ "= &bbEmptyString;"
 				Else If TArrayType(decl.ty) Then
@@ -3090,6 +3096,9 @@ End Rem
 			If TCastExpr(expr) Then
 				If TInvokeExpr(TCastExpr(expr).expr) Then
 					Return Enquote(TInvokeExpr(TCastExpr(expr).expr).decl.munged)
+				End If
+				If TNullExpr(TCastExpr(expr).expr) Then
+					Return Enquote("brl_blitz_NullFunctionError")
 				End If
 			End If
 
