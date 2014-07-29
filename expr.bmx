@@ -832,7 +832,11 @@ Type TCastExpr Extends TExpr
 					op="ToString"
 				Else If IsPointerType( ty, TType.T_BYTE )
 					exprType = ty
-					Return expr
+					If flags = CAST_EXPLICIT Then
+						Return Self
+					Else
+						Return expr
+					End If
 				Else
 					InternalErr
 				EndIf

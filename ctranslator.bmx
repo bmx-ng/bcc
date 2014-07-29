@@ -1218,6 +1218,14 @@ EndRem
 				Return tmp
 			End If
 
+			If TObjectType(src) Then
+				If TObjectType(src).classDecl.IsExtern() Then
+					Return Bra(t)
+				Else
+					Return Bra("(BBBYTE*)" + t) + "+" + Bra("sizeof(void*)")
+				End If
+			End If
+
 			Local p:String = TransSPointer(dst)
 			If TByteType( dst )
 				If IsPointerType(src, TType.T_BYTE) Return t
