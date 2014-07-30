@@ -246,7 +246,6 @@ Type TValDecl Extends TDecl
 	End Method
 	
 	Method OnSemant()
-
 		If declTy
 			ty=declTy.Semant()
 			
@@ -288,6 +287,8 @@ Type TValDecl Extends TDecl
 					' the default munged function value as defined in the interface
 					If TInvokeExpr(declInit) Then
 						init = declInit.Copy()
+					Else If TConstExpr(declInit) Then
+						init = declInit.Copy().Semant()
 					Else
 						Local expr:TExpr
 						

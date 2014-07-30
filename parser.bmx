@@ -1787,6 +1787,8 @@ Type TParser
 				' check for function pointer init
 				If CParse("=") Then
 					init=ParseExpr()
+				Else
+					init=New TConstExpr.Create( ty,"" )
 				End If
 
 			Else If toke<>"const"
