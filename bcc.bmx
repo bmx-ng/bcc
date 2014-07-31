@@ -46,13 +46,20 @@ If opt_buildtype = BUILDTYPE_MODULE Then
 	End If
 End If
 
-Local app:TAppDecl = ParseApp(opt_filepath)
+Local app:TAppDecl 
+Local trans:TCTranslator 
+Try
+	app = ParseApp(opt_filepath)
 
-app.Semant()
+	app.Semant()
 
-Local trans:TCTranslator = New TCTranslator
+	trans = New TCTranslator
 
-trans.TransApp(app)
+	trans.TransApp(app)
+Catch error:String
+	WriteStderr error
+	End
+End Try
 
 Local makeApp:Int = False
 If opt_apptype Then

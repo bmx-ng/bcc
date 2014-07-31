@@ -895,6 +895,11 @@ Type TFunctionPtrType Extends TType
 		Return ty
 	End Method
 
+	Method Semant:TType()
+		func.Semant()
+		Return Self
+	End Method
+
 End Type
 
 ' a holder during parsing which becomes the "real" var ptr type during semanting

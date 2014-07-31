@@ -36,7 +36,7 @@ Type TForEachinStmt Extends TStmt
 	Field varlocal:Int
 	Field expr:TExpr
 	Field block:TBlockDecl
-
+	
 	Field stmts:TList=New TList
 
 	Method Create:TForEachinStmt( varid$,varty:TType,varlocal:Int,expr:TExpr,block:TBlockDecl )
@@ -3029,7 +3029,11 @@ End Rem
 			If Not toker.Toke() Exit
 
 			con = 0
-			If Eval( toker,New TIntType ) = "1" con = 1
+			Try
+				If Eval( toker,New TIntType ) = "1" con = 1
+			Catch error:String
+				con = 0
+			End Try
 
 Rem
 		Case "macos", "macosx86", "x86", "littleendian", "bigendian"
@@ -3126,7 +3130,6 @@ Function ParseApp:TAppDecl( path$ )
 	Local toker:TToker=New TToker.Create( path,source )
 
 	Local parser:TParser=New TParser.Create( toker,app )
-
 	parser.ParseMain
 
 	Return app

@@ -56,11 +56,11 @@ Function PopErr()
 End Function
 
 Function Err( err$ )
-	WriteStderr "Compile Error: "+err + "~n"
-	WriteStderr _errInfo + "~n"
+	'WriteStderr "Compile Error: "+err + "~n"
+	'WriteStderr _errInfo + "~n"
 '	Print _errInfo+" "+err
-DebugStop
-	End
+DebugStop ' useful for debugging!
+	Throw "Compile Error: "+err + "~n" + _errInfo + "~n"
 End Function
 
 Function FormatError:String(path:String, line:Int, char:Int)

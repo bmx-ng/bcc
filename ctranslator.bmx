@@ -1550,7 +1550,7 @@ EndRem
 
 		If TArrayType( expr.expr.exprType ) Then
 			If TFunctionPtrType(TArrayType( expr.expr.exprType ).elemType) Then
-				Return Bra(Bra(TransType(TArrayType( expr.expr.exprType).elemType, "")) + Bra(Bra("(void**)BBARRAYDATA(" + t_expr + "," + t_expr + "->dims)") + "[" + t_index + "]"))
+				Return Bra(Bra(TransType(TArrayType( expr.expr.exprType).elemType, "*")) + Bra("BBARRAYDATA(" + t_expr + "," + t_expr + "->dims)")) + "[" + t_index + "]"
 			Else
 				Return Bra("(" + TransType(expr.exprType, "") + "*)BBARRAYDATA(" + t_expr + "," + t_expr + "->dims)") + "[" + t_index + "]"
 			End If

@@ -246,15 +246,23 @@ Type TValDecl Extends TDecl
 	End Method
 	
 	Method OnSemant()
+
 		If declTy
-			ty=declTy.Semant()
-			
-			' pass the scope into the function ptr
-			If TFunctionPtrType(ty) Then
-				If Not TFunctionPtrType(ty).func.scope Then
-					TFunctionPtrType(ty).func.scope = scope
+			' ensure to set the scope for a function pointer array before semanting
+			If TArrayType(declTy) And TFunctionPtrType(TArrayType(declTy).elemType) Then
+				If Not TFunctionPtrType(TArrayType(declTy).elemType).func.scope Then
+					TFunctionPtrType(TArrayType(declTy).elemType).func.scope = scope
 				End If
 			End If
+
+			' pass the scope into the function ptr
+			If TFunctionPtrType(declTy) Then
+				If Not TFunctionPtrType(declTy).func.scope Then
+					TFunctionPtrType(declTy).func.scope = scope
+				End If
+			End If
+			
+			ty=declTy.Semant()
 			
 			If Not deferInit Then
 				SemantInit()
@@ -1608,6 +1616,10 @@ End Rem
 			decl.Semant()
 		Next
 
+		For Local decl:TFieldDecl = EachIn Decls()
+			decl.Semant()
+		Next
+
 	End Method
 	
 	'Ok, this dodgy looking beast 'resurrects' methods that may not currently be alive, but override methods that ARE.
@@ -1969,7 +1981,8 @@ Type TAppDecl Extends TScopeDecl
 	Method OnSemant()
 'DebugStop		
 		_env=Null
-pushenv Self
+		pushenv Self
+		
 		mainModule.Semant
 
 		mainFunc=mainModule.FindFuncDecl( "LocalMain" )
@@ -1978,9 +1991,7 @@ pushenv Self
 		' FIXME
 		If Not mainFunc Err "Function 'Main' not found."
 		
-		'If Not TIntType( mainFunc.retType ) Or mainFunc.argDecls.Length
-		'	Err "Main function must be of type Main:Int()"
-		'EndIf
+		SemantDecls()
 
 		Repeat
 			Local more:Int
@@ -1993,6 +2004,43 @@ pushenv Self
 		For Local cdecl:TClassDecl=EachIn semantedClasses
 			cdecl.FinalizeClass
 		Next
+	End Method
+	
+	Method SemantDecls()
+		For Local decl:TDecl=EachIn mainModule._decls
+
+			decl.Semant
+			
+			' consts
+			Local cdecl:TConstDecl=TConstDecl( decl )
+			If cdecl
+				cdecl.Semant()
+				Continue
+			End If
+
+			' classes
+			Local tdecl:TClassDecl=TClassDecl( decl )
+			If tdecl
+				tdecl.Semant()
+				tdecl.SemantParts()
+				Continue
+			EndIf
+
+			' functions
+			Local fdecl:TFuncDecl=TFuncDecl( decl )
+			If fdecl And fdecl <> _appInstance.mainFunc Then
+				fdecl.Semant()
+				Continue
+			End If
+
+			' globals
+			Local gdecl:TGlobalDecl=TGlobalDecl( decl )
+			If gdecl
+				gdecl.Semant()
+				Continue
+			End If
+		Next
+
 	End Method
 	
 	Method hasStringConst:Int(value:String)
