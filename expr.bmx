@@ -260,6 +260,8 @@ Type TConstExpr Extends TExpr
 				Else
 					value=String( val )
 				End If
+			Else
+				value = String.FromLong(value.ToLong())
 			EndIf
 
 		Else If TFloatType( ty )
