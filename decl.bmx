@@ -251,19 +251,27 @@ Type TValDecl Extends TDecl
 			' ensure to set the scope for a function pointer array before semanting
 			If TArrayType(declTy) And TFunctionPtrType(TArrayType(declTy).elemType) Then
 				If Not TFunctionPtrType(TArrayType(declTy).elemType).func.scope Then
-					TFunctionPtrType(TArrayType(declTy).elemType).func.scope = scope
+					If scope Then
+						TFunctionPtrType(TArrayType(declTy).elemType).func.scope = scope
+					Else
+						TFunctionPtrType(TArrayType(declTy).elemType).func.scope = _env
+					End If
 				End If
 			End If
 
 			' pass the scope into the function ptr
 			If TFunctionPtrType(declTy) Then
 				If Not TFunctionPtrType(declTy).func.scope Then
-					TFunctionPtrType(declTy).func.scope = scope
+					If scope Then
+						TFunctionPtrType(declTy).func.scope = scope
+					Else
+						TFunctionPtrType(declTy).func.scope = _env
+					End If
 				End If
 			End If
 			
 			ty=declTy.Semant()
-			
+
 			If Not deferInit Then
 				SemantInit()
 			End If
