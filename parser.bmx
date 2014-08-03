@@ -2896,6 +2896,7 @@ endrem
 				End If
 
 				_module.attrs :| MODULE_SUPERSTRICT
+				opt_issuperstrict = True
 				nextToke
 			Case "moduleinfo"
 				NextToke
