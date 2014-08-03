@@ -610,7 +610,7 @@ Type TParser
 
 	Method ParseArgs:TExpr[]( stmt:Int )
 		Local args:TExpr[]
-'DebugStop
+
 		If stmt
 			If AtEos() Return args
 		Else

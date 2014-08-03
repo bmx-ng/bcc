@@ -79,6 +79,10 @@ Type TType
 	bbdoc: map to a pointer type
 	End Rem
 	Function MapToPointerType:TType(ty:TType)
+		If ty = stringType Then
+			ty = ty.Copy()
+		End If
+
 		If Not (ty._flags & T_PTR) Then
 			ty._flags :| T_PTR
 			Return ty
@@ -98,6 +102,10 @@ Type TType
 	End Function
 
 	Function MapToVarType:TType(ty:TType)
+		If ty = stringType Then
+			ty = ty.Copy()
+		End If
+		
 		If Not (ty._flags & T_VAR) Then
 			ty._flags :| T_VAR
 			Return ty
@@ -112,6 +120,10 @@ Type TType
 	bbdoc: map to a var pointer type
 	End Rem
 	Function MapToVarPointerType:TType(ty:TType)
+		If ty = stringType Then
+			ty = ty.Copy()
+		End If
+
 		If Not (ty._flags & T_VARPTR) Then
 			ty._flags :| T_VARPTR
 			Return ty
