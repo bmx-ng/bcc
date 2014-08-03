@@ -45,7 +45,7 @@ Type TIParser
 	Method ParseModuleImport:Int(pmod:TModuleDecl, modpath:String, path:String, imp:String = Null, iData:String = Null, attrs:Int = 0, relPath:String = "")
 
 		Const STATE_CLASS:Int = 1
-		
+
 		If Not modpath Then
 			modpath = imp
 		End If
@@ -513,6 +513,7 @@ Type TIParser
 		End Select
 		Local id$=_toker._toke
 		NextToke
+
 		Return id
 	End Method
 
@@ -861,6 +862,17 @@ Type TIParser
 						decl.attrs :| FUNC_METHOD
 					End If
 					
+					' an array of function pointers?
+					If CParse( "&" ) Then
+					End If
+
+					While CParse( "[]" )
+						ty=New TArrayType.Create( ty )
+			
+						If CParse( "&" ) Then
+						End If
+					Wend
+
 				End If
 
 Rem
