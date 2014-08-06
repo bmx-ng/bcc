@@ -1693,9 +1693,11 @@ EndRem
 		Emit "jmp_buf * buf = bbExEnter();"
 		Emit "switch(setjmp(*buf)) {"
 		Emit "case 0: {"
+		PushLoopTryStack(stmt)
 		tryStack.Push("")
 		EmitBlock( stmt.block )
 		tryStack.Pop()
+		PopLoopTryStack
 		Emit "bbExLeave();"
 		Emit "}"
 		Emit "break;"
@@ -2208,6 +2210,10 @@ End Rem
 			End If
 			Emit "}"
 		End If
+
+		' reset label ids
+		contLabelId = 0
+		exitLabelId = 0
 
 		EndLocalScope
 		'PopMungScope

@@ -32,6 +32,9 @@ Type TTranslator
 	Field LINES:TStringList'=New TStringList
 	Field unreachable:Int,broken:Int
 	
+	Field contLabelId:Int
+	Field exitLabelId:Int
+	
 	'Munging needs a big cleanup!
 	
 	Field mungScope:TMap=New TMap'<TDecl>
@@ -41,6 +44,7 @@ Type TTranslator
 	Field varStack:TStack = New TStack
 
 	Field tryStack:TStack = New TStack
+	Field loopTryStack:TStack = New TStack
 
 	Field mungedScopes:TMap=New TMap'<StringSet>
 '	Field funcMungs:=New StringMap<FuncDeclList>
@@ -55,6 +59,41 @@ Type TTranslator
 	
 	Method PopVarScope()
 		customVarStack=TStack(varStack.Pop())
+	End Method
+	
+	Method PushLoopTryStack(stmt:Object)
+		If loopTryStack.Length() = 0 Then
+			' Try statements can only be applied here to loops
+			If TTryStmt(stmt) = Null Then
+				loopTryStack.Push stmt
+			End If
+		Else
+			loopTryStack.Push stmt
+		End If
+	End Method
+
+	Method PopLoopTryStack()
+		loopTryStack.Pop
+	End Method
+	
+	Method LoopTryDepth:Int()
+		Local count:Int = 0
+		
+		For Local stmt:Object = EachIn loopTryStack
+			If TTryStmt(stmt) = Null Then
+				Exit
+			End If
+
+			count :+ 1
+		Next
+		
+		Return count
+	End Method
+
+	Method GetTopLoop:TTryBreakCheck()
+		For Local stmt:TTryBreakCheck = EachIn loopTryStack
+			Return stmt
+		Next
 	End Method
 	
 	Method MungFuncDecl( fdecl:TFuncDecl )
@@ -591,15 +630,63 @@ End Rem
 		Return t
 	End Method
 	
+	Method NextExitId:Int(bc:TTryBreakCheck)
+		If Not bc.exitId Then
+			exitLabelId :+ 1
+			bc.exitId = exitLabelId
+		End If
+		
+		Return bc.exitId
+	End Method
+
+	Method NextContId:Int(bc:TTryBreakCheck)
+		If Not bc.contId Then
+			contLabelId :+ 1
+			bc.contId = contLabelId
+		End If
+		
+		Return bc.contId
+	End Method
+
 	Method TransContinueStmt$( stmt:TContinueStmt )
 		unreachable=True
-		Return "continue"
+
+		Local count:Int = LoopTryDepth()
+		If count > 0 Then
+			Local bc:TTryBreakCheck = GetTopLoop()
+			If bc Then
+				NextContId(bc)
+				For Local i:Int = 0 Until count
+					Emit "bbExLeave();"
+				Next
+				Emit "goto " + TransLabelCont(bc, False)
+			Else
+				InternalErr
+			End If
+		Else
+			Return "continue"
+		End If
 	End Method
 	
 	Method TransBreakStmt$( stmt:TBreakStmt )
 		unreachable=True
 		broken:+1
-		Return "break"
+		
+		Local count:Int = LoopTryDepth()
+		If count > 0 Then
+			Local bc:TTryBreakCheck = GetTopLoop()
+			If bc Then
+				NextExitId(bc)
+				For Local i:Int = 0 Until count
+					Emit "bbExLeave();"
+				Next
+				Emit "goto " + TransLabelExit(bc, False)
+			Else
+				InternalErr
+			End If
+		Else
+			Return "break"
+		End If
 	End Method
 	
 	Method TransTryStmt$( stmt:TTryStmt )
@@ -641,6 +728,22 @@ End Rem
 	End Method
 
 	Method TransSizeOfExpr:String(expr:TSizeOfExpr)
+	End Method
+	
+	Method TransLabelCont:String(bc:TTryBreakCheck, jmp:Int = True)
+		If jmp Then
+			Return "_contjmp" + bc.contId + ": ;"
+		Else
+			Return "_contjmp" + bc.contId + ";"
+		End If
+	End Method
+	
+	Method TransLabelExit:String(bc:TTryBreakCheck, jmp:Int = True)
+		If jmp Then
+			Return "_exitjmp" + bc.exitId + ": ;"
+		Else
+			Return "_exitjmp" + bc.exitId + ";"
+		End If
 	End Method
 
 	'***** Block statements - all very C like! *****
@@ -824,9 +927,20 @@ End Rem
 
 		Emit "while"+Bra( stmt.expr.Trans() )+"{"
 		
+		Local check:TTryBreakCheck = New TTryBreakCheck
+		PushLoopTryStack(check)
 		Local unr:Int=EmitBlock( stmt.block )
+		PopLoopTryStack
 		
+		If check.contId Then
+			Emit TransLabelCont(check)
+		End If
+
 		Emit "}"
+
+		If check.exitId Then
+			Emit TransLabelExit(check)
+		End If
 		
 		If broken=nbroken And TConstExpr( stmt.expr ) And TConstExpr( stmt.expr ).value unreachable=True
 		broken=nbroken
@@ -839,15 +953,26 @@ End Rem
 
 		Emit "do{"
 		
+		Local check:TTryBreakCheck = New TTryBreakCheck
+		PushLoopTryStack(check)
 		Local unr:Int=EmitBlock( stmt.block )
-		
+		PopLoopTryStack
+
+		If check.contId Then
+			Emit TransLabelCont(check)
+		End If
+
 		SetOutput("source")
-		
+
 		Local s:String = "}while(!"+Bra( stmt.expr.Trans() )+");"
 		
 		SetOutputTemp(True)
 		
 		Emit s
+
+		If check.exitId Then
+			Emit TransLabelExit(check)
+		End If
 
 		If broken=nbroken And TConstExpr( stmt.expr ) And Not TConstExpr( stmt.expr ).value unreachable=True
 		broken=nbroken
@@ -871,13 +996,24 @@ End Rem
 		Local incr$=stmt.incr.Trans()
 
 		Emit "for("+init+";"+expr+";"+incr+"){"
-		
+
+		Local check:TTryBreakCheck = New TTryBreakCheck
+		PushLoopTryStack(check)
 		Local unr:Int=EmitBlock( stmt.block )
+		PopLoopTryStack
 		
+		If check.contId Then
+			Emit TransLabelCont(check)
+		End If
+
 		Emit "}"
 		
 		If decl Then
 			Emit "}"
+		End If
+
+		If check.exitId Then
+			Emit TransLabelExit(check)
 		End If
 		
 		If broken=nbroken And TConstExpr( stmt.expr ) And TConstExpr( stmt.expr ).value unreachable=True
@@ -1033,4 +1169,10 @@ End Rem
 		
 End Type
 
+Type TTryBreakCheck
+
+	Field contId:Int
+	Field exitId:Int
+
+End Type
 
