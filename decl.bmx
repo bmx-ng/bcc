@@ -650,7 +650,13 @@ Type TScopeDecl Extends TDecl
 		
 		If Not decl Then
 			If Self.ident.ToLower() = ident.ToLower() Then
-				decl = Self
+				' name matches but we are a "module", but not a *real* module..
+				' .. so we can't be looking for ourself
+				If TModuleDecl(Self) And Self.ident.Find(".") = - 1 Then
+					decl = Null
+				Else
+					decl = Self
+				End If
 			End If
 		End If
 		
@@ -690,6 +696,14 @@ Type TScopeDecl Extends TDecl
 	
 	Method FindValDecl:TValDecl( ident$, static:Int = False )
 		Local decl:TValDecl=TValDecl( FindDecl( ident ) )
+		If Not decl Then
+			' didn't find it? Maybe it is in module local scope?
+			' issue arises when a global initialises with a local variable in the module scope.
+			Local fdecl:TFuncDecl = TFuncDecl(FindDecl("LocalMain"))
+			If fdecl Then
+				decl = TValDecl( fdecl.FindDecl( ident ) )
+			End If
+		End If
 		If Not decl Return Null
 		decl.AssertAccess
 		decl.Semant
@@ -1908,6 +1922,11 @@ Type TModuleDecl Extends TScopeDecl
 	End Method
 
 	Method OnSemant()
+		Local decl:TFuncDecl = FindFuncDecl( "LocalMain" )
+		If decl Then
+			decl.Semant
+		End If
+	
 		For Local gdecl:TGlobalDecl=EachIn _decls
 			gdecl.Semant
 		Next
