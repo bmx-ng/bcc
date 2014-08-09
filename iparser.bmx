@@ -53,13 +53,19 @@ Type TIParser
 		' already imported??
 		If _appInstance.IsImported(modpath)
 			' add import to the scope (so we can find decls in it later)
-			pmod.imported.Insert(modpath, _appInstance.globalImports.ValueForKey(modpath))
+			' but don't add it if pmod is the apps' main module
+			If _appInstance.mainModule <> pmod Then
+				pmod.imported.Insert(modpath, _appInstance.globalImports.ValueForKey(modpath))
+			End If
 			Return False
 		Else If imp Then
 			' if "imp" is set, this is a file import. We need to check for it too, or we may end up importing it twice.
 			If _appInstance.IsImported(imp)
 				' add import to the scope (so we can find decls in it later)
-				pmod.imported.Insert(imp, _appInstance.globalImports.ValueForKey(imp))
+				' but don't add it if pmod is the apps' main module
+				If _appInstance.mainModule <> pmod Then
+					pmod.imported.Insert(imp, _appInstance.globalImports.ValueForKey(imp))
+				End If
 				Return False
 			End If
 		End If
@@ -493,7 +499,7 @@ Type TIParser
 		Forever
 		
 		If toke CParse toke
-		
+
 		Return classDecl
 
 	End Method
