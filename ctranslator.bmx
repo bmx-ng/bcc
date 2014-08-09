@@ -3210,7 +3210,7 @@ End Rem
 				Emit "-Delete%()=" + Enquote("_" + classDecl.munged + "_Delete")
 			End If
 
-			Local reserved:String = ",New,Delete,ToString,Compare,SendMessage,_reserved1_,_reserved2_,_reserved3_,".ToLower()
+			Local reserved:String = ",New,Delete,_reserved1_,_reserved2_,_reserved3_,".ToLower()
 
 			For Local decl:TDecl=EachIn classDecl.Decls()
 
