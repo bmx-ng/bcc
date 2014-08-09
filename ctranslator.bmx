@@ -2628,15 +2628,15 @@ End Rem
 		CountClassFieldsDebugScope(classDecl, count)
 		
 		' standard methods
-		If classHasFunction(classDecl, "ToString") Then
+		If classHierarchyHasFunction(classDecl, "ToString") Then
 			count :+ 1
 		End If
 
-		If classHasFunction(classDecl, "Compare") Then
+		If classHierarchyHasFunction(classDecl, "Compare") Then
 			count :+ 1
 		End If
 
-		If classHasFunction(classDecl, "SendMessage") Then
+		If classHierarchyHasFunction(classDecl, "SendMessage") Then
 			count :+ 1
 		End If
 		
