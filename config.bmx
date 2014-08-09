@@ -200,6 +200,58 @@ Type TStringList Extends TList
 	End Method
 End Type
 
+Type TKeyValue
+	Field key:Object
+	Field value:Object
+	
+	Method Create:TKeyValue(key:Object,value:Object)
+		Self.key = key
+		Self.value = value
+		Return Self
+	End Method
+	
+	Method Compare:Int(other:Object)
+		If Not TKeyValue(other) Return 0
+		Return key.Compare(TKeyValue(other).key)
+	End Method
+	
+End Type
+
+Type TUnorderedMap
+
+	Field list:TList = New TList
+	Field map:TMap = New TMap
+
+	Method Insert( key:Object,value:Object )
+		list.AddLAst(New TKeyValue.Create(key, value))
+		map.Insert(key, value)
+	End Method
+	
+	Method Keys:TList()
+		Local klist:TList = New TList
+		For Local kv:TKeyValue = EachIn list
+			klist.AddLast(kv.key)
+		Next
+		Return klist
+	End Method
+	
+	Method Values:TList()
+		Local vlist:TList = New TList
+		For Local kv:TKeyValue = EachIn list
+			vlist.AddLast(kv.value)
+		Next
+		Return vlist
+	End Method
+	
+	Method Contains:Int( key:Object )
+		Return map.Contains(key)
+	End Method
+	
+	Method ValueForKey:Object( key:Object )
+		Return map.ValueForKey(key)
+	End Method
+End Type
+
 Function MakeKeywords:String()
 	Local keywords:String
 	

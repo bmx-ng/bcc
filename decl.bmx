@@ -1824,8 +1824,8 @@ Type TModuleDecl Extends TScopeDecl
 
 	Field filepath$
 	Field relpath$
-	Field imported:TMap=New TMap'<TModuleDecl>		'Maps filepath to modules
-	Field pubImported:TMap=New TMap'<TModuleDecl>	'Ditto for publicly imported modules
+	Field imported:TUnorderedMap=New TUnorderedMap'<TModuleDecl>		'Maps filepath to modules
+	Field pubImported:TUnorderedMap =New TUnorderedMap'<TModuleDecl>	'Ditto for publicly imported modules
 
 	Field fileImports:TList=New TList'StringList
 	
@@ -1898,7 +1898,7 @@ Type TModuleDecl Extends TScopeDecl
 			
 			'If Not _env Exit
 			
-			Local imps:TMap=mdecl.imported
+			Local imps:TUnorderedMap=mdecl.imported
 			'If mdecl<>_env.ModuleScope() imps=mdecl.pubImported
 
 			For Local mdecl2:TModuleDecl=EachIn imps.Values()
@@ -1948,9 +1948,9 @@ End Type
 
 Type TAppDecl Extends TScopeDecl
 
-	Field imported:TMap=New TMap'<TModuleDecl>			'maps modpath->mdecl
+	Field imported:TUnorderedMap=New TUnorderedMap'<TModuleDecl>			'maps modpath->mdecl
 	
-	Field globalImports:TMap = New TMap
+	Field globalImports:TUnorderedMap = New TUnorderedMap
 	
 	Field mainModule:TModuleDecl
 	Field mainFunc:TFuncDecl	
