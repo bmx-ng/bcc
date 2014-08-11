@@ -30,7 +30,7 @@ Import "iparser.bmx"
 
 Global FILE_EXT$="bmx"
 
-Type TForEachinStmt Extends TStmt
+Type TForEachinStmt Extends TLoopStmt
 	Field varid$
 	Field varty:TType
 	Field varlocal:Int
@@ -39,17 +39,18 @@ Type TForEachinStmt Extends TStmt
 	
 	Field stmts:TList=New TList
 
-	Method Create:TForEachinStmt( varid$,varty:TType,varlocal:Int,expr:TExpr,block:TBlockDecl )
+	Method Create:TForEachinStmt( varid$,varty:TType,varlocal:Int,expr:TExpr,block:TBlockDecl,loopLabel:TLoopLabelDecl )
 		Self.varid=varid
 		Self.varty=varty
 		Self.varlocal=varlocal
 		Self.expr=expr
 		Self.block=block
+		Self.loopLabel=loopLabel
 		Return Self
 	End Method
 
 	Method OnCopy:TStmt( scope:TScopeDecl )
-		Return New TForEachinStmt.Create( varid,varty,varlocal,expr.Copy(),block.CopyBlock( scope ) )
+		Return New TForEachinStmt.Create( varid,varty,varlocal,expr.Copy(),block.CopyBlock( scope ),TLoopLabelDecl(loopLabel.Copy()) )
 	End Method
 
 	Method OnSemant()
@@ -120,7 +121,7 @@ Type TForEachinStmt Extends TStmt
 
 			EndIf
 
-			Local whileStmt:TWhileStmt=New TWhileStmt.Create( cmpExpr,block )
+			Local whileStmt:TWhileStmt=New TWhileStmt.Create( cmpExpr,block,Null )
 
 			block=New TBlockDecl.Create( block.scope )
 			block.AddStmt New TDeclStmt.Create( exprTmp )
@@ -167,7 +168,7 @@ Type TForEachinStmt Extends TStmt
 				block.stmts.AddFirst New TAssignStmt.Create( "=",New TIdentExpr.Create( varid ),nextObjExpr )
 			EndIf
 
-			Local whileStmt:TWhileStmt=New TWhileStmt.Create( hasNextExpr,block )
+			Local whileStmt:TWhileStmt=New TWhileStmt.Create( hasNextExpr,block,Null )
 
 			block=New TBlockDecl.Create( block.scope )
 			If tmpDecl Then
@@ -1214,7 +1215,7 @@ Type TParser
 		_block.AddStmt stmt
 	End Method
 
-	Method ParseWhileStmt()
+	Method ParseWhileStmt(loopLabel:TLoopLabelDecl = Null)
 		Parse "while"
 
 		Local expr:TExpr=ParseExpr()
@@ -1241,12 +1242,12 @@ Type TParser
 		Wend
 		PopBlock
 
-		Local stmt:TWhileStmt=New TWhileStmt.Create( expr,block )
+		Local stmt:TWhileStmt=New TWhileStmt.Create( expr,block,loopLabel )
 
 		_block.AddStmt stmt
 	End Method
 
-	Method ParseRepeatStmt()
+	Method ParseRepeatStmt(loopLabel:TLoopLabelDecl = Null)
 
 		Parse "repeat"
 
@@ -1268,12 +1269,12 @@ Type TParser
 			expr=New TConstExpr.Create( New TBoolType,"" )
 		EndIf
 
-		Local stmt:TRepeatStmt=New TRepeatStmt.Create( block,expr )
+		Local stmt:TRepeatStmt=New TRepeatStmt.Create( block,expr,loopLabel )
 
 		_block.AddStmt stmt
 	End Method
 
-	Method ParseForStmt()
+	Method ParseForStmt(loopLabel:TLoopLabelDecl = Null)
 'DebugStop
 		Parse "for"
 
@@ -1310,7 +1311,7 @@ Type TParser
 			Wend
 			PopBlock
 
-			Local stmt:TForEachinStmt=New TForEachinStmt.Create( varid,varty,varlocal,expr,block )
+			Local stmt:TForEachinStmt=New TForEachinStmt.Create( varid,varty,varlocal,expr,block,loopLabel )
 
 			_block.AddStmt stmt
 
@@ -1365,7 +1366,7 @@ Type TParser
 
 		NextToke
 
-		Local stmt:TForStmt=New TForStmt.Create( init,expr,incr,block )
+		Local stmt:TForStmt=New TForStmt.Create( init,expr,incr,block,loopLabel )
 
 		_block.AddStmt stmt
 	End Method
@@ -1379,12 +1380,16 @@ Type TParser
 
 	Method ParseExitStmt()
 		Parse "exit"
-		_block.AddStmt New TBreakStmt
+		Local expr:TExpr
+		If Not AtEos() expr=ParseExpr()
+		_block.AddStmt New TBreakStmt.Create(expr)
 	End Method
 
 	Method ParseContinueStmt()
 		Parse "continue"
-		_block.AddStmt New TContinueStmt
+		Local expr:TExpr
+		If Not AtEos() expr=ParseExpr()
+		_block.AddStmt New TContinueStmt.Create(expr)
 	End Method
 
 	Method ParseTryStmt()
@@ -1665,6 +1670,19 @@ Type TParser
 				ParseEndStmt()
 			Case "extern"
 				ParseExternBlock(_module, 0)
+			Case "#"
+				Local decl:TLoopLabelDecl = ParseLoopLabelDecl()
+				NextToke
+				Select _toke
+					Case "while"
+						ParseWhileStmt(decl)
+					Case "repeat"
+						ParseRepeatStmt(decl)
+					Case "for"
+						ParseForStmt(decl)
+					Default
+						Err "Expecting loop statement"
+				End Select
 			Default
 				Local expr:TExpr=ParsePrimaryExpr( True )
 
@@ -1846,6 +1864,12 @@ Type TParser
 			Local decl:TDecl=ParseDecl( toke,0 )
 			_block.AddStmt New TDeclStmt.Create( decl )
 		Until Not CParse(",")
+	End Method
+	
+	Method ParseLoopLabelDecl:TLoopLabelDecl()
+		NextToke
+		Local id:String = ParseIdent()
+		Return New TLoopLabelDecl.Create(id, 0)
 	End Method
 
 	'handle end-of-line "dot dot return"-line connector
@@ -2381,7 +2405,6 @@ End Rem
 
 			' try to import interface
 			Local par:TIParser = New TIParser
-
 			If par.ParseModuleImport(_module, modpath, origPath, path, , , filepath) Return
 		Else
 			If filepath.startswith("-") Then

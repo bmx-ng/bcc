@@ -913,6 +913,22 @@ End Rem
 		Return match
 	End Method
 	
+	Method FindLoop:TStmt(ident:String)
+
+		If TBlockDecl(scope) And TBlockDecl(scope).extra Then
+			Local loop:TLoopStmt = TLoopStmt(TBlockDecl(scope).extra)
+			If loop.loopLabel And loop.loopLabel.ident = ident Then
+				Return loop
+			End If
+		End If
+
+		If TFuncDecl(scope) Or TModuleDecl(scope)
+			Return Null
+		End If
+		
+		If scope Return scope.FindLoop( ident )
+	End Method
+	
 	Method OnSemant()
 	End Method
 	
@@ -920,6 +936,7 @@ End Type
 
 Type TBlockDecl Extends TScopeDecl
 	Field stmts:TList=New TList
+	Field extra:Object
 	
 	Method Create:TBlockDecl( scope:TScopeDecl )
 		Self.scope=scope
@@ -935,6 +952,7 @@ Type TBlockDecl Extends TScopeDecl
 		For Local stmt:TStmt=EachIn stmts
 			t.AddStmt stmt.Copy( t )
 		Next
+		t.extra = extra
 		Return t
 	End Method
 
@@ -1796,6 +1814,23 @@ End Rem
 		decl.offset = lastOffset
 		
 		lastOffset :+ modifier
+	End Method
+	
+End Type
+
+Type TLoopLabelDecl Extends TDecl
+
+	Method Create:TLoopLabelDecl( ident$, attrs:Int=0 )
+		Self.ident=ident
+		Self.attrs=attrs
+		Return Self
+	End Method
+	
+	Method OnCopy:TDecl()
+		Return New TLoopLabelDecl.Create( ident,attrs )
+	End Method
+	
+	Method OnSemant()
 	End Method
 	
 End Type

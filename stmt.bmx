@@ -269,12 +269,22 @@ End Type
 
 Type TBreakStmt Extends TStmt
 
+	Field label:TExpr
+
+	Method Create:TBreakStmt( label:TExpr )
+		Self.label=label
+		Return Self
+	End Method
+
 	Method OnSemant()
 		If Not _loopnest Err "Exit statement must appear inside a loop."
+		If label Then
+			label = label.Semant()
+		End If
 	End Method
 
 	Method OnCopy:TStmt( scope:TScopeDecl )
-		Return New TBreakStmt
+		Return New TBreakStmt.Create(label.Copy())
 	End Method
 	
 	Method Trans$()
@@ -285,12 +295,22 @@ End Type
 
 Type TContinueStmt Extends TStmt
 
+	Field label:TExpr
+	
+	Method Create:TContinueStmt( label:TExpr )
+		Self.label=label
+		Return Self
+	End Method
+
 	Method OnSemant()
 		If Not _loopnest Err "Continue statement must appear inside a loop."
+		If label Then
+			label = label.Semant()
+		End If
 	End Method
 
 	Method OnCopy:TStmt( scope:TScopeDecl )
-		Return New TContinueStmt
+		Return New TContinueStmt.Create(label.Copy())
 	End Method
 	
 	Method Trans$()
@@ -326,18 +346,28 @@ Type TIfStmt Extends TStmt
 	End Method
 End Type
 
-Type TWhileStmt Extends TStmt
+Type TLoopStmt Extends TStmt
+
+	Field loopLabel:TLoopLabelDecl
+
+End Type
+
+Type TWhileStmt Extends TLoopStmt
 	Field expr:TExpr
 	Field block:TBlockDecl
 	
-	Method Create:TWhileStmt( expr:TExpr,block:TBlockDecl )
+	Method Create:TWhileStmt( expr:TExpr,block:TBlockDecl,loopLabel:TLoopLabelDecl )
 		Self.expr=expr
 		Self.block=block
+		Self.loopLabel = loopLabel
+		If loopLabel Then
+			block.extra = Self
+		End If
 		Return Self
 	End Method
 
 	Method OnCopy:TStmt( scope:TScopeDecl )
-		Return New TWhileStmt.Create( expr.Copy(),block.CopyBlock( scope ) )
+		Return New TWhileStmt.Create( expr.Copy(),block.CopyBlock( scope ),TLoopLabelDecl(loopLabel.Copy()) )
 	End Method
 	
 	Method OnSemant()
@@ -352,18 +382,22 @@ Type TWhileStmt Extends TStmt
 	End Method
 End Type
 
-Type TRepeatStmt Extends TStmt
+Type TRepeatStmt Extends TLoopStmt
 	Field block:TBlockDecl
 	Field expr:TExpr
 	
-	Method Create:TRepeatStmt( block:TBlockDecl,expr:TExpr )
+	Method Create:TRepeatStmt( block:TBlockDecl,expr:TExpr,loopLabel:TLoopLabelDecl )
 		Self.block=block
 		Self.expr=expr
+		Self.loopLabel=loopLabel
+		If loopLabel Then
+			block.extra = Self
+		End If
 		Return Self
 	End Method
 
 	Method OnCopy:TStmt( scope:TScopeDecl )
-		Return New TRepeatStmt.Create( block.CopyBlock( scope ),expr.Copy() )
+		Return New TRepeatStmt.Create( block.CopyBlock( scope ),expr.Copy(),TLoopLabelDecl(loopLabel.Copy()) )
 	End Method
 	
 	Method OnSemant()
@@ -378,22 +412,26 @@ Type TRepeatStmt Extends TStmt
 	End Method
 End Type
 
-Type TForStmt Extends TStmt
+Type TForStmt Extends TLoopStmt
 	Field init:TStmt	'assignment or local decl...
 	Field expr:TExpr
 	Field incr:TStmt	'assignment...
 	Field block:TBlockDecl
 	
-	Method Create:TForStmt( init:TStmt,expr:TExpr,incr:TStmt,block:TBlockDecl )
+	Method Create:TForStmt( init:TStmt,expr:TExpr,incr:TStmt,block:TBlockDecl,loopLabel:TLoopLabelDecl )
 		Self.init=init
 		Self.expr=expr
 		Self.incr=incr
 		Self.block=block
+		Self.loopLabel=loopLabel
+		If loopLabel Then
+			block.extra = Self
+		End If
 		Return Self
 	End Method
 
 	Method OnCopy:TStmt( scope:TScopeDecl )
-		Return New TForStmt.Create( init.Copy( scope ),expr.Copy(),incr.Copy( scope ),block.CopyBlock( scope ) )
+		Return New TForStmt.Create( init.Copy( scope ),expr.Copy(),incr.Copy( scope ),block.CopyBlock( scope ),TLoopLabelDecl(loopLabel.Copy()) )
 	End Method
 	
 	Method OnSemant()

@@ -1734,7 +1734,6 @@ Type TIdentExpr Extends TExpr
 	End Method
 
 	Method SemantSet:TExpr( op$,rhs:TExpr )
-
 		_Semant
 
 		'Local scope:TScopeDecl=IdentScope()
@@ -1813,6 +1812,13 @@ Type TIdentExpr Extends TExpr
 			Local e:TIdentTypeExpr = New TIdentTypeExpr.Create(cdecl.objectType)
 			e.cdecl = cdecl
 			Return e
+		End If
+
+		' maybe it's a loop label?
+		Local stmt:TLoopStmt = TLoopStmt(scope.FindLoop(ident))
+		
+		If stmt Then
+			Return New TLoopLabelExpr.Create(stmt)
 		End If
 		
 		IdentErr
@@ -2185,3 +2191,31 @@ Type TNullExpr Extends TExpr
 	End Method
 
 End Type
+
+Type TLoopLabelExpr Extends TExpr
+
+	Field loop:TLoopStmt
+
+	Method Create:TLoopLabelExpr(loop:TLoopStmt)
+		Self.loop = loop
+		Return Self
+	End Method
+	
+	Method Copy:TExpr()
+		Return New TLoopLabelExpr.Create(loop)
+	End Method
+
+	Method Semant:TExpr()
+		Return Self
+	End Method
+
+	Method Trans$()
+		DebugStop
+	End Method
+
+	Method Eval$()
+		Return ""
+	End Method
+
+End Type
+

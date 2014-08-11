@@ -653,6 +653,7 @@ End Rem
 
 		Local count:Int = LoopTryDepth()
 		If count > 0 Then
+			' TODO : handle loop labels
 			Local bc:TTryBreakCheck = GetTopLoop()
 			If bc Then
 				NextContId(bc)
@@ -664,7 +665,11 @@ End Rem
 				InternalErr
 			End If
 		Else
-			Return "continue"
+			If stmt.label And TLoopLabelExpr(stmt.label) Then
+				Emit "goto " + TransLoopLabelCont(TLoopLabelExpr(stmt.label).loop.loopLabel.ident, False)
+			Else
+				Return "continue"
+			End If
 		End If
 	End Method
 	
@@ -674,6 +679,7 @@ End Rem
 		
 		Local count:Int = LoopTryDepth()
 		If count > 0 Then
+			' TODO : handle loop labels
 			Local bc:TTryBreakCheck = GetTopLoop()
 			If bc Then
 				NextExitId(bc)
@@ -685,7 +691,11 @@ End Rem
 				InternalErr
 			End If
 		Else
-			Return "break"
+			If stmt.label And TLoopLabelExpr(stmt.label) Then
+				Emit "goto " + TransLoopLabelExit(TLoopLabelExpr(stmt.label).loop.loopLabel.ident, False)
+			Else
+				Return "break"
+			End If
 		End If
 	End Method
 	
@@ -743,6 +753,22 @@ End Rem
 			Return "_exitjmp" + bc.exitId + ": ;"
 		Else
 			Return "_exitjmp" + bc.exitId + ";"
+		End If
+	End Method
+
+	Method TransLoopLabelCont:String(id:String, jmp:Int = True)
+		If jmp Then
+			Return "_loopcont_" + id.ToLower() + ": ;"
+		Else
+			Return "_loopcont_" + id.ToLower() + ";"
+		End If
+	End Method
+
+	Method TransLoopLabelExit:String(id:String, jmp:Int = True)
+		If jmp Then
+			Return "_loopexit_" + id.ToLower() + ": ;"
+		Else
+			Return "_loopexit_" + id.ToLower() + ";"
 		End If
 	End Method
 
@@ -936,10 +962,18 @@ End Rem
 			Emit TransLabelCont(check)
 		End If
 
+		If stmt.loopLabel Then
+			Emit TransLoopLabelCont(stmt.loopLabel.ident, True)
+		End If
+		
 		Emit "}"
 
 		If check.exitId Then
 			Emit TransLabelExit(check)
+		End If
+
+		If stmt.loopLabel Then
+			Emit TransLoopLabelExit(stmt.loopLabel.ident, True)
 		End If
 		
 		If broken=nbroken And TConstExpr( stmt.expr ) And TConstExpr( stmt.expr ).value unreachable=True
@@ -962,6 +996,10 @@ End Rem
 			Emit TransLabelCont(check)
 		End If
 
+		If stmt.loopLabel Then
+			Emit TransLoopLabelCont(stmt.loopLabel.ident, True)
+		End If
+		
 		SetOutput("source")
 
 		Local s:String = "}while(!"+Bra( stmt.expr.Trans() )+");"
@@ -972,6 +1010,10 @@ End Rem
 
 		If check.exitId Then
 			Emit TransLabelExit(check)
+		End If
+
+		If stmt.loopLabel Then
+			Emit TransLoopLabelExit(stmt.loopLabel.ident, True)
 		End If
 
 		If broken=nbroken And TConstExpr( stmt.expr ) And Not TConstExpr( stmt.expr ).value unreachable=True
@@ -1006,6 +1048,10 @@ End Rem
 			Emit TransLabelCont(check)
 		End If
 
+		If stmt.loopLabel Then
+			Emit TransLoopLabelCont(stmt.loopLabel.ident, True)
+		End If
+		
 		Emit "}"
 		
 		If decl Then
@@ -1014,6 +1060,10 @@ End Rem
 
 		If check.exitId Then
 			Emit TransLabelExit(check)
+		End If
+
+		If stmt.loopLabel Then
+			Emit TransLoopLabelExit(stmt.loopLabel.ident, True)
 		End If
 		
 		If broken=nbroken And TConstExpr( stmt.expr ) And TConstExpr( stmt.expr ).value unreachable=True
