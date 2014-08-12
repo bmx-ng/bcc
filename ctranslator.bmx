@@ -561,7 +561,7 @@ t:+"NULLNULLNULL"
 	End Method
 
 	Method TransFunc$( decl:TFuncDecl,args:TExpr[],lhs:TExpr, sup:Int = False, scope:TScopeDecl = Null )
-'If decl.ident = "ToString" DebugStop
+'If decl.ident = "Sqr" DebugStop
 		' for calling the super class method instead
 		Local tSuper:String
 		If sup Then
@@ -1182,6 +1182,10 @@ EndRem
 
 		Local dst:TType=expr.exprType
 		Local src:TType=expr.expr.exprType
+		
+		If TNumericType(src) And (src._flags & TType.T_VAR) Then
+			t = Bra("*" + t)
+		End If
 
 		If (dst._flags & TType.T_VARPTR) Or (dst._flags & TType.T_VAR) Then
 			If Not TConstExpr(expr.expr) Then
@@ -1276,12 +1280,7 @@ EndRem
 			If TByteType( src) Return Bra("(BBINT)"+t)
 			If TShortType( src) Return Bra("(BBINT)"+t)
 			If TBoolType( src ) Return t
-			If TIntType( src ) Then
-				If src._flags & TType.T_VAR Then
-					Return Bra("*" + t)
-				End If
-				Return t
-			End If
+			If TIntType( src ) Return t
 			If TFloatType( src ) Return Bra("(BBINT)"+t)
 			If TDoubleType( src ) Return Bra("(BBINT)"+t)
 			If TLongType( src ) Return Bra("(BBINT)"+t)
@@ -1294,12 +1293,7 @@ EndRem
 			If TByteType( src) Return Bra("(BBLONG)"+t)
 			If TShortType( src) Return Bra("(BBLONG)"+t)
 			If TIntType( src) Return Bra("(BBLONG)"+t)
-			If TLongType( src ) Then
-				If src._flags & TType.T_VAR Then
-					Return Bra("*" + t)
-				End If
-				Return t
-			End If
+			If TLongType( src ) Return t
 			If TFloatType( src ) Return Bra("(BBLONG)"+t)
 			If TDoubleType( src ) Return Bra("(BBLONG)"+t)
 			If TStringType( src ) Return "bbStringToLong" + Bra(t)
@@ -1310,12 +1304,7 @@ EndRem
 			If TByteType( src ) Return Bra("(BBFLOAT)"+t)
 			If TIntType( src ) Return Bra("(BBFLOAT)"+t)
 			If TShortType( src ) Return Bra("(BBFLOAT)"+t)
-			If TFloatType( src ) Then
-				If src._flags & TType.T_VAR Then
-					Return Bra("*" + t)
-				End If
-				Return t
-			End If
+			If TFloatType( src ) Return t
 			If TDoubleType( src ) Return Bra("(BBFLOAT)"+t)
 			If TLongType( src ) Return Bra("(BBFLOAT)"+t)
 			If TStringType( src ) Return "bbStringToFloat" + Bra(t)
@@ -1326,28 +1315,13 @@ EndRem
 			If TByteType( src ) Return Bra("(BBDOUBLE)"+t)
 			If TIntType( src ) Return Bra("(BBDOUBLE)"+t)
 			If TShortType( src ) Return Bra("(BBDOUBLE)"+t)
-			If TDoubleType( src ) Then
-				If src._flags & TType.T_VAR Then
-					Return Bra("*" + t)
-				End If
-				Return t
-			End If
+			If TDoubleType( src ) Return t
 			If TFloatType( src ) Return Bra("(BBDOUBLE)"+t)
 			If TLongType( src ) Return Bra("(BBDOUBLE)"+t)
 			If TStringType( src ) Return "bbStringToDouble" + Bra(t)
 			'If TDoubleVarPtrType( src ) Return Bra("*" + t)
 			'If TPointerType( src ) Return Bra("(BBDOUBLE)"+t)
 		Else If TStringType( dst )
-
-			If src._flags & TType.T_VAR Then
-				If TByteType( src ) Return "bbStringFromInt"+Bra( "*" + t )
-				If TShortType( src ) Return "bbStringFromInt"+Bra( "*" + t )
-				If TIntType( src ) Return "bbStringFromInt"+Bra( "*" + t )
-				If TLongType( src ) Return "bbStringFromLong"+Bra( "*" + t )
-				If TFloatType( src ) Return "bbStringFromFloat"+Bra( "*" + t )
-				If TDoubleType( src ) Return "bbStringFromDouble"+Bra( "*" + t )
-			End If
-
 			If TBoolType( src ) Return "bbStringFromInt"+Bra( t )
 			If TByteType( src ) Return "bbStringFromInt"+Bra( t )
 			If TShortType( src ) Return "bbStringFromInt"+Bra( t )
@@ -1378,12 +1352,7 @@ EndRem
 'DebugStop
 		Else If TByteType( dst )
 			If TBoolType( src ) Return Bra( t )
-			If TByteType( src) Then
-				If src._flags & TType.T_VAR Then
-					Return Bra("*" + t)
-				End If
-				Return t
-			End If
+			If TByteType( src) Return t
 			If TShortType( src ) Return Bra("(BBBYTE)"+t)
 			If TIntType( src ) Return Bra("(BBBYTE)"+t)
 			If TFloatType( src ) Return Bra("(BBBYTE)"+t)
@@ -1393,12 +1362,7 @@ EndRem
 			'If TByteVarPtrType( src ) Return Bra("*" + t)
 		Else If TShortType( dst )
 			If TBoolType( src ) Return Bra( t )
-			If TShortType( src) Then
-				If src._flags & TType.T_VAR Then
-					Return Bra("*" + t)
-				End If
-				Return t
-			End If
+			If TShortType( src) Return t
 			If TByteType( src) Return Bra("(BBSHORT)"+t)
 			If TIntType( src ) Return Bra("(BBSHORT)"+t)
 			If TFloatType( src ) Return Bra("(BBSHORT)"+t)
