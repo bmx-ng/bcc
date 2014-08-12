@@ -2839,6 +2839,11 @@ endrem
 		' import all brl and pub modules if we haven't specified one
 		If opt_buildtype <> BUILDTYPE_MODULE And Not opt_framework Then
 			ImportAllModules MODULE_ACTUALMOD
+		Else
+			If opt_framework Then
+				Local par:TIParser = New TIParser
+				par.ParseModuleImport(_module, opt_framework, modulepath(opt_framework), , , MODULE_ACTUALMOD)
+			End If
 		End If
 
 
