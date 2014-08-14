@@ -76,11 +76,15 @@ Type TTranslator
 		loopTryStack.Pop
 	End Method
 	
-	Method LoopTryDepth:Int()
+	Method LoopTryDepth:Int(findStmt:TStmt)
 		Local count:Int = 0
 		
 		For Local stmt:Object = EachIn loopTryStack
 			If TTryStmt(stmt) = Null Then
+				If findStmt And findStmt <> stmt Then
+					Continue
+				End If
+				
 				Exit
 			End If
 
@@ -90,9 +94,12 @@ Type TTranslator
 		Return count
 	End Method
 
-	Method GetTopLoop:TTryBreakCheck()
-		For Local stmt:TTryBreakCheck = EachIn loopTryStack
-			Return stmt
+	Method GetTopLoop:TTryBreakCheck(findStmt:TStmt)
+		For Local tbc:TTryBreakCheck = EachIn loopTryStack
+			If findStmt And findStmt <> tbc.stmt Then
+				Continue
+			End If
+			Return tbc
 		Next
 	End Method
 	
@@ -610,7 +617,7 @@ End Rem
 		Local t$="return"
 		unreachable=True
 		If stmt.expr Then
-'DebugStop
+
 			If TObjectType(stmt.expr.exprType) And TNullDecl(TObjectType(stmt.expr.exprType).classDecl) Then
 				If IsPointerType(stmt.fRetType, 0, TType.T_POINTER) Or IsNumericType(stmt.fRetType) Then
 					Return t + " 0"
@@ -651,10 +658,15 @@ End Rem
 	Method TransContinueStmt$( stmt:TContinueStmt )
 		unreachable=True
 
-		Local count:Int = LoopTryDepth()
+		Local contLoop:TStmt
+		' if we are continuing with a loop label, we'll need to find it in the stack
+		If stmt.label And TLoopLabelExpr(stmt.label) Then
+			contLoop = TLoopLabelExpr(stmt.label).loop
+		End If
+		' get count of Try statements in the stack in this loop
+		Local count:Int = LoopTryDepth(contLoop)
 		If count > 0 Then
-			' TODO : handle loop labels
-			Local bc:TTryBreakCheck = GetTopLoop()
+			Local bc:TTryBreakCheck = GetTopLoop(contLoop)
 			If bc Then
 				NextContId(bc)
 				For Local i:Int = 0 Until count
@@ -665,6 +677,7 @@ End Rem
 				InternalErr
 			End If
 		Else
+			' No Try statements in the stack here..
 			If stmt.label And TLoopLabelExpr(stmt.label) Then
 				Emit "goto " + TransLoopLabelCont(TLoopLabelExpr(stmt.label).loop.loopLabel.ident, False)
 			Else
@@ -677,10 +690,15 @@ End Rem
 		unreachable=True
 		broken:+1
 		
-		Local count:Int = LoopTryDepth()
+		Local brkLoop:TStmt
+		' if we are exiting with a loop label, we'll need to find it in the stack
+		If stmt.label And TLoopLabelExpr(stmt.label) Then
+			brkLoop = TLoopLabelExpr(stmt.label).loop
+		End If
+		' get count of Try statements in the stack in this loop
+		Local count:Int = LoopTryDepth(brkLoop)
 		If count > 0 Then
-			' TODO : handle loop labels
-			Local bc:TTryBreakCheck = GetTopLoop()
+			Local bc:TTryBreakCheck = GetTopLoop(brkLoop)
 			If bc Then
 				NextExitId(bc)
 				For Local i:Int = 0 Until count
@@ -691,6 +709,7 @@ End Rem
 				InternalErr
 			End If
 		Else
+			' No Try statements in the stack here..
 			If stmt.label And TLoopLabelExpr(stmt.label) Then
 				Emit "goto " + TransLoopLabelExit(TLoopLabelExpr(stmt.label).loop.loopLabel.ident, False)
 			Else
@@ -954,6 +973,7 @@ End Rem
 		Emit "while"+Bra( stmt.expr.Trans() )+"{"
 		
 		Local check:TTryBreakCheck = New TTryBreakCheck
+		check.stmt = stmt
 		PushLoopTryStack(check)
 		Local unr:Int=EmitBlock( stmt.block )
 		PopLoopTryStack
@@ -988,6 +1008,7 @@ End Rem
 		Emit "do{"
 		
 		Local check:TTryBreakCheck = New TTryBreakCheck
+		check.stmt = stmt
 		PushLoopTryStack(check)
 		Local unr:Int=EmitBlock( stmt.block )
 		PopLoopTryStack
@@ -1040,6 +1061,7 @@ End Rem
 		Emit "for("+init+";"+expr+";"+incr+"){"
 
 		Local check:TTryBreakCheck = New TTryBreakCheck
+		check.stmt = stmt
 		PushLoopTryStack(check)
 		Local unr:Int=EmitBlock( stmt.block )
 		PopLoopTryStack
@@ -1224,5 +1246,7 @@ Type TTryBreakCheck
 	Field contId:Int
 	Field exitId:Int
 
+	Field stmt:TStmt
+	
 End Type
 
