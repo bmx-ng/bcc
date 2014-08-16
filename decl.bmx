@@ -669,9 +669,9 @@ Type TScopeDecl Extends TDecl
 	End Method
 	
 
-	Method FindDecl:Object( ident$ )
+	Method FindDecl:Object( ident$, override:Int = False )
 	
-		If _env<>Self Return GetDecl( ident )
+		If Not override And _env<>Self Return GetDecl( ident )
 		
 		Local tscope:TScopeDecl=Self
 		While tscope
@@ -696,6 +696,19 @@ Type TScopeDecl Extends TDecl
 	
 	Method FindValDecl:TValDecl( ident$, static:Int = False )
 		Local decl:TValDecl=TValDecl( FindDecl( ident ) )
+		
+		' we found a field but we don't have access to it?
+		If TFieldDecl(decl) And static Then
+			' see if there's another decl with the same name elsewhere that we may...
+			' field's scope.scope will be a module.
+			If decl.scope And decl.scope.scope Then
+				Local vDecl:TValDecl = TValDecl( decl.scope.scope.FindDecl( ident, True ) )
+				If vDecl Then
+					decl = vDecl
+				End If
+			End If
+		End If
+		
 		If Not decl Then
 			' didn't find it? Maybe it is in module local scope?
 			' issue arises when a global initialises with a local variable in the module scope.
