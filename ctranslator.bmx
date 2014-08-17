@@ -74,7 +74,7 @@ Type TCTranslator Extends TTranslator
 		If TStringType( ty ) Return "~q$~q"
 		If TArrayType( ty ) Return "~q[~q"
 		If TObjectType( ty ) Return "~q:~q"
-		If TFunctionPtrType( ty ) Return "~q*b~q" ' TODO : use "(" instead? (it's mentioned in blitz array source somewhere)
+		If TFunctionPtrType( ty ) Return "~q(~q"
 
 	End Method
 	
