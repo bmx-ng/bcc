@@ -865,8 +865,8 @@ Type TCastExpr Extends TExpr
 				'if both objects or both non-objects...
 				If (TObjectType(ty)<>Null)=(TObjectType(src)<>Null) exprType=ty
 
-			Else
-				If (TObjectType(ty)<>Null) And (TObjectType(src)<>Null) exprType=ty
+			'Else ' if not explicitly cast, we can't just auto-cast it ourselves here.
+				'If (TObjectType(ty)<>Null) And (TObjectType(src)<>Null) exprType=ty
 			EndIf
 
 		EndIf
@@ -1748,7 +1748,7 @@ Type TIdentExpr Extends TExpr
 				If Not static And (TInvokeExpr( expr ) Or TInvokeMemberExpr( expr )) Return New TStmtExpr.Create( New TExprStmt.Create( expr ),cexpr ).Semant()
 				Return cexpr.Semant()
 
-			Else If TFieldDecl( vdecl )
+			Else If TFieldDecl( vdecl ) 
 				If static Err "Field '"+ident+"' cannot be accessed from here."
 				If expr Return New TMemberVarExpr.Create( expr,TVarDecl( vdecl ) ).Semant()
 '				If expr Return New TMemberVarExpr.Create( expr,TVarDecl( vdecl ) ).Semant()
