@@ -443,7 +443,11 @@ t:+"NULLNULLNULL"
 			Return TransType( init.exprType, munged )+"="+init.Trans()
 		Else
 'DebugStop
-			Return TransType( init.exprType, munged )+" "+munged+"="+init.Trans()
+			If TObjectType(init.exprType) Then
+				Return TransType( init.exprType, munged )+" volatile "+munged+"="+init.Trans()
+			Else
+				Return TransType( init.exprType, munged )+" "+munged+"="+init.Trans()
+			End If
 		End If
 	End Method
 
