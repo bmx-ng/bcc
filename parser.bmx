@@ -149,7 +149,7 @@ Type TForEachinStmt Extends TLoopStmt
 '				block.stmts.AddFirst New TDeclStmt.Create( varTmp )
 
 				' local variable
-				Local varTmp:TLocalDecl=New TLocalDecl.Create( varid,varty,nextObjExpr )
+				Local varTmp:TLocalDecl=New TLocalDecl.Create( varid,varty,New TCastExpr.Create( varty, nextObjExpr,CAST_EXPLICIT ) )
 
 				' local var as expression
 				Local expr:TExpr=New TVarExpr.Create( varTmp )
@@ -165,7 +165,7 @@ Type TForEachinStmt Extends TLoopStmt
 				block.stmts.AddFirst New TIfStmt.Create( expr,thenBlock,elseBlock )
 				block.stmts.AddFirst New TDeclStmt.Create( varTmp )
 			Else
-				block.stmts.AddFirst New TAssignStmt.Create( "=",New TIdentExpr.Create( varid ),nextObjExpr )
+				block.stmts.AddFirst New TAssignStmt.Create( "=",New TIdentExpr.Create( varid ),New TCastExpr.Create( varty, nextObjExpr,CAST_EXPLICIT ) )
 			EndIf
 
 			Local whileStmt:TWhileStmt=New TWhileStmt.Create( hasNextExpr,block,Null )
