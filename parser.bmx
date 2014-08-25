@@ -148,8 +148,16 @@ Type TForEachinStmt Extends TLoopStmt
 '				Local varTmp:TLocalDecl=New TLocalDecl.Create( varid,varty,nextObjExpr )
 '				block.stmts.AddFirst New TDeclStmt.Create( varTmp )
 
+				Local cExpr:TExpr
+				
+				If TIdentType(varty) And TIdentType(varty).ident = "Object" Then
+					cExpr = nextObjExpr
+				Else
+					cExpr = New TCastExpr.Create( varty, nextObjExpr,CAST_EXPLICIT )
+				End If
+
 				' local variable
-				Local varTmp:TLocalDecl=New TLocalDecl.Create( varid,varty,New TCastExpr.Create( varty, nextObjExpr,CAST_EXPLICIT ) )
+				Local varTmp:TLocalDecl=New TLocalDecl.Create( varid,varty,cExpr )
 
 				' local var as expression
 				Local expr:TExpr=New TVarExpr.Create( varTmp )
@@ -165,7 +173,29 @@ Type TForEachinStmt Extends TLoopStmt
 				block.stmts.AddFirst New TIfStmt.Create( expr,thenBlock,elseBlock )
 				block.stmts.AddFirst New TDeclStmt.Create( varTmp )
 			Else
-				block.stmts.AddFirst New TAssignStmt.Create( "=",New TIdentExpr.Create( varid ),New TCastExpr.Create( varty, nextObjExpr,CAST_EXPLICIT ) )
+				
+				If Not varty Then
+					Local decl:TValDecl = block.scope.FindValDecl(varid)
+					
+					If decl Then
+						decl.Semant()
+						
+						varty = decl.ty.Copy()
+					End If
+				End If
+				
+				' var = Null
+				Local expr:TExpr=New TBinaryCompareExpr.Create( "=",New TIdentExpr.Create( varid ), New TNullExpr.Create(TType.nullObjectType))
+
+				' then continue
+				Local thenBlock:TBlockDecl=New TBlockDecl.Create( block.scope )
+				Local elseBlock:TBlockDecl=New TBlockDecl.Create( block.scope )
+				thenBlock.AddStmt New TContinueStmt
+
+				block.stmts.AddFirst New TIfStmt.Create( expr,thenBlock,elseBlock )
+				'block.stmts.AddFirst New TDeclStmt.Create( varTmp )
+
+				block.stmts.AddFirst New TAssignStmt.Create( "=",New TIdentExpr.Create( varid ),New TCastExpr.Create( varty, nextObjExpr,CAST_EXPLICIT ))
 			EndIf
 
 			Local whileStmt:TWhileStmt=New TWhileStmt.Create( hasNextExpr,block,Null )
@@ -556,6 +586,7 @@ Type TParser
 			ty=ParseType()
 
 			If CParse("ptr") Then
+
 				ty = TType.MapToPointerType(ty)
 
 				While CParse("ptr")
@@ -2235,7 +2266,9 @@ End Rem
 				superTy=ParseIdentType()
 			EndIf
 		Else
-			superTy=New TIdentType.Create( "brl.classes.object" )
+			If Not (attrs & DECL_EXTERN) Then
+				superTy=New TIdentType.Create( "brl.classes.object" )
+			End If
 		EndIf
 Rem
 		If CParse( "implements" )
@@ -2406,11 +2439,13 @@ End Rem
 			' try to import interface
 			Local par:TIParser = New TIParser
 			If par.ParseModuleImport(_module, modpath, origPath, path, , , filepath) Return
+		Else If filepath.startswith("-") Then
+			If Not _app.fileimports.Contains(filepath) Then
+				_app.fileimports.AddLast filepath
+			End If
 		Else
-			If filepath.startswith("-") Then
-				If Not _app.fileimports.Contains(filepath) Then
-					_app.fileimports.AddLast filepath
-				End If
+			If filepath.EndsWith(".h") And filepath.Find("*") = -1 Then
+				_app.headers.AddLast filepath
 			End If
 		End If
 

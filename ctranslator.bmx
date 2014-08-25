@@ -175,7 +175,7 @@ Type TCTranslator Extends TTranslator
 			Return "$" + p
 		End If
 		If TArrayType( ty ) Return TransIfcType(TArrayType( ty ).elemType) + "&[]"
-		If TObjectType( ty ) Return ":" + TObjectType(ty).classDecl.ident
+		If TObjectType( ty ) Return ":" + TObjectType(ty).classDecl.ident + p
 		If TFunctionPtrType( ty ) Return TransIfcType(TFunctionPtrType(ty).func.retType) + TransIfcArgs(TFunctionPtrType(ty).func)
 		If TExternObjectType( ty ) Return ":" + TExternObjectType(ty).classDecl.ident + p
 		InternalErr
@@ -323,7 +323,12 @@ Type TCTranslator Extends TTranslator
 						Continue
 					End If
 				End If
-				t:+TransTemplateCast( ty,args[i].exprType,args[i].Trans() )
+				
+				If decl.argDecls[i].castTo Then
+					t:+ Bra(decl.argDecls[i].castTo) + args[i].Trans()
+				Else
+					t:+TransTemplateCast( ty,args[i].exprType,args[i].Trans() )
+				End If
 			Else
 				decl.argDecls[i].Semant()
 				' default values
@@ -598,8 +603,12 @@ t:+"NULLNULLNULL"
 						'Return "(" + obj + TransSubExpr( lhs ) + ")->" + decl.munged+TransArgs( args,decl, Null)
 						Return TransSubExpr( lhs ) + "->" + decl.munged+TransArgs( args,decl, Null)
 					Else
-						Local class:String = TransSubExpr( lhs ) + "->clas" + tSuper
-						Return class + "->" + TransFuncPrefix(cdecl, decl) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
+						If decl.scope.IsExtern()
+							Return decl.munged + Bra(TransArgs( args,decl, TransSubExpr( lhs ) ))
+						Else
+							Local class:String = TransSubExpr( lhs ) + "->clas" + tSuper
+							Return class + "->" + TransFuncPrefix(cdecl, decl) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
+						End If
 					End If
 				Else If TNewObjectExpr(lhs) Then
 					Local cdecl:TClassDecl = TNewObjectExpr(lhs).classDecl
@@ -617,9 +626,14 @@ t:+"NULLNULLNULL"
 				Else If TMemberVarExpr(lhs) Then
 					Local cdecl:TClassDecl = TObjectType(TMemberVarExpr(lhs).decl.ty).classDecl
 					Local obj:String = Bra(TransObject(cdecl))
-					Local class:String = Bra("(" + obj + TransSubExpr( lhs ) + ")->clas" + tSuper)
-					'Local class:String = TransFuncClass(cdecl)
-					Return class + "->" + TransFuncPrefix(cdecl, decl) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
+					
+					If decl.scope.IsExtern()
+						Return decl.munged + Bra(TransArgs( args,decl, TransSubExpr( lhs ) ))
+					Else
+						Local class:String = Bra("(" + obj + TransSubExpr( lhs ) + ")->clas" + tSuper)
+						'Local class:String = TransFuncClass(cdecl)
+						Return class + "->" + TransFuncPrefix(cdecl, decl) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
+					End If
 				Else If TInvokeExpr(lhs) Then
 					' create a local variable of the inner invocation
 					Local lvar:String = CreateLocal(lhs)
@@ -693,7 +707,11 @@ t:+"NULLNULLNULL"
 		If decl.ident = "Object"
 			Return "BBOBJECT"
 		Else
-			Return "struct " + decl.munged + "_obj*"
+			If decl.IsExtern() Then
+				Return "struct " + decl.munged + "*"
+			Else
+				Return "struct " + decl.munged + "_obj*"
+			End If
 		End If
 	End Method
 
@@ -1770,7 +1788,7 @@ EndRem
 			Else
 				s :+ lhs+TransAssignOp( stmt.op )+rhs
 			End If
-		Else If TFunctionPtrType(stmt.lhs.exprType) And TInvokeExpr(stmt.rhs) And Not TInvokeExpr(stmt.rhs).invokedWithBraces Then
+		Else If (TFunctionPtrType(stmt.lhs.exprType) <> Null Or IsPointerType(stmt.lhs.exprType, TType.T_BYTE)) And TInvokeExpr(stmt.rhs) And Not TInvokeExpr(stmt.rhs).invokedWithBraces Then
 			rhs = TInvokeExpr(stmt.rhs).decl.munged
 			s :+ lhs+TransAssignOp( stmt.op )+rhs
 		Else
@@ -2248,7 +2266,10 @@ End Rem
 	Method EmitClassProto( classDecl:TClassDecl )
 
 		Local classid$=classDecl.munged
-		Local superid$=classDecl.superClass.actual.munged
+		Local superid$
+		If classDecl.superClass Then
+			superid=classDecl.superClass.actual.munged
+		End If
 
 		If Not classDecl.IsExtern() Then
 			If opt_issuperstrict Then
@@ -3142,7 +3163,11 @@ End Rem
 
 	Method EmitIfcClassDecl(classDecl:TClassDecl)
 
-		Emit classDecl.ident + "^" + classDecl.superClass.ident + "{", False
+		If classDecl.superClass Then
+			Emit classDecl.ident + "^" + classDecl.superClass.ident + "{", False
+		Else
+			Emit classDecl.ident + "^Null{", False
+		End If
 
 		'PushMungScope
 		BeginLocalScope
@@ -3194,6 +3219,16 @@ End Rem
 
 			Emit "}=" + Enquote(classDecl.munged), False
 		Else
+			For Local decl:TDecl=EachIn classDecl.Decls()
+
+				Local fdecl:TFuncDecl=TFuncDecl( decl )
+				If fdecl
+					EmitIfcClassFuncDecl fdecl
+					Continue
+				EndIf
+
+			Next
+
 			Emit "}E=0", False
 		End If
 
@@ -3336,6 +3371,10 @@ End Rem
 
 				EmitModuleInclude(TModuleDecl(mdecl), included)
 			Next
+		Next
+		
+		For Local header:String=EachIn app.headers
+			Emit "#include ~q../" + header + "~q"
 		Next
 
 		Emit "int " + app.munged + "();"

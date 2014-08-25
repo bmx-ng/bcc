@@ -2007,6 +2007,7 @@ Type TAppDecl Extends TScopeDecl
 	Field semantedGlobals:TList=New TList'<TGlobalDecl>			'in-order (ie: dependancy sorted) list of _semanted globals
 
 	Field fileImports:TList=New TList'StringList
+	Field headers:TList = New TList
 	
 	Field stringConsts:TMap = New TMap
 	Field stringConstCount:Int

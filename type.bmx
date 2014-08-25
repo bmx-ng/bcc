@@ -769,6 +769,11 @@ Type TIdentType Extends TType
 			ty = New TObjectType.Create(TObjectType(ty).classDecl)
 			ty._flags :| T_VAR
 		End If
+
+		If (_flags & T_POINTER) And TObjectType(ty) Then
+			ty = New TObjectType.Create(TObjectType(ty).classDecl)
+			ty._flags :| (_flags & T_POINTER)
+		End If
 		
 		Return ty
 	End Method

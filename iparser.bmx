@@ -1067,7 +1067,11 @@ End Rem
 			If CParse("*") Then
 				If TIdentType(ty) Then
 					ty = TType.MapToPointerType(ty)
-					'ty = New TIdentPtrType.Create(TIdentType(ty).ident, TIdentType(ty).args)
+
+					While CParse( "*" )
+						ty = TType.MapToPointerType(ty)
+					Wend
+
 				End If
 			End If
 			
