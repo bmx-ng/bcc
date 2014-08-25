@@ -1127,6 +1127,9 @@ EndRem
 		Else If TIdentTypeExpr(expr.expr) Then
 			' doing something like : SizeOf TMyType
 			Return Bra(TIdentTypeExpr(expr.expr).cdecl.munged + ".instance_size-(sizeof(void*))")
+		
+		Else If TSelfExpr(expr.expr) Then
+			Return Bra("o->clas->instance_size-(sizeof(void*))")
 		End If
 		
 		InternalErr
