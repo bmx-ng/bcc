@@ -2541,112 +2541,132 @@ End Rem
 	' load external cast defs
 	Method LoadExternCasts(path:String)
 
-		path = StripExt(path) + ".x"
+		For Local externs:Int = 0 Until 3
+		
+			Local ePath:String
+		
+			Select externs
+				Case 0
+					' eg. file.win32.x86.x
+					ePath = StripExt(path) + "." + opt_platform + "." + opt_arch + ".x"
+				Case 1
+					' eg. file.win32.x
+					ePath = StripExt(path) + "." + opt_platform + ".x"
+				Case 2
+					' eg. file.x
+					ePath = StripExt(path) + ".x"
+			End Select
 
-		If FileType(path) = FILETYPE_FILE Then
 
-			Local toker:TToker=New TToker.Create( path,LoadText( path ) )
-			toker.NextToke
-
-			While True
-
-				SkipEolsToker(toker)
-
-				If toker._tokeType = TOKE_EOF Exit
-
-				Local rt$=toker._toke
-				NextTokeToker(toker)
-				If CParseToker(toker,"*") Then
-					rt:+ "*"
-
+			If FileType(ePath) = FILETYPE_FILE Then
+	
+				Local toker:TToker=New TToker.Create( ePath,LoadText( ePath ) )
+				toker.NextToke
+	
+				While True
+	
+					SkipEolsToker(toker)
+	
+					If toker._tokeType = TOKE_EOF Exit
+	
+					Local rt$=toker._toke
+					NextTokeToker(toker)
 					If CParseToker(toker,"*") Then
 						rt:+ "*"
+	
+						If CParseToker(toker,"*") Then
+							rt:+ "*"
+						End If
 					End If
-				End If
-
-
-				Local dets:TCastDets = New TCastDets
-
-				' fname
-				Local fn$=toker._toke
-				NextTokeToker(toker)
-
-				dets.name = fn
-				dets.retType = rt
-
-				_externCasts.Insert(fn, dets)
-
-				' args
-				ParseToker(toker, "(")
-
-				If CParseToker(toker, ")") Then
-
+	
+	
+					Local dets:TCastDets = New TCastDets
+	
+					' fname
+					Local fn$=toker._toke
+					NextTokeToker(toker)
+	
+					dets.name = fn
+					dets.retType = rt
+	
+					_externCasts.Insert(fn, dets)
+	
+					' args
+					ParseToker(toker, "(")
+	
+					If CParseToker(toker, ")") Then
+	
+						' don't generate header extern
+						If CParseToker(toker, "!") Then
+							dets.noGen = True
+						End If
+	
+						Continue
+					End If
+	
+					Local i:Int = 0
+					Repeat
+						Local at$=toker._toke
+	
+						If CParseToker(toker, "const") Then
+							at :+ " " + toker._toke
+						End If
+	
+						If CParseToker(toker, "unsigned") Then
+							at :+ " " + toker._toke
+						End If
+	
+						NextTokeToker(toker)
+						If CParseToker(toker, "*") Then
+							at:+ "*"
+	
+							If CParseToker(toker, "*") Then
+								at:+ "*"
+							End If
+						End If
+	
+						' function pointer
+						If CParseToker(toker, "(") Then
+	
+							ParseToker(toker, "*")
+							ParseToker(toker, ")")
+							at :+ "(*)"
+	
+							ParseToker(toker, "(")
+							at :+ "("
+	
+							While Not CParseToker(toker, ")")
+								NextTokeToker(toker)
+								at :+ toker._toke
+							Wend
+	
+							at :+ ")"
+						End If
+	
+	
+						dets.args :+ [at]
+	
+						If toker._toke=")" Exit
+						ParseToker(toker, ",")
+	
+						i:+ 1
+					Forever
+	
+					NextTokeToker(toker)
+	
 					' don't generate header extern
 					If CParseToker(toker, "!") Then
 						dets.noGen = True
 					End If
-
-					Continue
-				End If
-
-				Local i:Int = 0
-				Repeat
-					Local at$=toker._toke
-
-					If CParseToker(toker, "const") Then
-						at :+ " " + toker._toke
-					End If
-
-					If CParseToker(toker, "unsigned") Then
-						at :+ " " + toker._toke
-					End If
-
-					NextTokeToker(toker)
-					If CParseToker(toker, "*") Then
-						at:+ "*"
-
-						If CParseToker(toker, "*") Then
-							at:+ "*"
-						End If
-					End If
-
-					' function pointer
-					If CParseToker(toker, "(") Then
-
-						ParseToker(toker, "*")
-						ParseToker(toker, ")")
-						at :+ "(*)"
-
-						ParseToker(toker, "(")
-						at :+ "("
-
-						While Not CParseToker(toker, ")")
-							NextTokeToker(toker)
-							at :+ toker._toke
-						Wend
-
-						at :+ ")"
-					End If
-
-
-					dets.args :+ [at]
-
-					If toker._toke=")" Exit
-					ParseToker(toker, ",")
-
-					i:+ 1
-				Forever
-
-				NextTokeToker(toker)
-
-				' don't generate header extern
-				If CParseToker(toker, "!") Then
-					dets.noGen = True
-				End If
-
-			Wend
-
-		End If
+	
+				Wend
+				
+				' we found a matching extern file, no need to iterate any further
+				Exit
+	
+			End If
+			
+		Next
 
 	End Method
 
