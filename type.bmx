@@ -568,6 +568,12 @@ Type TStringType Extends TType
 	Method OnCopy:TType()
 		Local ty:TStringType = New TStringType
 		ty.cdecl = cdecl
+		If _flags & T_CHAR_PTR Then
+			ty._flags :| T_CHAR_PTR
+		End If
+		If _flags & T_SHORT_PTR Then
+			ty._flags :| T_SHORT_PTR
+		End If
 		Return ty
 	End Method
 

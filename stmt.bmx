@@ -514,3 +514,26 @@ Type TEndStmt Extends TStmt
 		Return _trans.TransEndStmt( Self )
 	End Method
 End Type
+
+Type TReleaseStmt Extends TStmt
+	Field expr:TExpr
+
+	Method Create:TReleaseStmt( expr:TExpr )
+		Self.expr=expr
+		Return Self
+	End Method
+
+	Method OnCopy:TStmt( scope:TScopeDecl )
+		Return New TReleaseStmt.Create( expr.Copy() )
+	End Method
+	
+	Method OnSemant()
+		expr=expr.Semant()
+		If Not TVarExpr( expr ) And Not TMemberVarExpr( expr) And Not TIndexExpr( expr ) err "Expression must be a variable"
+		If Not TNumericType(expr.exprType) Err "Subexpression for release must be an integer variable"
+	End Method
+	
+	Method Trans$()
+		Return _trans.TransReleaseStmt( Self )
+	End Method
+End Type

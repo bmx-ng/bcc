@@ -1479,6 +1479,12 @@ Type TParser
 		_block.AddStmt New TThrowStmt.Create( expr )
 	End Method
 
+	Method ParseReleaseStmt()
+		Parse "release"
+		Local expr:TExpr = ParseExpr()
+		_block.AddStmt New TReleaseStmt.Create( expr )
+	End Method
+	
 	Method ParseAssertStmt()
 		Parse "assert"
 		Local expr:TExpr = ParseExpr()
@@ -1714,6 +1720,8 @@ Type TParser
 					Default
 						Err "Expecting loop statement"
 				End Select
+			Case "release"
+				ParseReleaseStmt()
 			Default
 				Local expr:TExpr=ParsePrimaryExpr( True )
 

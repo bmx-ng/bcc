@@ -169,7 +169,7 @@ Type TCTranslator Extends TTranslator
 		If TStringType( ty ) Then
 			If ty._flags & TType.T_CHAR_PTR Then
 				Return "$z"
-			Else If ty._flags & TType.T_CHAR_PTR Then
+			Else If ty._flags & TType.T_SHORT_PTR Then
 				Return "$w"
 			End If
 			Return "$" + p
@@ -458,7 +458,7 @@ t:+"NULLNULLNULL"
 
 	Method TransGlobalDecl$( munged$,init:TExpr, attrs:Int, ty:TType )
 		Local glob:String
-		
+
 		If Not (attrs & DECL_INITONLY) Then
 			glob :+"static " + TransType( init.exprType, munged )+" "
 		End If
@@ -470,6 +470,15 @@ t:+"NULLNULLNULL"
 			glob :+ indent + "if (" + munged + "==0) {~n"
 			glob :+ indent + "~t" + munged + "=" + init.Trans() + ";~n"
 			glob :+ indent + "}"
+		Else If TArrayExpr(init) And Not (attrs & DECL_INITONLY) Then
+			glob :+ "0;~n"
+			Emit glob
+			Emit "if (" + munged + "==0) {"
+			
+			glob = munged + "=" + init.Trans() + ";"
+			Emit glob
+			Emit "}"
+			glob = ""
 		Else
 			If init Then
 				If TFunctionPtrType(ty) Then
@@ -496,7 +505,11 @@ t:+"NULLNULLNULL"
 	Method CreateLocal2$( ty:TType, t$ )
 		Local tmp:TLocalDecl=New TLocalDecl.Create( "", ty,Null )
 		MungDecl tmp
-		Emit TransType(ty, "") + " " + tmp.munged + " = bbStringToCString" + Bra(t)+ ";"
+		If TShortType(ty) Then
+			Emit TransType(ty, "") + " " + tmp.munged + " = bbStringToWString" + Bra(t)+ ";"
+		Else
+			Emit TransType(ty, "") + " " + tmp.munged + " = bbStringToCString" + Bra(t)+ ";"
+		End If
 		customVarStack.Push(tmp.munged)
 		Return tmp.munged
 	End Method
@@ -570,7 +583,7 @@ t:+"NULLNULLNULL"
 	End Method
 
 	Method TransFunc$( decl:TFuncDecl,args:TExpr[],lhs:TExpr, sup:Int = False, scope:TScopeDecl = Null )
-'If decl.ident = "Sqr" DebugStop
+'If decl.ident = "LoadLibraryW" DebugStop
 		' for calling the super class method instead
 		Local tSuper:String
 		If sup Then
@@ -1242,7 +1255,12 @@ EndRem
 			'If TByteType(src) And Not IsPointerType(src, TType.T_BYTE, TType.T_POINTER) Return Bra("&"+t)
 
 			If TStringType(src) Then
-				Local tmp:String = CreateLocal2(NewPointerType(TType.T_BYTE), t)
+				Local tmp:String
+				If IsPointerType( dst, 0, TType.T_SHORT_PTR ) Then
+					tmp = CreateLocal2(NewPointerType(TType.T_SHORT), t)
+				Else
+					tmp = CreateLocal2(NewPointerType(TType.T_BYTE), t)
+				End If
 
 				Return tmp
 			End If
@@ -1817,7 +1835,11 @@ EndRem
 	Method TransEndStmt$( stmt:TEndStmt )
 		Emit "bbEnd();"
 	End Method
-	
+
+	Method TransReleaseStmt$( stmt:TReleaseStmt )
+		Emit "bbHandleRelease" + Bra(stmt.expr.Trans()) + ";"
+	End Method
+
 	Method TransFullName:String(decl:TDecl)
 		Local s:String
 		

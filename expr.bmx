@@ -421,6 +421,7 @@ Type TInvokeExpr Extends TExpr
 	End Method
 
 	Method Semant:TExpr()
+
 		If exprType Return Self
 
 		' handle Sgn, Asc and Chr keywords/functions for const values
@@ -863,7 +864,10 @@ Type TCastExpr Extends TExpr
 			If flags & CAST_EXPLICIT
 'DebugStop
 				'if both objects or both non-objects...
-				If (TObjectType(ty)<>Null)=(TObjectType(src)<>Null) exprType=ty
+				If (TObjectType(ty)<>Null)=(TObjectType(src)<>Null) Then
+					exprType=ty
+					Return Self
+				End If
 
 			'Else ' if not explicitly cast, we can't just auto-cast it ourselves here.
 				'If (TObjectType(ty)<>Null) And (TObjectType(src)<>Null) exprType=ty
@@ -918,7 +922,7 @@ Type TCastExpr Extends TExpr
 			Return Self
 		End If
 		
-		If TStringType(src) And (src._flags & TType.T_CHAR_PTR) And TStringType(ty) Then
+		If TStringType(src) And ((src._flags & TType.T_CHAR_PTR) Or (src._flags & TType.T_SHORT_PTR)) And TStringType(ty) Then
 			exprType = ty
 			Return Self
 		End If
@@ -943,7 +947,7 @@ Type TCastExpr Extends TExpr
 			End If
 		End If
 
-		If IsPointerType(ty, 0, TType.T_POINTER | TType.T_CHAR_PTR) Then
+		If IsPointerType(ty, 0, TType.T_POINTER | TType.T_CHAR_PTR | TType.T_SHORT_PTR) Then
 			If IsNumericType(src) And Not (src._flags & TType.T_VARPTR) Then
 				'If IsPointerType(ty,0,TType.T_POINTER) Then
 				'	exprType = TNumericType(src).ToPointer()
