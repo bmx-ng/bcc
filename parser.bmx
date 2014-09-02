@@ -70,15 +70,21 @@ Type TForEachinStmt Extends TLoopStmt
 
 
 			If varlocal
-			
-				block.stmts.AddFirst New TAssignStmt.Create( "=",New TVarExpr.Create( indexTmp ),addExpr )
 
 				' array of object ?
 				
 				If TObjectType(TArrayType( expr.exprType ).elemType) Then
 
+					Local cExpr:TExpr
+					
+					If TIdentType(varty) And TIdentType(varty).ident = "Object" Then
+						cExpr = indexExpr
+					Else
+						cExpr = New TCastExpr.Create( varty, indexExpr,CAST_EXPLICIT )
+					End If
+
 					' local variable
-					Local varTmp:TLocalDecl=New TLocalDecl.Create( varid,varty,indexExpr )
+					Local varTmp:TLocalDecl=New TLocalDecl.Create( varid,varty,cExpr )
 
 					' local var as expression
 					Local expr:TExpr=New TVarExpr.Create( varTmp )
@@ -92,16 +98,28 @@ Type TForEachinStmt Extends TLoopStmt
 					thenBlock.AddStmt New TContinueStmt
 
 					block.stmts.AddFirst New TIfStmt.Create( expr,thenBlock,elseBlock )
+					block.stmts.AddFirst New TAssignStmt.Create( "=",New TVarExpr.Create( indexTmp ),addExpr )
 					block.stmts.AddFirst New TDeclStmt.Create( varTmp )
 
 				Else
 					Local varTmp:TLocalDecl=New TLocalDecl.Create( varid,varty,indexExpr )
+					block.stmts.AddFirst New TAssignStmt.Create( "=",New TVarExpr.Create( indexTmp ),addExpr )
 					block.stmts.AddFirst New TDeclStmt.Create( varTmp )
 				End If
 			Else
 				
 				If TObjectType(TArrayType( expr.exprType ).elemType) Then
 				' var = Null
+					If Not varty Then
+						Local decl:TValDecl = block.scope.FindValDecl(varid)
+						
+						If decl Then
+							decl.Semant()
+							
+							varty = decl.ty.Copy()
+						End If
+					End If
+
 					expr=New TBinaryCompareExpr.Create( "=",New TIdentExpr.Create( varid ), New TNullExpr.Create(TType.nullObjectType))
 
 					' then continue
@@ -111,13 +129,15 @@ Type TForEachinStmt Extends TLoopStmt
 
 					block.stmts.AddFirst New TIfStmt.Create( expr,thenBlock,elseBlock )
 					'block.stmts.AddFirst New TDeclStmt.Create( varTmp )
-				
+
+					block.stmts.AddFirst New TAssignStmt.Create( "=",New TVarExpr.Create( indexTmp ),addExpr )
+					block.stmts.AddFirst New TAssignStmt.Create( "=",New TIdentExpr.Create( varid ),New TCastExpr.Create( varty, indexExpr,CAST_EXPLICIT ) )
+				Else
+					block.stmts.AddFirst New TAssignStmt.Create( "=",New TVarExpr.Create( indexTmp ),addExpr )
+					block.stmts.AddFirst New TAssignStmt.Create( "=",New TIdentExpr.Create( varid ),indexExpr )
 				End If
 				
 
-				block.stmts.AddFirst New TAssignStmt.Create( "=",New TVarExpr.Create( indexTmp ),addExpr )
-
-				block.stmts.AddFirst New TAssignStmt.Create( "=",New TIdentExpr.Create( varid ),indexExpr )
 
 			EndIf
 
