@@ -77,6 +77,36 @@ Type TCTranslator Extends TTranslator
 		If TFunctionPtrType( ty ) Return "~q(~q"
 
 	End Method
+
+	Method TransDefDataType$( ty:TType)
+		If TByteType( ty ) Return "~qb~q"
+		If TShortType( ty ) Return "~qs~q"
+		If TIntType( ty ) Return "~qi~q"
+		If TFloatType( ty ) Return "~qf~q"
+		If TDoubleType( ty ) Return "~qd~q"
+		If TLongType( ty ) Return "~ql~q"
+		If TStringType( ty ) Return "~q$~q"
+	End Method
+
+	Method TransDefDataConversion$(ty:TType)
+		If TByteType( ty ) Return "bbConvertToInt"
+		If TShortType( ty ) Return "bbConvertToInt"
+		If TIntType( ty ) Return "bbConvertToInt"
+		If TFloatType( ty ) Return "bbConvertToFloat"
+		If TDoubleType( ty ) Return "bbConvertToDouble"
+		If TLongType( ty ) Return "bbConvertToLong"
+		If TStringType( ty ) Return "bbConvertToString"
+	End Method
+
+	Method TransDefDataUnionType$(ty:TType)
+		If TByteType( ty ) Return "b"
+		If TShortType( ty ) Return "s"
+		If TIntType( ty ) Return "i"
+		If TFloatType( ty ) Return "f"
+		If TDoubleType( ty ) Return "d"
+		If TLongType( ty ) Return "l"
+		If TStringType( ty ) Return "t"
+	End Method
 	
 	Method TransDebugScopeType$(ty:TType)
 		Local p:String = TransSPointer(ty)
@@ -1838,6 +1868,16 @@ EndRem
 
 	Method TransReleaseStmt$( stmt:TReleaseStmt )
 		Emit "bbHandleRelease" + Bra(stmt.expr.Trans()) + ";"
+	End Method
+
+	Method TransRestoreDataStmt$( stmt:TRestoreDataStmt )
+		Emit "_defDataOffset = &_defData[" + TDataLabelExpr(stmt.expr).dataDef.label.index + "];"
+	End Method
+
+	Method TransReadDataStmt$( stmt:TReadDataStmt )
+		For Local expr:TExpr = EachIn stmt.args
+			Emit expr.Trans() + " = " + TransDefDataConversion(expr.exprType) + Bra("_defDataOffset++") + ";"
+		Next
 	End Method
 
 	Method TransFullName:String(decl:TDecl)
@@ -3663,6 +3703,11 @@ End Rem
 		For Local ib:TIncbin = EachIn app.incbins
 			Emit "bbIncbinAdd(&" + TStringConst(app.stringConsts.ValueForKey(ib.file)).id + ",&" + app.munged + "_ib_" + ib.id + "," + ib.length + ");"
 		Next
+		
+		' defdata init
+		If Not app.dataDefs.IsEmpty() Then
+			Emit "_defDataOffset = &_defData;"
+		End If
 
 		' initialise globals
 		For Local decl:TGlobalDecl=EachIn app.semantedGlobals
@@ -3729,7 +3774,40 @@ End Rem
 				End If
 			End If
 		Next
+		
+		' defdata
+		EmitDefDataArray(app)
 
+	End Method
+	
+	Method EmitDefDataArray(app:TAppDecl)
+		If Not app.dataDefs.IsEmpty() Then
+			' 
+			Emit "static struct bbDataDef * _defDataOffset;"
+			Emit "static struct bbDataDef _defData[" + TDefDataDecl.count + "]={"
+			
+			For Local decl:TDefDataDecl = EachIn app.dataDefs
+				EmitDefData(decl)
+			Next
+			
+			Emit "};"
+		End If
+	End Method
+
+	Method EmitDefData(decl:TDefDataDecl)
+		For Local i:Int = 0 Until decl.data.length
+			Local expr:TExpr = decl.data[i]
+			
+			Emit "{"
+		
+			Emit TransDefDataType(expr.exprType) + ","
+			
+			Emit "{"
+			Emit "." + TransDefDataUnionType(expr.exprType) + " = " + expr.Trans()
+			Emit "}"
+		
+			Emit "},"
+		Next
 	End Method
 
 	Method EmitIfcImports(impMod:TModuleDecl, processed:TMap)

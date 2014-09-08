@@ -176,18 +176,18 @@ Type TExpr
 		Err "Can't balance types "+lhs.ToString()+" and "+rhs.ToString()+"."
 	End Method
 
-	Method CopyExpr:TExpr( expr:TExpr )
+	Function CopyExpr:TExpr( expr:TExpr )
 		If Not expr Return Null
 		Return expr.Copy()
-	End Method
+	End Function
 
-	Method CopyArgs:TExpr[]( exprs:TExpr[] )
+	Function CopyArgs:TExpr[]( exprs:TExpr[] )
 		exprs=exprs[..]
 		For Local i:Int=0 Until exprs.Length
 			exprs[i]=CopyExpr( exprs[i] )
 		Next
 		Return exprs
-	End Method
+	End Function
 
 End Type
 
@@ -1825,6 +1825,13 @@ Type TIdentExpr Extends TExpr
 			Return New TLoopLabelExpr.Create(stmt)
 		End If
 		
+		' maybe it's a data label?
+		Local ddecl:TDefDataDecl = TDefDataDecl(_appInstance.FindDataLabel(ident))
+		
+		If ddecl Then
+			Return New TDataLabelExpr.Create(ddecl)
+		End If
+		
 		IdentErr
 	End Method
 
@@ -2223,3 +2230,29 @@ Type TLoopLabelExpr Extends TExpr
 
 End Type
 
+Type TDataLabelExpr Extends TExpr
+
+	Field dataDef:TDefDataDecl
+	
+	Method Create:TDataLabelExpr(dataDef:TDefDataDecl)
+		Self.dataDef = dataDef
+		Return Self
+	End Method
+
+	Method Copy:TExpr()
+		Return New TDataLabelExpr.Create(dataDef)
+	End Method
+
+	Method Semant:TExpr()
+		Return Self
+	End Method
+
+	Method Trans$()
+		DebugStop
+	End Method
+
+	Method Eval$()
+		Return ""
+	End Method
+
+End Type

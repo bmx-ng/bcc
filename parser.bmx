@@ -350,6 +350,14 @@ Type TParser
 		Return toker._toke
 	End Method
 
+	Method DescribeToke:String( toke:String )
+		Select toke
+			Case "~n"
+				Return "end-of-line"
+		End Select
+		Return toke
+	End Method
+
 	Method CParse:Int( toke$ )
 		If _toke.ToLower()<>toke
 			Return False
@@ -1422,6 +1430,64 @@ Type TParser
 		_block.AddStmt stmt
 	End Method
 
+	Method ParseDefDataStmt(label:TLoopLabelDecl = Null)
+		Parse "defdata"
+		
+		If AtEos() Then
+			Err "Expecting expression but encountered " + DescribeToke(_toke)
+		End If
+		
+		Local args:TExpr[]
+		Local nargs:Int
+
+		Repeat
+			Local arg:TExpr
+			If _toke And _toke<>"," arg=ParseExpr()
+			If args.Length=nargs args=args + New TExpr[10]
+			args[nargs]=arg
+			nargs:+1
+		Until Not CParse(",")
+		args=args[..nargs]
+		
+		Local dataLabel:TDataLabelDecl
+		If label Then
+			dataLabel = New TDataLabelDecl.Create(label.ident, label.attrs)
+		End If
+		
+		Local decl:TDefDataDecl = New TDefDataDecl.Create(args, dataLabel)
+		
+		_app.dataDefs.AddLast(decl)
+		
+	End Method
+
+	Method ParseReadDataStmt()
+		Parse "readdata"
+
+		Local args:TExpr[]
+		Local nargs:Int
+
+		If Not AtEos() Then
+			Repeat
+				Local arg:TExpr
+				If _toke And _toke<>"," arg=ParseExpr()
+				If args.Length=nargs args=args + New TExpr[10]
+				args[nargs]=arg
+				nargs:+1
+			Until Not CParse(",")
+			args=args[..nargs]
+		End If
+
+		_block.AddStmt New TReadDataStmt.Create( args )
+	End Method
+
+	Method ParseRestoreDataStmt()
+		Parse "restoredata"
+		
+		Local expr:TExpr = ParseExpr()
+
+		_block.AddStmt New TRestoreDataStmt.Create( expr )
+	End Method
+	
 	Method ParseReturnStmt()
 		Parse "return"
 		Local expr:TExpr
@@ -1730,18 +1796,26 @@ Type TParser
 			Case "#"
 				Local decl:TLoopLabelDecl = ParseLoopLabelDecl()
 				NextToke
-				Select _toke
+				Select _toke.ToLower()
 					Case "while"
 						ParseWhileStmt(decl)
 					Case "repeat"
 						ParseRepeatStmt(decl)
 					Case "for"
 						ParseForStmt(decl)
+					Case "defdata"
+						ParseDefDataStmt(decl)
 					Default
-						Err "Expecting loop statement"
+						Err "Labels must appear before a loop or DefData statement"
 				End Select
 			Case "release"
 				ParseReleaseStmt()
+			Case "defdata"
+				ParseDefDataStmt()
+			Case "readdata"
+				ParseReadDataStmt()
+			Case "restoredata"
+				ParseRestoreDataStmt()
 			Default
 				Local expr:TExpr=ParsePrimaryExpr( True )
 

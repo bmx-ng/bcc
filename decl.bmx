@@ -727,6 +727,9 @@ Type TScopeDecl Extends TDecl
 'DebugLog Self.ident + "::FindType::" + ident
 		Local decl:Object=(GetDecl( ident ))
 		If decl Then
+			If TModuleDecl(decl) Then
+				decl = TModuleDecl(decl).GetDecl(ident)
+			End If
 			Local ty:TType=TType(decl)
 			If ty
 				If args.Length Err "Wrong number of type arguments"
@@ -1848,6 +1851,65 @@ Type TLoopLabelDecl Extends TDecl
 	
 End Type
 
+Type TDataLabelDecl Extends TDecl
+
+	Field index:Int
+
+	Method Create:TDataLabelDecl( ident$, attrs:Int=0 )
+		Self.ident=ident
+		Self.attrs=attrs
+		Return Self
+	End Method
+	
+	Method OnCopy:TDecl()
+		Return New TDataLabelDecl.Create( ident,attrs )
+	End Method
+	
+	Method OnSemant()
+	End Method
+	
+End Type
+
+Type TDefDataDecl Extends TDecl
+
+	Global count:Int
+
+	Field label:TDataLabelDecl
+	Field data:TExpr[]
+
+	Method Create:TDefDataDecl(data:TExpr[], label:TDataLabelDecl = Null, attrs:Int=0 )
+		Self.data=data
+		Self.label=label
+		Self.attrs=attrs
+		Return Self
+	End Method
+	
+	Method OnCopy:TDecl()
+		Return New TDefDataDecl.Create(TExpr.CopyArgs(data),TDataLabelDecl(label.Copy()),attrs)
+	End Method
+
+	Method OnSemant()
+		If data Then
+			If label Then
+				label.index = count
+			End If
+		
+			For Local i:Int = 0 Until data.length
+				data[i] = data[i].Semant()
+				If Not TConstExpr(data[i]) Then
+					Err "Data items must be numeric or strings"
+				Else
+					' todo : more type tests?
+				End If
+				count :+ 1
+			Next
+		Else
+			' err?
+		End If
+	End Method
+	
+End Type
+
 Const MODULE_STRICT:Int=1
 Const MODULE_SUPERSTRICT:Int=2
 Const MODULE_ACTUALMOD:Int=4
@@ -2015,6 +2077,8 @@ Type TAppDecl Extends TScopeDecl
 	Field incbins:TList = New TList
 	Field genIncBinHeader:Int = False
 	
+	Field dataDefs:TList = New TList
+	
 	Method GetPathPrefix:String()
 		If opt_buildtype = BUILDTYPE_MODULE Then
 			Local prefix:String
@@ -2059,6 +2123,8 @@ Type TAppDecl Extends TScopeDecl
 		_env=Null
 		pushenv Self
 		
+		SemantDataDefs()	
+
 		mainModule.Semant
 
 		mainFunc=mainModule.FindFuncDecl( "LocalMain" )
@@ -2066,7 +2132,7 @@ Type TAppDecl Extends TScopeDecl
 		
 		' FIXME
 		If Not mainFunc Err "Function 'Main' not found."
-		
+	
 		SemantDecls()
 
 		Repeat
@@ -2079,6 +2145,14 @@ Type TAppDecl Extends TScopeDecl
 		
 		For Local cdecl:TClassDecl=EachIn semantedClasses
 			cdecl.FinalizeClass
+		Next
+	End Method
+	
+	Method SemantDataDefs()
+		TDefDataDecl.count = 0
+		
+		For Local decl:TDecl = EachIn dataDefs
+			decl.Semant
 		Next
 	End Method
 	
@@ -2156,6 +2230,14 @@ Type TAppDecl Extends TScopeDecl
 				End If
 			End If
 		End If
+	End Method
+	
+	Method FindDataLabel:TDecl(ident:String)
+		For Local dd:TDefDataDecl = EachIn dataDefs
+			If dd.label And dd.label.ident.ToLower() = ident.ToLower() Then
+				Return dd
+			End If
+		Next
 	End Method
 	
 End Type

@@ -1099,7 +1099,13 @@ End Rem
 	End Method
 
 	Method TransEndStmt$( stmt:TEndStmt ) Abstract
-	
+
+	Method TransReleaseStmt$( stmt:TReleaseStmt ) Abstract
+
+	Method TransRestoreDataStmt$( stmt:TRestoreDataStmt ) Abstract
+
+	Method TransReadDataStmt$( stmt:TReadDataStmt ) Abstract
+
 	'module
 	Method TransApp( app:TAppDecl ) Abstract
 

@@ -537,3 +537,66 @@ Type TReleaseStmt Extends TStmt
 		Return _trans.TransReleaseStmt( Self )
 	End Method
 End Type
+
+Type TReadDataStmt Extends TStmt
+	Field args:TExpr[]
+
+	Method Create:TReadDataStmt( args:TExpr[] )
+		Self.args=args
+		Return Self
+	End Method
+
+	Method OnCopy:TStmt( scope:TScopeDecl )
+		Return New TReadDataStmt.Create( TExpr.CopyArgs(args) )
+	End Method
+
+	Method OnSemant()
+		If args Then
+			For Local i:Int = 0 Until args.length
+				args[i]=args[i].Semant()
+				
+				If Not TVarExpr(args[i]) And Not TMemberVarExpr(args[i]) And Not TIndexExpr(args[i]) Then
+					Err "Expression must be a variable"
+				End If
+			Next
+		End If
+	End Method
+
+	Method Trans$()
+		Return _trans.TransReadDataStmt( Self )
+	End Method
+	
+End Type
+
+Type TRestoreDataStmt Extends TStmt
+	Field expr:TExpr
+
+	Method Create:TRestoreDataStmt( expr:TExpr )
+		Self.expr=expr
+		Return Self
+	End Method
+
+	Method OnCopy:TStmt( scope:TScopeDecl )
+		Return New TRestoreDataStmt.Create( expr.Copy() )
+	End Method
+
+	Method OnSemant()
+		If Not TIdentExpr(expr) Then
+			' todo : better (more specific) error?
+			Err "Expecting identifier"
+		Else
+			Local label:String = TIdentExpr(expr).ident
+			expr=expr.Semant()
+			
+			If Not expr Then
+				Err "Label '" + label + "' not found"
+			End If
+		End If
+	End Method
+
+	Method Trans$()
+		Return _trans.TransRestoreDataStmt( Self )
+	End Method
+	
+End Type
+
