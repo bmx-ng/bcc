@@ -624,30 +624,61 @@ Type TNewObjectExpr Extends TExpr
 		classDecl.attrs:|CLASS_INSTANCED
 
 		exprType=ty
-
+		
 		If it Then
-			Local i:Int=it.ident.FindLast( "." )
-			Local n:Int = it.ident.length
-			While i > 0
+			Local parts:String[] = it.ident.Split(".")
+			
+			Local i:Int = 0
+			
+			While i < parts.length And parts[i].ToLower() <> classDecl.ident.ToLower()
+				i :+ 1
+			Wend
+			
+			i :+ 1
+
+			Local expr:TExpr = Self
+			Local cdecl:TClassDecl = classDecl
+			Local eType:TType = objTy
+			
+			While i < parts.length
+				Local id:String = parts[i]
+				i :+ 1
+				
 				' find member function.method
-				Local fdecl:TFuncDecl = classDecl.FindFuncDecl(it.ident[i+1..n], iArgs)
+				Local fdecl:TFuncDecl = cdecl.FindFuncDecl(id, iArgs)
 				If fdecl Then
-					Return New TInvokeMemberExpr.Create( Self,fdecl, iArgs ).Semant()
+					expr = New TInvokeMemberExpr.Create( expr,fdecl, iArgs ).Semant()
+					eType = expr.exprType
+					If TObjectType(eType) Then
+						cdecl = TObjectType(expr.exprType).classdecl
+					End If
+					If TArrayType(eType) Or TStringType(eType) Then
+						cdecl = eType.GetClass()
+					End If
+					Continue
 				End If
 				' find other member decl (field, etc)
-				Local decl:TVarDecl = TVarDecl(classDecl.GetDecl(it.ident[i+1..n]))
+				Local decl:TVarDecl = TVarDecl(cdecl.GetDecl(id))
 				If decl Then
-					i = it.ident[i+1..].FindLast(".")
-					
-				
-					Local tmp:TLocalDecl=New TLocalDecl.Create( "", objTy, Self )
+					Local tmp:TLocalDecl=New TLocalDecl.Create( "", eType, expr )
 					Local varExpr:TExpr = New TMemberVarExpr.Create(New TVarExpr.Create( tmp ), decl).Semant()
-					Return New TStmtExpr.Create( New TDeclStmt.Create( tmp ), varExpr ).Semant()
+					expr = New TStmtExpr.Create( New TDeclStmt.Create( tmp ), varExpr ).Semant()
+					eType = decl.ty
+					If TObjectType(eType) Then
+						cdecl = TObjectType(expr.exprType).classdecl
+					End If
+					If TArrayType(eType) Or TStringType(eType) Then
+						cdecl = eType.GetClass()
+					End If
+					Continue
 				End If
 				
-				n = i
-				i = it.ident[..i].FindLast(".")
+				' didn't match member or function??
+				' probably an error...
+				Err "Identifier '" + id + "' not found."
 			Wend
+			
+			Return expr
 		End If
 
 		Return Self
