@@ -1209,10 +1209,14 @@ EndRem
 	Method TransNewObjectExpr$( expr:TNewObjectExpr )
 		Local t$
 
-		If ClassHasObjectField(expr.classDecl) Then
-			t = "bbObjectNew(&" + expr.classDecl.actual.munged + ")"
+		If expr.instanceExpr Then
+			t = "bbObjectNew(" + expr.instanceExpr.Trans() + "->clas)"
 		Else
-			t = "bbObjectAtomicNew(&" + expr.classDecl.actual.munged + ")"
+			If ClassHasObjectField(expr.classDecl) Then
+				t = "bbObjectNew(&" + expr.classDecl.actual.munged + ")"
+			Else
+				t = "bbObjectAtomicNew(&" + expr.classDecl.actual.munged + ")"
+			End If
 		End If
 		'Local t$="(new "+expr.classDecl.actual.munged+")"
 		'If expr.ctor t:+"->"+expr.ctor.actual.munged+TransArgs( expr.args,expr.ctor )

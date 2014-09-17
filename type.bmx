@@ -44,7 +44,7 @@ Type TType
 		Return EqualsType( ty )
 	End Method
 	
-	Method Semant:TType()
+	Method Semant:TType(option:Int = False)
 		Return Self
 	End Method
 
@@ -560,7 +560,7 @@ Type TStringType Extends TType
 		Return cdecl
 	End Method
 	
-	Method Semant:TType()
+	Method Semant:TType(option:Int = 0)
 		GetClass()
 		Return Self
 	End Method
@@ -608,7 +608,7 @@ Type TArrayType Extends TType
 		Return (arrayType And ( TVoidType( elemType ) Or elemType.EqualsType( arrayType.elemType ) )) Or IsPointerType(ty, 0, TType.T_POINTER) <> Null Or (TObjectType( ty ) And TObjectType( ty ).classDecl.ident="Object")
 	End Method
 	
-	Method Semant:TType()
+	Method Semant:TType(option:Int = False)
 		Local ty:TType=elemType.Semant()
 		If ty<>elemType Return New TArrayType.Create( ty, dims )
 		Return Self
@@ -722,7 +722,7 @@ Type TIdentType Extends TType
 	'End Method
 	
 	
-	Method Semant:TType()
+	Method Semant:TType(ignoreNotFoundError:Int = 0)
 'If ident="obj" DebugStop
 		If Not ident Return TType.nullObjectType
 
@@ -769,7 +769,12 @@ Type TIdentType Extends TType
 				End If
 			End If
 		EndIf
-		If Not ty Err "Type '"+tyid+"' not found"
+		If Not ty Then
+			If ignoreNotFoundError Then
+				Return Null
+			End If
+			Err "Type '"+tyid+"' not found"
+		End If
 		
 		If (_flags & T_VAR) And TObjectType(ty) Then
 			ty = New TObjectType.Create(TObjectType(ty).classDecl)
@@ -918,7 +923,7 @@ Type TFunctionPtrType Extends TType
 		Return ty
 	End Method
 
-	Method Semant:TType()
+	Method Semant:TType(option:Int = False)
 		func.Semant()
 		Return Self
 	End Method

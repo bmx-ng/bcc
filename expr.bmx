@@ -580,6 +580,7 @@ Type TNewObjectExpr Extends TExpr
 	Field args:TExpr[]
 	Field ctor:TFuncDecl
 	Field classDecl:TClassDecl
+	Field instanceExpr:TExpr
 
 	Method Create:TNewObjectExpr( ty:TType,args:TExpr[] )
 		Self.ty=ty
@@ -597,7 +598,17 @@ Type TNewObjectExpr Extends TExpr
 		Local it:TIdentType = TIdentType(ty)
 		Local iArgs:TExpr[] = CopyArgs(args)
 
-		ty=ty.Semant()
+		ty=ty.Semant(True)
+		If Not ty Then
+			' maybe it's an instance of a type ?
+			Local decl:TVarDecl = TVarDecl(_env.FindDecl(it.ident))
+			If decl And TObjectType(decl.ty) Then
+				ty = decl.ty
+				instanceExpr = New TVarExpr.Create(decl).Semant()
+			Else
+				Err "Type '"+it.ident+"' not found"
+			End If
+		End If
 		args=SemantArgs( args )
 
 		Local objTy:TObjectType=TObjectType( ty )
