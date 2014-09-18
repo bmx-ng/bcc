@@ -2007,7 +2007,7 @@ Type TParser
 
 	'handle end-of-line "dot dot return"-line connector
 	'-> skips EOL tokens
-	Method HandleDotsLineConnector()
+	Method HandleDotsLineConnector(eatToke:Int = False)
 
 		Local tok:TToker = New TToker.Copy(_toker)
 
@@ -2032,6 +2032,10 @@ Type TParser
 			If t = "~n" Then
 				NextToke
 			End If
+		End If
+		
+		If eatToke Then
+			NextToke
 		End If
 	End Method
 
@@ -2136,7 +2140,7 @@ Type TParser
 			Local nargs:Int
 			Repeat
 				' handle end-of-line "dot dot return"
-				If _toke =".." Then HandleDotsLineConnector()
+				If _toke =".." Then HandleDotsLineConnector(True)
 
 				Local argId$=ParseIdent()
 
