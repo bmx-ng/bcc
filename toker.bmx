@@ -45,7 +45,7 @@ Type TToker
 	Const _keywords$=";"+ ..
 	"strict;superstrict;"+ ..
 	"public;private;"+ ..
-	"short;int;float;double;long;string;object;array;ptr;var;varptr;mod;continue;exit;"+ ..
+	"short;int;float;double;long;string;object;ptr;var;varptr;mod;continue;exit;"+ ..
 	"include;import;module;extern;framework;"+ ..
 	"new;self;super;eachin;true;false;null;not;"+ ..
 	"extends;abstract;select;case;default;"+ ..

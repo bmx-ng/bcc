@@ -513,7 +513,7 @@ Type TIParser
 	Method ParseIdent$()
 		Select _toker._toke.tolower()
 		Case "@" _toker.NextToke
-		Case "string","array","object"
+		Case "string","___array","object"
 		Default	
 			If _toker._tokeType<>TOKE_IDENT Err "Syntax error - expecting identifier."
 		End Select

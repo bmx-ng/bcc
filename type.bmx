@@ -616,7 +616,7 @@ Type TArrayType Extends TType
 	
 	Method GetClass:TClassDecl()
 		'Return _env.FindClassDecl( "array" )
-		Return TClassDecl( _env.FindDecl( "array" ) )
+		Return TClassDecl( _env.FindDecl( "___array" ) )
 	End Method
 
 	Method OnCopy:TType()
