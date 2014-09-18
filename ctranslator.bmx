@@ -1458,7 +1458,7 @@ EndRem
 				End If
 			End If
 			
-			If TObjectType( src) And (TObjectType( src ).classDecl.ident = "Array" Or TObjectType( src ).classDecl.ident = "Object") Then
+			If TObjectType( src) And (TObjectType( src ).classDecl.ident = "___Array" Or TObjectType( src ).classDecl.ident = "Object") Then
 				Return "bbArrayCastFromObject" + Bra(t + "," + TransArrayType(TArrayType( dst ).elemType))
 			End If
 		Else If TObjectType( dst )
@@ -3009,7 +3009,7 @@ End Rem
 		Local s:String = variable
 
 		' array.length
-		If decl.scope And decl.scope.ident = "Array" Then
+		If decl.scope And decl.scope.ident = "___Array" Then
 			If decl.ident = "length" Then
 				Return Bra(variable + "->scales[0]")
 			End If
