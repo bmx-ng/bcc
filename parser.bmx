@@ -2034,7 +2034,7 @@ Type TParser
 			End If
 		End If
 		
-		If eatToke Then
+		If eatToke And Not count Then
 			NextToke
 		End If
 	End Method
