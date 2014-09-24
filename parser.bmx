@@ -1185,7 +1185,7 @@ Type TParser
 		Return ParseOrExpr()
 	End Method
 
-rem
+Rem
 	unused atm
 
 	Method ReadTillNextToken:string(amount:int=1)
@@ -1223,12 +1223,12 @@ endrem
 
 		'define if the current if is a "singleline if"
 		'"singleline ifs" are not allowed to contain "endif" "end if"
-		local singleLineIf:int = True
+		Local singleLineIf:Int = True
 
 		'to know if it is a multiline or singleline if we have to check
 		'for certain situations
 		Select _toke
-			case "~n"
+			Case "~n"
 				'if a  <- newline
 				'  print "a"
 				'endif
@@ -1256,26 +1256,34 @@ endrem
 		'now check each toke until we reach our desired term
 		'for singleline-if this is "~n", for multiline-if this is
 		'"endif" or "end if"
-		if singleLineIf
+		If singleLineIf
 			term = "~n"
-		else
+		Else
 			term = "end" 'endif, end if
-		endif
+		EndIf
 
 		'only read until reaching the limit - or no valid toke was returned
-		while _toke <> term and _toke<>""
-			local currentToke:string = _toke
+		While _toke <> term
+			Local currentToke:String = _toke
 
 			Select currentToke
+				'file end before endif/end/elseif
+				Case ""
+                   Err("Expecting expression but encountered end-of-file")
 				'"endif" / "end if"
-				case "endif", "end"
+				Case "endif", "end"
+				
+					If singleLineIf Then
+						Err "'EndIf' without matching 'If'"
+					End If
+				
 					NextToke()
 					'If currentToke = "endif" or (currentToke + _toke)="endif"
 					'	'do something if "endif/end if" happens ?
 					'Endif
 
 					'finish this if-statement
-					exit
+					Exit
 
 				'"else" and "elseif" / "else if"
 				Case "else","elseif"
@@ -1293,10 +1301,10 @@ endrem
 					'doing it this way avoids to parse "elseif if" as
 					'else-statement
 					NextToke()
-					If currentToke = "elseif" or (currentToke + _toke)="elseif"
+					If currentToke = "elseif" Or (currentToke + _toke)="elseif"
 						'create a new if-statement and exit current handling
 						ParseIfStmt(term, True)
-						exit
+						Exit
 					EndIf
 					
 				Default
@@ -1307,19 +1315,26 @@ endrem
 
 					'handle the end-function and "end if"
 					Select currentToke
-						case "end"
+						Case "end"
 							'check next toke too
 							NextToke()
 
 							'found end-function
-							If currentToke = "end" and (currentToke + _toke)<>"endif"
+							If currentToke = "end" And (currentToke + _toke)<>"endif"
 '								print "   parsing end .... handling"
 								ParseEndStmt(False)
 							'found "end if"
 							Else
-								NextToke()
-								exit
-							Endif
+								If CParse("if") Then
+									If singleLineIf Then
+										Err "'End If' without matching 'If'"
+									End If
+									
+									Exit
+								End If
+								
+								'NextToke()
+							EndIf
 					End Select
 			End Select
 		Wend
