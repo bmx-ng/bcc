@@ -1185,94 +1185,153 @@ Type TParser
 		Return ParseOrExpr()
 	End Method
 
-	Method ParseIfStmt( term$, elseIfEndIfReadAheadCheck:Int = False )
-		Local tok:TToker
+rem
+	unused atm
 
+	Method ReadTillNextToken:string(amount:int=1)
+		'copy current toker and move one token forward
+		local tok:TToker = New TToker.Copy(_toker)
+		local result:string = _toker._toke
+		for local i:int = 0 until amount
+			NextTokeToker(tok)
+			result :+ " "+ tok._toke
+		Next
+		return _toker._toke+" "+tok._toke
+	End Method
+endrem
+	
+	Method ParseIfStmt( term$, elseIfEndIfReadAheadCheck:Int = False )
+
+		Local tok:TToker
+		'rules:
+		'- the command "end" cannot be used as condition
+		'- "endif" or "end if" is not allowed in singleline-ifs
+
+		'if current toke is "if", move on to the next toke
 		CParse "if"
 
+		'read in the expression/condition following after "if"
 		Local expr:TExpr=ParseExpr()
 
+		'if current toke is "then", move to next, else stay at this
+		'position -> makes "then" usage voluntary
 		CParse "then"
 
+		'create empty blocks for then/else
 		Local thenBlock:TBlockDecl=New TBlockDecl.Create( _block )
 		Local elseBlock:TBlockDecl=New TBlockDecl.Create( _block )
 
-		Local eatTerm:Int
-		If Not term
-			If _toke="~n" term="end" Else term="~n"
-			eatTerm=True
-		EndIf
+		'define if the current if is a "singleline if"
+		'"singleline ifs" are not allowed to contain "endif" "end if"
+		local singleLineIf:int = True
 
-		PushBlock thenBlock
-		While _toke<>term
-			Select _toke
-			Case "endif"
-				'if searching for "end" (not function "end"),
-				'also accept "endif"
-				If term="end" Exit
-				Err "Syntax error - expecting 'End'."
-			Case "else","elseif"
-				Local elif:Int=_toke="elseif"
-				NextToke
-				If _block=elseBlock
-					Err "If statement can only have one 'else' block."
-				EndIf
-				PopBlock
-				PushBlock elseBlock
-				If elif Or _toke="if"
-					ParseIfStmt term, True
-				EndIf
-			Default
-				ParseStmt
+		'to know if it is a multiline or singleline if we have to check
+		'for certain situations
+		Select _toke
+			case "~n"
+				'if a  <- newline
+				'  print "a"
+				'endif
+				singleLineIf = False
+			Case "if"
+				'another "if" means the outer one is a singleline if!
+				singleLineIf = True
+			Case "else"
+				'if ReadTillNextToken().toLower() = "else if"
+				'	print "IF: found if X then Y else if ..."
+				'else
+				'	print "IF: found if X then Y else ..."
+				'endif
 
-				' for an elseif, it is part of the original if, insofar as the subsequent End If will close both.
-				' read ahead (without moving the parser forward) for an End If and exit if required.
-				If _toke = "end" And elseIfEndIfReadAheadCheck Then
-					tok = New TToker.Copy(_toker)
-					If tok._toke.ToLower() = "end" Then
-						NextTokeToker(tok)
-						If tok._toke.ToLower() = "if" Then
-							If term="end" Then
-								Exit
-							End If
-						End If
-					End If
-				End If
+				'also read "else if"
+				singleLineIf = True
+			Case "elseif"
+				singleLineIf = True
+		End Select
 
-				' to handle "end" statement
-				If _toke = "end" Then
-					NextToke
-					If _toke = "if" Then
-						'_block.RemoveStmt ' remove the "end" statement we just added
-						If term="end" Then
-							Parse "if"
-							If eatTerm Then
-								eatTerm = False
-							End If
-							Exit
-						End If
-					Else
-						ParseEndStmt(False)
-					End If
-				End If
+
+		'set thenBlock as the active block
+		PushBlock( thenBlock )
+
+		'now check each toke until we reach our desired term
+		'for singleline-if this is "~n", for multiline-if this is
+		'"endif" or "end if"
+		if singleLineIf
+			term = "~n"
+		else
+			term = "end" 'endif, end if
+		endif
+
+		'only read until reaching the limit - or no valid toke was returned
+		while _toke <> term and _toke<>""
+			local currentToke:string = _toke
+
+			Select currentToke
+				'"endif" / "end if"
+				case "endif", "end"
+					NextToke()
+					'If currentToke = "endif" or (currentToke + _toke)="endif"
+					'	'do something if "endif/end if" happens ?
+					'Endif
+
+					'finish this if-statement
+					exit
+
+				'"else" and "elseif" / "else if"
+				Case "else","elseif"
+'					print "parsing "+currentToke
+
+					If _block = elseBlock
+						Err("If statement can only have one 'else' block.")
+					EndIf
+
+					'switch from thenBlock to elseBlock
+					PopBlock()
+					PushBlock(elseBlock)
+
+					'move to next token, might contain "if" for "else if"
+					'doing it this way avoids to parse "elseif if" as
+					'else-statement
+					NextToke()
+					If currentToke = "elseif" or (currentToke + _toke)="elseif"
+						'create a new if-statement and exit current handling
+						ParseIfStmt(term, True)
+						exit
+					EndIf
+					
+				Default
+					'parse the current and next tokens
+					ParseStmt()
+
+					currentToke = _toke
+
+					'handle the end-function and "end if"
+					Select currentToke
+						case "end"
+							'check next toke too
+							NextToke()
+
+							'found end-function
+							If currentToke = "end" and (currentToke + _toke)<>"endif"
+'								print "   parsing end .... handling"
+								ParseEndStmt(False)
+							'found "end if"
+							Else
+								NextToke()
+								exit
+							Endif
+					End Select
 			End Select
 		Wend
-		PopBlock
+		
+		'change block
+		PopBlock()
 
-		If eatTerm
-			'only parse for "if" if the token wasn't endif
-			If _toke = "endif" Then eatTerm = False
-
-			NextToke
-
-			'still eating term? look for If
-			If eatTerm And term="end" Parse "if"
-		EndIf
-
+		'create a if-then[-else]-statement
 		Local stmt:TIfStmt=New TIfStmt.Create( expr,thenBlock,elseBlock )
-
 		_block.AddStmt stmt
 	End Method
+
 
 	Method ParseWhileStmt(loopLabel:TLoopLabelDecl = Null)
 		Parse "while"
