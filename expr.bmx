@@ -162,16 +162,41 @@ Type TExpr
 		If lhs.ExtendsType( rhs ) Return rhs
 		If rhs.ExtendsType( lhs ) Return lhs
 		' balance arrays - only for objects... to the lowest common denominator.
-		' either Object or superclass (TODO)
 		If TArrayType( lhs ) And TArrayType( rhs ) Then
-			' lhs = Object[]
-			If TObjectType(TArrayType( lhs ).elemType) And TObjectType(TArrayType( lhs ).elemType).classDecl.ident = "Object" Then
-				Return lhs
+			
+			If TObjectType(TArrayType( lhs ).elemType) And TObjectType(TArrayType( rhs ).elemType) Then
+				' lhs = Object[]
+				If TObjectType(TArrayType( lhs ).elemType).classDecl.ident = "Object" Then
+					Return lhs
+				End If
+				' rhs = Object[]
+				If TObjectType(TArrayType( rhs ).elemType).classDecl.ident = "Object" Then
+					Return rhs
+				End If
+				
+				' does one extend the other? If so, return the base type
+				If TObjectType(TArrayType( lhs ).elemType).ExtendsType(TObjectType(TArrayType( rhs ).elemType)) Then
+					Return rhs
+				End If
+
+				If TObjectType(TArrayType( rhs ).elemType).ExtendsType(TObjectType(TArrayType( lhs ).elemType)) Then
+					Return lhs
+				End If
+				
+				' no? then we will fallback to an Object type array
+				
+				' find the Object classdecl instance
+				Local modid$="brl.classes"
+				Local mdecl:TModuleDecl=_env.FindModuleDecl( modid )
+				' return an array of Objects
+				Return New TArrayType.Create(New TObjectType.Create(TClassDecl(mdecl.FindDecl( "object" ))))
 			End If
-			' rhs = Object[]
-			If TObjectType(TArrayType( rhs ).elemType) And TObjectType(TArrayType( rhs ).elemType).classDecl.ident = "Object" Then
-				Return rhs
+
+			' balancing primitive types
+			If Not TArrayType( lhs ).elemType.EqualsType(TArrayType( rhs ).elemType) Then
+				Err "Types '" + TArrayType( lhs ).elemType.ToString() + " Array' and '" + TArrayType( rhs ).elemType.ToString() + " Array' are unrelated"
 			End If
+			
 		End If
 		Err "Can't balance types "+lhs.ToString()+" and "+rhs.ToString()+"."
 	End Method
