@@ -1129,8 +1129,15 @@ Type TUnaryExpr Extends TExpr
 		Select op
 		Case "+","-"
 			expr=expr.Semant()
-			If Not TNumericType( expr.exprType ) Err expr.ToString()+" must be numeric for use with unary operator '"+op+"'"
+			If Not TNumericType( expr.exprType ) Or IsPointerType(expr.exprType) Then
+				Err expr.ToString()+" must be numeric for use with unary operator '"+op+"'"
+			End If
 			exprType=expr.exprType
+			' Remove Var-ness, if required. "expr" will still be "Var"
+			If exprType._flags & TType.T_VAR Then
+				exprType = exprType.Copy()
+				exprType._flags :~ TType.T_VAR
+			End If
 		Case "~~"
 			expr=expr.SemantAndCast( New TIntType )
 			exprType=New TIntType
