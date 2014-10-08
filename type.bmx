@@ -361,7 +361,7 @@ End Type
 Type TIntType Extends TNumericType
 	
 	Method EqualsType:Int( ty:TType )
-		Return TIntType( ty )<>Null And _flags = ty._flags
+		Return TIntType( ty )<>Null And (_flags = ty._flags Or (_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR)) ' varptr = ptr
 	End Method
 	
 	Method ExtendsType:Int( ty:TType )
@@ -391,7 +391,7 @@ End Type
 Type TByteType Extends TNumericType
 	
 	Method EqualsType:Int( ty:TType )
-		Return TByteType( ty )<>Null And _flags = ty._flags
+		Return TByteType( ty )<>Null And (_flags = ty._flags Or (_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR)) ' varptr = ptr
 	End Method
 	
 	Method ExtendsType:Int( ty:TType )
@@ -421,7 +421,7 @@ End Type
 Type TShortType Extends TNumericType
 
 	Method EqualsType:Int( ty:TType )
-		Return TShortType( ty )<>Null And _flags = ty._flags
+		Return TShortType( ty )<>Null And (_flags = ty._flags Or (_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR)) ' varptr = ptr
 	End Method
 	
 	Method ExtendsType:Int( ty:TType )
@@ -451,7 +451,7 @@ End Type
 Type TLongType Extends TNumericType ' BaH Long
 	
 	Method EqualsType:Int( ty:TType )
-		Return TLongType( ty )<>Null And _flags = ty._flags
+		Return TLongType( ty )<>Null And (_flags = ty._flags Or (_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR)) ' varptr = ptr
 	End Method
 	
 	Method ExtendsType:Int( ty:TType )
@@ -479,7 +479,7 @@ End Type
 Type TFloatType Extends TDecimalType
 	
 	Method EqualsType:Int( ty:TType )
-		Return TFloatType( ty )<>Null And _flags = ty._flags
+		Return TFloatType( ty )<>Null And (_flags = ty._flags Or (_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR)) ' varptr = ptr
 	End Method
 	
 	Method ExtendsType:Int( ty:TType )
@@ -509,7 +509,7 @@ End Type
 Type TDoubleType Extends TDecimalType
 	
 	Method EqualsType:Int( ty:TType )
-		Return TDoubleType( ty )<>Null And _flags = ty._flags
+		Return TDoubleType( ty )<>Null And (_flags = ty._flags Or (_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR)) ' varptr = ptr
 	End Method
 	
 	Method ExtendsType:Int( ty:TType )

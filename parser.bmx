@@ -461,9 +461,12 @@ Type TParser
 				arg=CParseIdentType( True )
 				If Not arg Return Null
 			EndIf
-			While CParse( "[]" )
-				arg=arg.ArrayOf()
+			While IsArrayDef()
+				arg = ParseArrayType(arg)
 			Wend
+'			While CParse( "[]" )
+'				arg=arg.ArrayOf()
+'			Wend
 			args = args + [arg]
 			nargs :+ 1
 		Until Not CParse(",")
@@ -542,9 +545,12 @@ Type TParser
 			End If
 		End Select
 
-		While CParse( "[]" )
-			ty=New TArrayType.Create( ty )
+		While IsArrayDef()
+			ty = ParseArrayType(ty)
 		Wend
+		'While CParse( "[]" )
+		'	ty=New TArrayType.Create( ty )
+		'Wend
 
 		Return ty
 	End Method
@@ -642,9 +648,12 @@ Type TParser
 		End Select
 		
 		' array ?
-		While CParse( "[]" )
-			ty=New TArrayType.Create( ty )
+		While IsArrayDef()
+			ty = ParseArrayType(ty)
 		Wend
+'		While CParse( "[]" )
+'			ty=New TArrayType.Create( ty )
+'		Wend
 		
 		Return ty
 	End Method
@@ -666,6 +675,60 @@ Type TParser
 		args=args[..nargs]
 		Parse "]"
 		Return New TArrayExpr.Create( args )
+	End Method
+
+	' replaces While CParse( "[]" ) sections, with support for multi-dimension arrays
+	Method ParseArrayType:TType(ty:TType)
+		While True
+			Local dims:Int = 1
+			
+			If CParse("[]") Then
+				ty=New TArrayType.Create( ty )
+				Exit
+			End If
+			
+			If Not CParse("[") Then
+				Exit
+			End If
+		
+			While CParse( ",")
+				dims :+ 1
+			Wend
+			
+			Parse "]"
+			
+			ty=New TArrayType.Create( ty, dims )
+			Exit
+		Wend
+		Return ty
+	End Method
+	
+	Method IsArrayDef:Int()
+		Local isDef:Int = True
+		Local toker:TToker=New TToker.Copy(_toker)
+		While True
+			'Local dims:Int = 1
+			
+			If CParseToker(toker, "[]") Then
+				Exit
+			End If
+			
+			If Not CParseToker(toker, "[") Then
+				isDef = False
+				Exit
+			End If
+		
+			While CParseToker(toker, ",")
+				'dims :+ 1
+			Wend
+			
+			If Not CParseToker(toker, "]") Then
+				isDef = False
+				Exit
+			End If
+			Exit
+		Wend
+		Return isDef
 	End Method
 
 	Method ParseArgs:TExpr[]( stmt:Int )
@@ -756,17 +819,65 @@ Type TParser
 				ty = TType.MapToPointerType(ty)
 			Wend
 
-			If CParse( "[" )
+			If _toke = "[" Or _toke = "[]" Then
+				Local depth:Int = 0
 				Local ln:TExpr[]
+				Local tmpTy:TType = ty.Copy()
+
 				Repeat
-					ln = ln + [ParseExpr()]
-					If CParse("]") Exit
-					Parse ","
+					Local dims:Int = 1
+					
+					If CParse("[]") Then
+						tmpTy=New TArrayType.Create( tmpTy )
+						depth :+ 1
+						Continue
+					End If
+
+					' looking for an array with expression					
+					If Not ln Then
+						Parse "["
+					Else
+						If Not CParse("[") Then
+							Exit
+						Else
+							Err "Unexpected '[' after array size declaration"
+						End If
+					End If
+
+					Repeat
+						If CParse(",") Then
+							dims :+ 1
+							Continue
+						End If
+						If CParse("]") Exit
+						ln = ln + [ParseExpr()]
+						If CParse("]") Exit
+						Parse(",")
+					Forever
+
+					If Not ln Then
+						tmpTy=New TArrayType.Create( tmpTy, dims )
+					End If
 				Forever
-				'Parse "]"
-				While CParse( "[]" )
-					ty=New TArrayType.Create( ty)
-				Wend
+
+				If ln Then
+					ty = tmpTy
+				End If
+
+
+'				Repeat
+					'If CParse( "[" )
+'					Repeat
+'						ln = ln + [ParseExpr()]
+'						If CParse("]") Exit
+'						Parse ","
+'					Forever
+					'Parse "]"
+'					ty = ParseArrayType(ty)
+'				Forever
+				'While CParse( "[]" )
+				'	ty=New TArrayType.Create( ty)
+				'Wend
 				expr=New TNewArrayExpr.Create( ty,ln )
 			Else
 				expr=New TNewObjectExpr.Create( ty,ParseArgs( stmt ) )
@@ -810,9 +921,10 @@ Type TParser
 			End If
 
 			' array
-			While CParse( "[]" )
-				ty=New TArrayType.Create( ty)
-			Wend
+			ty = ParseArrayType(ty)
+			'While CParse( "[]" )
+			'	ty=New TArrayType.Create( ty)
+			'Wend
 
 			' optional brackets
 			If CParse( "(" )
@@ -895,9 +1007,10 @@ Type TParser
 			End If
 
 			' string array
-			While CParse( "[]" )
-				ty=New TArrayType.Create( ty)
-			Wend
+			ty = ParseArrayType(ty)
+			'While CParse( "[]" )
+			'	ty=New TArrayType.Create( ty)
+			'Wend
 
 			If CParse( "(" )
 				expr=ParseExpr()
@@ -1971,19 +2084,26 @@ endrem
 			init=ParseExpr()
 		Else
 			ty=ParseDeclType()
+
 			If CParse( "=" )
 				init=ParseExpr()
 			Else If CParse( "[" )
 				Local ln:TExpr[]
 				Repeat
+					If CParse(",") Then
+						ln = ln + [New TNullExpr]
+						Continue
+					End If
+					If CParse("]") Exit
 					ln = ln + [ParseExpr()]
 					If CParse("]") Exit
 					Parse(",")
 				Forever
 				'Parse "]"
-				While CParse( "[]" )
-					ty=New TArrayType.Create(ty)
-				Wend
+				ty = ParseArrayType(ty)
+				'While CParse( "[]" )
+				'	ty=New TArrayType.Create(ty)
+				'Wend
 				init=New TNewArrayExpr.Create( ty,ln)
 				ty=New TArrayType.Create( ty, ln.length )
 			Else If _toke = "(" Then
@@ -2005,9 +2125,12 @@ endrem
 
 				TFunctionPtrType(ty).func.ident = ""
 
-				While CParse( "[]" )
-					ty=New TArrayType.Create(ty)
+				While IsArrayDef()
+					ty = ParseArrayType(ty)
 				Wend
+				'While CParse( "[]" )
+				'	ty=New TArrayType.Create(ty)
+				'Wend
 
 				' check for function pointer init
 				If CParse("=") Then
@@ -2038,6 +2161,20 @@ endrem
 				decl.munged=ParseStringLit()
 				If TFunctionPtrType(ty) Then
 					TFunctionPtrType(ty).func.munged = decl.munged
+					
+					Local cdets:TCastDets = TCastDets(_externCasts.ValueForKey(TFunctionPtrType(ty).func.munged))
+					If cdets Then
+						TFunctionPtrType(ty).func.castTo = cdets.retType
+						If cdets.noGen Then
+							TFunctionPtrType(ty).func.noCastGen = True
+						End If
+						For Local i:Int = 0 Until cdets.args.length
+							If i < TFunctionPtrType(ty).func.argDecls.length Then
+								TFunctionPtrType(ty).func.argDecls[i].castTo = cdets.args[i]
+							End If
+						Next
+					End If
+	
 				End If
 			Else
 				decl.munged=decl.ident
@@ -2751,6 +2888,7 @@ End Rem
 	
 					Local rt$=toker._toke
 					NextTokeToker(toker)
+					
 					If CParseToker(toker,"*") Then
 						rt:+ "*"
 	
@@ -3456,6 +3594,7 @@ End Rem
 
 	' windows
 	env.InsertDecl New TConstDecl.Create( "win32",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="win32" ),0 )
+	env.InsertDecl New TConstDecl.Create( "win32x86",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="win32" And opt_arch="x86"),0 )
 	env.InsertDecl New TConstDecl.Create( "win32x64",New TIntType,New TConstExpr.Create( New TIntType,(opt_platform="win64" And opt_arch="x64") Or (opt_platform="win32" And opt_arch="x64")),0 )
 	env.InsertDecl New TConstDecl.Create( "win64",New TIntType,New TConstExpr.Create( New TIntType,(opt_platform="win64" And opt_arch="x64") Or (opt_platform="win32" And opt_arch="x64")),0 )
 

@@ -72,7 +72,15 @@ Type TCTranslator Extends TTranslator
 		If TDoubleType( ty ) Return "~q" + p + "d~q"
 		If TLongType( ty ) Return "~q" + p + "l~q"
 		If TStringType( ty ) Return "~q$~q"
-		If TArrayType( ty ) Return "~q[~q"
+		If TArrayType( ty ) Then
+			Local s:String = "["
+			For Local i:Int = 0 Until TArrayType( ty ).dims - 1
+				s:+ ","
+			Next
+			s:+ "]"
+			s:+ TransArrayType(TArrayType( ty ).elemType)
+			Return Enquote(s.Replace("~q", ""))
+		End If
 		If TObjectType( ty ) Return "~q:~q"
 		If TFunctionPtrType( ty ) Return "~q(~q"
 
@@ -119,7 +127,12 @@ Type TCTranslator Extends TTranslator
 		If TLongType( ty ) Return p + "l"
 		If TStringType( ty ) Return "$"
 		If TArrayType( ty ) Then
-			Return "[]" + TransDebugScopeType(TArrayType( ty ).elemType)
+			Local s:String = "["
+			For Local i:Int = 0 Until TArrayType( ty ).dims - 1
+				s:+ ","
+			Next
+			s:+ "]"
+			Return s + TransDebugScopeType(TArrayType( ty ).elemType)
 		End If
 		If TObjectType( ty ) Then
 			Return ":" + TObjectType( ty ).classDecl.ident
@@ -613,7 +626,7 @@ t:+"NULLNULLNULL"
 	End Method
 
 	Method TransFunc$( decl:TFuncDecl,args:TExpr[],lhs:TExpr, sup:Int = False, scope:TScopeDecl = Null )
-'If decl.ident = "LoadLibraryW" DebugStop
+'If decl.ident = "UseFloat_" DebugStop
 		' for calling the super class method instead
 		Local tSuper:String
 		If sup Then
@@ -1256,6 +1269,10 @@ EndRem
 		Local src:TType=expr.expr.exprType
 		
 		If TNumericType(src) And (src._flags & TType.T_VAR) Then
+			' var number being cast to a varptr 
+			If (dst._flags & TType.T_VARPTR) Then
+				Return t
+			End If
 			t = Bra("*" + t)
 		End If
 
@@ -2298,7 +2315,7 @@ End Rem
 			decl.Semant()
 
 			If TFunctionPtrType(decl.ty) Then
-				Emit TransRefType( decl.ty, decl.munged ) + ";"
+					Emit TransRefType( decl.ty, decl.munged ) + ";"
 			Else
 				Emit "extern "+TransRefType( decl.ty, "" )+" "+ decl.munged+";"
 			End If
@@ -3013,6 +3030,15 @@ End Rem
 			If decl.ident = "length" Then
 				Return Bra(variable + "->scales[0]")
 			End If
+			If decl.ident = "numberOfDimensions" Then
+				Return Bra(variable + "->dims")
+			End If
+			If decl.ident = "sizeMinusHeader" Then
+				Return Bra(variable + "->size")
+			End If
+			If decl.ident = "elementTypeEncoding" Then
+				Return Bra(variable + "->type")
+			End If
 		End If
 
 		' string methods
@@ -3491,8 +3517,9 @@ End Rem
 				If Not TFunctionPtrType(gdecl.ty) Then
 					Emit "extern "+TransRefType( gdecl.ty, "" )+" "+gdecl.munged+";"	'forward reference...
 				Else
-'DebugStop
-					Emit TransRefType( gdecl.ty, gdecl.munged )+";"	'forward reference...
+					If Not TFunctionPtrType(gdecl.ty).func.noCastGen Then
+						Emit TransRefType( gdecl.ty, gdecl.munged )+";"	'forward reference...
+					End If
 				End If
 				Continue
 			EndIf
@@ -3963,7 +3990,7 @@ End Rem
 
 		' other imports
 		For Local s:String = EachIn app.fileImports
-			Emit "import ~q" + s + "~q"
+			Emit "import " + BmxEnquote(s)
 		Next
 
 
