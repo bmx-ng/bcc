@@ -58,8 +58,8 @@ Type TForEachinStmt Extends TLoopStmt
 
 		If TArrayType( expr.exprType ) Or TStringType( expr.exprType )
 
-			Local exprTmp:TLocalDecl=New TLocalDecl.Create( "",Null,expr )
-			Local indexTmp:TLocalDecl=New TLocalDecl.Create( "",Null,New TConstExpr.Create( New TIntType,"0" ) )
+			Local exprTmp:TLocalDecl=New TLocalDecl.Create( "",Null,expr,,True )
+			Local indexTmp:TLocalDecl=New TLocalDecl.Create( "",Null,New TConstExpr.Create( New TIntType,"0" ),,True )
 
 			Local lenExpr:TExpr=New TIdentExpr.Create( "Length",New TVarExpr.Create( exprTmp ) )
 
@@ -103,8 +103,8 @@ Type TForEachinStmt Extends TLoopStmt
 
 				Else
 					Local varTmp:TLocalDecl=New TLocalDecl.Create( varid,varty,indexExpr )
-					block.stmts.AddFirst New TAssignStmt.Create( "=",New TVarExpr.Create( indexTmp ),addExpr )
-					block.stmts.AddFirst New TDeclStmt.Create( varTmp )
+					block.stmts.AddFirst New TAssignStmt.Create( "=",New TVarExpr.Create( indexTmp ),addExpr, True )
+					block.stmts.AddFirst New TDeclStmt.Create( varTmp, True )
 				End If
 			Else
 				
@@ -130,36 +130,34 @@ Type TForEachinStmt Extends TLoopStmt
 					block.stmts.AddFirst New TIfStmt.Create( expr,thenBlock,elseBlock )
 					'block.stmts.AddFirst New TDeclStmt.Create( varTmp )
 
-					block.stmts.AddFirst New TAssignStmt.Create( "=",New TVarExpr.Create( indexTmp ),addExpr )
-					block.stmts.AddFirst New TAssignStmt.Create( "=",New TIdentExpr.Create( varid ),New TCastExpr.Create( varty, indexExpr,CAST_EXPLICIT ) )
+					block.stmts.AddFirst New TAssignStmt.Create( "=",New TVarExpr.Create( indexTmp ),addExpr, True )
+					block.stmts.AddFirst New TAssignStmt.Create( "=",New TIdentExpr.Create( varid ),New TCastExpr.Create( varty, indexExpr,CAST_EXPLICIT ), True )
 				Else
-					block.stmts.AddFirst New TAssignStmt.Create( "=",New TVarExpr.Create( indexTmp ),addExpr )
-					block.stmts.AddFirst New TAssignStmt.Create( "=",New TIdentExpr.Create( varid ),indexExpr )
+					block.stmts.AddFirst New TAssignStmt.Create( "=",New TVarExpr.Create( indexTmp ),addExpr, True )
+					block.stmts.AddFirst New TAssignStmt.Create( "=",New TIdentExpr.Create( varid ),indexExpr, True )
 				End If
-				
-
 
 			EndIf
 
-			Local whileStmt:TWhileStmt=New TWhileStmt.Create( cmpExpr,block,Null )
+			Local whileStmt:TWhileStmt=New TWhileStmt.Create( cmpExpr,block,Null, True )
 
-			block=New TBlockDecl.Create( block.scope )
-			block.AddStmt New TDeclStmt.Create( exprTmp )
-			block.AddStmt New TDeclStmt.Create( indexTmp )
+			block=New TBlockDecl.Create( block.scope, True )
+			block.AddStmt New TDeclStmt.Create( exprTmp, True )
+			block.AddStmt New TDeclStmt.Create( indexTmp, True )
 			block.AddStmt whileStmt
 
 		Else If TObjectType( expr.exprType )
 			Local tmpDecl:TDeclStmt
 
 			If TInvokeExpr(expr) Or TInvokeMemberExpr(expr) Then
-				Local tmpVar:TLocalDecl=New TLocalDecl.Create( "",expr.exprType,expr )
+				Local tmpVar:TLocalDecl=New TLocalDecl.Create( "",expr.exprType,expr,,True )
 				tmpVar.Semant()
-				tmpDecl = New TDeclStmt.Create( tmpVar )
+				tmpDecl = New TDeclStmt.Create( tmpVar, True )
 				expr = New TVarExpr.Create( tmpVar )
 			End If
 
 			Local enumerInit:TExpr=New TFuncCallExpr.Create( New TIdentExpr.Create( "ObjectEnumerator",expr ) )
-			Local enumerTmp:TLocalDecl=New TLocalDecl.Create( "",Null,enumerInit )
+			Local enumerTmp:TLocalDecl=New TLocalDecl.Create( "",Null,enumerInit,,True )
 
 			Local hasNextExpr:TExpr=New TFuncCallExpr.Create( New TIdentExpr.Create( "HasNext",New TVarExpr.Create( enumerTmp ) ) )
 			Local nextObjExpr:TExpr=New TFuncCallExpr.Create( New TIdentExpr.Create( "NextObject",New TVarExpr.Create( enumerTmp ) ) )
@@ -177,7 +175,7 @@ Type TForEachinStmt Extends TLoopStmt
 				End If
 
 				' local variable
-				Local varTmp:TLocalDecl=New TLocalDecl.Create( varid,varty,cExpr )
+				Local varTmp:TLocalDecl=New TLocalDecl.Create( varid,varty,cExpr)
 
 				' local var as expression
 				Local expr:TExpr=New TVarExpr.Create( varTmp )
@@ -186,12 +184,12 @@ Type TForEachinStmt Extends TLoopStmt
 				expr=New TBinaryCompareExpr.Create( "=",expr, New TNullExpr.Create(TType.nullObjectType))
 
 				' then continue
-				Local thenBlock:TBlockDecl=New TBlockDecl.Create( block.scope )
-				Local elseBlock:TBlockDecl=New TBlockDecl.Create( block.scope )
-				thenBlock.AddStmt New TContinueStmt
+				Local thenBlock:TBlockDecl=New TBlockDecl.Create( block.scope, True )
+				Local elseBlock:TBlockDecl=New TBlockDecl.Create( block.scope, True )
+				thenBlock.AddStmt New TContinueStmt.Create(Null, True)
 
-				block.stmts.AddFirst New TIfStmt.Create( expr,thenBlock,elseBlock )
-				block.stmts.AddFirst New TDeclStmt.Create( varTmp )
+				block.stmts.AddFirst New TIfStmt.Create( expr,thenBlock,elseBlock, True )
+				block.stmts.AddFirst New TDeclStmt.Create( varTmp, True )
 			Else
 				
 				If Not varty Then
@@ -218,13 +216,13 @@ Type TForEachinStmt Extends TLoopStmt
 				block.stmts.AddFirst New TAssignStmt.Create( "=",New TIdentExpr.Create( varid ),New TCastExpr.Create( varty, nextObjExpr,CAST_EXPLICIT ))
 			EndIf
 
-			Local whileStmt:TWhileStmt=New TWhileStmt.Create( hasNextExpr,block,Null )
+			Local whileStmt:TWhileStmt=New TWhileStmt.Create( hasNextExpr,block,Null, True )
 
-			block=New TBlockDecl.Create( block.scope )
+			block=New TBlockDecl.Create( block.scope, True )
 			If tmpDecl Then
 				block.AddStmt tmpDecl
 			End If
-			block.AddStmt New TDeclStmt.Create( enumerTmp )
+			block.AddStmt New TDeclStmt.Create( enumerTmp, True )
 			block.AddStmt whileStmt
 
 		Else
@@ -893,7 +891,6 @@ Type TParser
 			NextToke
 			expr=New TConstExpr.Create( New TIntType,"" )
 		Case "int","long","float","double","object","short","byte"
-
 			Local id$=_toke
 			Local ty:TType=ParseType()
 
@@ -912,13 +909,9 @@ Type TParser
 				End Select
 			End If
 
-			If CParse("ptr") Then
+			While CParse("ptr")
 				ty = TType.MapToPointerType(ty)
-			End If
-
-			If CParse("ptr") Then
-				ty = TType.MapToPointerType(ty)
-			End If
+			Wend
 
 			' array
 			ty = ParseArrayType(ty)
@@ -1784,7 +1777,7 @@ endrem
 
 		Local block:TBlockDecl=_block
 
-		Local tmpVar:TLocalDecl=New TLocalDecl.Create( "",Null,ParseExpr() )
+		Local tmpVar:TLocalDecl=New TLocalDecl.Create( "",Null,ParseExpr(),,True )
 
 		block.AddStmt New TDeclStmt.Create( tmpVar )
 
@@ -1953,7 +1946,7 @@ endrem
 				ParseDeclStmts
 			' nested function - needs to get added to the "module"
 			Case "function"
-				_block.InsertDecl ParseFuncDecl( _toke,FUNC_NESTED )
+				_block.InsertDecl ParseFuncDecl( _toke,FUNC_NESTED)
 			Case "return"
 				ParseReturnStmt()
 			Case "exit"
@@ -2409,6 +2402,7 @@ endrem
 				EndIf
 			Else If CParse( "nodebug" )
 				' TODO : NoDebug
+				attrs :| DECL_NODEBUG
 			Else If CParse( "{" ) 'meta data
 				' TODO : do something with the metadata
 				'meta data for functions/methods
@@ -2422,9 +2416,6 @@ endrem
 				Exit
 			EndIf
 		Forever
-If Not ty Then
-'DebugStop
-End If
 
 		Local funcDecl:TFuncDecl=New TFuncDecl.CreateF( id,ty,args,attrs )
 		If meta Then
@@ -2654,9 +2645,9 @@ End Rem
 
 		'If classDecl.IsTemplateArg() Return classDecl
 
-		Local decl_attrs:Int=(attrs & DECL_EXTERN)
+		Local decl_attrs:Int=(attrs & DECL_EXTERN) | (attrs & DECL_NODEBUG)
 
-		Local method_attrs:Int=decl_attrs|FUNC_METHOD
+		Local method_attrs:Int=decl_attrs|FUNC_METHOD | (attrs & DECL_NODEBUG)
 		If attrs & CLASS_INTERFACE method_attrs:|DECL_ABSTRACT
 
 		Repeat
@@ -3202,7 +3193,7 @@ endrem
 			par.ParseModuleImport(_module, "brl.blitz", modulepath("brl.blitz"), , , MODULE_ACTUALMOD)
 		End If
 
-		Local mainFunc:TFuncDecl = New TFuncDecl.CreateF("LocalMain", New TIntType,Null,0)
+		Local mainFunc:TFuncDecl = New TFuncDecl.CreateF("__LocalMain", New TIntType,Null,0)
 'DebugStop
 		'_app.InsertDecl mainFunc
 		_module.insertDecl(mainFunc)
@@ -3283,6 +3274,8 @@ endrem
 			Case "rem"
 				ParseRemStmt()
 			Case "nodebug"
+				mainFunc.attrs :| DECL_NODEBUG
+				attrs :| DECL_NODEBUG
 				NextToke
 			Case "strict"
 				If _module.attrs & (MODULE_STRICT | MODULE_SUPERSTRICT) Then

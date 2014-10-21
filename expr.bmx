@@ -959,6 +959,9 @@ Type TCastExpr Extends TExpr
 
 		If TIntType(ty) And Not IsPointerType(ty, 0, TType.T_POINTER) And IsPointerType(src, 0, TType.T_POINTER) Then
 			exprType = ty
+			If flags & CAST_EXPLICIT Then
+				Return Self
+			End If
 			Return expr
 		End If
 
@@ -1475,14 +1478,32 @@ Type TIndexExpr Extends TExpr
 			exprType= TArrayType( expr.exprType ).elemType
 
 			If TArrayType( expr.exprType ).dims > 1 Then
-				Local sizeExpr:TExpr = New TArraySizeExpr.Create(expr, Null, index)
-				index = [sizeExpr]
-				Local tmp:TLocalDecl=New TLocalDecl.Create( "", NewPointerType(TType.T_INT), sizeExpr )
-				TArraySizeExpr(sizeExpr).val = tmp
-				Local stmt:TExpr = New TStmtExpr.Create( New TDeclStmt.Create( tmp ), Self ).Semant()
-				stmt.exprType = exprType
-				Return stmt
-				
+				' a multi-dimensional array of arrays is slightly more complex
+				If TArrayType(exprType) Then
+
+				'	Local tmpArr:TLocalDecl=New TLocalDecl.Create( "", NewPointerType(TType.T_ARRAY), expr )
+				'	Local stmt:TExpr = New TStmtExpr.Create( New TDeclStmt.Create( tmp ), Self ).Semant()
+
+
+
+
+					Local sizeExpr:TExpr = New TArraySizeExpr.Create(expr, Null, index)
+					index = [sizeExpr]
+					Local tmp:TLocalDecl=New TLocalDecl.Create( "", NewPointerType(TType.T_INT), sizeExpr )
+					TArraySizeExpr(sizeExpr).val = tmp
+					Local stmt:TExpr = New TStmtExpr.Create( New TDeclStmt.Create( tmp ), Self ).Semant()
+					stmt.exprType = exprType
+
+					Return stmt
+				Else
+					Local sizeExpr:TExpr = New TArraySizeExpr.Create(expr, Null, index)
+					index = [sizeExpr]
+					Local tmp:TLocalDecl=New TLocalDecl.Create( "", NewPointerType(TType.T_INT), sizeExpr )
+					TArraySizeExpr(sizeExpr).val = tmp
+					Local stmt:TExpr = New TStmtExpr.Create( New TDeclStmt.Create( tmp ), Self ).Semant()
+					stmt.exprType = exprType
+					Return stmt
+				End If
 			End If
 			'If TObjectType(exprType) And Not TStringType(exprType) And Not TArrayType(exprType) Then
 			'	Local tmp:TLocalDecl=New TLocalDecl.Create( "", exprType,expr )
@@ -1524,6 +1545,10 @@ Type TIndexExpr Extends TExpr
 		Return _trans.TransIndexExpr( Self )
 	End Method
 
+	Method ToString$()
+		Return "<TIndexExpr<"+ expr.ToString() +"[" + index[0].ToString() + "]>>"
+	End Method
+	
 End Type
 
 Type TSliceExpr Extends TExpr
@@ -1672,6 +1697,10 @@ Type TArraySizeExpr Extends TExpr
 
 	Method Trans$()
 		Return _trans.TransArraySizeExpr( Self )
+	End Method
+
+	Method ToString$()
+		Return expr.ToString() + ".Size"
 	End Method
 
 End Type

@@ -82,23 +82,24 @@ Type TType
 		If ty = stringType Then
 			ty = ty.Copy()
 		End If
-
-		If Not (ty._flags & T_PTR) Then
-			ty._flags :| T_PTR
-			Return ty
-		End If
-
-		If Not (ty._flags & T_PTRPTR) Then
+		
+		Local flag:Int = T_POINTER & ty._flags
+		
+		If flag & T_PTR Then
+			ty._flags :~ T_PTR
 			ty._flags :| T_PTRPTR
 			Return ty
 		End If
 
-		If Not (ty._flags & T_PTRPTRPTR) Then
+		If flag & T_PTRPTR Then
+			ty._flags :~ T_PTRPTR
 			ty._flags :| T_PTRPTRPTR
 			Return ty
 		End If
 
-		Return Null
+		ty._flags :| T_PTR
+		Return ty
+		
 	End Function
 
 	Function MapToVarType:TType(ty:TType)
@@ -137,8 +138,10 @@ Type TType
 
 		If ty._flags & T_PTRPTRPTR Then
 			nty._flags :~ T_PTRPTRPTR
+			nty._flags :| T_PTRPTR
 		Else If ty._flags & T_PTRPTR Then
 			nty._flags :~ T_PTRPTR
+			nty._flags :| T_PTR
 		Else If ty._flags & T_PTR Then
 			nty._flags :~ T_PTR
 		End If
@@ -184,17 +187,13 @@ Type TType
 	
 	Method ToStringParts:String()
 		Local s:String
-		
+
 		If _flags & T_PTR Then
 			s:+ " Ptr"
-		End If
-
-		If _flags & T_PTRPTR Then
-			s:+ " Ptr"
-		End If
-
-		If _flags & T_PTRPTRPTR Then
-			s:+ " Ptr"
+		Else If _flags & T_PTRPTR Then
+			s:+ " Ptr Ptr"
+		Else If _flags & T_PTRPTRPTR Then
+			s:+ " Ptr Ptr Ptr"
 		End If
 
 		If _flags & T_VAR Then

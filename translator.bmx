@@ -26,6 +26,8 @@ Global _trans:TTranslator
 
 Type TTranslator
 
+	Field _app:TAppDecl
+
 	Field outputFiles:TMap = New TMap
 
 	Field indent$
@@ -49,6 +51,8 @@ Type TTranslator
 	Field mungedScopes:TMap=New TMap'<StringSet>
 '	Field funcMungs:=New StringMap<FuncDeclList>
 '	Field mungedFuncs:=New StringMap<FuncDecl>
+	Field localScopeStack:TStack = New TStack
+	Field localScope:TStack = New TStack
 
 	Field debugOut:String
 
@@ -60,7 +64,7 @@ Type TTranslator
 	Method PopVarScope()
 		customVarStack=TStack(varStack.Pop())
 	End Method
-	
+
 	Method PushLoopTryStack(stmt:Object)
 		If loopTryStack.Length() = 0 Then
 			' Try statements can only be applied here to loops
@@ -407,15 +411,15 @@ End Rem
 	End Method
 	
 	Method CreateLocal$( expr:TExpr )
-		Local tmp:TLocalDecl=New TLocalDecl.Create( "",expr.exprType,expr )
+		Local tmp:TLocalDecl=New TLocalDecl.Create( "",expr.exprType,expr, True )
 		MungDecl tmp
-		Emit TransLocalDecl( tmp.munged,expr )+";"
+		Emit TransLocalDecl( tmp.munged,expr, True )+";"
 		Return tmp.munged
 	End Method
 
 	'***** Utility *****
 
-	Method TransLocalDecl$( munged$,init:TExpr ) Abstract
+	Method TransLocalDecl$( munged$,init:TExpr, declare:Int = False ) Abstract
 
 	Method TransGlobalDecl$( munged$,init:TExpr, attrs:Int, ty:TType ) Abstract
 	
@@ -467,15 +471,28 @@ End Rem
 	
 	Method TransArgs$( args:TExpr[],decl:TFuncDecl, objParam:String = Null ) Abstract
 
+	Method EmitDebugEnterScope(block:TBlockDecl) Abstract
+	
+	Method EmitLocalDeclarations(decl:TScopeDecl, v:TValDecl = Null) Abstract
+	
 	Method BeginLocalScope()
 		mungStack.Push mungScope
 		mungScope:TMap=New TMap'<TDecl>
 '		mungedScopes.Insert "$",New TMap
+		
+		If opt_debug Then
+			localScopeStack.Push localScope
+			localScope = New TStack
+		End If
 	End Method
 	
 	Method EndLocalScope()
 		mungScope=TMap(mungStack.Pop())
 '		mungedScopes.Insert "$",Null
+
+		If opt_debug Then
+			localScope = TStack(localScopeStack.Pop())
+		End If
 	End Method
 
 Rem	
@@ -819,12 +836,21 @@ End Rem
 	
 	'returns unreachable status!
 	Method EmitBlock:Int( block:TBlockDecl )
+		Local stmtCount:Int
 'DebugStop
 		'If ENV_CONFIG="debug"
 		'	If TFuncDecl( block ) EmitPushErr
 		'EndIf
-		
+
+
 		PushEnv block
+		
+		' enter scope
+		If opt_debug And Not block.IsNoDebug() And Not block.generated Then
+			localScope.Push block
+'			localScopeDepth :+ 1
+			EmitDebugEnterScope(block)
+		End If
 
 		For Local stmt:TStmt=EachIn block.stmts
 		
@@ -854,6 +880,31 @@ Rem
 				EmitSetErr stmt.errInfo
 			EndIf
 End Rem
+			If opt_debug And Not block.IsNoDebug() Then
+				' only for user-made code
+				If Not stmt.generated Then
+					EmitDebugStmtErrInfo(stmt.errInfo, stmtCount)
+					stmtCount :+ 1
+				End If
+			
+				If TContinueStmt(stmt) Or TBreakStmt(stmt) Then
+					' TODO : use iterator scope depth
+					localScope.Pop()
+					'localScopeDepth :- 1
+					Emit "bbOnDebugLeaveScope();"
+				End If
+				
+				If TReturnStmt(stmt) Then
+					For Local i:Int = 0 Until localScope.Count()
+						Emit "bbOnDebugLeaveScope();"
+					Next
+					' use function scope depth
+					'localScopeDepth :- 1
+					localScope.Pop()
+				End If
+			End If
+
+
 			Local t$=stmt.Trans()
 			If t Emit t+";"
 
@@ -869,17 +920,24 @@ End Rem
 			Wend
 			
 		Next
+
+		If opt_debug And Not block.IsNoDebug() And Not unreachable And Not block.generated Then
+			'localScopeDepth :- 1
+			localScope.Pop()
+			Emit "bbOnDebugLeaveScope();"
+		End If
+
 		Local r:Int=unreachable
 		unreachable=False
 		PopEnv
 		Return r
 	End Method
 	
-	Method TransDeclStmt$( stmt:TDeclStmt )
+	Method TransDeclStmt$( stmt:TDeclStmt, declare:Int = False )
 		Local decl:TLocalDecl=TLocalDecl( stmt.decl )
 		If decl
 			MungDecl decl
-			Return TransLocalDecl( decl.munged,decl.init )
+			Return TransLocalDecl( decl.munged,decl.init, decl.generated Or declare )
 		EndIf
 		Local cdecl:TConstDecl=TConstDecl( stmt.decl )
 		If cdecl
@@ -898,20 +956,24 @@ End Rem
 		If TConstExpr( stmt.expr )
 			If TConstExpr( stmt.expr ).value
 '				Emit "if"+Bra( stmt.expr.Trans() )+"{"
+				EmitLocalDeclarations(stmt.thenBlock)
 				If EmitBlock( stmt.thenBlock ) unreachable=True
 '				Emit "}"
 			Else If stmt.elseBlock.stmts.First()
 '				Emit "if(!"+Bra( stmt.expr.Trans() )+"){"
+				EmitLocalDeclarations(stmt.elseBlock)
 				If EmitBlock( stmt.elseBlock ) unreachable=True
 '				Emit "}"
 			EndIf
 		Else If stmt.elseBlock.stmts.First()
 			Emit "if"+Bra( stmt.expr.Trans() )+"{"
+			EmitLocalDeclarations(stmt.thenBlock)
 			FreeVarsIfRequired(False)
 			PushVarScope
 			Local unr:Int=EmitBlock( stmt.thenBlock )
 			PopVarScope
 			Emit "}else{"
+			EmitLocalDeclarations(stmt.elseBlock)
 			FreeVarsIfRequired
 			Local unr2:Int=EmitBlock( stmt.elseBlock )
 			Emit "}"
@@ -931,6 +993,7 @@ End Rem
 				Emit "if"+Bra( stmt.expr.Trans() )+"{"
 				FreeVarsIfRequired(False)
 '			End If
+			EmitLocalDeclarations(stmt.thenBlock)
 			PushVarScope
 			Local unr:Int=EmitBlock( stmt.thenBlock )
 			PopVarScope
@@ -975,6 +1038,7 @@ End Rem
 		Local check:TTryBreakCheck = New TTryBreakCheck
 		check.stmt = stmt
 		PushLoopTryStack(check)
+		EmitLocalDeclarations(stmt.block)
 		Local unr:Int=EmitBlock( stmt.block )
 		PopLoopTryStack
 		
@@ -1010,6 +1074,7 @@ End Rem
 		Local check:TTryBreakCheck = New TTryBreakCheck
 		check.stmt = stmt
 		PushLoopTryStack(check)
+		EmitLocalDeclarations(stmt.block)
 		Local unr:Int=EmitBlock( stmt.block )
 		PopLoopTryStack
 
@@ -1047,11 +1112,13 @@ End Rem
 		Local init$
 
 		Local decl:Int
+		Local vdecl:TValDecl
 		If TDeclStmt(stmt.init) Then
 			decl = True
 			Emit "{"
-			Emit stmt.init.Trans() + ";"
+			Emit TransDeclStmt(TDeclStmt(stmt.init), True) + ";"
 			init = TDeclStmt(stmt.init).decl.munged
+			vdecl = TValDecl(TDeclStmt(stmt.init).decl)
 		Else
 			init=stmt.init.Trans()
 		End If
@@ -1063,6 +1130,7 @@ End Rem
 		Local check:TTryBreakCheck = New TTryBreakCheck
 		check.stmt = stmt
 		PushLoopTryStack(check)
+		EmitLocalDeclarations(stmt.block, vdecl)
 		Local unr:Int=EmitBlock( stmt.block )
 		PopLoopTryStack
 		
@@ -1244,7 +1312,20 @@ End Rem
 			DebugArray(id, func, trans)
 		End If
 	End Method
-		
+	
+	Method EmitDebugStmtErrInfo(info:String, count:Int)
+		' extract from info
+		info = info[1..info.length-1]
+		Local infoArray:String[] = info.Split(";")
+
+		Local dbg:String = "struct BBDebugStm __stmt_" + count + " = {"
+		dbg :+ Enquote(infoArray[0]) + ", "
+		dbg :+ infoArray[1] + ", "
+		dbg :+ infoArray[2] + "};"
+		Emit dbg
+		Emit "bbOnDebugEnterStm(&__stmt_" + count + ");" 
+	End Method
+	
 End Type
 
 Type TTryBreakCheck
@@ -1255,4 +1336,3 @@ Type TTryBreakCheck
 	Field stmt:TStmt
 	
 End Type
-

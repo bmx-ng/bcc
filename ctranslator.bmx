@@ -27,7 +27,6 @@ Import "parser.bmx"
 
 Type TCTranslator Extends TTranslator
 
-	Field _app:TAppDecl
 	'Field stringConstCount:Int
 
 	Field prefix:String
@@ -47,14 +46,10 @@ Type TCTranslator Extends TTranslator
 
 			If ty._flags & TType.T_PTR Then
 				p:+ "*"
-			End If
-
-			If ty._flags & TType.T_PTRPTR Then
-				p:+ "*"
-			End If
-
-			If ty._flags & TType.T_PTRPTRPTR Then
-				p:+ "*"
+			Else If ty._flags & TType.T_PTRPTR Then
+				p:+ "**"
+			Else If ty._flags & TType.T_PTRPTRPTR Then
+				p:+ "***"
 			End If
 
 		End If
@@ -217,7 +212,13 @@ Type TCTranslator Extends TTranslator
 			End If
 			Return "$" + p
 		End If
-		If TArrayType( ty ) Return TransIfcType(TArrayType( ty ).elemType) + "&[]"
+		If TArrayType( ty )  Then
+			Local s:String = TransIfcType(TArrayType( ty ).elemType) + "&["
+			For Local i:Int = 0 Until TArrayType( ty ).dims - 1
+				s:+ ","
+			Next
+			Return s + "]"
+		End If
 		If TObjectType( ty ) Return ":" + TObjectType(ty).classDecl.ident + p
 		If TFunctionPtrType( ty ) Return TransIfcType(TFunctionPtrType(ty).func.retType) + TransIfcArgs(TFunctionPtrType(ty).func)
 		If TExternObjectType( ty ) Return ":" + TExternObjectType(ty).classDecl.ident + p
@@ -294,7 +295,7 @@ Type TCTranslator Extends TTranslator
 	End Method
 	
 	Method TransArgs$( args:TExpr[],decl:TFuncDecl, objParam:String = Null )
-'If decl.ident="addConnection" DebugStop
+'If decl.ident="ToHex" DebugStop
 		Local t$
 		If objParam And decl.IsMethod() Then
 			t:+ objParam
@@ -486,15 +487,31 @@ t:+"NULLNULLNULL"
 
 	'***** Utility *****
 
-	Method TransLocalDecl$( munged$,init:TExpr )
-		If TFunctionPtrType(init.exprType) Then
-			Return TransType( init.exprType, munged )+"="+init.Trans()
+	Method TransLocalDecl$( munged$,init:TExpr, declare:Int = False )
+		If Not declare And opt_debug Then
+			Return munged+"="+init.Trans() 
 		Else
-'DebugStop
-			If TObjectType(init.exprType) Then
-				Return TransType( init.exprType, munged )+" volatile "+munged+"="+init.Trans()
+			If TFunctionPtrType(init.exprType) Then
+				'Return TransType( init.exprType, munged )+"="+init.Trans()
+				Return munged+"="+init.Trans()
 			Else
-				Return TransType( init.exprType, munged )+" "+munged+"="+init.Trans()
+				If TObjectType(init.exprType) Then
+					Return TransType( init.exprType, munged )+" volatile "+munged+"="+init.Trans()
+				Else
+					Return TransType( init.exprType, munged )+" "+munged+"="+init.Trans()
+				End If
+			End If
+		End If
+	End Method
+
+	Method TransLocalDeclNoInit$( decl:TVarDecl )
+		If TFunctionPtrType(decl.ty) Then
+			Return TransType( decl.ty, decl.munged ) + "=" + TransValue(decl.ty, "")
+		Else
+			If TObjectType(decl.ty) Then
+				Return TransType( decl.ty, decl.munged )+" volatile "+decl.munged + "=" + TransValue(decl.ty, "")
+			Else
+				Return TransType( decl.ty, decl.munged )+" "+decl.munged + "=" + TransValue(decl.ty, "")
 			End If
 		End If
 	End Method
@@ -546,7 +563,7 @@ t:+"NULLNULLNULL"
 	End Method
 
 	Method CreateLocal2$( ty:TType, t$ )
-		Local tmp:TLocalDecl=New TLocalDecl.Create( "", ty,Null )
+		Local tmp:TLocalDecl=New TLocalDecl.Create( "", ty,Null, True )
 		MungDecl tmp
 		If TShortType(ty) Then
 			Emit TransType(ty, "") + " " + tmp.munged + " = bbStringToWString" + Bra(t)+ ";"
@@ -1326,22 +1343,22 @@ EndRem
 
 			Local p:String = TransSPointer(dst)
 			If TByteType( dst )
-				If IsPointerType(src, TType.T_BYTE) Return t
+				If IsPointerType(src, TType.T_BYTE, TType.T_POINTER & dst._flags) Return t
 				If TNumericType( src ) Return Bra("(BBBYTE" + p + ")"+t)
 			Else If TShortType( dst )
-				If IsPointerType(src, TType.T_SHORT) Return t
+				If IsPointerType(src, TType.T_SHORT, TType.T_POINTER & dst._flags) Return t
 				If TNumericType( src ) Return Bra("(BBSHORT" + p + ")"+t)
 			Else If TIntType( dst )
-				If IsPointerType(src, TType.T_INT) Return t
+				If IsPointerType(src, TType.T_INT, TType.T_POINTER & dst._flags) Return t
 				If TNumericType( src ) Return Bra("(BBINT" + p + ")"+t)
 			Else If TFloatType( dst )
-				If IsPointerType(src, TType.T_FLOAT) Return t
+				If IsPointerType(src, TType.T_FLOAT, TType.T_POINTER & dst._flags) Return t
 				If TNumericType( src ) Return Bra("(BBFLOAT" + p + ")"+t)
 			Else If TDoubleType( dst )
-				If IsPointerType(src, TType.T_DOUBLE) Return t
+				If IsPointerType(src, TType.T_DOUBLE, TType.T_POINTER & dst._flags) Return t
 				If TNumericType( src ) Return Bra("(BBDOUBLE" + p + ")"+t)
 			Else If TLongType( dst )
-				If IsPointerType(src, TType.T_LONG) Return t
+				If IsPointerType(src, TType.T_LONG, TType.T_POINTER & dst._flags) Return t
 				If TNumericType( src ) Return Bra("(BBLONG" + p + ")"+t)
 				
 			'Else If TIntPtrPtrType( dst )
@@ -1574,6 +1591,7 @@ EndRem
 	End Method
 
 	Method TransIndexExpr$( expr:TIndexExpr )
+
 		Local t_expr$=TransSubExpr( expr.expr )
 
 		Local t_index$
@@ -1804,6 +1822,65 @@ EndRem
 		Next
 	End Method
 
+	Method EmitDebugEnterScope(block:TBlockDecl)
+		Local count:Int
+		For Local decl:TDecl = EachIn block.Decls()
+			If TLocalDecl(decl) Then
+				count :+ 1
+			End If
+		Next
+		
+		If Not count Then
+			Emit "struct BBDebugScope __scope = {"
+		Else
+			Emit "struct BBDebugScope_" + count + " __scope = {"
+			_app.scopeDefs.Insert(String(count), "")
+		End If
+
+		If TFuncDecl(block) Then
+			Emit "BBDEBUGSCOPE_FUNCTION,"
+			If _app.mainFunc = block Then
+				' use the filename as the base function name
+				Emit Enquote(StripExt(StripDir(_app.mainModule.filepath))) + ","
+			Else
+				Emit Enquote(TFuncDecl(block).ident) + ","
+			End If
+		Else
+			Emit "BBDEBUGSCOPE_LOCALBLOCK,"
+			Emit "0,"
+		End If
+			
+			Emit "{"
+			
+			' iterate through decls and add as appropriate
+			For Local decl:TDecl = EachIn block.Decls()
+				Local ldecl:TLocalDecl = TLocalDecl(decl)
+				If ldecl Then
+					Emit "{"
+					If ldecl.ty._flags & TType.T_VAR Then
+						Emit "BBDEBUGDECL_VARPARAM,"
+					Else
+						Emit "BBDEBUGDECL_LOCAL,"
+					End If
+					Emit Enquote(ldecl.ident) + ","
+					Emit Enquote(TransDebugScopeType(ldecl.ty)) + ","
+					Emit ".var_address=&" + ldecl.munged
+					Emit "},"
+					
+					Continue
+				End If
+			Next
+
+			
+			Emit "BBDEBUGDECL_END "
+			Emit "}"
+			
+			
+		Emit "};"
+		
+		Emit "bbOnDebugEnterScope(&__scope);"
+	End Method
+	
 	Method TransAssignStmt$( stmt:TAssignStmt )
 		If Not stmt.rhs Return stmt.lhs.Trans()
 
@@ -2277,6 +2354,8 @@ End Rem
 
 				decl.Semant()
 
+				EmitLocalDeclarations(decl)
+
 				EmitBlock decl
 
 			End If
@@ -2289,6 +2368,19 @@ End Rem
 
 		EndLocalScope
 		'PopMungScope
+	End Method
+	
+	Method EmitLocalDeclarations(decl:TScopeDecl, v:TValDecl = Null)
+		If opt_debug Then
+			For Local ldecl:TLocalDecl = EachIn decl.Decls()
+				If ldecl <> v Then
+					If Not TArgDecl(ldecl) And Not ldecl.generated Then
+						MungDecl ldecl
+						Emit TransLocalDeclNoInit(ldecl) + ";"
+					End If
+				End If
+			Next
+		End If
 	End Method
 
 	Method EmitClassFieldsProto(classDecl:TClassDecl)
@@ -2525,9 +2617,10 @@ End Rem
 
 	Method EmitClassFieldsDebugScope(classDecl:TClassDecl)
 
-		If classDecl.superClass Then
-			EmitClassFieldsDebugScope(classDecl.superClass)
-		End If
+		' Don't list superclass fields in our debug scope
+		'If classDecl.superClass Then
+		'	EmitClassFieldsDebugScope(classDecl.superClass)
+		'End If
 
 		For Local decl:TFieldDecl = EachIn classDecl.Decls()
 			Emit "{"
@@ -2535,12 +2628,12 @@ End Rem
 			Emit Enquote(decl.ident) + ","
 			Emit Enquote(TransDebugScopeType(decl.ty) + TransDebugMetaData(decl.metadata)) + ","
 
-			Local offset:String = "offsetof" + Bra("struct " + classDecl.munged + "_obj," + decl.munged)
-			If WORD_SIZE = 8 Then
-				Emit Bra("BBLONG") + offset
-			Else
-				Emit offset
-			End If
+			Local offset:String = ".field_offset=offsetof" + Bra("struct " + classDecl.munged + "_obj," + decl.munged)
+'			If WORD_SIZE = 8 Then
+'				Emit Bra("BBLONG") + offset
+'			Else
+			Emit offset
+'			End If
 			'If Not TFunctionPtrType(decl.ty) Then
 			'	Emit TransType(decl.ty, classDecl.actual.munged) + " _" + classDecl.actual.munged.ToLower() + "_" + decl.ident.ToLower() + ";"
 			'Else
@@ -2687,9 +2780,9 @@ End Rem
 
 	Method CountClassFieldsDebugScope(classDecl:TClassDecl, count:Int Var)
 
-		If classDecl.superClass Then
-			CountClassFieldsDebugScope(classDecl.superClass, count)
-		End If
+		'If classDecl.superClass Then
+		'	CountClassFieldsDebugScope(classDecl.superClass, count)
+		'End If
 
 		For Local decl:TFieldDecl = EachIn classDecl.Decls()
 			count :+ 1
@@ -2802,13 +2895,20 @@ End Rem
 
 		reserved = ",New,Delete,ToString,Compare,SendMessage,_reserved1_,_reserved2_,_reserved3_,".ToLower()
 
-		Emit "struct _" + classid + "_DebugScope{"
-		Emit "int kind;"
-		Emit "const char *name;"
-		Emit "BBDebugDecl decls[" + DebugScopeDeclCount(classDecl) + "];"
-		Emit "};"
+		'Emit "struct _" + classid + "_DebugScope{"
+		'Emit "int kind;"
+		'Emit "const char *name;"
+		'Emit "BBDebugDecl decls[" + DebugScopeDeclCount(classDecl) + "];"
+		'Emit "};"
+		Local count:Int = DebugScopeDeclCount(classDecl)
+		
 		' debugscope
-		Emit "struct _" + classid + "_DebugScope " + classid + "_scope={"
+		If count > 1 Then
+			_app.scopeDefs.Insert(String(count - 1), "")
+			Emit "struct BBDebugScope_" + (count - 1) + " " + classid + "_scope ={"
+		Else
+			Emit "struct BBDebugScope " + classid + "_scope ={"
+		End If
 		Emit "BBDEBUGSCOPE_USERTYPE,"
 		Emit EnQuote(classDecl.ident + TransDebugMetaData(classDecl.metadata)) + ","
 
@@ -2972,7 +3072,9 @@ End Rem
 		Local decl:TFuncDecl = classDecl.FindFuncDecl("New")
 		If decl Then
 			decl.Semant
-			EmitBlock decl
+			If decl.munged <> "bbObjectCtor" Then
+				EmitBlock decl
+			End If
 		End If
 
 		'
@@ -3515,10 +3617,14 @@ End Rem
 				MungDecl gdecl
 				
 				If Not TFunctionPtrType(gdecl.ty) Then
+If Not gdecl.IsPrivate() Then
 					Emit "extern "+TransRefType( gdecl.ty, "" )+" "+gdecl.munged+";"	'forward reference...
+End If
 				Else
 					If Not TFunctionPtrType(gdecl.ty).func.noCastGen Then
-						Emit TransRefType( gdecl.ty, gdecl.munged )+";"	'forward reference...
+						If Not gdecl.IsExtern() Then
+							Emit TransRefType( gdecl.ty, gdecl.munged )+";"	'forward reference...
+						End If
 					End If
 				End If
 				Continue
@@ -3661,7 +3767,33 @@ End Rem
 		TransIncBin(app)
 
 		SetOutput("source")
-		
+
+		' Private Global declarations
+		' since we don't declare them in the header, they need to be near the top of the source
+		For Local decl:TDecl=EachIn app.Semanted()
+
+			If decl.declImported Continue
+
+			Local gdecl:TGlobalDecl=TGlobalDecl( decl )
+			If gdecl And gdecl.IsPrivate() Then
+
+				If Not TFunctionPtrType(gdecl.ty) Then
+					If TConstExpr(gdecl.init) Then
+						Emit TransRefType( gdecl.ty, "WW" )+" "+TransGlobalDecl(gdecl.munged, gdecl.init, gdecl.attrs, gdecl.ty)+";"
+						gdecl.inited = True
+					Else
+If Not gdecl.IsExtern() Then
+						Emit TransRefType( gdecl.ty, "WW" )+" "+gdecl.munged+";"
+End If
+					End If
+				Else
+					'Emit TransRefType( gdecl.ty, gdecl.munged ) + ";"
+				End If
+				Continue
+			EndIf
+		Next
+
+
 		'definitions!
 		For Local decl:TDecl=EachIn app.Semanted()
 
@@ -3669,12 +3801,14 @@ End Rem
 
 			Local gdecl:TGlobalDecl=TGlobalDecl( decl )
 			If gdecl
-				If Not TFunctionPtrType(gdecl.ty) Then
+				If Not TFunctionPtrType(gdecl.ty) And Not gdecl.IsPrivate() Then
 					If TConstExpr(gdecl.init) Then
 						Emit TransRefType( gdecl.ty, "WW" )+" "+TransGlobalDecl(gdecl.munged, gdecl.init, gdecl.attrs, gdecl.ty)+";"
 						gdecl.inited = True
 					Else
+If Not gdecl.IsExtern() Then
 						Emit TransRefType( gdecl.ty, "WW" )+" "+gdecl.munged+";"
+End If
 					End If
 				Else
 					'Emit TransRefType( gdecl.ty, gdecl.munged ) + ";"
@@ -3764,6 +3898,7 @@ End Rem
 
 		' now do the local main stuff
 		app.mainFunc.Semant()
+		EmitLocalDeclarations(app.mainFunc)
 		EmitBlock app.mainFunc
 
 
@@ -3808,6 +3943,14 @@ End Rem
 		
 		' defdata
 		EmitDefDataArray(app)
+		
+		' scope defs
+		If Not app.scopedefs.IsEmpty() Then
+			For Local val:String = EachIn app.scopedefs.Keys()
+				Local i:Int = val.ToInt()
+				Emit "struct BBDebugScope_" + i + "{int kind; const char *name; BBDebugDecl decls[" + (i + 1) + "]; };"
+			Next
+		End If
 
 	End Method
 	
@@ -3852,7 +3995,7 @@ End Rem
 
 						For Local s:String = EachIn mdecl.fileImports
 							If Not processed.Contains("XX" + s + "XX") Then
-								Emit "import ~q" + s + "~q"
+								Emit "import " + BmxEnquote(s)
 								processed.Insert("XX" + s + "XX", "")
 							End If
 						Next

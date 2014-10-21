@@ -35,6 +35,8 @@ Const DECL_POINTER:Int=	$400000
 Const DECL_ARG:Int=     $800000
 Const DECL_INITONLY:Int=$1000000
 
+Const DECL_NODEBUG:Int=$2000000
+
 Const CLASS_INTERFACE:Int=	$001000
 Const CLASS_THROWABLE:Int=	$002000
 
@@ -67,6 +69,7 @@ Type TDecl
 	Field metadata:String
 	
 	Field declImported:Int = False
+	Field generated:Int
 	
 	Method New()
 		errInfo=_errInfo
@@ -98,6 +101,10 @@ Type TDecl
 	
 	Method IsSemanting:Int()
 		Return (attrs & DECL_SEMANTING)<>0
+	End Method
+	
+	Method IsNoDebug:Int()
+		Return (attrs & DECL_NODEBUG)<>0
 	End Method
 	
 	Method FuncScope:TFuncDecl()
@@ -402,16 +409,17 @@ End Type
 
 Type TLocalDecl Extends TVarDecl
 
-	Method Create:TLocalDecl( ident$,ty:TType,init:TExpr,attrs:Int=0 )
+	Method Create:TLocalDecl( ident$,ty:TType,init:TExpr,attrs:Int=0, generated:Int = False )
 		Self.ident=ident
 		Self.declTy=ty
 		Self.declInit=init
 		Self.attrs=attrs
+		Self.generated=generated
 		Return Self
 	End Method
 	
 	Method OnCopy:TDecl()
-		Return New TLocalDecl.Create( ident,ty,CopyInit(),attrs )
+		Return New TLocalDecl.Create( ident,ty,CopyInit(),attrs, generated )
 	End Method
 	
 	Method ToString$()
@@ -424,11 +432,12 @@ Type TArgDecl Extends TLocalDecl
 
 	Field castTo:String
 	
-	Method Create:TArgDecl( ident$,ty:TType,init:TExpr,attrs:Int=0 )
+	Method Create:TArgDecl( ident$,ty:TType,init:TExpr,attrs:Int=0, generated:Int = False )
 		Self.ident=ident
 		Self.declTy=ty
 		Self.declInit=init
 		Self.attrs=attrs
+		Self.generated=generated
 		Return Self
 	End Method
 	
@@ -441,7 +450,7 @@ Type TArgDecl Extends TLocalDecl
 	End Method
 	
 	Method OnCopy:TDecl()
-		Local d:TArgDecl = New TArgDecl.Create( ident,ty,CopyInit(),attrs )
+		Local d:TArgDecl = New TArgDecl.Create( ident,ty,CopyInit(),attrs,generated )
 		d.ty = d.declTy
 		d.init = d.declInit
 		Return d
@@ -712,7 +721,7 @@ Type TScopeDecl Extends TDecl
 		If Not decl Then
 			' didn't find it? Maybe it is in module local scope?
 			' issue arises when a global initialises with a local variable in the module scope.
-			Local fdecl:TFuncDecl = TFuncDecl(FindDecl("LocalMain"))
+			Local fdecl:TFuncDecl = TFuncDecl(FindDecl("__LocalMain"))
 			If fdecl Then
 				decl = TValDecl( fdecl.FindDecl( ident ) )
 			End If
@@ -913,6 +922,9 @@ End Rem
 				match = func
 				match.maybeFunctionPtr = True
 			End If
+		Else If Not argExprs Then
+			' if there are no args, the actual function may have none either... so we may still be trying to use it as a function pointer
+			match.maybeFunctionPtr = True
 		End If
 		
 		If Not match
@@ -954,8 +966,12 @@ Type TBlockDecl Extends TScopeDecl
 	Field stmts:TList=New TList
 	Field extra:Object
 	
-	Method Create:TBlockDecl( scope:TScopeDecl )
+	Method Create:TBlockDecl( scope:TScopeDecl, generated:Int = False )
 		Self.scope=scope
+		Self.generated = generated
+		
+		attrs :| (scope.attrs & DECL_NODEBUG)
+		
 		Return Self
 	End Method
 	
@@ -969,6 +985,7 @@ Type TBlockDecl Extends TScopeDecl
 			t.AddStmt stmt.Copy( t )
 		Next
 		t.extra = extra
+		t.generated = generated
 		Return t
 	End Method
 
@@ -1167,6 +1184,7 @@ Type TFuncDecl Extends TBlockDecl
 			'	stmt=New TReturnStmt.Create( Null )
 			'Else
 				stmt=New TReturnStmt.Create( New TConstExpr.Create( retType,"" ) )
+				stmt.generated = True
 			'EndIf
 				stmt.errInfo=errInfo
 				stmts.AddLast stmt
@@ -2032,7 +2050,7 @@ Type TModuleDecl Extends TScopeDecl
 	End Method
 
 	Method OnSemant()
-		Local decl:TFuncDecl = FindFuncDecl( "LocalMain" )
+		Local decl:TFuncDecl = FindFuncDecl( "__LocalMain" )
 		If decl Then
 			decl.Semant
 		End If
@@ -2078,6 +2096,7 @@ Type TAppDecl Extends TScopeDecl
 	Field genIncBinHeader:Int = False
 	
 	Field dataDefs:TList = New TList
+	Field scopeDefs:TMap = New TMap
 	
 	Method GetPathPrefix:String()
 		If opt_buildtype = BUILDTYPE_MODULE Then
@@ -2127,7 +2146,7 @@ Type TAppDecl Extends TScopeDecl
 
 		mainModule.Semant
 
-		mainFunc=mainModule.FindFuncDecl( "LocalMain" )
+		mainFunc=mainModule.FindFuncDecl( "__LocalMain" )
 		
 		
 		' FIXME
