@@ -2152,26 +2152,28 @@ endrem
 'DebugStop
 			If CParse( "=" )
 				decl.munged=ParseStringLit()
-				If TFunctionPtrType(ty) Then
-					TFunctionPtrType(ty).func.munged = decl.munged
-					
-					Local cdets:TCastDets = TCastDets(_externCasts.ValueForKey(TFunctionPtrType(ty).func.munged))
-					If cdets Then
-						TFunctionPtrType(ty).func.castTo = cdets.retType
-						If cdets.noGen Then
-							TFunctionPtrType(ty).func.noCastGen = True
-						End If
-						For Local i:Int = 0 Until cdets.args.length
-							If i < TFunctionPtrType(ty).func.argDecls.length Then
-								TFunctionPtrType(ty).func.argDecls[i].castTo = cdets.args[i]
-							End If
-						Next
-					End If
-	
-				End If
 			Else
 				decl.munged=decl.ident
 			EndIf
+
+			If TFunctionPtrType(ty) Then
+				TFunctionPtrType(ty).func.munged = decl.munged
+				
+				Local cdets:TCastDets = TCastDets(_externCasts.ValueForKey(TFunctionPtrType(ty).func.munged))
+				If cdets Then
+					TFunctionPtrType(ty).func.castTo = cdets.retType
+					If cdets.noGen Then
+						TFunctionPtrType(ty).func.noCastGen = True
+					End If
+					For Local i:Int = 0 Until cdets.args.length
+						If i < TFunctionPtrType(ty).func.argDecls.length Then
+							TFunctionPtrType(ty).func.argDecls[i].castTo = cdets.args[i]
+						End If
+					Next
+				End If
+
+			End If
+
 		EndIf
 
 		'meta data for variables
@@ -2853,6 +2855,8 @@ End Rem
 		
 			Local ePath:String
 		
+			' we will iterate through all possibilities as there may be different sets
+			' of explicit casts/no gen funcs for each.
 			Select externs
 				Case 0
 					' eg. file.win32.x86.x
@@ -2867,7 +2871,7 @@ End Rem
 
 
 			If FileType(ePath) = FILETYPE_FILE Then
-	
+
 				Local toker:TToker=New TToker.Create( ePath,LoadText( ePath ) )
 				toker.NextToke
 	
@@ -2970,9 +2974,6 @@ End Rem
 	
 				Wend
 				
-				' we found a matching extern file, no need to iterate any further
-				Exit
-	
 			End If
 			
 		Next
