@@ -1466,7 +1466,11 @@ Type TIndexExpr Extends TExpr
 
 		expr=expr.Semant()
 		For Local i:Int = 0 Until index.length
-			index[i]=index[i].SemantAndCast( New TIntType )
+			If opt_arch = "x64" Then
+				index[i]=index[i].SemantAndCast( New TLongType )
+			Else
+				index[i]=index[i].SemantAndCast( New TIntType )
+			End If
 		Next
 
 		If TStringType( expr.exprType )
