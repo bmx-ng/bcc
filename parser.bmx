@@ -473,14 +473,21 @@ Type TParser
 	End Method
 
 	Method CParsePrimitiveType:TType()
-		If CParse( "short" ) Return New TShortType
-		If CParse( "byte" ) Return New TByteType
-		If CParse( "int" ) Return New TIntType
-		If CParse( "float" ) Return New TFloatType
 		If CParse( "string" ) Return TType.stringType
 		If CParse( "object" ) Return New TIdentType.Create( "brl.classes.object" )
-		If CParse( "long" ) Return New TLongType
-		If CParse( "double" ) Return New TDoubleType
+
+		Local ty:TType
+		If CParse( "short" ) ty = New TShortType
+		If CParse( "byte" ) ty = New TByteType
+		If CParse( "int" ) ty = New TIntType
+		If CParse( "float" ) ty = New TFloatType
+		If CParse( "long" ) ty = New TLongType
+		If CParse( "double" ) ty = New TDoubleType
+
+		While CParse("ptr")
+			ty = TType.MapToPointerType(ty)
+		Wend
+		Return ty
 	End	Method
 
 	Method CParsePrimitiveNumberType:TType()
@@ -517,29 +524,57 @@ Type TParser
 		Case "@"
 			NextToke
 			ty=New TByteType
+
+			While CParse("ptr")
+				ty = TType.MapToPointerType(ty)
+			Wend
 		Case "@@"
 			NextToke
 			ty=New TShortType
+
+			While CParse("ptr")
+				ty = TType.MapToPointerType(ty)
+			Wend
 		Case "%"
 			NextToke
 			ty=New TIntType
+
+			While CParse("ptr")
+				ty = TType.MapToPointerType(ty)
+			Wend
 		Case "#"
 			NextToke
 			ty=New TFloatType
+
+			While CParse("ptr")
+				ty = TType.MapToPointerType(ty)
+			Wend
 		Case "$"
 			NextToke
 			ty=New TStringType
 		Case "!"
 			NextToke
 			ty=New TDoubleType
+
+			While CParse("ptr")
+				ty = TType.MapToPointerType(ty)
+			Wend
 		Case "%%"
 			NextToke
 			ty=New TLongType
+
+			While CParse("ptr")
+				ty = TType.MapToPointerType(ty)
+			Wend
 		Case ":"
 			NextToke
 			ty=CParsePrimitiveNumberType()
 			If Not ty Then
 				ty = ParseIdentType()
+			Else
+				While CParse("ptr")
+					ty = TType.MapToPointerType(ty)
+				Wend
 			End If
 		End Select
 
@@ -2156,23 +2191,23 @@ endrem
 				decl.munged=decl.ident
 			EndIf
 
-			If TFunctionPtrType(ty) Then
-				TFunctionPtrType(ty).func.munged = decl.munged
-				
-				Local cdets:TCastDets = TCastDets(_externCasts.ValueForKey(TFunctionPtrType(ty).func.munged))
-				If cdets Then
-					TFunctionPtrType(ty).func.castTo = cdets.retType
-					If cdets.noGen Then
-						TFunctionPtrType(ty).func.noCastGen = True
-					End If
-					For Local i:Int = 0 Until cdets.args.length
-						If i < TFunctionPtrType(ty).func.argDecls.length Then
-							TFunctionPtrType(ty).func.argDecls[i].castTo = cdets.args[i]
+				If TFunctionPtrType(ty) Then
+					TFunctionPtrType(ty).func.munged = decl.munged
+					
+					Local cdets:TCastDets = TCastDets(_externCasts.ValueForKey(TFunctionPtrType(ty).func.munged))
+					If cdets Then
+						TFunctionPtrType(ty).func.castTo = cdets.retType
+						If cdets.noGen Then
+							TFunctionPtrType(ty).func.noCastGen = True
 						End If
-					Next
+						For Local i:Int = 0 Until cdets.args.length
+							If i < TFunctionPtrType(ty).func.argDecls.length Then
+								TFunctionPtrType(ty).func.argDecls[i].castTo = cdets.args[i]
+							End If
+						Next
+					End If
+	
 				End If
-
-			End If
 
 		EndIf
 
@@ -2871,7 +2906,7 @@ End Rem
 
 
 			If FileType(ePath) = FILETYPE_FILE Then
-
+	
 				Local toker:TToker=New TToker.Create( ePath,LoadText( ePath ) )
 				toker.NextToke
 	
