@@ -1769,16 +1769,26 @@ EndRem
 		Emit "jmp_buf * buf = bbExEnter();"
 		Emit "switch(setjmp(*buf)) {"
 		Emit "case 0: {"
+		If opt_debug Then
+			Emit "bbOnDebugPushExState();"
+		End If
 		PushLoopTryStack(stmt)
-		tryStack.Push("")
+		tryStack.Push(stmt.block)
 		EmitBlock( stmt.block )
 		tryStack.Pop()
 		PopLoopTryStack
 		Emit "bbExLeave();"
+		If opt_debug Then
+			Emit "bbOnDebugPopExState();"
+		End If
 		Emit "}"
 		Emit "break;"
 		Emit "case 1:"
 		Emit "{"
+
+		If opt_debug Then
+			Emit "bbOnDebugPopExState();"
+		End If
 
 		Emit "BBOBJECT ex = bbExObject();"
 		Local s:String = ""
@@ -1819,6 +1829,15 @@ EndRem
 	Method EmitTryStack()
 		For Local i:Int = 0 Until tryStack.Length()
 			Emit "bbExLeave();"
+			If opt_debug Then
+				Emit "bbOnDebugPopExState();"
+			End If
+		Next
+	End Method
+
+	Method EmitLocalScopeStack()
+		For Local i:Int = 0 Until localScope.Length()
+			Emit "// TODO"
 		Next
 	End Method
 

@@ -359,12 +359,12 @@ End Type
 Type TLoopStmt Extends TStmt
 
 	Field loopLabel:TLoopLabelDecl
+	Field block:TBlockDecl
 
 End Type
 
 Type TWhileStmt Extends TLoopStmt
 	Field expr:TExpr
-	Field block:TBlockDecl
 	
 	Method Create:TWhileStmt( expr:TExpr,block:TBlockDecl,loopLabel:TLoopLabelDecl, generated:Int = False )
 		Self.expr=expr
@@ -394,7 +394,6 @@ Type TWhileStmt Extends TLoopStmt
 End Type
 
 Type TRepeatStmt Extends TLoopStmt
-	Field block:TBlockDecl
 	Field expr:TExpr
 	
 	Method Create:TRepeatStmt( block:TBlockDecl,expr:TExpr,loopLabel:TLoopLabelDecl )
@@ -427,7 +426,6 @@ Type TForStmt Extends TLoopStmt
 	Field init:TStmt	'assignment or local decl...
 	Field expr:TExpr
 	Field incr:TStmt	'assignment...
-	Field block:TBlockDecl
 	
 	Method Create:TForStmt( init:TStmt,expr:TExpr,incr:TStmt,block:TBlockDecl,loopLabel:TLoopLabelDecl )
 		Self.init=init

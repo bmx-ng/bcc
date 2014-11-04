@@ -64,6 +64,40 @@ Type TTranslator
 	Method PopVarScope()
 		customVarStack=TStack(varStack.Pop())
 	End Method
+	
+	Method PushLoopLocalStack(stmt:Object)
+		localScope.Push stmt
+	End Method
+
+	Method PopLoopLocalStack()
+		localScope.Pop
+	End Method
+
+	Method LoopLocalScopeDepth:Int(findStmt:TStmt)
+		Local count:Int = 0
+
+		For Local stmt:Object = EachIn localScope
+			If TBlockDecl(stmt) = Null Then
+				If findStmt And TTryBreakCheck(stmt) And findStmt <> TTryBreakCheck(stmt).stmt Then
+					Continue
+				End If
+				Exit
+			End If
+
+			count :+ 1
+		Next
+		
+		Return count
+	End Method
+
+	Method GetTopLocalLoop:TTryBreakCheck(findStmt:TStmt)
+		For Local tbc:TTryBreakCheck = EachIn localScope
+			If findStmt And findStmt <> tbc.stmt Then
+				Continue
+			End If
+			Return tbc
+		Next
+	End Method
 
 	Method PushLoopTryStack(stmt:Object)
 		If loopTryStack.Length() = 0 Then
@@ -106,7 +140,7 @@ Type TTranslator
 			Return tbc
 		Next
 	End Method
-	
+
 	Method MungFuncDecl( fdecl:TFuncDecl )
 
 		If fdecl.munged Return
@@ -688,17 +722,41 @@ End Rem
 				NextContId(bc)
 				For Local i:Int = 0 Until count
 					Emit "bbExLeave();"
+					If opt_debug Then
+						Emit "bbOnDebugPopExState();"
+					End If
 				Next
 				Emit "goto " + TransLabelCont(bc, False)
 			Else
 				InternalErr
 			End If
 		Else
-			' No Try statements in the stack here..
-			If stmt.label And TLoopLabelExpr(stmt.label) Then
-				Emit "goto " + TransLoopLabelCont(TLoopLabelExpr(stmt.label).loop.loopLabel.ident, False)
+		 	' For debug builds, we need to rollback the local scope stack correctly
+			count = 0
+			
+			If opt_debug And Not TLoopStmt(contLoop).block.IsNoDebug() Then
+				count = LoopLocalScopeDepth(contLoop)
+			End If
+			
+			If count > 0 Then
+				Local bc:TTryBreakCheck = GetTopLocalLoop(contLoop)
+				If bc Then
+					NextContId(bc)
+					For Local i:Int = 0 Until count
+						Emit "bbOnDebugLeaveScope();"
+					Next
+					Emit "goto " + TransLabelCont(bc, False)
+				Else
+					InternalErr
+				End If
+				PopLoopLocalStack()
 			Else
-				Return "continue"
+				' No Try statements in the stack here..
+				If stmt.label And TLoopLabelExpr(stmt.label) Then
+					Emit "goto " + TransLoopLabelCont(TLoopLabelExpr(stmt.label).loop.loopLabel.ident, False)
+				Else
+					Return "continue"
+				End If
 			End If
 		End If
 	End Method
@@ -720,17 +778,41 @@ End Rem
 				NextExitId(bc)
 				For Local i:Int = 0 Until count
 					Emit "bbExLeave();"
+					If opt_debug Then
+						Emit "bbOnDebugPopExState();"
+					End If
 				Next
 				Emit "goto " + TransLabelExit(bc, False)
 			Else
 				InternalErr
 			End If
 		Else
-			' No Try statements in the stack here..
-			If stmt.label And TLoopLabelExpr(stmt.label) Then
-				Emit "goto " + TransLoopLabelExit(TLoopLabelExpr(stmt.label).loop.loopLabel.ident, False)
+		 	' For debug builds, we need to rollback the local scope stack correctly
+			count = 0
+			
+			If opt_debug And Not TLoopStmt(brkLoop).block.IsNoDebug() Then
+				count = LoopLocalScopeDepth(brkLoop)
+			End If
+			
+			If count > 0 Then
+				Local bc:TTryBreakCheck = GetTopLocalLoop(brkLoop)
+				If bc Then
+					NextExitId(bc)
+					For Local i:Int = 0 Until count
+						Emit "bbOnDebugLeaveScope();"
+					Next
+					Emit "goto " + TransLabelExit(bc, False)
+				Else
+					InternalErr
+				End If
+				PopLoopLocalStack()
 			Else
-				Return "break"
+				' No Try statements in the stack here..
+				If stmt.label And TLoopLabelExpr(stmt.label) Then
+					Emit "goto " + TransLoopLabelExit(TLoopLabelExpr(stmt.label).loop.loopLabel.ident, False)
+				Else
+					Return "break"
+				End If
 			End If
 		End If
 	End Method
@@ -847,8 +929,7 @@ End Rem
 		
 		' enter scope
 		If opt_debug And Not block.IsNoDebug() And Not block.generated Then
-			localScope.Push block
-'			localScopeDepth :+ 1
+			PushLoopLocalStack(block)
 			EmitDebugEnterScope(block)
 		End If
 
@@ -856,8 +937,9 @@ End Rem
 		
 			_errInfo=stmt.errInfo
 			
-			If unreachable And ENV_LANG<>"as"
-				'If stmt.errInfo Print "Unreachable:"+stmt.errInfo
+			If unreachable
+				' Statements following cannot be reached - maybe we have Returned, etc
+				' So don't process any more for this block - they won't be generated now!
 				Exit
 			EndIf
 
@@ -887,20 +969,11 @@ End Rem
 					stmtCount :+ 1
 				End If
 			
-				If TContinueStmt(stmt) Or TBreakStmt(stmt) Then
-					' TODO : use iterator scope depth
-					localScope.Pop()
-					'localScopeDepth :- 1
-					Emit "bbOnDebugLeaveScope();"
-				End If
-				
 				If TReturnStmt(stmt) Then
-					For Local i:Int = 0 Until localScope.Count()
+					For Local b:TBlockDecl = EachIn localScope
 						Emit "bbOnDebugLeaveScope();"
 					Next
-					' use function scope depth
-					'localScopeDepth :- 1
-					localScope.Pop()
+					PopLoopLocalStack()
 				End If
 			End If
 
@@ -922,8 +995,7 @@ End Rem
 		Next
 
 		If opt_debug And Not block.IsNoDebug() And Not unreachable And Not block.generated Then
-			'localScopeDepth :- 1
-			localScope.Pop()
+			PopLoopLocalStack()
 			Emit "bbOnDebugLeaveScope();"
 		End If
 
@@ -1038,8 +1110,14 @@ End Rem
 		Local check:TTryBreakCheck = New TTryBreakCheck
 		check.stmt = stmt
 		PushLoopTryStack(check)
+		If opt_debug And Not stmt.block.IsNoDebug() And Not stmt.block.generated Then
+			PushLoopLocalStack(check)
+		End If
 		EmitLocalDeclarations(stmt.block)
 		Local unr:Int=EmitBlock( stmt.block )
+		If opt_debug And Not stmt.block.IsNoDebug() And Not stmt.block.generated Then
+			PopLoopLocalStack
+		End If
 		PopLoopTryStack
 		
 		If check.contId Then
@@ -1074,8 +1152,14 @@ End Rem
 		Local check:TTryBreakCheck = New TTryBreakCheck
 		check.stmt = stmt
 		PushLoopTryStack(check)
+		If opt_debug And Not stmt.block.IsNoDebug() And Not stmt.block.generated Then
+			PushLoopLocalStack(check)
+		End If
 		EmitLocalDeclarations(stmt.block)
 		Local unr:Int=EmitBlock( stmt.block )
+		If opt_debug And Not stmt.block.IsNoDebug() And Not stmt.block.generated Then
+			PopLoopLocalStack
+		End If
 		PopLoopTryStack
 
 		If check.contId Then
@@ -1130,8 +1214,14 @@ End Rem
 		Local check:TTryBreakCheck = New TTryBreakCheck
 		check.stmt = stmt
 		PushLoopTryStack(check)
+		If opt_debug And Not stmt.block.IsNoDebug() And Not stmt.block.generated Then
+			PushLoopLocalStack(check)
+		End If
 		EmitLocalDeclarations(stmt.block, vdecl)
 		Local unr:Int=EmitBlock( stmt.block )
+		If opt_debug And Not stmt.block.IsNoDebug() And Not stmt.block.generated Then
+			PopLoopLocalStack
+		End If
 		PopLoopTryStack
 		
 		If check.contId Then
