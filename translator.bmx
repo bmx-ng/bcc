@@ -1027,15 +1027,15 @@ End Rem
 	Method TransIfStmt$( stmt:TIfStmt )
 		If TConstExpr( stmt.expr )
 			If TConstExpr( stmt.expr ).value
-'				Emit "if"+Bra( stmt.expr.Trans() )+"{"
+				Emit "{"
 				EmitLocalDeclarations(stmt.thenBlock)
 				If EmitBlock( stmt.thenBlock ) unreachable=True
-'				Emit "}"
+				Emit "}"
 			Else If stmt.elseBlock.stmts.First()
-'				Emit "if(!"+Bra( stmt.expr.Trans() )+"){"
+				Emit "{"
 				EmitLocalDeclarations(stmt.elseBlock)
 				If EmitBlock( stmt.elseBlock ) unreachable=True
-'				Emit "}"
+				Emit "}"
 			EndIf
 		Else If stmt.elseBlock.stmts.First()
 			Emit "if"+Bra( stmt.expr.Trans() )+"{"
