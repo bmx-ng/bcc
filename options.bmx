@@ -206,11 +206,20 @@ Function DefaultOptions()
 End Function
 
 Function CheckConfig()
-
 	Local config:TConfigMap = New TConfigMap.Init("bcc.conf")
-	
-	If config.GetString("BMXPATH") <> ""
-		putenv_("BMXPATH="+config.GetString("BMXPATH"))
-	EndIf
 
+	'try to load an OS-specific path (so all bcc builds could share
+	'one single bcc.conf)
+	local osBmxPath:string = ""
+	?win32
+		osBmxPath = config.GetString("BMXPATH_WIN32")
+	?linux
+		osBmxPath = config.GetString("BMXPATH_LINUX")
+	?macos
+		osBmxPath = config.GetString("BMXPATH_MACOS")
+	?
+	'load default/generic path
+	if osBmxPath = "" then osBmxPath = config.GetString("BMXPATH")
+
+	If osBmxPath <> "" then putenv_("BMXPATH="+osBmxPath)
 End Function
