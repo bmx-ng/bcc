@@ -163,7 +163,7 @@ Type TExpr
 		If rhs.ExtendsType( lhs ) Return lhs
 		' balance arrays - only for objects... to the lowest common denominator.
 		If TArrayType( lhs ) And TArrayType( rhs ) Then
-			
+
 			If TObjectType(TArrayType( lhs ).elemType) And TObjectType(TArrayType( rhs ).elemType) Then
 				' lhs = Object[]
 				If TObjectType(TArrayType( lhs ).elemType).classDecl.ident = "Object" Then
@@ -190,6 +190,22 @@ Type TExpr
 				Local mdecl:TModuleDecl=_env.FindModuleDecl( modid )
 				' return an array of Objects
 				Return New TArrayType.Create(New TObjectType.Create(TClassDecl(mdecl.FindDecl( "object" ))))
+			End If
+			
+			If TObjectType(TArrayType( lhs ).elemType) And TObjectType(TArrayType( lhs ).elemType).classDecl.ident = "Object" And TStringType(TArrayType( rhs ).elemType) Then
+				Return lhs
+			End If
+
+			If TObjectType(TArrayType( rhs ).elemType) And TObjectType(TArrayType( rhs ).elemType).classDecl.ident = "Object"  And TStringType(TArrayType( lhs ).elemType) Then
+				Return rhs
+			End If
+
+			If TObjectType(TArrayType( lhs ).elemType) And TObjectType(TArrayType( lhs ).elemType).classDecl.ident = "Object"  And TArrayType(TArrayType( rhs ).elemType) Then
+				Return lhs
+			End If
+
+			If TObjectType(TArrayType( rhs ).elemType) And TObjectType(TArrayType( rhs ).elemType).classDecl.ident = "Object"  And TArrayType(TArrayType( lhs ).elemType) Then
+				Return rhs
 			End If
 
 			' balancing primitive types
