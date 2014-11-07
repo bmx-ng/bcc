@@ -53,7 +53,7 @@ Type TTranslator
 '	Field mungedFuncs:=New StringMap<FuncDecl>
 	Field localScopeStack:TStack = New TStack
 	Field localScope:TStack = New TStack
-
+	Field ind:Int
 	Field debugOut:String
 
 	Method PushVarScope()
@@ -66,10 +66,21 @@ Type TTranslator
 	End Method
 	
 	Method PushLoopLocalStack(stmt:Object)
+		ind :+ 1
+		If DEBUG Then
+			Emit "// --> STACK = " + ind
+		End If
 		localScope.Push stmt
 	End Method
 
 	Method PopLoopLocalStack()
+		If DEBUG Then
+			Emit "// <-- STACK = " + ind
+		End If
+		ind :- 1
+		If ind < 0 Then
+			InternalErr
+		End If
 		localScope.Pop
 	End Method
 
@@ -734,7 +745,7 @@ End Rem
 		 	' For debug builds, we need to rollback the local scope stack correctly
 			count = 0
 			
-			If opt_debug And Not TLoopStmt(contLoop).block.IsNoDebug() Then
+			If opt_debug And TLoopStmt(contLoop) And Not TLoopStmt(contLoop).block.IsNoDebug() Then
 				count = LoopLocalScopeDepth(contLoop)
 			End If
 			
@@ -790,7 +801,7 @@ End Rem
 		 	' For debug builds, we need to rollback the local scope stack correctly
 			count = 0
 			
-			If opt_debug And Not TLoopStmt(brkLoop).block.IsNoDebug() Then
+			If opt_debug And TLoopStmt(brkLoop) And Not TLoopStmt(brkLoop).block.IsNoDebug() Then
 				count = LoopLocalScopeDepth(brkLoop)
 			End If
 			
@@ -973,7 +984,7 @@ End Rem
 					For Local b:TBlockDecl = EachIn localScope
 						Emit "bbOnDebugLeaveScope();"
 					Next
-					PopLoopLocalStack()
+					'PopLoopLocalStack()
 				End If
 			End If
 
@@ -994,9 +1005,11 @@ End Rem
 			
 		Next
 
-		If opt_debug And Not block.IsNoDebug() And Not unreachable And Not block.generated Then
+		If opt_debug And Not block.IsNoDebug() And Not block.generated Then
 			PopLoopLocalStack()
-			Emit "bbOnDebugLeaveScope();"
+			If Not unreachable Then
+				Emit "bbOnDebugLeaveScope();"
+			End If
 		End If
 
 		Local r:Int=unreachable

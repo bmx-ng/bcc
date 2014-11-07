@@ -492,8 +492,8 @@ t:+"NULLNULLNULL"
 			Return munged+"="+init.Trans() 
 		Else
 			If TFunctionPtrType(init.exprType) Then
-				'Return TransType( init.exprType, munged )+"="+init.Trans()
-				Return munged+"="+init.Trans()
+				Return TransType( init.exprType, munged )+"="+init.Trans()
+				'Return munged+"="+init.Trans()
 			Else
 				If TObjectType(init.exprType) Then
 					Return TransType( init.exprType, munged )+" volatile "+munged+"="+init.Trans()
