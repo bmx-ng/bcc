@@ -1766,6 +1766,9 @@ EndRem
 
 	Method TransTryStmt$( stmt:TTryStmt )
 		Emit "do {"
+		
+		EmitLocalDeclarations(stmt.block)
+		
 		Emit "jmp_buf * buf = bbExEnter();"
 		Emit "switch(setjmp(*buf)) {"
 		Emit "case 0: {"
@@ -3092,6 +3095,7 @@ End Rem
 		If decl Then
 			decl.Semant
 			If decl.munged <> "bbObjectCtor" Then
+				EmitLocalDeclarations(decl)
 				EmitBlock decl
 			End If
 		End If
@@ -3114,6 +3118,7 @@ End Rem
 		Local decl:TFuncDecl = classDecl.FindFuncDecl("Delete")
 		If decl Then
 			decl.Semant
+			EmitLocalDeclarations(decl)
 			EmitBlock decl
 		End If
 

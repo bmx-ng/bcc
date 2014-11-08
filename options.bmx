@@ -25,7 +25,7 @@ SuperStrict
 
 Import "base.configmap.bmx"
 
-Const version:String = "0.24"
+Const version:String = "0.25"
 
 Const BUILDTYPE_APP:Int = 0
 Const BUILDTYPE_MODULE:Int = 1
@@ -210,7 +210,7 @@ Function CheckConfig()
 
 	'try to load an OS-specific path (so all bcc builds could share
 	'one single bcc.conf)
-	local osBmxPath:string = ""
+	Local osBmxPath:String = ""
 	?win32
 		osBmxPath = config.GetString("BMXPATH_WIN32")
 	?linux
@@ -219,7 +219,7 @@ Function CheckConfig()
 		osBmxPath = config.GetString("BMXPATH_MACOS")
 	?
 	'load default/generic path
-	if osBmxPath = "" then osBmxPath = config.GetString("BMXPATH")
+	If osBmxPath = "" Then osBmxPath = config.GetString("BMXPATH")
 
-	If osBmxPath <> "" then putenv_("BMXPATH="+osBmxPath)
+	If osBmxPath <> "" Then putenv_("BMXPATH="+osBmxPath)
 End Function

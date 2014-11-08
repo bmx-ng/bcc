@@ -1509,7 +1509,7 @@ Type TIndexExpr Extends TExpr
 
 					Local sizeExpr:TExpr = New TArraySizeExpr.Create(expr, Null, index)
 					index = [sizeExpr]
-					Local tmp:TLocalDecl=New TLocalDecl.Create( "", NewPointerType(TType.T_INT), sizeExpr )
+					Local tmp:TLocalDecl=New TLocalDecl.Create( "", NewPointerType(TType.T_INT), sizeExpr,,True )
 					TArraySizeExpr(sizeExpr).val = tmp
 					Local stmt:TExpr = New TStmtExpr.Create( New TDeclStmt.Create( tmp ), Self ).Semant()
 					stmt.exprType = exprType
@@ -1518,7 +1518,7 @@ Type TIndexExpr Extends TExpr
 				Else
 					Local sizeExpr:TExpr = New TArraySizeExpr.Create(expr, Null, index)
 					index = [sizeExpr]
-					Local tmp:TLocalDecl=New TLocalDecl.Create( "", NewPointerType(TType.T_INT), sizeExpr )
+					Local tmp:TLocalDecl=New TLocalDecl.Create( "", NewPointerType(TType.T_INT), sizeExpr,,True )
 					TArraySizeExpr(sizeExpr).val = tmp
 					Local stmt:TExpr = New TStmtExpr.Create( New TDeclStmt.Create( tmp ), Self ).Semant()
 					stmt.exprType = exprType
