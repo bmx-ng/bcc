@@ -561,6 +561,22 @@ Type TIParser
 		Return True
 	End Method
 
+	Method CParseToker:Int( toker:TToker, toke$ )
+		If toker._toke.ToLower()<>toke
+			Return False
+		EndIf
+		NextTokeToker(toker)
+		Return True
+	End Method
+
+	Method NextTokeToker$(toker:TToker)
+		Repeat
+			toker.NextToke()
+		Until toker.tokeType()<>TOKE_SPACE
+
+		Return toker._toke
+	End Method
+
 	Method SkipEols()
 		Local found:Int = True
 		While found
@@ -872,8 +888,8 @@ Type TIParser
 					If CParse( "&" ) Then
 					End If
 
-					While CParse( "[]" )
-						ty=New TArrayType.Create( ty )
+					While IsArrayDef()
+						ty = ParseArrayType(ty)
 			
 						If CParse( "&" ) Then
 						End If
@@ -994,6 +1010,57 @@ End Rem
 		Return decl
 	End Method
 
+	' replaces While CParse( "[]" ) sections, with support for multi-dimension arrays
+	Method ParseArrayType:TType(ty:TType)
+		While True
+			Local dims:Int = 1
+			
+			If CParse("[]") Then
+				ty=New TArrayType.Create( ty )
+				Exit
+			End If
+			
+			If Not CParse("[") Then
+				Exit
+			End If
+		
+			While CParse( ",")
+				dims :+ 1
+			Wend
+			
+			Parse "]"
+			
+			ty=New TArrayType.Create( ty, dims )
+			Exit
+		Wend
+		Return ty
+	End Method
+
+	Method IsArrayDef:Int()
+		Local isDef:Int = True
+		Local toker:TToker=New TToker.Copy(_toker)
+		While True
+			If CParseToker(toker, "[]") Then
+				Exit
+			End If
+			
+			If Not CParseToker(toker, "[") Then
+				isDef = False
+				Exit
+			End If
+		
+			While CParseToker(toker, ",")
+			Wend
+			
+			If Not CParseToker(toker, "]") Then
+				isDef = False
+				Exit
+			End If
+			Exit
+		Wend
+		Return isDef
+	End Method
+
 	Method ParseDeclType:TType(attrs:Int Var, fn:Int = False)
 		Local ty:TType
 		Select _toker._toke
@@ -1108,8 +1175,8 @@ End Rem
 		If CParse( "&" ) Then
 		End If
 
-		While CParse( "[]" )
-			ty=New TArrayType.Create( ty )
+		While IsArrayDef()
+			ty = ParseArrayType(ty)
 
 			If CParse( "&" ) Then
 			End If
