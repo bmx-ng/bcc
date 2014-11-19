@@ -869,6 +869,7 @@ Type TCastExpr Extends TExpr
 	End Method
 
 	Method Semant:TExpr()
+
 		If exprType Return Self
 
 		ty=ty.Semant()
@@ -934,9 +935,9 @@ Type TCastExpr Extends TExpr
 
 		Else If TBoolType( ty )
 
-			'If VoidType( src )
-			'	Err "Cannot convert from Void to Bool."
-			'EndIf
+			If TVoidType( src )
+				Err "Cannot convert from Void to Int."
+			EndIf
 
 			If  flags & CAST_EXPLICIT
 				exprType=ty

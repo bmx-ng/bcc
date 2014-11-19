@@ -591,9 +591,6 @@ Type TParser
 	Method ParseDeclType:TType()
 		Local ty:TType
 		Select _toke
-		'Case "?"
-		'	NextToke
-		'	ty=TType.boolType
 		Case "@"
 			NextToke
 			ty=New TByteType
@@ -635,10 +632,8 @@ Type TParser
 
 			If CParse("z") Then
 				ty._flags :| TType.T_CHAR_PTR
-				'ty = TType.stringToCharPointerType
 			Else If CParse("w") Then
 				ty._flags :| TType.T_SHORT_PTR
-				'ty = TType.stringToShortPointerType
 			End If
 
 		Case "!"
@@ -684,9 +679,6 @@ Type TParser
 		While IsArrayDef()
 			ty = ParseArrayType(ty)
 		Wend
-'		While CParse( "[]" )
-'			ty=New TArrayType.Create( ty )
-'		Wend
 		
 		Return ty
 	End Method
@@ -1559,6 +1551,9 @@ endrem
 			varid=ParseIdent()
 			'If Not CParse( ":=" )
 				varty=ParseDeclType()
+				If varty._flags & (TType.T_CHAR_PTR | TType.T_SHORT_PTR) Then
+					DoErr "Illegal variable type"
+				End If
 				Parse( "=" )
 			'EndIf
 		Else
@@ -2365,11 +2360,19 @@ endrem
 			Else
 				id=ParseIdent()
 				ty=ParseDeclType()
+				If ty._flags & (TType.T_CHAR_PTR | TType.T_SHORT_PTR) Then
+					DoErr "Illegal function return type"
+				End If
+
 			EndIf
 		Else
 			If Not (attrs & FUNC_PTR) Then
 				id=ParseIdent()
 				ty=ParseDeclType()
+				' can only return "$z" and "$w" from an extern function.
+				If ty._flags & (TType.T_CHAR_PTR | TType.T_SHORT_PTR) And Not (attrs & DECL_EXTERN) Then
+					DoErr "Illegal function return type"
+				End If
 			End If
 		EndIf
 
