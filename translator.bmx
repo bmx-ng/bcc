@@ -520,6 +520,8 @@ End Rem
 	
 	Method EmitLocalDeclarations(decl:TScopeDecl, v:TValDecl = Null) Abstract
 	
+	Method TransType$( ty:TType, ident:String) Abstract
+	
 	Method BeginLocalScope()
 		mungStack.Push mungScope
 		mungScope:TMap=New TMap'<TDecl>
@@ -682,17 +684,36 @@ End Rem
 
 			If TObjectType(stmt.expr.exprType) And TNullDecl(TObjectType(stmt.expr.exprType).classDecl) Then
 				If IsPointerType(stmt.fRetType, 0, TType.T_POINTER) Or IsNumericType(stmt.fRetType) Then
-					Return t + " 0"
+					t:+ " 0"
 				End If
 				If TStringType(stmt.fRetType) Then
-					Return t + " &bbEmptyString"
+					t:+ " &bbEmptyString"
 				End If
 				If TArrayType(stmt.fRetType) Then
-					Return t + " &bbEmptyArray"
+					t:+ " &bbEmptyArray"
+				End If
+
+			Else
+				
+				Local s:String = stmt.expr.Trans()
+				
+				' we have some temp variables that need to be freed before we can return
+				' put the results into a new variable, and return that.
+				If customVarStack.Count() > 0 Then
+					If Not TFunctionPtrType( stmt.expr.exprType ) Then
+						Emit TransType(stmt.expr.exprType, "rt_") + " rt_ = " + s + ";"
+					Else
+						Emit TransType(stmt.expr.exprType, "rt_") + " = " + s + ";"
+					End If
+					t:+ " rt_"
+				Else
+					t:+" " + s
 				End If
 			End If
-			t:+" "+stmt.expr.Trans()
+			
 		End If
+
+		FreeVarsIfRequired()
 		
 		EmitTryStack()
 
