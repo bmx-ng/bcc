@@ -3631,10 +3631,16 @@ End Rem
 	env.InsertDecl New TConstDecl.Create( "win64",New TIntType,New TConstExpr.Create( New TIntType,(opt_platform="win64" And opt_arch="x64") Or (opt_platform="win32" And opt_arch="x64")),0 )
 
 	' linux
-	env.InsertDecl New TConstDecl.Create( "linux",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="linux" ),0 )
-	env.InsertDecl New TConstDecl.Create( "linuxx86",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="linux" And opt_arch="x86"),0 )
-	env.InsertDecl New TConstDecl.Create( "linuxx64",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="linux" And opt_arch="x64"),0 )
-	env.InsertDecl New TConstDecl.Create( "linuxARM",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="linux" And opt_arch="arm"),0 )
+	env.InsertDecl New TConstDecl.Create( "linux",New TIntType,New TConstExpr.Create( New TIntType,(opt_platform="linux" Or opt_platform="android") ),0 )
+	env.InsertDecl New TConstDecl.Create( "linuxx86",New TIntType,New TConstExpr.Create( New TIntType,(opt_platform="linux" Or opt_platform="android") And opt_arch="x86"),0 )
+	env.InsertDecl New TConstDecl.Create( "linuxx64",New TIntType,New TConstExpr.Create( New TIntType,(opt_platform="linux" Or opt_platform="android") And opt_arch="x64"),0 )
+	env.InsertDecl New TConstDecl.Create( "linuxARM",New TIntType,New TConstExpr.Create( New TIntType,(opt_platform="linux" Or opt_platform="android") And opt_arch="arm"),0 )
+
+	' android
+	env.InsertDecl New TConstDecl.Create( "android",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="android" ),0 )
+	env.InsertDecl New TConstDecl.Create( "androidx86",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="android" And opt_arch="x86"),0 )
+	env.InsertDecl New TConstDecl.Create( "androidx64",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="android" And opt_arch="x64"),0 )
+	env.InsertDecl New TConstDecl.Create( "androidARM",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="android" And opt_arch="arm"),0 )
 
 	' arch
 	env.InsertDecl New TConstDecl.Create( "ppc",New TIntType,New TConstExpr.Create( New TIntType,opt_arch="ppc" ),0 )

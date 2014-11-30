@@ -25,7 +25,7 @@ SuperStrict
 
 Import "base.configmap.bmx"
 
-Const version:String = "0.27"
+Const version:String = "0.28"
 
 Const BUILDTYPE_APP:Int = 0
 Const BUILDTYPE_MODULE:Int = 1
@@ -53,6 +53,7 @@ Global opt_arch:String
 '    win32
 '    macos
 '    linux
+'    android
 Global opt_platform:String
 ' framework
 Global opt_framework:String
@@ -202,6 +203,8 @@ Function DefaultOptions()
 	opt_platform = "macos"
 ?linux
 	opt_platform = "linux"
+?android
+	opt_platform = "android"
 ?
 End Function
 
@@ -217,6 +220,8 @@ Function CheckConfig()
 		osBmxPath = config.GetString("BMXPATH_LINUX")
 	?macos
 		osBmxPath = config.GetString("BMXPATH_MACOS")
+	?android
+		osBmxPath = config.GetString("BMXPATH_ANDROID")
 	?
 	'load default/generic path
 	If osBmxPath = "" Then osBmxPath = config.GetString("BMXPATH")
