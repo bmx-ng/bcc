@@ -54,6 +54,7 @@ Global opt_arch:String
 '    macos
 '    linux
 '    android
+'    raspberrypi
 Global opt_platform:String
 ' framework
 Global opt_framework:String
@@ -205,6 +206,8 @@ Function DefaultOptions()
 	opt_platform = "linux"
 ?android
 	opt_platform = "android"
+?raspberrypi
+	opt_platform = "raspberrypi"
 ?
 End Function
 
@@ -221,7 +224,17 @@ Function CheckConfig()
 	?macos
 		osBmxPath = config.GetString("BMXPATH_MACOS")
 	?android
-		osBmxPath = config.GetString("BMXPATH_ANDROID")
+		' override BMXPATH_LINUX if available
+		Local tmp:String = config.GetString("BMXPATH_ANDROID")
+		If tmp Then
+			osBmxPath = tmp
+		End If
+	?raspberrypi
+		' override BMXPATH_LINUX if available
+		Local tmp:String = config.GetString("BMXPATH_RASPBERRYPI")
+		If tmp Then
+			osBmxPath = tmp
+		End If
 	?
 	'load default/generic path
 	If osBmxPath = "" Then osBmxPath = config.GetString("BMXPATH")
