@@ -3634,13 +3634,16 @@ End Rem
 	env.InsertDecl New TConstDecl.Create( "linux",New TIntType,New TConstExpr.Create( New TIntType,(opt_platform="linux" Or opt_platform="android" Or opt_platform="raspberrypi")),0 )
 	env.InsertDecl New TConstDecl.Create( "linuxx86",New TIntType,New TConstExpr.Create( New TIntType,(opt_platform="linux" Or opt_platform="android") And opt_arch="x86"),0 )
 	env.InsertDecl New TConstDecl.Create( "linuxx64",New TIntType,New TConstExpr.Create( New TIntType,(opt_platform="linux" Or opt_platform="android") And opt_arch="x64"),0 )
-	env.InsertDecl New TConstDecl.Create( "linuxARM",New TIntType,New TConstExpr.Create( New TIntType,(opt_platform="linux" Or opt_platform="android" Or opt_platform="raspberrypi") And opt_arch="arm"),0 )
+	env.InsertDecl New TConstDecl.Create( "linuxARM",New TIntType,New TConstExpr.Create( New TIntType, ((opt_platform="android" Or opt_platform="linux") And (opt_arch="arm" Or opt_arch="armeabi" Or opt_arch="armeabiv7a" Or opt_arch="arm64v8a")) Or (opt_platform="raspberrypi" And opt_arch="arm")),0 )
 
 	' android
 	env.InsertDecl New TConstDecl.Create( "android",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="android" ),0 )
 	env.InsertDecl New TConstDecl.Create( "androidx86",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="android" And opt_arch="x86"),0 )
 	env.InsertDecl New TConstDecl.Create( "androidx64",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="android" And opt_arch="x64"),0 )
-	env.InsertDecl New TConstDecl.Create( "androidARM",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="android" And opt_arch="arm"),0 )
+	env.InsertDecl New TConstDecl.Create( "androidarm",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="android" And (opt_arch="arm" Or opt_arch="armeabi" Or opt_arch="armeabiv7a" Or opt_arch="arm64v8a") ),0 )
+	env.InsertDecl New TConstDecl.Create( "androidarmeabi",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="android" And opt_arch="armeabi"),0 )
+	env.InsertDecl New TConstDecl.Create( "androidarmeabiv7a",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="android" And opt_arch="armeabiv7a"),0 )
+	env.InsertDecl New TConstDecl.Create( "androidarm64v8a",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="android" And opt_arch="arm64v8a"),0 )
 
 	' raspberrypi - ARM only
 	env.InsertDecl New TConstDecl.Create( "raspberrypi",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="raspberrypi" And opt_arch="arm"),0 )
@@ -3650,7 +3653,10 @@ End Rem
 	env.InsertDecl New TConstDecl.Create( "ppc",New TIntType,New TConstExpr.Create( New TIntType,opt_arch="ppc" ),0 )
 	env.InsertDecl New TConstDecl.Create( "x86",New TIntType,New TConstExpr.Create( New TIntType,opt_arch="x86" ),0 )
 	env.InsertDecl New TConstDecl.Create( "x64",New TIntType,New TConstExpr.Create( New TIntType,opt_arch="x64" ),0 )
-	env.InsertDecl New TConstDecl.Create( "arm",New TIntType,New TConstExpr.Create( New TIntType,opt_arch="arm" ),0 )
+	env.InsertDecl New TConstDecl.Create( "arm",New TIntType,New TConstExpr.Create( New TIntType,opt_arch="arm" Or opt_arch="armeabi" Or opt_arch="armeabiv7a" Or opt_arch="arm64v8a" ),0 )
+	env.InsertDecl New TConstDecl.Create( "armeabi",New TIntType,New TConstExpr.Create( New TIntType,opt_arch="armeabi" ),0 )
+	env.InsertDecl New TConstDecl.Create( "armeabiv7a",New TIntType,New TConstExpr.Create( New TIntType,opt_arch="armeabiv7a" ),0 )
+	env.InsertDecl New TConstDecl.Create( "arm64v8a",New TIntType,New TConstExpr.Create( New TIntType,opt_arch="arm64v8a" ),0 )
 
 	' endian
 	env.InsertDecl New TConstDecl.Create( "bigendian",New TIntType,New TConstExpr.Create( New TIntType,opt_arch="ppc" ),0 )

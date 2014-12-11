@@ -48,6 +48,8 @@ Global opt_modulename:String
 '    ppc
 '    x64
 '    arm
+'    armeabi
+'    armeabiv7a
 Global opt_arch:String
 ' platform
 '    win32
@@ -196,6 +198,10 @@ Function DefaultOptions()
 	opt_arch = "x64"
 ?arm
 	opt_arch = "arm"
+?armeabi
+	opt_arch = "armeabi"
+?armeabiv7a
+	opt_arch = "armeabiv7a"
 ?
 
 ?win32
