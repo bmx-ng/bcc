@@ -120,6 +120,11 @@ Type TExpr
 						Err "Unable to convert from '" + args[i].exprType.ToString() + "()' to '" + funcDecl.argDecls[i].ty.ToString() + "'"
 					End If
 				End If
+
+				If (TConstExpr(args[i]) Or TBinaryExpr(args[i])) And (funcDecl.argDecls[i].ty._flags & TType.T_VAR) Then
+					Err "Expression for 'Var' parameter must be a variable"
+				End If
+
 				args[i]=args[i].Cast( funcDecl.argDecls[i].ty )
 			Else If funcDecl.argDecls[i].init
 				args[i]=funcDecl.argDecls[i].init
