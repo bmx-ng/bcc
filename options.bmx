@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2014 Bruce A Henderson
+' Copyright (c) 2013-2015 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -25,7 +25,7 @@ SuperStrict
 
 Import "base.configmap.bmx"
 
-Const version:String = "0.28"
+Const version:String = "0.29"
 
 Const BUILDTYPE_APP:Int = 0
 Const BUILDTYPE_MODULE:Int = 1
