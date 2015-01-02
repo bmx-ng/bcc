@@ -1318,7 +1318,8 @@ Type TParser
 		Return ParseOrExpr()
 	End Method
 
-
+Rem
+	unused atm
 	Method ReadTillNextToken:string(amount:int=1)
 		'copy current toker and move one token forward
 		local tok:TToker = New TToker.Copy(_toker)
@@ -1329,7 +1330,7 @@ Type TParser
 		Next
 		return _toker._toke+" "+tok._toke
 	End Method
-
+End Rem
 	
 	Method ParseIfStmt( term$, elseIfEndIfReadAheadCheck:Int = False )
 
@@ -1407,18 +1408,14 @@ Type TParser
 				
 					If singleLineIf Then
 						'check for "end"-command ("if a=1 end")
-						'instead of just checking for the last token of
-						'a singleline-if ("~n") we will have to check for
-						'the existence of "if". Else we would not allow
-						'the code construct:
-						'if a=1 end; print "hi"
-
-						If ReadTillNextToken() = "end if"
-							Err "'EndIf' without matching 'If'"
-						Else
+						If currentToke = "end" and (currentToke + _toke) <> "endif" Then
 							ParseEndStmt(False)
-						End If
-					End If
+						'found "end if"
+						Else
+							Err "'End If' without matching 'If'"
+							Exit
+						EndIf
+					EndIf
 				
 					'If currentToke = "endif" or (currentToke + _toke)="endif"
 					'	'do something if "endif/end if" happens ?
