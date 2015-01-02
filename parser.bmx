@@ -1318,8 +1318,6 @@ Type TParser
 		Return ParseOrExpr()
 	End Method
 
-Rem
-	unused atm
 
 	Method ReadTillNextToken:string(amount:int=1)
 		'copy current toker and move one token forward
@@ -1331,7 +1329,7 @@ Rem
 		Next
 		return _toker._toke+" "+tok._toke
 	End Method
-endrem
+
 	
 	Method ParseIfStmt( term$, elseIfEndIfReadAheadCheck:Int = False )
 
@@ -1405,12 +1403,23 @@ endrem
                    Err("Expecting expression but encountered end-of-file")
 				'"endif" / "end if"
 				Case "endif", "end"
+					NextToke()
 				
 					If singleLineIf Then
-						Err "'EndIf' without matching 'If'"
+						'check for "end"-command ("if a=1 end")
+						'instead of just checking for the last token of
+						'a singleline-if ("~n") we will have to check for
+						'the existence of "if". Else we would not allow
+						'the code construct:
+						'if a=1 end; print "hi"
+
+						If ReadTillNextToken() = "end if"
+							Err "'EndIf' without matching 'If'"
+						Else
+							ParseEndStmt(False)
+						End If
 					End If
 				
-					NextToke()
 					'If currentToke = "endif" or (currentToke + _toke)="endif"
 					'	'do something if "endif/end if" happens ?
 					'Endif

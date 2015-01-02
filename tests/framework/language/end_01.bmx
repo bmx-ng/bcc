@@ -14,29 +14,32 @@ Framework BRL.StandardIO
 'If 1=0 then end end if
 
 'possible
-If 1=0 end
+If 1=0 End
+
+'check for correct singleline-ending check
+If 1=0 End;Print"ok"
 
 'possible
-If 1=0 then end
+If 1=0 Then End
 
 'not possible in blitzmax -albeit ";" should connect things?
 'If 1=0;end;endif
 
 'possible - whatever this does ?
-If 1=0;end
+If 1=0;End
 
 'possible
 If 1=0
-	end
-endif
+	End
+EndIf
 
 'possible
 If 1=0
-	end
-end if
+	End
+End If
 
 'possible - I prefer "Wend"
-while 1=0
+While 1=0
 	End
 End While
 
@@ -50,7 +53,7 @@ End While
 'if (end) then if (end) then end
 
 'not possible in blitzmax ;D
-rem
+Rem
 if end
 	if end
 		end
@@ -65,8 +68,8 @@ endrem
 
 
 'possible
-Function Call:int();end;EndFunction
+Function Call:Int();End;EndFunction
 
 'possible
-Function Call2:int();end;End Function
+Function Call2:Int();End;End Function
 
