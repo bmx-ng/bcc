@@ -102,8 +102,14 @@ Type TAssignStmt Extends TStmt
 		If TInvokeExpr( lhs ) Or TInvokeMemberExpr( lhs )
 			rhs=Null
 		Else
-			If IsPointerType(lhs.exprType, 0, TType.T_POINTER | TType.T_VAR | TType.T_VARPTR) And TNumericType(rhs.exprType) Then
+			If IsPointerType(lhs.exprType, 0, TType.T_POINTER | TType.T_VARPTR) And TNumericType(rhs.exprType) Then
 				' with pointer assignment we don't cast the numeric to a pointer
+				
+			Else If IsPointerType(lhs.exprType, 0, TType.T_VAR) And TNumericType(rhs.exprType) Then
+				' for var, we cast to the non-var type
+				Local ty:TType = lhs.exprType.Copy()
+				ty._flags :~ TType.T_VAR
+				rhs=rhs.Cast( ty )
 			Else
 				rhs=rhs.Cast( lhs.exprType )
 			End If
