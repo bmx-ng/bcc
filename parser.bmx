@@ -410,6 +410,10 @@ Type TParser
 	Method ParseIdent$()
 		Select _toke
 		Case "@" NextToke
+		'handle ".." in between a multiline definition
+		'eg.: Local a:Int=1, b:Int=2, ..
+		'           c:Int=3
+		Case ".." HandleDotsLineConnector()
 		Case "string","object"
 		Default
 			If _tokeType<>TOKE_IDENT Err "Syntax error - expecting identifier."
@@ -1318,19 +1322,18 @@ Type TParser
 		Return ParseOrExpr()
 	End Method
 
-Rem
-	unused atm
-	Method ReadTillNextToken:string(amount:int=1)
+	Method ReadTillNextToken:string(amount:int=1, stripSpaces:int=False)
 		'copy current toker and move one token forward
 		local tok:TToker = New TToker.Copy(_toker)
 		local result:string = _toker._toke
+		local space:string = " "
+		if stripSpaces then space = ""
 		for local i:int = 0 until amount
 			NextTokeToker(tok)
-			result :+ " "+ tok._toke
+			result :+ space + tok._toke
 		Next
-		return _toker._toke+" "+tok._toke
+		return _toker._toke + space + tok._toke
 	End Method
-End Rem
 	
 	Method ParseIfStmt( term$, elseIfEndIfReadAheadCheck:Int = False )
 
@@ -2228,6 +2231,8 @@ End Rem
 		Repeat
 			Local decl:TDecl=ParseDecl( toke,attrs )
 			decls.AddLast decl
+			'TODO: handle multiline definitions - needed?
+			'If CParse("..") Then HandleDotsLineConnector(true)
 			If Not CParse(",") Return decls
 		Forever
 	End Method
@@ -2238,6 +2243,8 @@ End Rem
 		Repeat
 			Local decl:TDecl=ParseDecl( toke,0 )
 			_block.AddStmt New TDeclStmt.Create( decl )
+			'TODO: handle multiline definitions - needed?
+			'If CParse("..") Then HandleDotsLineConnector(true)
 		Until Not CParse(",")
 	End Method
 	
@@ -2424,10 +2431,20 @@ End Rem
 				If args.Length=nargs args=args + New TArgDecl[10]
 				args[nargs]=arg
 				nargs:+1
-				If _toke=")" Exit
 
 				' handle end-of-line "dot dot return"
 				If _toke =".." Then HandleDotsLineConnector()
+
+				' check for ending bracket AFTER handling ".."
+				'
+				' else it would try to parse to "," if the last ".."
+				' did not lead to a ")"
+				' eg.
+				'   function MyFunc(..
+				'               a:int, ..
+				'               b:int ..
+				'            )
+				If _toke=")" Exit
 
 				Parse ","
 			Forever
