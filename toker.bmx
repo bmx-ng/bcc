@@ -234,7 +234,7 @@ Type TToker
 					If IsAlpha(sym[sym.length-1]) Then
 						' not at the end of the file?
 						If _source.Length >= _tokePos+sym.length Then
-							If IsAlpha(TCHR(sym.length)) Or IsDigit(TCHR(sym.length)) Then
+							If IsAlpha(TCHR(sym.length-1)) Or IsDigit(TCHR(sym.length-1)) Then
 								Exit
 							End If
 						End If
