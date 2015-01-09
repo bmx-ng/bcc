@@ -687,11 +687,6 @@ Type TParser
 		Parse "["
 		Local args:TExpr[],nargs:Int
 		Repeat
-			If CParse("..") Then
-				If Not CParse("~n") Then
-					Err "Expecting expression but encountered '..'"
-				End If
-			End If
 			Local arg:TExpr=ParseExpr()
 			If args.Length=nargs args=args + New TExpr[10]
 			args[nargs]=arg
@@ -792,8 +787,6 @@ Type TParser
 						If bra<>1 Continue
 						eat=True
 						Exit
-					Case ".."
-						'toker.NextToke
 					End Select
 				Forever
 			Else
@@ -1058,18 +1051,6 @@ Type TParser
 			EndIf
 			Local id$=ParseIdent()
 			expr=New TInvokeSuperExpr.Create( id,ParseArgs( stmt ) )
-		Case ".." ' handle end-of-line "dot dot return"
-			'concat lines connected with ".."
-			HandleDotsLineConnector()
-
-			expr=ParseExpr()
-
-			'NextToke
-
-			'If Not CParse("~n") Then
-			'	Err "Expecting expression but encountered '..'"
-			'End If
-			'NextToke
 		Default
 			Select _tokeType
 			Case TOKE_IDENT
@@ -1206,11 +1187,6 @@ Type TParser
 				NextToke
 				Local rhs:TExpr=ParseUnaryExpr()
 				expr=New TBinaryMathExpr.Create( op,expr,rhs )
-			Case ".." ' handle end-of-line "dot dot return"
-				'concat lines connected with ".."
-				HandleDotsLineConnector()
-
-				Return expr
 			Default
 				Return expr
 			End Select
@@ -1408,7 +1384,7 @@ End Rem
 				
 					If singleLineIf Then
 						'check for "end"-command ("if a=1 end")
-						If currentToke = "end" and (currentToke + _toke) <> "endif" Then
+						If currentToke = "end" And (currentToke + _toke) <> "endif" Then
 							ParseEndStmt(False)
 						'found "end if"
 						Else
@@ -2288,8 +2264,6 @@ End Rem
 		SkipEols
 
 		Repeat
-			'concat lines connected with ".."
-			If _toke =".." Then HandleDotsLineConnector()
 			
 			If metaDataString Then
 				metaDataString :+ " "
@@ -2312,12 +2286,8 @@ End Rem
 			'read next token
 			NextToke()
 
-			If _toke =".." Then HandleDotsLineConnector()
-			
 			' got a value
 			If CParse("=") Then
-				
-				If _toke =".." Then HandleDotsLineConnector()
 				
 				If _tokeType = TOKE_IDENT Then
 					Err "Meta data must be literal constant"
@@ -2389,8 +2359,6 @@ End Rem
 		If _toke<>")"
 			Local nargs:Int
 			Repeat
-				' handle end-of-line "dot dot return"
-				If _toke =".." Then HandleDotsLineConnector(True)
 
 				Local argId$=ParseIdent()
 
@@ -2425,9 +2393,6 @@ End Rem
 				args[nargs]=arg
 				nargs:+1
 				If _toke=")" Exit
-
-				' handle end-of-line "dot dot return"
-				If _toke =".." Then HandleDotsLineConnector()
 
 				Parse ","
 			Forever
@@ -3262,7 +3227,7 @@ endrem
 		While _toke
 			SetErr
 			Select _toke.ToLower()
-			Case "~n", ".."
+			Case "~n"
 				NextToke
 			Case "public"
 				NextToke

@@ -196,49 +196,49 @@ Type TToker
 				_tokePos:+1
 				_line:+1
 			EndIf
+		Else If str="." And TSTR()="." Then
+
+			Local pos:Int = _tokePos
+			Local isValidTilEOL:Int = True
+			_tokePos:+1
+			While TSTR() And TSTR()<>"~n"
+				If Not IsSpace(TCHR()) Then
+					isValidTilEOL = False
+				End If
+				_tokePos:+1
+			Wend
+			
+			If Not isValidTilEOL Then
+				_tokePos = pos + 1
+				_tokeType=TOKE_SYMBOL
+			Else
+				_tokePos:+1
+				_line:+1
+				_tokeType=TOKE_SPACE
+			End If
+			
 		Else
+
 			_tokeType=TOKE_SYMBOL
 			For Local i:Int = 0 Until _symbols.length
-'If i = 9 And _line = 42 DebugStop
+
 				Local sym$=_symbols[i]
 				If char<>sym[0] Continue
 
 				'do not try to read beyond source length
 				If TCHR(sym.length) <= 0 Then Continue
 
-'Local a:String = _source[_tokePos-1.._tokePos+sym.length-1]
 				If _source[_tokePos-1.._tokePos+sym.length-1].ToLower()=sym
-					'found the sym-string-representation in the code...
-					'but alphanumeric-symbols need a space or ".."-line-
-					'concat to work, skip other matches.
-					'else "Method My:ModObject" would tokenize ":mod"
-					Local isAlphaNum:Byte = False
-					For Local j:int = 0 Until sym.length
-						If IsAlpha(sym[j]) Or IsDigit(sym[j])
-							isAlphaNum = True
-							Exit
-						EndIf
-					Next
-					'only look advance if there is enough to read
-					If isAlphaNum And _source.Length >= _tokePos+sym.length
-						'compare following char according our rules
-						Local followUpChar:String = Chr(_source[_tokePos + sym.length - 1])
-
-						'NO concat via "double dot"?
-						If followUpChar = "."
-							'enough space left for double-dot-check
-							If _source.Length >= _tokePos + sym.length + 1
-								followUpChar = Chr(_source[_tokePos + sym.length])
-								If followUpChar = "." Then Continue
-							EndIf
-						EndIf
-
-						'NO space?
-						If Not IsSpace(Asc(followUpChar)) Then Continue
-					EndIf
-
-				
-					'_toke = _symbols_map[i]
+					
+					' if symbol has alpha, test for trailing alphanumeric char - in which case this is not a symbol
+					If IsAlpha(sym[sym.length-1]) Then
+						' not at the end of the file?
+						If _source.Length >= _tokePos+sym.length Then
+							If IsAlpha(TCHR(sym.length)) Or IsDigit(TCHR(sym.length)) Then
+								Exit
+							End If
+						End If
+					End If
 					
 					_tokePos:+sym.length-1
 					
