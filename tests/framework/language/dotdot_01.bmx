@@ -1,39 +1,60 @@
-Strict
+Rem
+	The following code checks various variants to use the ".." concatenator
+End Rem
+SuperStrict
+Framework brl.StandardIO
 
-Framework brl.standardio
+Type Test
+	Field fa:Int = 12, ..
+	      fb:Int = 13
+	Field fc:Int = 14 ..
+	      , fd:Int = 15
+
+	Function MyFunction:Int( ..    
+	          a:Int, ..
+	          b:Int ..
+	         )
+		Print a+","+b
+	End Function
+
+	Function MyFunctionB:Int(..
+	          a:Int ..
+	          , b:Int ..
+	         )
+		Print a+","+b
+	End Function
+
+	Method MyMethod()
+		Print fa+","+fb+","+fc+","+fd
+	End Method
+End Type
+
+Global T:Test = New Test
+T.MyFunction(8,9)
+T.MyFunctionB(10,11)
+T.MyMethod()
+
+
+Local a:Int=1, b:Int=2, ..
+      c:Int=3
+Local d:Int=4, e:Int=5 ..
+      , f:Int=6
+
+Print a+","+b+","+c+","+d+","+e+","+f
 
 
 
+Global ga:Int=1, gb:Int=2, ..
+       gc:Int=3
+Global gd:Int=4, ge:Int=5 ..
+       , gf:Int=6
+
+Print ga+","+gb+","+gc+","+gd+","+ge+","+gf
 
 
 
-Function RenderText(text:String, xpos:Int, ypos:Int, centered:Int = False, ..
-					  shadow:Int = False, caps:Int = False)
+Global ..
+ gg:Int = 7
 
-End Function
-
-
-Extern
-
-Function Decode_Ogg:Byte Ptr(..
-	datasource:Object,..
-	reado(buf@Ptr,size,nmemb,src:Object),..
-	seeko(src:Object,offset:Long,whence),..
-	closeo(src:Object),..
-	tello(src:Object ),..
-	samples Var,channels Var,freq Var)
-
-End Extern
-
-
-Function createIO:Int()
-	Return test(test2(10, ..
-			15, Null, Null))
-End Function
-
-Function test:Int(val:Int)
-End Function
-
-Function test2:Int(a:Int, b:Int, x:Object, y:Object)
-End Function
+Print gg
 
