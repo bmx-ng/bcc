@@ -229,17 +229,43 @@ Type TToker
 				If TCHR(sym.length) <= 0 Then Continue
 
 				If _source[_tokePos-1.._tokePos+sym.length-1].ToLower()=sym
-					
-					' if symbol has alpha, test for trailing alphanumeric char - in which case this is not a symbol
+
+					' if symbol has alpha, test for trailing alphanumeric
+					' char - in which case this is not a symbol
 					If IsAlpha(sym[sym.length-1]) Then
-						' not at the end of the file?
-						If _source.Length >= _tokePos+sym.length Then
-							If IsAlpha(TCHR(sym.length)) Or IsDigit(TCHR(sym.length)) Then
-								Exit
-							End If
-						End If
+
+						'found the sym-string-representation in the code...
+						'but alphanumeric-symbols need a space or ".."-
+						'line-concat to work, skip other matches.
+						'Without that checks "Method My:ModObject" would
+						'tokenize ":mod"
+						'do not just check for "alpha" or "digit", as a
+						'newline is not possible after "shortcut"
+						'so "a :mod~n" is invalid
+
+						'compare following char according our rules
+						Local followUpChar:String = Chr(_source[_tokePos + sym.length - 1])
+						Local isSym:int = False
+
+						'concat via "double dot"?
+						'("." is still existing when using raw source
+						' access ... so we cannot skip this check)
+						If followUpChar = "."
+							'enough space left for double-dot-check
+							If _source.Length >= _tokePos + sym.length + 1
+								followUpChar = Chr(_source[_tokePos + sym.length])
+								If followUpChar = "." Then isSym = True
+							EndIf
+						EndIf
+
+						'space?
+						If IsSpace(Asc(followUpChar)) Then isSym = True
+						'valid symbol, but invalid useage
+						If followUpChar = "~n" Then isSym = True
+
+						If not isSym then continue 
 					End If
-					
+
 					_tokePos:+sym.length-1
 					
 					Exit
