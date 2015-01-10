@@ -146,7 +146,7 @@ Type TExpr
 		'End If
 
 		If TStringType( lhs ) Or TStringType( rhs ) Return New TStringType
-		If TDoubleType( lhs ) Or TDoubleType( rhs ) Return New TFloatType
+		If TDoubleType( lhs ) Or TDoubleType( rhs ) Return New TDoubleType
 		If TFloatType( lhs ) Or TFloatType( rhs ) Return New TFloatType
 		If IsPointerType( lhs, 0, TType.T_POINTER ) Or IsPointerType( rhs, 0, TType.T_POINTER ) Then
 			If IsPointerType( lhs, 0, TType.T_POINTER ) Return lhs
@@ -282,7 +282,7 @@ Type TConstExpr Extends TExpr
 	Field value$
 
 	Method Create:TConstExpr( ty:TType,value$ )
-		If TIntType( ty )
+		If TIntType( ty ) Or TShortType( ty ) Or TByteType( ty ) Or TLongType( ty )
 			Local radix:Int
 			If value.StartsWith( "%" )
 				radix=1
@@ -301,16 +301,28 @@ Type TConstExpr Extends TExpr
 						val=val Shl radix | ((ch & 15)+9)
 					EndIf
 				Next
-				If val >= 2147483648:Long Then
+				If TIntType(ty) And val >= 2147483648:Long Then
 					value = String( -2147483648:Long + (val - 2147483648:Long))
 				Else
-					value=String( val )
+					If TShortType( ty ) Then
+						value=String( Short(val) )
+					Else If TByteType( ty ) Then
+						value=String( Byte(val) )
+					Else
+						value=String( val )
+					End If
 				End If
 			Else
-				value = String.FromLong(value.ToLong())
+				If TShortType( ty ) Then
+					value = String.FromLong(Short(value.ToLong()))
+				Else If TByteType( ty ) Then
+					value = String.FromLong(Byte(value.ToLong()))
+				Else
+					value = String.FromLong(value.ToLong())
+				End If
 			EndIf
 
-		Else If TFloatType( ty )
+		Else If TDecimalType( ty )
 			If Not (value.Contains("e") Or value.Contains("E") Or value.Contains("."))
 				value:+".0"
 			EndIf
@@ -1082,7 +1094,16 @@ Type TCastExpr Extends TExpr
 			Err "Unable to convert from "+src.ToString()+" to "+ty.ToString()+"."
 		EndIf
 
-		If TConstExpr( expr ) Return EvalConst()
+		If TConstExpr( expr ) Then
+
+			Local ex:TExpr = EvalConst()
+			If flags & CAST_EXPLICIT Then
+				Return New TCastExpr.Create(exprType, ex, 1).Semant()
+			Else
+				Return ex
+			End If
+		End If
+		
 		Return Self
 	End Method
 

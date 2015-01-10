@@ -452,8 +452,21 @@ Type TForStmt Extends TLoopStmt
 	Method OnSemant()
 
 		PushEnv block
+
+		Local updateCastTypes:Int
+		If TAssignStmt(init) And TIdentExpr(TAssignStmt(init).lhs) Then
+			updateCastTypes = True
+		End If
 		init.Semant
+
 		PopEnv
+
+		If updateCastTypes Then
+			' ty in the casts are currently Null - we didn't know at the time of creating the statement, what the variable type was.
+			' Now we do, so we'll fill in the gaps.
+			TCastExpr(TBinaryCompareExpr(expr).rhs).ty = TVarExpr(TAssignStmt(init).lhs).exprType.Copy()
+			TCastExpr(TBinaryMathExpr(TAssignStmt(incr).rhs).rhs).ty = TVarExpr(TAssignStmt(init).lhs).exprType.Copy()
+		End If
 		
 		expr=expr.Semant()
 		
@@ -462,7 +475,7 @@ Type TForStmt Extends TLoopStmt
 		_loopnest:-1
 
 		incr.Semant
-		
+
 		'dodgy as hell! Reverse comparison for backward loops!
 		Local assop:TAssignStmt=TAssignStmt( incr )
 		Local addop:TBinaryExpr=TBinaryExpr( assop.rhs )
