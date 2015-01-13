@@ -1275,7 +1275,7 @@ Type TBinaryMathExpr Extends TBinaryExpr
 				If op<>"+"
 					Err "Illegal string operator."
 				EndIf
-			Else If Not TNumericType( exprType ) And Not IsPointerType( exprType, 0, TType.T_POINTER ) And Not TArrayType( exprType )
+			Else If Not TNumericType( exprType ) And Not IsPointerType( exprType, 0, TType.T_POINTER ) And Not TArrayType( exprType ) And Not TBoolType( exprType )
 				Err "Illegal expression type."
 			Else If IsPointerType( exprType, 0, TType.T_POINTER ) And op <> "+" And op <> "-" Then
 				Err "Illegal expression type."
