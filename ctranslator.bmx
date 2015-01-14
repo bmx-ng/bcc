@@ -1552,6 +1552,10 @@ EndRem
 		If expr.op = "^" Then
 			Return "pow" + Bra(t_lhs + ", " + t_rhs)
 		End If
+		
+		If (expr.op = "shr" Or expr.op = "&" Or expr.op = "|") And TIntType(expr.exprType) Then
+			t_lhs = "(unsigned int)(" + t_lhs + ")"
+		End If
 
 		If TBinaryCompareExpr(expr) Then
 			If TStringType(TBinaryCompareExpr(expr).ty) Then
