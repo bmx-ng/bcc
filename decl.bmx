@@ -1147,7 +1147,10 @@ Type TFuncDecl Extends TBlockDecl
 			InsertDecl arg
 			arg.Semant
 		Next
-		
+
+		' if we are a function pointer declaration, we just want to semant the args here.
+		If attrs & FUNC_PTR Return
+
 		If actual<>Self Return
 		
 		'check for duplicate decl
