@@ -25,7 +25,7 @@ SuperStrict
 
 Import "base.configmap.bmx"
 
-Const version:String = "0.32"
+Const version:String = "0.33"
 
 Const BUILDTYPE_APP:Int = 0
 Const BUILDTYPE_MODULE:Int = 1
@@ -202,6 +202,8 @@ Function DefaultOptions()
 	opt_arch = "armeabi"
 ?armeabiv7a
 	opt_arch = "armeabiv7a"
+?arm64v8a
+	opt_arch = "arm64v8a"
 ?
 
 ?win32
