@@ -110,11 +110,12 @@ Type TExpr
 		' FIXME
 
 		For Local i:Int=0 Until args.Length
-			If args[i]
-				If Not funcDecl.argDecls[i].IsSemanted() Then
-					funcDecl.argDecls[i].Semant()
-				End If
+			' ensure funcdecl args are semanted before trying to use them.
+			If Not funcDecl.argDecls[i].IsSemanted() Then
+				funcDecl.argDecls[i].Semant()
+			End If
 
+			If args[i]
 				If TInvokeExpr(args[i]) And Not TInvokeExpr(args[i]).invokedWithBraces Then
 					If Not IsPointerType(funcDecl.argDecls[i].ty, TType.T_BYTE) And Not TFunctionPtrType(funcDecl.argDecls[i].ty) Then
 						Err "Unable to convert from '" + args[i].exprType.ToString() + "()' to '" + funcDecl.argDecls[i].ty.ToString() + "'"
