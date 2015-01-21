@@ -3868,6 +3868,10 @@ End If
 
 		Emit "int " + app.munged + "(){"
 
+		' initialise stuff
+		Emit "if (!" + app.munged + "_inited) {"
+		Emit app.munged + "_inited = 1;"
+
 		' call any imported mod inits
 		For Local decl:TModuleDecl=EachIn app.imported.Values()
 			For Local mdecl:TDecl=EachIn decl.imported.Values()
@@ -3876,10 +3880,6 @@ End If
 				End If
 			Next
 		Next
-
-		' initialise stuff
-		Emit "if (!" + app.munged + "_inited) {"
-		Emit app.munged + "_inited = 1;"
 
 		' register types
 		For Local decl:TDecl=EachIn app.Semanted()
