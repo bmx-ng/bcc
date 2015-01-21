@@ -525,7 +525,7 @@ t:+"NULLNULLNULL"
 
 		glob :+ munged+"="
 
-		If TNewObjectExpr(init) And Not (attrs & DECL_INITONLY) Then
+		If (TNewObjectExpr(init) Or TNewArrayExpr(init)) And Not (attrs & DECL_INITONLY) Then
 			glob :+ "0;~n"
 			glob :+ indent + "if (" + munged + "==0) {~n"
 			glob :+ indent + "~t" + munged + "=" + init.Trans() + ";~n"
@@ -547,6 +547,14 @@ t:+"NULLNULLNULL"
 					Else
 						glob :+ init.Trans()
 					End If
+				Else If Not TConstExpr(init) And Not (attrs & DECL_INITONLY) Then
+					' for non const, we need to add an initialiser
+					glob :+ TransValue(ty, "") + ";~n"
+					glob :+ indent +"static int _" + munged + "_inited = 0;~n"
+					glob :+ indent + "if (!_" + munged + "_inited) {~n"
+					glob :+ indent + "~t_" + munged + "_inited = 1;~n"
+					glob :+ indent + "~t" + munged + " = " + init.Trans() + ";~n"
+					glob :+ indent + "}"
 				Else
 					glob :+ init.Trans()
 				End If
