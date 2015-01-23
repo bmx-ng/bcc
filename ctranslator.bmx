@@ -2484,18 +2484,18 @@ End Rem
 		End If
 
 		If Not classDecl.IsExtern() Then
-			If opt_issuperstrict Then
+'			If opt_issuperstrict Then
 				Emit "void _" + classid + "_New" + Bra(TransObject(classdecl) + " o") + ";"
-			Else
-				Emit "int _" + classid + "_New" + Bra(TransObject(classdecl) + " o") + ";"
-			End If
+'			Else
+'				Emit "int _" + classid + "_New" + Bra(TransObject(classdecl) + " o") + ";"
+'			End If
 			
 			If classHierarchyHasFunction(classDecl, "Delete") Then
-				If opt_issuperstrict Then
+'				If opt_issuperstrict Then
 					Emit "void _" + classid + "_Delete" + Bra(TransObject(classdecl) + " o") + ";"
-				Else
-					Emit "int _" + classid + "_Delete" + Bra(TransObject(classdecl) + " o") + ";"
-				End If
+'				Else
+'					Emit "int _" + classid + "_Delete" + Bra(TransObject(classdecl) + " o") + ";"
+'				End If
 			End If
 
 			If classHasFunction(classDecl, "ToString") Then
@@ -3064,11 +3064,11 @@ End Rem
 		Local superid$=classDecl.superClass.actual.munged
 
 		' New
-		If opt_issuperstrict Then
+'		If opt_issuperstrict Then
 			Emit "void _" + classid + "_New" + Bra(TransObject(classdecl) + " o") + " {"
-		Else
-			Emit "int _" + classid + "_New" + Bra(TransObject(classdecl) + " o") + " {"
-		End If
+'		Else
+'			Emit "int _" + classid + "_New" + Bra(TransObject(classdecl) + " o") + " {"
+'		End If
 
 		If classDecl.superClass.ident = "Object" Then
 			Emit "bbObjectCtor(o);"
@@ -3121,11 +3121,11 @@ End Rem
 		Local superid$=classDecl.superClass.actual.munged
 
 		' New
-		If opt_issuperstrict Then
+'		If opt_issuperstrict Then
 			Emit "void _" + classid + "_Delete" + Bra(TransObject(classdecl) + " o") + " {"
-		Else
-			Emit "int _" + classid + "_Delete" + Bra(TransObject(classdecl) + " o") + " {"
-		End If
+'		Else
+'			Emit "int _" + classid + "_Delete" + Bra(TransObject(classdecl) + " o") + " {"
+'		End If
 
 		Local decl:TFuncDecl = classDecl.FindFuncDecl("Delete")
 		If decl Then
@@ -3431,9 +3431,9 @@ End Rem
 
 		' functions
 		If Not classDecl.IsExtern() Then
-			Emit "-New%()=" + Enquote("_" + classDecl.munged + "_New")
+			Emit "-New()=" + Enquote("_" + classDecl.munged + "_New")
 			If classHierarchyHasFunction(classDecl, "Delete") Then
-				Emit "-Delete%()=" + Enquote("_" + classDecl.munged + "_Delete")
+				Emit "-Delete()=" + Enquote("_" + classDecl.munged + "_Delete")
 			End If
 
 			Local reserved:String = ",New,Delete,_reserved1_,_reserved2_,_reserved3_,".ToLower()
