@@ -204,6 +204,8 @@ Function DefaultOptions()
 	opt_arch = "armeabiv7a"
 ?arm64v8a
 	opt_arch = "arm64v8a"
+?js
+	opt_arch = "js"
 ?
 
 ?win32
@@ -216,6 +218,8 @@ Function DefaultOptions()
 	opt_platform = "android"
 ?raspberrypi
 	opt_platform = "raspberrypi"
+?emscripten
+	opt_platform = "emscripten"
 ?
 End Function
 

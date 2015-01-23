@@ -3621,6 +3621,10 @@ End Rem
 	env.InsertDecl New TConstDecl.Create( "raspberrypi",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="raspberrypi" And opt_arch="arm"),0 )
 	env.InsertDecl New TConstDecl.Create( "raspberrypiARM",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="raspberrypi" And opt_arch="arm"),0 )
 
+	' emscripten
+	env.InsertDecl New TConstDecl.Create( "emscripten",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="emscripten" ),0 )
+	env.InsertDecl New TConstDecl.Create( "emscriptenjs",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="emscripten" And opt_arch="js"),0 )
+
 	' arch
 	env.InsertDecl New TConstDecl.Create( "ppc",New TIntType,New TConstExpr.Create( New TIntType,opt_arch="ppc" ),0 )
 	env.InsertDecl New TConstDecl.Create( "x86",New TIntType,New TConstExpr.Create( New TIntType,opt_arch="x86" ),0 )
@@ -3629,6 +3633,7 @@ End Rem
 	env.InsertDecl New TConstDecl.Create( "armeabi",New TIntType,New TConstExpr.Create( New TIntType,opt_arch="armeabi" ),0 )
 	env.InsertDecl New TConstDecl.Create( "armeabiv7a",New TIntType,New TConstExpr.Create( New TIntType,opt_arch="armeabiv7a" ),0 )
 	env.InsertDecl New TConstDecl.Create( "arm64v8a",New TIntType,New TConstExpr.Create( New TIntType,opt_arch="arm64v8a" ),0 )
+	env.InsertDecl New TConstDecl.Create( "js",New TIntType,New TConstExpr.Create( New TIntType,opt_arch="js" ),0 )
 
 	' endian
 	env.InsertDecl New TConstDecl.Create( "bigendian",New TIntType,New TConstExpr.Create( New TIntType,opt_arch="ppc" ),0 )
