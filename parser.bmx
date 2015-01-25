@@ -2341,6 +2341,10 @@ End Rem
 					DoErr "Illegal function return type"
 				End If
 
+				' Delete() return type should always be Void
+				If id.ToLower() = "delete" And TIntType(ty) Then
+					ty = New TVoidType
+				End If
 			EndIf
 		Else
 			If Not (attrs & FUNC_PTR) Then
@@ -3638,6 +3642,9 @@ End Rem
 	' endian
 	env.InsertDecl New TConstDecl.Create( "bigendian",New TIntType,New TConstExpr.Create( New TIntType,opt_arch="ppc" ),0 )
 	env.InsertDecl New TConstDecl.Create( "littleendian",New TIntType,New TConstExpr.Create( New TIntType,opt_arch<>"ppc" ),0 )
+
+	' opengles target platform
+	env.InsertDecl New TConstDecl.Create( "opengles",New TIntType,New TConstExpr.Create( New TIntType, opt_platform="android" Or opt_platform="raspberrypi" Or opt_platform="emscripten" ),0 )
 
 	' new compiler
 	env.InsertDecl New TConstDecl.Create( "bmxng",New TIntType,New TConstExpr.Create( New TIntType, True ),0 )
