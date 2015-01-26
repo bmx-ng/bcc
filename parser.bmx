@@ -1050,6 +1050,10 @@ Type TParser
 				Err "Call to super class constructor must be first statement in a constructor."
 			EndIf
 			Local id$=ParseIdent()
+			
+			' eat any type stuff
+			ParseConstNumberType()
+
 			expr=New TInvokeSuperExpr.Create( id,ParseArgs( stmt ) )
 		Default
 			Select _tokeType
@@ -1110,6 +1114,7 @@ Type TParser
 			Select _toke
 			Case "."
 				NextToke
+				
 				expr=New TIdentExpr.Create( ParseIdent(),expr )
 				
 				ParseConstNumberType()
