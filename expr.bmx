@@ -823,19 +823,27 @@ Type TInvokeSuperExpr Extends TExpr
 	Method Semant:TExpr()
 		If exprType Return Self
 
-		If _env.FuncScope().IsStatic() Err "Illegal use of Super."
+		'If _env.FuncScope().IsStatic() Err "Illegal use of Super."
 
 		classScope=_env.ClassScope()
 		superClass=classScope.superClass
 		
 		If Not superClass Err "Type has no super class."
-
+		
 		args=SemantArgs( args )
 		origFuncDecl=classScope.FindFuncDecl(ident,args)
 		funcDecl=superClass.FindFuncDecl( ident,args )
+
+		If Not funcDecl Err "Can't find superclass method '"+ident+"'."
+
 		' ensure the super function has been semanted
 		funcDecl.Semant()
-		If Not funcDecl Err "Can't find superclass method '"+ident+"'."
+		
+		' for static scope, we need to change class scope to that of the super class
+		If _env.FuncScope().IsStatic() Then
+			classScope = TClassDecl(funcDecl.scope)
+		End If
+		
 		args=CastArgs( args,funcDecl )
 		exprType=funcDecl.retType
 		Return Self
@@ -1276,6 +1284,8 @@ Type TBinaryMathExpr Extends TBinaryExpr
 				If op<>"+"
 					Err "Illegal string operator."
 				EndIf
+			Else If TVoidType( exprType ) Then
+				Err "Illegal operation on a void expression."
 			Else If Not TNumericType( exprType ) And Not IsPointerType( exprType, 0, TType.T_POINTER ) And Not TArrayType( exprType ) And Not TBoolType( exprType )
 				Err "Illegal expression type."
 			Else If IsPointerType( exprType, 0, TType.T_POINTER ) And op <> "+" And op <> "-" Then
@@ -1386,11 +1396,6 @@ Type TBinaryCompareExpr Extends TBinaryExpr
 		rhs=rhs.Semant()
 
 		ty=BalanceTypes( lhs.exprType,rhs.exprType )
-		If TArrayType( ty )
-			If TArrayType(lhs.exprType) And TArrayType(rhs.exprType) Then
-				Err "Arrays cannot be compared."
-			End If
-		EndIf
 
 		lhs=lhs.Cast( ty )
 		rhs=rhs.Cast( ty )

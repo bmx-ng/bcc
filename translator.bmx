@@ -650,7 +650,7 @@ End Rem
 
 		If decl.munged.StartsWith( "$" ) Return TransIntrinsicExpr( decl,expr )
 		
-		If decl Return TransSuperFunc( TFuncDecl( decl ),expr.args, expr.classScope )
+		If decl Return TransSuperFunc( TFuncDecl( expr.funcDecl ),expr.args, expr.classScope )
 		
 		InternalErr
 	End Method
