@@ -604,7 +604,7 @@ Type TArrayType Extends TType
 	
 	Method ExtendsType:Int( ty:TType )
 		Local arrayType:TArrayType=TArrayType( ty )
-		Return (arrayType And ( TVoidType( elemType ) Or elemType.EqualsType( arrayType.elemType ) )) Or IsPointerType(ty, 0, TType.T_POINTER) <> Null Or (TObjectType( ty ) And TObjectType( ty ).classDecl.ident="Object")
+		Return (arrayType And ( TVoidType( elemType ) Or elemType.EqualsType( arrayType.elemType ) Or elemType.ExtendsType( arrayType.elemType ) )) Or IsPointerType(ty, 0, TType.T_POINTER) <> Null Or (TObjectType( ty ) And TObjectType( ty ).classDecl.ident="Object")
 	End Method
 	
 	Method Semant:TType(option:Int = False)
