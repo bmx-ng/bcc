@@ -1998,6 +1998,19 @@ Type TIdentExpr Extends TExpr
 		'Local scope:TScopeDecl=IdentScope()
 		Local fdecl:TFuncDecl=scope.FindFuncDecl( ident,args )
 
+		' if our scope is static, but the scope of the found function/method is not
+		' then we should ignore it and continue looking higher up the scope stack.
+		If static And fdecl And Not fdecl.IsStatic() Then
+			Local scope2:TScopeDecl = fdecl.scope
+			
+			fdecl = Null
+			
+			' if fdecl was a method, this would be the Type's scope (ie. file/module)
+			If scope2.scope Then
+				fdecl = scope2.scope.FindFuncDecl( ident,args )
+			End If
+		End If
+
 		' couldn't find it? try a global search
 		If Not fdecl Then
 			For Local mdecl:TModuleDecl = EachIn _appInstance.globalImports.Values()
