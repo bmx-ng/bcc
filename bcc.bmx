@@ -31,6 +31,7 @@ Local args:String[] = ParseArgs(AppArgs[1..])
 
 If args.length = 0 Then
 	Print "bcc[ng] Release Version " + version
+	End
 End If
 
 If args.length <> 1 Then
