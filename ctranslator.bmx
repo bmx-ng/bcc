@@ -682,7 +682,7 @@ t:+"NULLNULLNULL"
 						If decl.scope.IsExtern()
 							Return decl.munged + Bra(TransArgs( args,decl, TransSubExpr( lhs ) ))
 						Else
-							Local class:String = TransSubExpr( lhs ) + "->clas" + tSuper
+							Local class:String = Bra(TransSubExpr( lhs )) + "->clas" + tSuper
 							Return class + "->" + TransFuncPrefix(cdecl, decl) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
 						End If
 					End If
@@ -1194,7 +1194,7 @@ EndRem
 		Local t$
 
 		If expr.instanceExpr Then
-			t = "bbObjectNew(" + expr.instanceExpr.Trans() + "->clas)"
+			t = "bbObjectNew(" + Bra(expr.instanceExpr.Trans()) + "->clas)"
 		Else
 			If ClassHasObjectField(expr.classDecl) Then
 				t = "bbObjectNew(&" + expr.classDecl.actual.munged + ")"
