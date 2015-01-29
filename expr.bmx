@@ -483,44 +483,6 @@ Type TInvokeExpr Extends TExpr
 
 		If exprType Return Self
 
-		' handle Sgn, Asc and Chr keywords/functions for const values
-		Select decl.ident.ToLower()
-			Case "sgn"
-				Local arg:TExpr = args[0]
-				If TConstExpr(arg) Then
-					'use different calls to only return a "float sgn"
-					'when param is a float
-					Local val:String = TConstExpr(arg).value
-					Local expr:TExpr
-					If String(Int(val)) = val
-						expr = New TConstExpr.Create(New TIntType, Sgn(Int(TConstExpr(arg).value)))
-					Else
-						expr = New TConstExpr.Create(New TIntType, Sgn(Float(TConstExpr(arg).value)))
-					End If
-					
-					_appInstance.removeStringConst(TConstExpr(arg).value)
-					expr.Semant()
-					Return expr
-				End If
-			Case "asc"
-				Local arg:TExpr = args[0]
-				If TConstExpr(arg) Then
-					Local expr:TExpr = New TConstExpr.Create(New TIntType, Asc(TConstExpr(arg).value))
-					_appInstance.removeStringConst(TConstExpr(arg).value)
-					expr.Semant()
-					Return expr
-				End If
-			Case "chr"
-				Local arg:TExpr = args[0]
-				If TConstExpr(arg) Then
-					Local expr:TConstExpr = New TConstExpr.Create(New TStringType, Chr(Int(TConstExpr(arg).value)))
-					expr.Semant()
-					_appInstance.mapStringConsts(expr.value)
-					Return expr
-				End If
-		End Select
-
-
 		If Not decl.retType
 			decl.Semant()
 		End If
@@ -544,32 +506,7 @@ Type TInvokeExpr Extends TExpr
 	End Method
 
 	Method Eval$()
-		Select decl.ident.ToLower()
-			Case "sgn"
-				If args.length = 1 Then
-					'use different calls to only return a "float sgn"
-					'when param is a float
-					Local v:String = String(args[0].Eval())
-					If String(Int(v)) = v
-						Return Sgn(Int(v))
-					Else
-						Return Sgn(Float(v))
-					End If
-				End If
-				DebugStop
-			Case "asc"
-				If args.length = 1 Then
-					Local v:String = String(args[0].Eval())
-					If v And v.length = 1 Then
-						Return Asc(v)
-					End If
-				End If
-				DebugStop
-			Case "chr"
-				DebugStop
-		Default
-			Return Super.Eval()
-		End Select
+		Return Super.Eval()
 	End Method
 
 End Type
@@ -2164,6 +2101,21 @@ Type TAscExpr Extends TBuiltinExpr
 		Return Self
 	End Method
 
+	Method Semant:TExpr()
+		If exprType Return Self
+
+		If TConstExpr(expr) Then
+			Local cexpr:TExpr = New TConstExpr.Create(New TIntType, Asc(TConstExpr(expr).value))
+			_appInstance.removeStringConst(TConstExpr(expr).value)
+			cexpr.Semant()
+			Return cexpr
+		End If
+		
+		expr = expr.SemantAndCast( New TStringType )
+		exprType = New TIntType
+		Return Self
+	End Method
+
 	Method Copy:TExpr()
 		Return New TAscExpr.Create( CopyExpr(expr) )
 	End Method
@@ -2179,6 +2131,30 @@ Type TSgnExpr Extends TBuiltinExpr
 	Method Create:TSgnExpr( expr:TExpr )
 		Self.id="sgn"
 		Self.expr=expr
+		Return Self
+	End Method
+
+	Method Semant:TExpr()
+		If exprType Return Self
+
+		If TConstExpr(expr) Then
+			'use different calls to only return a "float sgn"
+			'when param is a float
+			Local val:String = TConstExpr(expr).value
+			Local cexpr:TExpr
+			If String(Int(val)) = val
+				cexpr = New TConstExpr.Create(New TIntType, Sgn(Int(TConstExpr(expr).value)))
+			Else
+				cexpr = New TConstExpr.Create(New TFloatType, Sgn(Float(TConstExpr(expr).value)))
+			End If
+			
+			_appInstance.removeStringConst(TConstExpr(expr).value)
+			cexpr.Semant()
+			Return cexpr
+		End If
+		
+		expr = expr.Semant()
+		exprType=expr.exprType
 		Return Self
 	End Method
 
@@ -2278,6 +2254,40 @@ Type TSizeOfExpr Extends TBuiltinExpr
 	End Method
 
 End Type
+
+Type TChrExpr Extends TBuiltinExpr
+
+	Method Create:TChrExpr( expr:TExpr )
+		Self.id="chr"
+		Self.expr=expr
+		Return Self
+	End Method
+	
+	Method Semant:TExpr()
+		If exprType Return Self
+
+		If TConstExpr(expr) Then
+			Local cexpr:TConstExpr = New TConstExpr.Create(New TStringType, Chr(Int(TConstExpr(expr).value)))
+			cexpr.Semant()
+			_appInstance.mapStringConsts(cexpr.value)
+			Return cexpr
+		End If
+		
+		expr = expr.SemantAndCast( New TIntType )
+		exprType = New TStringType
+		Return Self
+	End Method
+
+	Method Copy:TExpr()
+		Return New TChrExpr.Create( CopyExpr(expr) )
+	End Method
+
+	Method ToString$()
+		Return "TChrExpr("+expr.ToString()+")"
+	End Method
+
+End Type
+
 
 Type TFuncCallExpr Extends TExpr
 	Field expr:TExpr

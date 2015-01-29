@@ -442,9 +442,9 @@ End Rem
 	
 	Method TransSubExpr$( expr:TExpr,pri:Int=2 )
 		Local t_expr$=expr.Trans()
-		If expr.exprType._flags & TTYPE.T_VAR Then
-			t_expr = Bra("*" + t_expr)
-		End If
+		'If expr.exprType._flags & TTYPE.T_VAR Then
+		'	t_expr = Bra("*" + t_expr)
+		'End If
 		If ExprPri( expr )>pri t_expr=Bra( t_expr )
 		Return t_expr
 	End Method
@@ -598,7 +598,13 @@ End Rem
 
 		If decl.munged.StartsWith( "$" ) Return TransIntrinsicExpr( decl,Null )
 		
-		If TLocalDecl( decl ) Return decl.munged
+		If TLocalDecl( decl ) Then
+			If decl.ty._flags & TType.T_VAR Then
+				Return "*" + decl.munged
+			Else
+				Return decl.munged
+			End If
+		End If
 		
 		If TFieldDecl( decl ) Return TransField( TFieldDecl( decl ),Null )
 		
@@ -863,6 +869,7 @@ End Rem
 		If TMaxExpr(expr) Return TransMaxExpr(TMaxExpr(expr))
 		If TAbsExpr(expr) Return TransAbsExpr(TAbsExpr(expr))
 		If TAscExpr(expr) Return TransAscExpr(TAscExpr(expr))
+		If TChrExpr(expr) Return TransChrExpr(TChrExpr(expr))
 		If TSgnExpr(expr) Return TransSgnExpr(TSgnExpr(expr))
 		If TLenExpr(expr) Return TransLenExpr(TLenExpr(expr))
 		If TSizeOfExpr(expr) Return TransSizeOfExpr(TSizeOfExpr(expr))
@@ -879,6 +886,9 @@ End Rem
 	End Method
 
 	Method TransAscExpr:String(expr:TAscExpr)
+	End Method
+
+	Method TransChrExpr:String(expr:TChrExpr)
 	End Method
 
 	Method TransSgnExpr:String(expr:TSgnExpr)

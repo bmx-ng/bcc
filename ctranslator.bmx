@@ -139,7 +139,6 @@ Type TCTranslator Extends TTranslator
 		Local p:String = TransSPointer(ty, True)
 		
 		If TVoidType( ty ) Or Not ty Then
-'DebugStop
 			Return "void"
 		End If
 		If TBoolType( ty ) Return "BBINT" + p
@@ -157,7 +156,6 @@ Type TCTranslator Extends TTranslator
 			End If
 			Return "BBSTRING" + p
 		End If
-		'If TStringVarPtrType( ty ) Return "BBSTRING *"
 		If TArrayType( ty ) Return "BBARRAY" + p
 		If TObjectType( ty ) Then
 			Return TransObject(TObjectType(ty).classdecl) + p
@@ -289,7 +287,6 @@ Type TCTranslator Extends TTranslator
 				End If
 			End If
 			If TFunctionPtrType( ty) Return "&brl_blitz_NullFunctionError" ' todo ??
-			'If TByteType( ty ) Return "0"
 		EndIf
 		InternalErr
 	End Method
@@ -310,6 +307,10 @@ Type TCTranslator Extends TTranslator
 					Continue
 				Else If TStringType(ty) And (ty._flags & TType.T_VAR) Then
 					If TCastExpr(args[i]) And TStringType(TCastExpr(args[i]).expr.exprType) Then
+						t:+ "&"
+					End If
+				Else If TArrayType(ty) And (ty._flags & TType.T_VAR) Then
+					If TVarExpr(args[i]) And TArrayType(TVarExpr(args[i]).exprType) Then
 						t:+ "&"
 					End If
 				Else If TObjectType(ty) And (ty._flags & TType.T_VAR) Then
@@ -347,12 +348,6 @@ Type TCTranslator Extends TTranslator
 						t:+ TInvokeExpr(TCastExpr(args[i]).expr).decl.munged
 						Continue
 					End If
-
-					'If TObjectType(args[i].exprType) 'And TObjectType(args[i].exprType).classDecl = TClassDecl.nullObjectClass Then
-					'err "NULL"
-					'	t:+ "0"
-					'	Continue
-					'End If
 
 					' Object -> Byte Ptr
 					If IsPointerType(ty, TType.T_BYTE) And TObjectType(args[i].exprType) Then
@@ -775,12 +770,6 @@ t:+"NULLNULLNULL"
 			End If
 		End If
 		
-		' built-in functions
-		Select decl.ident.ToLower()
-			Case "min", "max", "len", "asc", "chr", "sgn"
-				Return TransBuiltin(decl, args)
-		End Select
-
 		Return TransStatic( decl )+TransArgs( args,decl )
 	End Method
 
@@ -826,62 +815,6 @@ t:+"NULLNULLNULL"
 '		End If
 	End Method
 
-	Method TransBuiltin$( decl:TFuncDecl,args:TExpr[] )
-		Select decl.ident.ToLower()
-			Case "min", "max"
-				Local isFloat:Int
-				For Local arg:TExpr = EachIn args
-					If TFloatType(arg.exprType) Or TDoubleType(arg.exprType) Then
-						isFloat = True
-					End If
-				Next
-				If isFloat Then
-					Return "bbFloat" + decl.ident + TransArgsTypes(args, [New TFloatType, New TFloatType])
-				Else
-					' TODO : Long support
-					Return "bbInt" + decl.ident + TransArgs(args, decl)
-				End If
-			Case "len"
-				Local arg:TExpr = args[0]
-
-				If TStringType(arg.exprType) Then
-					Return TVarExpr(arg).decl.munged + "->length"
-				Else If TArrayType(arg.exprType) Then
-					Return TVarExpr(arg).decl.munged + "->scales[0]"
-				Else If TCastExpr(arg) Then
-					If TArrayType(TCastExpr(arg).expr.exprType) Then
-						Return TCastExpr(arg).expr.Trans() + "->scales[0]"
-					End If
-				'other types just have a length of "1"
-				Else
-					Return "1"
-				End If
-			Case "sgn"
-				Local arg:TExpr = args[0]
-				'should be handled already
-				If TConstExpr(arg) Then InternalErr
-
-				'decide whether to use float or int (cast done BEFORE
-				'sgn() is executed)
-				'bbFloatSng/bbIntSng call "Sgn#(v#)" as defined
-				'in config.bmx -> keywords
-				If TFloatType(arg.exprType) Or TDoubleType(arg.exprType)
-					'decl.ident contains "sgn", same like "bbFloatSng"
-					Return "bbFloat" + decl.ident + TransArgsTypes(args, [New TFloatType])
-				Else
-					' TODO : Long support
-					Return "bbInt" + decl.ident + TransArgs(args, decl)
-				End If
-			Case "asc"
-				Local arg:TExpr = args[0]
-				If TConstExpr(arg) InternalErr ' we should have handled this case already
-				Return "bbStringAsc" + TransArgs(args, decl)
-			Case "chr"
-				If TConstExpr(args[0]) InternalErr ' we should have handled this case already
-				Return "bbStringFromChar" + TransArgs(args, decl)
-		End Select
-	End Method
-
 	Method TransMinExpr:String(expr:TMinExpr)
 		Local s:String
 		If TDecimalType(expr.exprType) Then
@@ -891,6 +824,7 @@ t:+"NULLNULLNULL"
 		Else
 			s = "bbIntMin"
 		End If
+
 		Return s + Bra(expr.expr.trans() + "," + expr.expr2.Trans())
 	End Method
 
@@ -907,9 +841,21 @@ t:+"NULLNULLNULL"
 	End Method
 
 	Method TransAscExpr:String(expr:TAscExpr)
+		Return "bbStringAsc" + Bra(expr.expr.Trans())
+	End Method
+
+	Method TransChrExpr:String(expr:TChrExpr)
+		Return "bbStringFromChar" + Bra(expr.expr.Trans())
 	End Method
 
 	Method TransSgnExpr:String(expr:TSgnExpr)
+		If TFloatType(expr.expr.exprType) Or TDoubleType(expr.expr.exprType)
+			'decl.ident contains "sgn", same like "bbFloatSng"
+			Return "bbFloatSgn" + Bra(expr.expr.Trans())
+		Else
+			' TODO : Long support
+			Return "bbIntSgn" + Bra(expr.expr.Trans())
+		End If
 	End Method
 
 	Method TransAbsExpr:String(expr:TAbsExpr)
@@ -934,12 +880,12 @@ t:+"NULLNULLNULL"
 		End If
 		
 		If TStringType(expr.expr.exprType) Then
-			Return expr.expr.Trans() + "->length"
+			Return Bra(expr.expr.Trans()) + "->length"
 		Else If TArrayType(expr.expr.exprType) Then
-			Return expr.expr.Trans() + "->scales[0]"
+			Return Bra(expr.expr.Trans()) + "->scales[0]"
 		Else If TCastExpr(expr.expr) Then
 			If TArrayType(TCastExpr(expr.expr).expr.exprType) Then
-				Return TCastExpr(expr.expr).expr.Trans() + "->scales[0]"
+				Return Bra(TCastExpr(expr.expr).expr.Trans()) + "->scales[0]"
 			End If
 		'other types just have a length of "1"
 		Else
@@ -1145,7 +1091,7 @@ Rem
 			Else
 				Return "sizeof(void*)"
 			End If
-endrem
+EndRem
 		'class instances function calls
 		ElseIf TInvokeExpr(expr.expr) Then
 			'Throw ("Implement TInvokeMemberExpr(expr.expr)")
@@ -1296,12 +1242,12 @@ EndRem
 		If TNumericType(src) And (src._flags & TType.T_VAR) Then
 			' var number being cast to a varptr 
 			If (dst._flags & TType.T_VARPTR) Then
-				Return t
+				Return "&" + Bra(t)
 			End If
-			t = Bra("*" + t)
 		End If
 
 		If (dst._flags & TType.T_VARPTR) Or (dst._flags & TType.T_VAR) Then
+
 			If Not TConstExpr(expr.expr) Then
 				If TInvokeExpr(expr.expr) Return t
 
@@ -1454,9 +1400,9 @@ EndRem
 				End If
 				If src._flags & TType.T_VAR Then
 					If TSliceExpr( expr.expr ) Then
-						Return t
+						Return "&" + Bra(t)
 					End If
-					Return "*" + t
+					Return t
 				End If
 				Return t
 			End If
@@ -1638,9 +1584,9 @@ EndRem
 
 		If TArrayType( expr.expr.exprType ) Then
 			If TFunctionPtrType(TArrayType( expr.expr.exprType ).elemType) Then
-				Return Bra(Bra(TransType(TArrayType( expr.expr.exprType).elemType, "*")) + Bra("BBARRAYDATA(" + t_expr + "," + t_expr + "->dims)")) + "[" + t_index + "]"
+				Return Bra(Bra(TransType(TArrayType( expr.expr.exprType).elemType, "*")) + Bra("BBARRAYDATA(" + Bra(t_expr) + "," + Bra(t_expr) + "->dims)")) + "[" + t_index + "]"
 			Else
-				Return Bra("(" + TransType(expr.exprType, "") + "*)BBARRAYDATA(" + t_expr + "," + t_expr + "->dims)") + "[" + t_index + "]"
+				Return Bra("(" + TransType(expr.exprType, "") + "*)BBARRAYDATA(" + Bra(t_expr) + "," + Bra(t_expr) + "->dims)") + "[" + t_index + "]"
 			End If
 		End If
 
@@ -1665,11 +1611,11 @@ EndRem
 			t_args:+","+expr.term.Trans()
 		Else
 			If TArrayType(expr.exprType) Then
-				t_args :+ "," + t_expr + "->scales[0]"
+				t_args :+ "," + Bra(t_expr) + "->scales[0]"
 			'Else If TStringVarPtrType(expr.exprType) Then
 			'	t_args :+ ",(*" + t_expr + ")->length"
 			Else
-				t_args :+ "," + t_expr + "->length"
+				t_args :+ "," + Bra(t_expr) + "->length"
 			End If
 		End If
 
@@ -1920,10 +1866,6 @@ EndRem
 
 		Local rhs$=stmt.rhs.Trans()
 		Local lhs$=stmt.lhs.TransVar()
-
-		If stmt.lhs.exprType._flags & TType.T_VAR Then
-			lhs = "*" + lhs
-		End If
 
 		Local s:String
 
@@ -3162,6 +3104,10 @@ End Rem
 
 	Method TransFieldRef:String(decl:TFieldDecl, variable:String, exprType:TType = Null)
 		Local s:String = variable
+
+		If variable.StartsWith("*") Then
+			variable = Bra(variable)
+		End If
 
 		' array.length
 		If decl.scope And decl.scope.ident = "___Array" Then

@@ -1011,6 +1011,39 @@ Type TParser
 			End If
 
 			expr=New TMaxExpr.Create( expr, expr2 )
+		Case "asc"
+			NextToke
+			' optional brackets
+			If CParse( "(" )
+				expr=ParseExpr()
+				Parse ")"
+				expr=New TAscExpr.Create( expr )
+			Else
+				expr=ParseExpr()
+				expr=New TAscExpr.Create( expr )
+			EndIf
+		Case "chr"
+			NextToke
+			' optional brackets
+			If CParse( "(" )
+				expr=ParseExpr()
+				Parse ")"
+				expr=New TChrExpr.Create( expr )
+			Else
+				expr=ParseExpr()
+				expr=New TChrExpr.Create( expr )
+			EndIf
+		Case "sgn"
+			NextToke
+			' optional brackets
+			If CParse( "(" )
+				expr=ParseExpr()
+				Parse ")"
+				expr=New TSgnExpr.Create( expr )
+			Else
+				expr=ParseExpr()
+				expr=New TSgnExpr.Create( expr )
+			EndIf
 		Case "string"
 			Local id$=_toke
 			Local ty:TType=ParseType()
