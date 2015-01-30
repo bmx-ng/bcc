@@ -894,271 +894,60 @@ t:+"NULLNULLNULL"
 	End Method
 
 	Method TransSizeOfExpr:String(expr:TSizeOfExpr)
-		'ATTENTION:
-		'current assumption is: 2 Bytes per unicode character are used
-		Local bytesPerChar:Int = 2
-	
-		If TVarExpr(expr.expr) Then
-			'objects
-			If TObjectType(TVarExpr(expr.expr).exprType) Then
-				Return Bra(TVarExpr(expr.expr).decl.munged + "->clas->instance_size-(sizeof(void*))")
+		Local cexpr:TConstExpr = TConstExpr(expr.expr)
+		If cexpr Then
+			If TNumericType(cexpr.exprType) Then
+				Return "sizeof" + Bra(TransType(cexpr.exprType, ""))
 
-			'numeric types are able to use sizeof(BBINT|BBFLOAT...)
-			ElseIf IsNumericType(TVarExpr(expr.expr).exprType) Then
-				Return "sizeof" + Bra(TransType(TVarExpr(expr.expr).exprType, ""))
-
-			'strings
-			ElseIf TStringType(TVarExpr(expr.expr).exprType) Then
-				'unicode chars each take 2 bytes
-				Return TVarExpr(expr.expr).decl.munged + "->length * " + bytesPerChar
-
-			'arrays
-			ElseIf TArrayType(TVarExpr(expr.expr).exprType) Then
-				'normal exprType is something like "int[]" that
-				'is why it has to be checked against elemType
-				Local elemType:TType = TArrayType( TVarExpr(expr.expr).exprType ).elemType
-
-				'numerics
-				If IsNumericType(elemType) Then
-					'multiply element count * size of element type
-					Return TVarExpr(expr.expr).decl.munged + "->scales[0] * sizeof" + Bra(TransType(elemType, ""))
-
-				'strings
-				ElseIf TStringType(elemType) Then
-					'arrays of strings are of size: elementCount * pointerSize
-					Return  TVarExpr(expr.expr).decl.munged + "->scales[0] * sizeof(void*)"
-
-				'non numeric elements are just connected through "pointers"
-				'so they could be merged with the string type
-				Else
-					'arrays of objects are of size: elementCount * pointerSize
-					Return  TVarExpr(expr.expr).decl.munged + "->scales[0] * sizeof(void*)"
-				EndIf
-
-			'objects, pointers, ... seem to just occupy 1 pointerSize
-			'it it does not matter what kind of pointer is used
-			Else
-				Return "sizeof(void*)"
+			' strings
+			Else If TStringType(cexpr.exprType) Then
+				' length of const string * 2 bytes per char
+				Return Len(cexpr.value) * 2
 			End If
+		Else
+			If TNumericType(expr.expr.exprType) Then
+				' remove Var-ness first, if any
+				Local t:TType = expr.expr.exprType.Copy()
+				t._flags :~ TType.T_VAR
 
+				Return "sizeof" + Bra(TransType(t, ""))
 
-		ElseIf TConstExpr(expr.expr) Then
-			'const numerics behave exactly the same like variable numerics
-			If IsNumericType(TConstExpr(expr.expr).exprType) Then
-				Return "sizeof" + Bra(TransType(TConstExpr(expr.expr).exprType, ""))
-
-			'strings
-			ElseIf TStringType(TConstExpr(expr.expr).exprType) Then
-				'const strings can rely on the BMX sizeOf()
-				'Return sizeOf(TConstExpr(expr.expr).value)
-
-				'BUT: for now we use 2*chars so it is easier to replace
-				Return Len(TConstExpr(expr.expr).value) * bytesPerChar
-
-			'arrays
-			ElseIf TArrayType(TConstExpr(expr.expr).exprType) Then
-				'normal exprType is something like "int[]" that
-				'is why it has to be checked against elemType
-				Local elemType:TType = TArrayType( TConstExpr(expr.expr).exprType ).elemType
-
-				'numerics
-				If IsNumericType(elemType) Then
-					'multiply element count * size of element type
-					Return TConstExpr(expr.expr).value + "->scales[0] * sizeof" + Bra(TransType(elemType, ""))
-
-				'strings
-				ElseIf TStringType(elemType) Then
-					'arrays of strings are of size: elementCount * pointerSize
-					Return  TConstExpr(expr.expr).value + "->scales[0] * sizeof(void*)"
-
-				'non numeric elements are just connected through "pointers"
-				'so they could be merged with the string type
-				Else
-					'arrays of objects are of size: elementCount * pointerSize
-					Return  TConstExpr(expr.expr).value + "->scales[0] * sizeof(void*)"
-				EndIf
-
-			'objects, pointers, ... seem to just occupy 1 pointerSize
-			'it it does not matter what kind of pointer is used
-			Else
-				Return "sizeof(void*)"
-			End If
-
-		'class instances properties (fields)
-		ElseIf TMemberVarExpr(expr.expr) Then
-			Local instanceName:String = TVarExpr(TMemberVarExpr(expr.expr).expr).decl.munged
-			Local propertyName:String = TMemberVarExpr(expr.expr).decl.ident
-			Local propertyType:TType = TMemberVarExpr(expr.expr).decl.declTy
-
-			'objects
-			If TObjectType(propertyType) Then
-				Return Bra(instanceName + "->clas->instance_size-(sizeof(void*))")
-
-			'numeric types are able to use sizeof(BBINT|BBFLOAT...)
-			ElseIf TNumericType(propertyType) Then
-				Return "sizeof" + Bra(TransType(propertyType, ""))
-
-			'strings
-			ElseIf TStringType(propertyType) Then
+			' strings
+			Else If TStringType(expr.expr.exprType) Then
 				'unicode chars each take 2 bytes
-				Return instanceName + "->" + propertyName + "->length * " + bytesPerChar
+				Return Bra(expr.expr.Trans()) + "->length * 2"
 
-			'arrays
-			ElseIf TArrayType(propertyType) Then
+			' arrays
+			Else If TArrayType(expr.expr.exprType) Then
 				'normal exprType is something like "int[]" that
 				'is why it has to be checked against elemType
-				Local elemType:TType = TArrayType( propertyType ).elemType
+				Local elemType:TType = TArrayType( expr.expr.exprType ).elemType
 
-				'numerics
+				' numerics - including numeric pointers
 				If TNumericType(elemType) Then
 					'multiply element count * size of element type
-					Return expr.expr.Trans() + "->scales[0] * sizeof" + Bra(TransType(elemType, ""))
+					Return Bra(expr.expr.Trans()) + "->scales[0] * sizeof" + Bra(TransType(elemType, ""))
 
-				'strings
-				ElseIf TStringType(elemType) Then
-					'arrays of strings are of size: elementCount * pointerSize
-					Return expr.expr.Trans() + "->scales[0] * sizeof(void*)"
-
-				'non-numeric elements are just connected through "pointers"
-				'so they could be merged with the string type but to
-				'keep it extendable easily, keep it split
+				' everything else : string, array, object, function pointer - are all pointers
 				Else
 					'arrays of objects are of size: elementCount * pointerSize
-					Return expr.expr.Trans() + "->scales[0] * sizeof(void*)"
+					Return  Bra(expr.expr.Trans()) + "->scales[0] * sizeof(void*)"
 				EndIf
-
-			'objects, pointers, ... seem to just occupy 1 pointerSize
-			'it it does not matter what kind of pointer is used
-			Else
-				Return "sizeof(void*)"
-			End If
 			
-		'class instances method calls
-		ElseIf TInvokeMemberExpr(expr.expr) Then
-			'Throw ("Implement TInvokeMemberExpr(expr.expr)")
-			Print "Implement TInvokeMemberExpr(expr.expr) handling: typeInstance.method() calls"
-			'Return "sizeof(void*)"
-			InternalErr
-
-Rem
-			'I think this part should contain some "temporary variable"
-			'creation - which then can get handled like all other
-			'variables
-
-			local instanceName:string = TVarExpr(TInvokeMemberExpr(expr.expr).expr).decl.munged
-			local returnName:string = ""
-			local returnType:TType = TInvokeMemberExpr(expr.expr).decl.retType
-
-			'objects
-			If TObjectType(returnType) then
-				Return Bra(instanceName + "->clas->instance_size-(sizeof(void*))")
-
-			'numeric types are able to use sizeof(BBINT|BBFLOAT...)
-			ElseIf TNumericType(returnType) Then
-				Return "sizeof" + Bra(TransType(returnType, ""))
-
-			'strings
-			ElseIf TStringType(returnType) Then
-				'unicode chars each take 2 bytes
-				Return instanceName + "->" + returnName + "->length * " + bytesPerChar
-
-			'arrays
-			ElseIf TArrayType(returnType) Then
-				'normal exprType is something like "int[]" that
-				'is why it has to be checked against elemType
-				local elemType:TType = TArrayType( returnType ).elemType
-
-				'numerics
-				If TNumericType(elemType) Then
-					'multiply element count * size of element type
-					Return expr.expr.Trans() + "->scales[0] * sizeof" + Bra(TransType(elemType, ""))
-
-				'strings
-				ElseIf TStringType(elemType) Then
-					'arrays of strings are of size: elementCount * pointerSize
-					Return expr.expr.Trans() + "->scales[0] * sizeof(void*)"
-
-				'non-numeric elements are just connected through "pointers"
-				'so they could be merged with the string type but to
-				'keep it extendable easily, keep it split
+			' objects
+			Else If TObjectType(expr.expr.exprType) Then
+				If TObjectType( expr.expr.exprType ).classDecl.ident = "Object" Then
+					Return "0"
 				Else
-					'arrays of objects are of size: elementCount * pointerSize
-					Return expr.expr.Trans() + "->scales[0] * sizeof(void*)"
-				EndIf
-
-			'objects, pointers, ... seem to just occupy 1 pointerSize
-			'it it does not matter what kind of pointer is used
-			Else
-				Return "sizeof(void*)"
+					If TIdentTypeExpr(expr.expr) Then
+						Return "sizeof" + Bra(expr.expr.Trans()) + "-sizeof(void*)"
+					Else
+						Return Bra(Bra(expr.expr.Trans()) + "->clas->instance_size-(sizeof(void*))")
+					End If
+				End If
 			End If
-EndRem
-		'class instances function calls
-		ElseIf TInvokeExpr(expr.expr) Then
-			'Throw ("Implement TInvokeMemberExpr(expr.expr)")
-			Print "Implement TInvokeExpr(expr.expr) handling: type.function()-calls "
-			'Return "sizeof(void*)"
-			InternalErr
-
-Rem
-			'I think this part should contain some "temporary variable"
-			'creation - which then can get handled like all other
-			'variables
-
-			local instanceName:string = TVarExpr(TInvokeExpr(expr.expr).expr).decl.munged
-			local returnName:string = ""
-			local returnType:TType = TInvokeExpr(expr.expr).decl.retType
-
-			'objects
-			If TObjectType(returnType) then
-				Return Bra(instanceName + "->clas->instance_size-(sizeof(void*))")
-
-			'numeric types are able to use sizeof(BBINT|BBFLOAT...)
-			ElseIf TNumericType(returnType) Then
-				Return "sizeof" + Bra(TransType(returnType, ""))
-
-			'strings
-			ElseIf TStringType(returnType) Then
-				'unicode chars each take 2 bytes
-				Return instanceName + "->" + returnName + "->length * " + bytesPerChar
-
-			'arrays
-			ElseIf TArrayType(returnType) Then
-				'normal exprType is something like "int[]" that
-				'is why it has to be checked against elemType
-				local elemType:TType = TArrayType( returnType ).elemType
-
-				'numerics
-				If TNumericType(elemType) Then
-					'multiply element count * size of element type
-					Return expr.expr.Trans() + "->scales[0] * sizeof" + Bra(TransType(elemType, ""))
-
-				'strings
-				ElseIf TStringType(elemType) Then
-					'arrays of strings are of size: elementCount * pointerSize
-					Return expr.expr.Trans() + "->scales[0] * sizeof(void*)"
-
-				'non-numeric elements are just connected through "pointers"
-				'so they could be merged with the string type but to
-				'keep it extendable easily, keep it split
-				Else
-					'arrays of objects are of size: elementCount * pointerSize
-					Return expr.expr.Trans() + "->scales[0] * sizeof(void*)"
-				EndIf
-
-			'objects, pointers, ... seem to just occupy 1 pointerSize
-			'it it does not matter what kind of pointer is used
-			Else
-				Return "sizeof(void*)"
-			End If
-EndRem
-		Else If TIdentTypeExpr(expr.expr) Then
-			' doing something like : SizeOf TMyType
-			Return Bra(TIdentTypeExpr(expr.expr).cdecl.munged + ".instance_size-(sizeof(void*))")
-		
-		Else If TSelfExpr(expr.expr) Then
-			Return Bra("o->clas->instance_size-(sizeof(void*))")
 		End If
-		
+
 		InternalErr
 	End Method
 
@@ -1230,6 +1019,10 @@ EndRem
 
 	Method TransSelfExpr$( expr:TSelfExpr )
 		Return "o"
+	End Method
+
+	Method TransIdentTypeExpr:String(expr:TIdentTypeExpr)
+		Return "struct " + expr.cdecl.munged + "_obj"
 	End Method
 
 	Method TransCastExpr$( expr:TCastExpr )

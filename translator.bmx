@@ -900,6 +900,8 @@ End Rem
 	Method TransSizeOfExpr:String(expr:TSizeOfExpr)
 	End Method
 	
+	Method TransIdentTypeExpr:String(expr:TIdentTypeExpr) Abstract
+	
 	Method TransLabelCont:String(bc:TTryBreakCheck, jmp:Int = True)
 		If jmp Then
 			Return "_contjmp" + bc.contId + ": ;"

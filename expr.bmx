@@ -1740,6 +1740,10 @@ Type TIdentTypeExpr Extends TExpr
 		Return cdecl
 	End	Method
 
+	Method Trans$()
+		Return _trans.TransIdentTypeExpr( Self )
+	End Method
+
 End Type
 
 Type TIdentExpr Extends TExpr
