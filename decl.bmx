@@ -873,11 +873,11 @@ End Rem
 					
 					If Not explicit And exprTy.ExtendsType( declTy ) Continue
 
-				Else If argDecls[i].init
+				Else If Not argDecls[i].init
 
-					exact=False
+					' if this argument is missing and there isn't a default...
+					Err "Missing function parameter '" + argDecls[i].ident + "'"
 
-					If Not explicit Exit
 				Else
 					If func.attrs & FUNC_PTR Then
 						exact=False
