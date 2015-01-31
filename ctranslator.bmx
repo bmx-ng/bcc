@@ -324,16 +324,20 @@ Type TCTranslator Extends TTranslator
 						Else
 							' need to test scopes to see if we need to use the current instance's function or not
 							Local fdecl:TFuncDecl = TInvokeExpr(args[i]).decl
+							mungdecl fdecl
 
 							If TClassDecl(fdecl.scope) Then
 								' current scope is related to function scope?
 								If TClassDecl(_env.scope) And TFuncDecl(_env) And TFuncDecl(_env).IsMethod() Then
-									'If TClassDecl(decl.scope).ExtendsClass(TClassDecl(fdecl.scope)) Then
-									Local scope:TScopeDecl = _env.scope
-									Local obj:String = Bra("struct " + scope.munged + "_obj*")
-									Local class:String = "(" + obj + "o)->clas"
+									If TClassDecl(decl.scope).ExtendsClass(TClassDecl(fdecl.scope)) Then
+										Local scope:TScopeDecl = _env.scope
+										Local obj:String = Bra("struct " + scope.munged + "_obj*")
+										Local class:String = "(" + obj + "o)->clas"
 				
-									t:+ class + "->fn_" + fdecl.ident
+										t:+ class + "->fn_" + fdecl.ident
+									Else
+										t:+ fdecl.munged
+									End If
 								Else
 									t:+ fdecl.munged
 								End If

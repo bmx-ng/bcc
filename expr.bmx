@@ -97,6 +97,18 @@ Type TExpr
 					TIdentExpr(args[i]).isArg = True
 				End If
 				args[i]=args[i].Semant()
+
+				' if an arg is a invocation without braces, it is *probably* a function pointer.
+				If TInvokeExpr(args[i]) And Not TInvokeExpr(args[i]).invokedWithBraces Then
+					TInvokeExpr(args[i]).exprType = New TFunctionPtrType
+					Local cp:TDecl = TInvokeExpr(args[i]).decl
+					TInvokeExpr(args[i]).decl = TFuncDecl(TInvokeExpr(args[i]).decl.Copy())
+					TInvokeExpr(args[i]).decl.actual = cp
+					TInvokeExpr(args[i]).decl.attrs :| FUNC_PTR
+					TFunctionPtrType(TInvokeExpr(args[i]).exprType).func = TInvokeExpr(args[i]).decl
+
+					TInvokeExpr(args[i]).decl.semant()
+				End If
 			End If
 		Next
 		Return args
