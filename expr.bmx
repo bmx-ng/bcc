@@ -102,7 +102,7 @@ Type TExpr
 				If TInvokeExpr(args[i]) And Not TInvokeExpr(args[i]).invokedWithBraces Then
 					TInvokeExpr(args[i]).exprType = New TFunctionPtrType
 					Local cp:TDecl = TInvokeExpr(args[i]).decl
-					TInvokeExpr(args[i]).decl = TFuncDecl(TInvokeExpr(args[i]).decl.Copy())
+					TInvokeExpr(args[i]).decl = TFuncDecl(TInvokeExpr(args[i]).decl.Copy(False))
 					TInvokeExpr(args[i]).decl.actual = cp
 					TInvokeExpr(args[i]).decl.attrs :| FUNC_PTR
 					TFunctionPtrType(TInvokeExpr(args[i]).exprType).func = TInvokeExpr(args[i]).decl
@@ -1576,7 +1576,13 @@ Type TSliceExpr Extends TExpr
 		If TArrayType( expr.exprType ) Or TStringType( expr.exprType )
 			If from from=from.SemantAndCast( New TIntType )
 			If term term=term.SemantAndCast( New TIntType )
+
 			exprType=expr.exprType
+			' remove var-ness
+			If exprType._flags & TType.T_VAR Then
+				exprType = exprType.Copy()
+				exprType._flags :~ TType.T_VAR
+			End If
 		Else
 			Err "Slices can only be used on strings or arrays."
 		EndIf
@@ -1903,7 +1909,7 @@ Type TIdentExpr Extends TExpr
 		Local args:TExpr[]
 		If rhs args=[rhs]
 
-		Local fdecl:TFuncDecl=scope.FindFuncDecl( ident,args, , isArg )
+		Local fdecl:TFuncDecl=scope.FindFuncDecl( ident,args, , isArg, True )
 
 		If fdecl
 			If _env.ModuleScope().IsStrict() And Not fdecl.IsProperty() And Not isArg And Not fdecl.maybeFunctionPtr Err "Identifier '"+ident+"' cannot be used in this way."

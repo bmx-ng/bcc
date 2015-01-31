@@ -76,7 +76,7 @@ Type TDecl
 		actual=Self
 	End Method
 	
-	Method OnCopy:TDecl() Abstract
+	Method OnCopy:TDecl(deep:Int = True) Abstract
 	
 	Method ToString$()
 		If TClassDecl( scope ) Return scope.ToString()+"."+ident
@@ -140,8 +140,8 @@ Type TDecl
 		EndIf
 	End Method
 
-	Method Copy:TDecl()
-		Local t:TDecl=OnCopy()
+	Method Copy:TDecl(deep:Int = True)
+		Local t:TDecl=OnCopy(deep)
 		t.munged=munged
 		t.errInfo=errInfo
 		Return t
@@ -382,7 +382,7 @@ Type TConstDecl Extends TValDecl
 		Return inst
 	End Method
 
-	Method OnCopy:TDecl()
+	Method OnCopy:TDecl(deep:Int = True)
 		Return New TConstDecl.Create( ident,ty,CopyInit(), attrs )
 	End Method
 	
@@ -418,7 +418,7 @@ Type TLocalDecl Extends TVarDecl
 		Return Self
 	End Method
 	
-	Method OnCopy:TDecl()
+	Method OnCopy:TDecl(deep:Int = True)
 		Return New TLocalDecl.Create( ident,ty,CopyInit(),attrs, generated )
 	End Method
 	
@@ -449,7 +449,7 @@ Type TArgDecl Extends TLocalDecl
 		Return inst
 	End Method
 	
-	Method OnCopy:TDecl()
+	Method OnCopy:TDecl(deep:Int = True)
 		Local d:TArgDecl = New TArgDecl.Create( ident,ty,CopyInit(),attrs,generated )
 		d.ty = d.declTy
 		d.init = d.declInit
@@ -476,7 +476,7 @@ Type TGlobalDecl Extends TVarDecl
 		Return Self
 	End Method
 
-	Method OnCopy:TDecl()
+	Method OnCopy:TDecl(deep:Int = True)
 		Return New TGlobalDecl.Create( ident,ty,CopyInit(),attrs )
 	End Method
 	
@@ -509,7 +509,7 @@ Type TFieldDecl Extends TVarDecl
 		Return Self
 	End Method
 
-	Method OnCopy:TDecl()
+	Method OnCopy:TDecl(deep:Int = True)
 		Return New TFieldDecl.Create( ident,ty,CopyInit(),attrs )
 	End Method
 	
@@ -538,7 +538,7 @@ Type TAliasDecl Extends TDecl
 		Return Self
 	End Method
 	
-	Method OnCopy:TDecl()
+	Method OnCopy:TDecl(deep:Int = True)
 		Return New TAliasDecl.Create( ident,decl,attrs )
 	End Method
 	
@@ -558,7 +558,7 @@ Type TScopeDecl Extends TDecl
 
 'Public
 
-	Method OnCopy:TDecl()
+	Method OnCopy:TDecl(deep:Int = True)
 		InternalErr
 	End Method
 
@@ -793,9 +793,9 @@ End Rem
 		Return decl
 	End Method
 	
-	Method FindFuncDecl:TFuncDecl( ident$,argExprs:TExpr[] = Null,explicit:Int=False, isArg:Int = False )
+	Method FindFuncDecl:TFuncDecl( ident$,argExprs:TExpr[] = Null,explicit:Int=False, isArg:Int = False, isIdentExpr:Int = False )
 'DebugLog "FindFuncDecl : " + ident
-'If ident = "lua_pushcclosure" Then DebugStop
+'If ident = "FixPath" Then DebugStop
 		'Local funcs:TFuncDeclList=TFuncDeclList( FindDecl( ident ) )
 		Local f:TDecl = TDecl(findDecl(ident))
 		If Not f Then Return Null
@@ -875,14 +875,17 @@ End Rem
 
 				Else If Not argDecls[i].init
 
-					' if this argument is missing and there isn't a default...
-					Err "Missing function parameter '" + argDecls[i].ident + "'"
-
-				Else
-					If func.attrs & FUNC_PTR Then
+					If (func.attrs & FUNC_PTR) Or isIdentExpr Then
 						exact=False
 						Exit
 					End If
+
+					' if this argument is missing and there isn't a default...
+					Err "Missing function parameter '" + argDecls[i].ident + "'"
+
+				Else ' for case of argdecls having default args
+					exact=False
+					If Not explicit Exit
 				EndIf
 			
 				possible=False
@@ -979,11 +982,13 @@ Type TBlockDecl Extends TScopeDecl
 		stmts.AddLast stmt
 	End Method
 	
-	Method OnCopy:TDecl()
+	Method OnCopy:TDecl(deep:Int = True)
 		Local t:TBlockDecl=New TBlockDecl
-		For Local stmt:TStmt=EachIn stmts
-			t.AddStmt stmt.Copy( t )
-		Next
+		If deep Then
+			For Local stmt:TStmt=EachIn stmts
+				t.AddStmt stmt.Copy( t )
+			Next
+		End If
 		t.extra = extra
 		t.generated = generated
 		Return t
@@ -1041,15 +1046,17 @@ Type TFuncDecl Extends TBlockDecl
 		Return Self
 	End Method
 	
-	Method OnCopy:TDecl()
+	Method OnCopy:TDecl(deep:Int = True)
 		Local args:TArgDecl[]=argDecls[..]
 		For Local i:Int=0 Until args.Length
 			args[i]=TArgDecl( args[i].Copy() )
 		Next
 		Local t:TFuncDecl=New TFuncDecl.CreateF( ident,retType,args,attrs )
-		For Local stmt:TStmt=EachIn stmts
-			t.AddStmt stmt.Copy( t )
-		Next
+		If deep Then
+			For Local stmt:TStmt=EachIn stmts
+				t.AddStmt stmt.Copy( t )
+			Next
+		End If
 		t.retType = retType
 		t.scope = scope
 		t.overrides = overrides
@@ -1294,7 +1301,7 @@ Type TClassDecl Extends TScopeDecl
 		Return Self
 	End Method
 	
-	Method OnCopy:TDecl()
+	Method OnCopy:TDecl(deep:Int = True)
 		InternalErr
 	End Method
 	
@@ -1457,7 +1464,7 @@ End Rem
 		Return Super.GetDecl( ident )
 	End Method
 	
-	Method FindFuncDecl:TFuncDecl( ident$,args:TExpr[] = Null ,explicit:Int=False, isArg:Int = False )
+	Method FindFuncDecl:TFuncDecl( ident$,args:TExpr[] = Null ,explicit:Int=False, isArg:Int = False, isIdentExpr:Int = False )
 	
 		If args = Null Then
 			args = New TExpr[0]
@@ -1863,7 +1870,7 @@ Type TLoopLabelDecl Extends TDecl
 		Return Self
 	End Method
 	
-	Method OnCopy:TDecl()
+	Method OnCopy:TDecl(deep:Int = True)
 		Return New TLoopLabelDecl.Create( ident,attrs )
 	End Method
 	
@@ -1882,7 +1889,7 @@ Type TDataLabelDecl Extends TDecl
 		Return Self
 	End Method
 	
-	Method OnCopy:TDecl()
+	Method OnCopy:TDecl(deep:Int = True)
 		Return New TDataLabelDecl.Create( ident,attrs )
 	End Method
 	
@@ -1905,7 +1912,7 @@ Type TDefDataDecl Extends TDecl
 		Return Self
 	End Method
 	
-	Method OnCopy:TDecl()
+	Method OnCopy:TDecl(deep:Int = True)
 		Return New TDefDataDecl.Create(TExpr.CopyArgs(data),TDataLabelDecl(label.Copy()),attrs)
 	End Method
 

@@ -323,8 +323,11 @@ Type TCTranslator Extends TTranslator
 							t:+ TInvokeExpr(args[i]).Trans()
 						Else
 							' need to test scopes to see if we need to use the current instance's function or not
-							Local fdecl:TFuncDecl = TInvokeExpr(args[i]).decl
-							mungdecl fdecl
+							' use the "actual", not the copy we made for the function pointer.
+							Local fdecl:TFuncDecl = TFuncDecl(TInvokeExpr(args[i]).decl.actual)
+							If Not fdecl.munged Then
+								MungDecl fdecl
+							End If
 
 							If TClassDecl(fdecl.scope) Then
 								' current scope is related to function scope?
@@ -349,7 +352,11 @@ Type TCTranslator Extends TTranslator
 					End If
 					' some cases where we are passing a function pointer via a void* parameter.
 					If TCastExpr(args[i]) And TInvokeExpr(TCastExpr(args[i]).expr) And Not TInvokeExpr(TCastExpr(args[i]).expr).invokedWithBraces Then
-						t:+ TInvokeExpr(TCastExpr(args[i]).expr).decl.munged
+						If Not TInvokeExpr(TCastExpr(args[i]).expr).decl.munged Then
+							t:+ TInvokeExpr(TCastExpr(args[i]).expr).decl.actual.munged
+						Else
+							t:+ TInvokeExpr(TCastExpr(args[i]).expr).decl.munged
+						End If
 						Continue
 					End If
 
