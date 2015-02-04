@@ -377,7 +377,21 @@ Type TCTranslator Extends TTranslator
 				If decl.argDecls[i].castTo Then
 					t:+ Bra(decl.argDecls[i].castTo) + args[i].Trans()
 				Else
-					t:+TransTemplateCast( ty,args[i].exprType,args[i].Trans() )
+
+					Local tc:String = TransTemplateCast( ty,args[i].exprType,args[i].Trans() )
+				
+					' *sigh*
+					' if var is going to var, remove any leading dereference character.
+					' rather hacky. Would be better to cast variable to varptr during semanting (well done if you can work out where!)
+					If args[i].exprType.EqualsType( ty.ActualType() ) And (ty._flags & TType.T_VAR) And (args[i].exprType._flags & TType.T_VAR) Then
+						If tc.startswith("*") Then
+							tc = tc[1..]
+						End If
+					End If
+
+					t:+ tc
+				
+					't:+TransTemplateCast( ty,args[i].exprType,args[i].Trans() )
 				End If
 			Else
 				decl.argDecls[i].Semant()
@@ -630,11 +644,11 @@ t:+"NULLNULLNULL"
 		' *sigh*
 		' if var is going to var, remove any leading dereference character.
 		' rather hacky. Would be better to cast variable to varptr during semanting (well done if you can work out where!)
-		If src.EqualsType( ty.ActualType() ) And (ty._flags & TType.T_VAR) And (src._flags & TType.T_VAR) Then
-			If expr.startswith("*") Then
-				expr = expr[1..]
-			End If
-		End If
+		'If src.EqualsType( ty.ActualType() ) And (ty._flags & TType.T_VAR) And (src._flags & TType.T_VAR) Then
+		'	If expr.startswith("*") Then
+		'		expr = expr[1..]
+		'	End If
+		'End If
 
 		If ty=src Return expr
 
