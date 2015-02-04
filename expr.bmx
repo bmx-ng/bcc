@@ -137,6 +137,10 @@ Type TExpr
 				If (TConstExpr(args[i]) Or TBinaryExpr(args[i])) And (funcDecl.argDecls[i].ty._flags & TType.T_VAR) Then
 					Err "Expression for 'Var' parameter must be a variable"
 				End If
+				
+				If (funcDecl.argDecls[i].ty._flags & TType.T_VAR) And Not (funcDecl.argDecls[i].ty.EqualsType(args[i].exprType)) Then
+					err "Variable for 'Var' parameter is not of matching type"
+				End If
 
 				args[i]=args[i].Cast( funcDecl.argDecls[i].ty )
 			Else If funcDecl.argDecls[i].init

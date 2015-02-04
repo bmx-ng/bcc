@@ -310,11 +310,11 @@ Type TCTranslator Extends TTranslator
 						t:+ "&"
 					End If
 				Else If TArrayType(ty) And (ty._flags & TType.T_VAR) Then
-					If TVarExpr(args[i]) And TArrayType(TVarExpr(args[i]).exprType) Then
+					If TVarExpr(args[i]) And TArrayType(TVarExpr(args[i]).exprType) And Not (args[i].exprType._flags & TType.T_VAR) Then
 						t:+ "&"
 					End If
 				Else If TObjectType(ty) And (ty._flags & TType.T_VAR) Then
-					If TVarExpr(args[i]) And TObjectType(TVarExpr(args[i]).exprType) Then
+					If TVarExpr(args[i]) And TObjectType(TVarExpr(args[i]).exprType) And Not (args[i].exprType._flags & TType.T_VAR) Then
 						t:+ "&"
 					End If
 				Else If TFunctionPtrType(ty) Or IsPointerType(ty, TType.T_BYTE) Then
@@ -626,6 +626,15 @@ t:+"NULLNULLNULL"
 	End Method
 
 	Method TransTemplateCast$( ty:TType,src:TType,expr$ )
+
+		' *sigh*
+		' if var is going to var, remove any leading dereference character.
+		' rather hacky. Would be better to cast variable to varptr during semanting (well done if you can work out where!)
+		If src.EqualsType( ty.ActualType() ) And (ty._flags & TType.T_VAR) And (src._flags & TType.T_VAR) Then
+			If expr.startswith("*") Then
+				expr = expr[1..]
+			End If
+		End If
 
 		If ty=src Return expr
 
