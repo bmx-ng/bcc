@@ -86,6 +86,9 @@ Global opt_ismain:Int = False
 ' issuperstrict
 '
 Global opt_issuperstrict:Int = False
+' gdbdebug
+'    output debug useful for gdb, #line <bmx line> <bmx file> 
+Global opt_gdbdebug:Int = False
 
 Global opt_filepath:String
 
@@ -172,6 +175,8 @@ Function ParseArgs:String[](args:String[])
 					CmdError "Command line error - Missing arg for '-f'"
 				End If
 				opt_framework = args[count]
+			Case "d"
+				opt_gdbdebug=True
 		End Select
 	
 		count:+ 1

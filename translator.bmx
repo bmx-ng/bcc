@@ -1021,7 +1021,8 @@ End Rem
 				End If
 			End If
 
-
+			EmitGDBDebug(stmt)
+			
 			Local t$=stmt.Trans()
 			If t Emit t+";"
 
@@ -1460,6 +1461,22 @@ End Rem
 		dbg :+ infoArray[2] + "};"
 		Emit dbg
 		Emit "bbOnDebugEnterStm(&__stmt_" + count + ");" 
+	End Method
+	
+	Method EmitGDBDebug(obj:Object)
+		If opt_gdbdebug Then
+			If TStmt(obj) Then
+				Local stmt:TStmt = TStmt(obj)
+				Local infoArray:String[] = stmt.errInfo[1..stmt.errInfo.length-1].Split(";")
+				If Not stmt.generated Then
+					Emit "#line " + infoArray[1] + " " + Enquote(infoArray[0])
+				End If
+			Else If TDecl(obj) Then
+				Local decl:TDecl = TDecl(obj)
+				Local infoArray:String[] = decl.errInfo[1..decl.errInfo.length-1].Split(";")
+				Emit "#line " + infoArray[1] + " " + Enquote(infoArray[0])
+			End If
+		End If
 	End Method
 	
 End Type

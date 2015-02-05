@@ -2660,6 +2660,7 @@ End Rem
 			Local fdecl:TFuncDecl=TFuncDecl( decl )
 			If fdecl
 				If reserved.Find("," + fdecl.ident.ToLower() + ",") = -1 Then
+					EmitGDBDebug(fdecl)
 					EmitFuncDecl fdecl, , True
 					Continue
 				End If
@@ -3448,6 +3449,7 @@ End If
 					Continue
 				End If
 
+				EmitGDBDebug(fdecl)
 				EmitFuncDecl( fdecl, True)
 				Continue
 			EndIf
@@ -3635,12 +3637,14 @@ End If
 					Continue
 				End If
 
+				EmitGDBDebug(fdecl)
 				EmitFuncDecl fdecl
 				Continue
 			EndIf
 
 			Local cdecl:TClassDecl=TClassDecl( decl )
 			If cdecl
+				EmitGDBDebug(cdecl)
 				EmitClassDecl cdecl
 				Continue
 			EndIf
