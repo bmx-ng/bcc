@@ -333,7 +333,7 @@ Type TCTranslator Extends TTranslator
 							If TClassDecl(fdecl.scope) Then
 								' current scope is related to function scope?
 								If TClassDecl(_env.scope) And TFuncDecl(_env) And TFuncDecl(_env).IsMethod() Then
-									If TClassDecl(decl.scope).ExtendsClass(TClassDecl(fdecl.scope)) Then
+									If TClassDecl(_env.scope).ExtendsClass(TClassDecl(fdecl.scope)) Then
 										Local scope:TScopeDecl = _env.scope
 										Local obj:String = Bra("struct " + scope.munged + "_obj*")
 										Local class:String = "(" + obj + "o)->clas"
