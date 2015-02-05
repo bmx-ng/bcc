@@ -230,6 +230,7 @@ Type TCTranslator Extends TTranslator
 
 	Method TransValue$( ty:TType,value$ )
 		If value
+			If IsPointerType(ty, 0, TType.T_POINTER) Return value
 			If TBoolType( ty ) Return "1"
 			If TShortType( ty ) Return value
 			If TIntType( ty ) Return value

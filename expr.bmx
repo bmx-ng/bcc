@@ -299,6 +299,17 @@ Type TConstExpr Extends TExpr
 	Field value$
 
 	Method Create:TConstExpr( ty:TType,value$ )
+
+		If TNumericType( ty ) And IsPointerType(ty, 0, TType.T_POINTER) Then
+			Self.ty=ty
+			If value Then
+				Self.value = value
+			Else
+				Self.value="0"
+			End If
+			Return Self
+		End If
+		
 		If TIntType( ty ) Or TShortType( ty ) Or TByteType( ty ) Or TLongType( ty )
 			Local radix:Int
 			If value.StartsWith( "%" )
