@@ -121,13 +121,13 @@ Type TExpr
 		'args=args.Resize( funcDecl.argDecls.Length )
 		' FIXME
 
-		For Local i:Int=0 Until args.Length
+		For Local i:Int=0 Until funcDecl.argDecls.Length
 			' ensure funcdecl args are semanted before trying to use them.
 			If Not funcDecl.argDecls[i].IsSemanted() Then
 				funcDecl.argDecls[i].Semant()
 			End If
 
-			If args[i]
+			If i < args.length And args[i]
 				If TInvokeExpr(args[i]) And Not TInvokeExpr(args[i]).invokedWithBraces Then
 					If Not IsPointerType(funcDecl.argDecls[i].ty, TType.T_BYTE) And Not TFunctionPtrType(funcDecl.argDecls[i].ty) Then
 						Err "Unable to convert from '" + args[i].exprType.ToString() + "()' to '" + funcDecl.argDecls[i].ty.ToString() + "'"
