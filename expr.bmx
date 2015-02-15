@@ -144,6 +144,8 @@ Type TExpr
 
 				args[i]=args[i].Cast( funcDecl.argDecls[i].ty )
 			Else If funcDecl.argDecls[i].init
+				' extend args to add default init entry
+				args = args[..i + 1]
 				args[i]=funcDecl.argDecls[i].init
 			Else
 				Err "Missing function argument '"+funcDecl.argDecls[i].ident+"'."
@@ -482,8 +484,9 @@ Type TInvokeExpr Extends TExpr
 	Field decl:TFuncDecl
 	Field args:TExpr[]
 	Field invokedWithBraces:Int
+	Field isArg:Int
 
-	Method Create:TInvokeExpr( decl:TFuncDecl,args:TExpr[]=Null,invokedWithBraces:Int=True )
+	Method Create:TInvokeExpr( decl:TFuncDecl,args:TExpr[]=Null,invokedWithBraces:Int=True, isArg:Int=False )
 		Self.decl=decl
 		If args Then
 			Self.args=args
@@ -491,6 +494,7 @@ Type TInvokeExpr Extends TExpr
 			Self.args = New TExpr[0]
 		End If
 		Self.invokedWithBraces = invokedWithBraces
+		Self.isArg = isArg
 		Return Self
 	End Method
 
@@ -519,7 +523,11 @@ Type TInvokeExpr Extends TExpr
 			exprType=decl.retType
 		End If
 
-		args=CastArgs( args,decl )
+		If (isArg And Not invokedWithBraces) And (args = Null Or args.length = 0) Then
+			' nothing to do here, as we are probably a function pointer. i.e. no braces and no 
+		Else
+			args=CastArgs( args,decl )
+		End If
 		Return Self
 	End Method
 
@@ -1936,7 +1944,7 @@ Type TIdentExpr Extends TExpr
 				If scope<>_env Or Not _env.FuncScope() Or _env.FuncScope().IsStatic() Err "Method '"+ident+"' cannot be accessed from here."
 			EndIf
 
-			Return New TInvokeExpr.Create( fdecl,args, False ).Semant()
+			Return New TInvokeExpr.Create( fdecl,args, False, isArg ).Semant()
 		End If
 		
 		' maybe it's a classdecl?
