@@ -485,8 +485,9 @@ Type TInvokeExpr Extends TExpr
 	Field args:TExpr[]
 	Field invokedWithBraces:Int
 	Field isArg:Int
+	Field isRhs:Int
 
-	Method Create:TInvokeExpr( decl:TFuncDecl,args:TExpr[]=Null,invokedWithBraces:Int=True, isArg:Int=False )
+	Method Create:TInvokeExpr( decl:TFuncDecl,args:TExpr[]=Null,invokedWithBraces:Int=True, isArg:Int=False, isRhs:Int = False )
 		Self.decl=decl
 		If args Then
 			Self.args=args
@@ -495,6 +496,7 @@ Type TInvokeExpr Extends TExpr
 		End If
 		Self.invokedWithBraces = invokedWithBraces
 		Self.isArg = isArg
+		Self.isRhs = isRhs
 		Return Self
 	End Method
 
@@ -523,7 +525,7 @@ Type TInvokeExpr Extends TExpr
 			exprType=decl.retType
 		End If
 
-		If (isArg And Not invokedWithBraces) And (args = Null Or args.length = 0) Then
+		If ((isArg Or isRhs) And Not invokedWithBraces) And (args = Null Or args.length = 0) Then
 			' nothing to do here, as we are probably a function pointer. i.e. no braces and no 
 		Else
 			args=CastArgs( args,decl )
@@ -1793,6 +1795,7 @@ Type TIdentExpr Extends TExpr
 	Field scope:TScopeDecl
 	Field static:Int
 	Field isArg:Int
+	Field isRhs:Int
 
 	Method Create:TIdentExpr( ident$,expr:TExpr=Null )
 		Self.ident=ident
@@ -1944,7 +1947,7 @@ Type TIdentExpr Extends TExpr
 				If scope<>_env Or Not _env.FuncScope() Or _env.FuncScope().IsStatic() Err "Method '"+ident+"' cannot be accessed from here."
 			EndIf
 
-			Return New TInvokeExpr.Create( fdecl,args, False, isArg ).Semant()
+			Return New TInvokeExpr.Create( fdecl,args, False, isArg, isRhs ).Semant()
 		End If
 		
 		' maybe it's a classdecl?

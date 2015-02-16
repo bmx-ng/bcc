@@ -97,6 +97,9 @@ Type TAssignStmt Extends TStmt
 	End Method
 	
 	Method OnSemant()
+		If TIdentExpr(rhs) Then
+			TIdentExpr(rhs).isRhs = True
+		End If
 		rhs=rhs.Semant()
 		lhs=lhs.SemantSet( op,rhs )
 		If TInvokeExpr( lhs ) Or TInvokeMemberExpr( lhs )
