@@ -144,8 +144,10 @@ Type TExpr
 
 				args[i]=args[i].Cast( funcDecl.argDecls[i].ty )
 			Else If funcDecl.argDecls[i].init
-				' extend args to add default init entry
-				args = args[..i + 1]
+				If i = args.length Then
+					' extend args to add default init entry
+					args = args[..i + 1]
+				End If
 				args[i]=funcDecl.argDecls[i].init
 			Else
 				Err "Missing function argument '"+funcDecl.argDecls[i].ident+"'."
