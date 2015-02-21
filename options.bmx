@@ -256,5 +256,8 @@ Function CheckConfig()
 	'load default/generic path
 	If osBmxPath = "" Then osBmxPath = config.GetString("BMXPATH")
 
+	'replace windows backslashes with crossplatform slashes
+	osBmxPath = osBmxPath.replace("\", "/")
+
 	If osBmxPath <> "" Then putenv_("BMXPATH="+osBmxPath)
 End Function
