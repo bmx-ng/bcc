@@ -1,6 +1,12 @@
-#copy this file as "bcc.conf" next to your bcc-binary
+# It is generally recommended NOT to have a bcc.conf file in the same folder as
+# your bcc binary.
 #
-#uncomment the following lines and adjust paths as needed
+# However, when debugging bcc, usually your debugger has a different BMXPATH to
+# that of the bcc you are debugging. This can cause problems, like accessing
+# modules from the debugger's BlitzMax rather than those of the bcc you are
+# debugging.
+# You can override the BMXPATH environment variable inherited from your debugger
+# by copying this file as "bcc.conf" next to your bcc-binary and uncomment
+# the following lines, adjusting the path accordingly :
 #
-
 #BMXPATH=YOUR/PATH/TO/BLITZMAX
