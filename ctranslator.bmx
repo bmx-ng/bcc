@@ -1414,6 +1414,9 @@ t:+"NULLNULLNULL"
 			If TFunctionPtrType(TArrayType( expr.expr.exprType ).elemType) Then
 				Return Bra(Bra(TransType(TArrayType( expr.expr.exprType).elemType, "*")) + Bra("BBARRAYDATA(" + Bra(t_expr) + "," + Bra(t_expr) + "->dims)")) + "[" + t_index + "]"
 			Else
+				If opt_debug Then
+					Emit "if (" + t_index + " >= " + Bra(t_expr) + "->scales[0]) brl_blitz_ArrayBoundsError();"
+				End If
 				Return Bra("(" + TransType(expr.exprType, "") + "*)BBARRAYDATA(" + Bra(t_expr) + "," + Bra(t_expr) + "->dims)") + "[" + t_index + "]"
 			End If
 		End If
@@ -3620,7 +3623,7 @@ End If
 						gdecl.inited = True
 					Else
 If Not gdecl.IsExtern() Then
-						Emit TransRefType( gdecl.ty, "WW" )+" "+gdecl.munged+";"
+						Emit TransRefType( gdecl.ty, "WW" )+" "+gdecl.munged+ "=" + TransValue(gdecl.ty, "") + ";"
 End If
 					End If
 				Else

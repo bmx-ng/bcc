@@ -1013,17 +1013,20 @@ End Rem
 					stmtCount :+ 1
 				End If
 			
-				If TReturnStmt(stmt) Then
-					For Local b:TBlockDecl = EachIn localScope
-						Emit "bbOnDebugLeaveScope();"
-					Next
-					'PopLoopLocalStack()
-				End If
 			End If
 
 			EmitGDBDebug(stmt)
 			
 			Local t$=stmt.Trans()
+			
+			If opt_debug And Not block.IsNoDebug() Then
+				If TReturnStmt(stmt) Then
+					For Local b:TBlockDecl = EachIn localScope
+						Emit "bbOnDebugLeaveScope();"
+					Next
+				End If
+			End If
+			
 			If t Emit t+";"
 
 			If DEBUG And debugOut Then

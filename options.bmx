@@ -25,7 +25,7 @@ SuperStrict
 
 Import "base.configmap.bmx"
 
-Const version:String = "0.47"
+Const version:String = "0.48"
 
 Const BUILDTYPE_APP:Int = 0
 Const BUILDTYPE_MODULE:Int = 1
@@ -257,7 +257,7 @@ Function CheckConfig()
 	If osBmxPath = "" Then osBmxPath = config.GetString("BMXPATH")
 
 	'replace windows backslashes with crossplatform slashes
-	osBmxPath = osBmxPath.replace("\", "/")
+	osBmxPath = osBmxPath.Replace("\", "/")
 
 	If osBmxPath <> "" Then putenv_("BMXPATH="+osBmxPath)
 End Function
