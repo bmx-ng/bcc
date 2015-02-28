@@ -295,7 +295,7 @@ Type TBreakStmt Extends TStmt
 		If label Then
 			label = label.Semant()
 		End If
-		If Not loop Then
+		If opt_debug And Not loop Then
 			loop = TLoopStmt(_env.FindLoop())
 			If Not loop Err "Cannot find loop for Exit."
 		End If
@@ -327,7 +327,7 @@ Type TContinueStmt Extends TStmt
 		If label Then
 			label = label.Semant()
 		End If
-		If Not loop Then
+		If opt_debug And Not loop Then
 			loop = TLoopStmt(_env.FindLoop())
 			If Not loop Err "Cannot find loop for Continue."
 		End If

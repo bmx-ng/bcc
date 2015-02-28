@@ -946,8 +946,8 @@ End Rem
 	
 	Method FindLoop:TStmt(ident:String = Null)
 
-		If TBlockDecl(scope) And TBlockDecl(scope).extra Then
-			Local loop:TLoopStmt = TLoopStmt(TBlockDecl(scope).extra)
+		If TBlockDecl(Self) And TBlockDecl(Self).extra Then
+			Local loop:TLoopStmt = TLoopStmt(TBlockDecl(Self).extra)
 			If ident Then
 				If loop.loopLabel And loop.loopLabel.ident = ident Then
 					Return loop
