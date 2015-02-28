@@ -68,7 +68,8 @@ Type TForEachinStmt Extends TLoopStmt
 			Local indexExpr:TExpr=New TIndexExpr.Create( New TVarExpr.Create( exprTmp ),[New TVarExpr.Create( indexTmp )] )
 			Local addExpr:TExpr=New TBinaryMathExpr.Create( "+",New TVarExpr.Create( indexTmp ),New TConstExpr.Create( New TIntType,"1" ) )
 
-
+			Local cont:TContinueStmt
+			
 			If varlocal
 
 				' array of object ?
@@ -95,7 +96,8 @@ Type TForEachinStmt Extends TLoopStmt
 					' then continue
 					Local thenBlock:TBlockDecl=New TBlockDecl.Create( block.scope )
 					Local elseBlock:TBlockDecl=New TBlockDecl.Create( block.scope )
-					thenBlock.AddStmt New TContinueStmt
+					cont = New TContinueStmt
+					thenBlock.AddStmt cont
 
 					block.stmts.AddFirst New TIfStmt.Create( expr,thenBlock,elseBlock )
 					block.stmts.AddFirst New TAssignStmt.Create( "=",New TVarExpr.Create( indexTmp ),addExpr )
@@ -125,7 +127,8 @@ Type TForEachinStmt Extends TLoopStmt
 					' then continue
 					Local thenBlock:TBlockDecl=New TBlockDecl.Create( block.scope )
 					Local elseBlock:TBlockDecl=New TBlockDecl.Create( block.scope )
-					thenBlock.AddStmt New TContinueStmt
+					cont = New TContinueStmt
+					thenBlock.AddStmt cont
 
 					block.stmts.AddFirst New TIfStmt.Create( expr,thenBlock,elseBlock )
 					'block.stmts.AddFirst New TDeclStmt.Create( varTmp )
@@ -145,6 +148,10 @@ Type TForEachinStmt Extends TLoopStmt
 			block.AddStmt New TDeclStmt.Create( exprTmp, True )
 			block.AddStmt New TDeclStmt.Create( indexTmp, True )
 			block.AddStmt whileStmt
+			
+			If cont Then
+				cont.loop = whileStmt
+			End If
 
 		Else If TObjectType( expr.exprType )
 			Local tmpDecl:TDeclStmt
@@ -162,6 +169,8 @@ Type TForEachinStmt Extends TLoopStmt
 			Local hasNextExpr:TExpr=New TFuncCallExpr.Create( New TIdentExpr.Create( "HasNext",New TVarExpr.Create( enumerTmp ) ) )
 			Local nextObjExpr:TExpr=New TFuncCallExpr.Create( New TIdentExpr.Create( "NextObject",New TVarExpr.Create( enumerTmp ) ) )
 
+			Local cont:TContinueStmt
+			
 			If varlocal
 '				Local varTmp:TLocalDecl=New TLocalDecl.Create( varid,varty,nextObjExpr )
 '				block.stmts.AddFirst New TDeclStmt.Create( varTmp )
@@ -186,7 +195,8 @@ Type TForEachinStmt Extends TLoopStmt
 				' then continue
 				Local thenBlock:TBlockDecl=New TBlockDecl.Create( block.scope, True )
 				Local elseBlock:TBlockDecl=New TBlockDecl.Create( block.scope, True )
-				thenBlock.AddStmt New TContinueStmt.Create(Null, True)
+				cont = New TContinueStmt.Create(Null, True)
+				thenBlock.AddStmt cont
 
 				block.stmts.AddFirst New TIfStmt.Create( expr,thenBlock,elseBlock, True )
 				block.stmts.AddFirst New TDeclStmt.Create( varTmp, True )
@@ -208,7 +218,8 @@ Type TForEachinStmt Extends TLoopStmt
 				' then continue
 				Local thenBlock:TBlockDecl=New TBlockDecl.Create( block.scope )
 				Local elseBlock:TBlockDecl=New TBlockDecl.Create( block.scope )
-				thenBlock.AddStmt New TContinueStmt
+				cont = New TContinueStmt
+				thenBlock.AddStmt cont
 
 				block.stmts.AddFirst New TIfStmt.Create( expr,thenBlock,elseBlock )
 				'block.stmts.AddFirst New TDeclStmt.Create( varTmp )
@@ -224,6 +235,10 @@ Type TForEachinStmt Extends TLoopStmt
 			End If
 			block.AddStmt New TDeclStmt.Create( enumerTmp, True )
 			block.AddStmt whileStmt
+			
+			If cont Then
+				cont.loop = whileStmt
+			End If
 
 		Else
 			InternalErr
