@@ -944,11 +944,15 @@ End Rem
 		Return match
 	End Method
 	
-	Method FindLoop:TStmt(ident:String)
+	Method FindLoop:TStmt(ident:String = Null)
 
 		If TBlockDecl(scope) And TBlockDecl(scope).extra Then
 			Local loop:TLoopStmt = TLoopStmt(TBlockDecl(scope).extra)
-			If loop.loopLabel And loop.loopLabel.ident = ident Then
+			If ident Then
+				If loop.loopLabel And loop.loopLabel.ident = ident Then
+					Return loop
+				End If
+			Else
 				Return loop
 			End If
 		End If

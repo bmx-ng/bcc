@@ -789,6 +789,14 @@ End Rem
 				End If
 				PopLoopLocalStack()
 			Else
+
+				If opt_debug And stmt.loop And Not stmt.loop.block.IsNoDebug() Then
+					count = LoopLocalScopeDepth(Null)
+				End If
+				For Local i:Int = 0 Until count
+					Emit "bbOnDebugLeaveScope();"
+				Next
+
 				' No Try statements in the stack here..
 				If stmt.label And TLoopLabelExpr(stmt.label) Then
 					Emit "goto " + TransLoopLabelCont(TLoopLabelExpr(stmt.label).loop.loopLabel.ident, False)
@@ -845,6 +853,14 @@ End Rem
 				End If
 				PopLoopLocalStack()
 			Else
+
+				If opt_debug And stmt.loop And Not stmt.loop.block.IsNoDebug() Then
+					count = LoopLocalScopeDepth(Null)
+				End If
+				For Local i:Int = 0 Until count
+					Emit "bbOnDebugLeaveScope();"
+				Next
+				
 				' No Try statements in the stack here..
 				If stmt.label And TLoopLabelExpr(stmt.label) Then
 					Emit "goto " + TransLoopLabelExit(TLoopLabelExpr(stmt.label).loop.loopLabel.ident, False)

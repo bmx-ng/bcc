@@ -282,6 +282,7 @@ End Type
 
 Type TBreakStmt Extends TStmt
 
+	Field loop:TLoopStmt
 	Field label:TExpr
 
 	Method Create:TBreakStmt( label:TExpr )
@@ -293,6 +294,10 @@ Type TBreakStmt Extends TStmt
 		If Not _loopnest Err "Exit statement must appear inside a loop."
 		If label Then
 			label = label.Semant()
+		End If
+		If Not loop Then
+			loop = TLoopStmt(_env.FindLoop())
+			If Not loop Err "Cannot find loop for Exit."
 		End If
 	End Method
 
@@ -308,6 +313,7 @@ End Type
 
 Type TContinueStmt Extends TStmt
 
+	Field loop:TLoopStmt
 	Field label:TExpr
 	
 	Method Create:TContinueStmt( label:TExpr, generated:Int = False )
@@ -320,6 +326,10 @@ Type TContinueStmt Extends TStmt
 		If Not _loopnest Err "Continue statement must appear inside a loop."
 		If label Then
 			label = label.Semant()
+		End If
+		If Not loop Then
+			loop = TLoopStmt(_env.FindLoop())
+			If Not loop Err "Cannot find loop for Continue."
 		End If
 	End Method
 
@@ -379,9 +389,9 @@ Type TWhileStmt Extends TLoopStmt
 		Self.expr=expr
 		Self.block=block
 		Self.loopLabel = loopLabel
-		If loopLabel Then
+'		If loopLabel Then
 			block.extra = Self
-		End If
+'		End If
 		Self.generated = generated
 		Return Self
 	End Method
@@ -409,9 +419,9 @@ Type TRepeatStmt Extends TLoopStmt
 		Self.block=block
 		Self.expr=expr
 		Self.loopLabel=loopLabel
-		If loopLabel Then
+'		If loopLabel Then
 			block.extra = Self
-		End If
+'		End If
 		Return Self
 	End Method
 
@@ -442,9 +452,9 @@ Type TForStmt Extends TLoopStmt
 		Self.incr=incr
 		Self.block=block
 		Self.loopLabel=loopLabel
-		If loopLabel Then
+'		If loopLabel Then
 			block.extra = Self
-		End If
+'		End If
 		Return Self
 	End Method
 
