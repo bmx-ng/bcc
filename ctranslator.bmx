@@ -2426,6 +2426,22 @@ End Rem
 			Return
 		EndIf
 	End Method
+	
+	Method EmitClassConstsDebugScope(classDecl:TClassDecl)
+	
+		For Local decl:TConstDecl = EachIn classDecl.Decls()
+			Emit "{"
+			Emit "BBDEBUGDECL_CONST,"
+			Emit Enquote(decl.ident) + ","
+			Emit Enquote(TransDebugScopeType(decl.ty) + TransDebugMetaData(decl.metadata)) + ","
+			
+			_appInstance.mapStringConsts(decl.value)
+			
+			Emit ".const_value=&" + TStringConst(_appInstance.stringConsts.ValueForKey(decl.value)).id
+			Emit "},"
+		Next
+
+	End Method
 
 	Method EmitClassFieldsDebugScope(classDecl:TClassDecl)
 
@@ -2455,7 +2471,7 @@ End Rem
 			
 			'offset:+ decl.ty.GetSize()
 		Next
-
+		
 		'Return offset
 	End Method
 	
@@ -2726,6 +2742,9 @@ End Rem
 		Emit EnQuote(classDecl.ident + TransDebugMetaData(classDecl.metadata)) + ","
 
 		Emit "{"
+		
+		' debug const decls
+		EmitClassConstsDebugScope(classDecl)
 		
 		' debug field decls
 		EmitClassFieldsDebugScope(classDecl)
