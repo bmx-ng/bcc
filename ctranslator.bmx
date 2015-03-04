@@ -1604,6 +1604,8 @@ t:+"NULLNULLNULL"
 				Err "Not an object"
 			End If
 			
+			EmitLocalDeclarations(c.block, c.init)
+			
 			EmitBlock( c.block )
 			s = "} else "
 		Next
@@ -2182,10 +2184,10 @@ End Rem
 		'PopMungScope
 	End Method
 	
-	Method EmitLocalDeclarations(decl:TScopeDecl, v:TValDecl = Null)
+	Method EmitLocalDeclarations(decl:TScopeDecl, ignoreVar:TValDecl = Null)
 		If opt_debug Then
 			For Local ldecl:TLocalDecl = EachIn decl.Decls()
-				If ldecl <> v Then
+				If ldecl <> ignoreVar Then
 					If Not TArgDecl(ldecl) And Not ldecl.generated Then
 						MungDecl ldecl
 						Emit TransLocalDeclNoInit(ldecl) + ";"
