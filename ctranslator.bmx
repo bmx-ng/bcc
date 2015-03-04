@@ -2606,6 +2606,13 @@ End Rem
 		Next
 	End Method
 
+	Method CountClassConstsDebugScope(classDecl:TClassDecl, count:Int Var)
+
+		For Local decl:TConstDecl = EachIn classDecl.Decls()
+			count :+ 1
+		Next
+	End Method
+
 	Method CountClassFieldsDebugScope(classDecl:TClassDecl, count:Int Var)
 
 		'If classDecl.superClass Then
@@ -2619,7 +2626,10 @@ End Rem
 	
 	Method DebugScopeDeclCount:Int(classDecl:TClassDecl)
 		Local count:Int = 2 ' "New" counts as first one
-		
+
+		' consts		
+		CountClassConstsDebugScope(classDecl, count)
+
 		' fields
 		CountClassFieldsDebugScope(classDecl, count)
 		
