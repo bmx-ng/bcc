@@ -721,8 +721,6 @@ End Rem
 
 		FreeVarsIfRequired()
 		
-		EmitTryStack()
-
 		Return t
 	End Method
 	
@@ -1041,6 +1039,10 @@ End Rem
 						Emit "bbOnDebugLeaveScope();"
 					Next
 				End If
+			End If
+
+			If TReturnStmt(stmt) Then
+				EmitTryStack()
 			End If
 			
 			If t Emit t+";"
