@@ -2184,18 +2184,37 @@ End Rem
 
 				TFunctionPtrType(ty).func.ident = ""
 
-				While IsArrayDef()
+				' an initialised array of function pointers?
+				If CParse( "[" )
+					Local ln:TExpr[]
+					Repeat
+						If CParse(",") Then
+							ln = ln + [New TNullExpr]
+							Continue
+						End If
+						If CParse("]") Exit
+						ln = ln + [ParseExpr()]
+						If CParse("]") Exit
+						Parse(",")
+					Forever
+					'Parse "]"
 					ty = ParseArrayType(ty)
-				Wend
-				'While CParse( "[]" )
-				'	ty=New TArrayType.Create(ty)
-				'Wend
-
-				' check for function pointer init
-				If CParse("=") Then
-					init=ParseExpr()
+					'While CParse( "[]" )
+					'	ty=New TArrayType.Create(ty)
+					'Wend
+					init=New TNewArrayExpr.Create( ty,ln)
+					ty=New TArrayType.Create( ty, ln.length )
 				Else
-					init=New TConstExpr.Create( ty,"" )
+					While IsArrayDef()
+						ty = ParseArrayType(ty)
+					Wend
+
+					' check for function pointer init
+					If CParse("=") Then
+						init=ParseExpr()
+					Else
+						init=New TConstExpr.Create( ty,"" )
+					End If
 				End If
 
 			Else If toke<>"const"
@@ -3140,7 +3159,7 @@ End Rem
 				'instead of merging the data of multiple parsers, the
 				'same parser is used for all included files - but each
 				'of them uses an individual toker
-				
+
 				If FileType( includeFile )<>FILETYPE_FILE
 					DoErr "File '"+ includeFile +"' not found."
 				EndIf
@@ -3150,55 +3169,24 @@ End Rem
 				Try
 					Local includeSource:String = PreProcess(includeFile)
 					Local includeToker:TToker = New TToker.Create(includeFile, includeSource)
-	
+
 					'backup old vars
 					Local oldToker:TToker = Self._toker
-	
+
 					'assign temporary vars
 					Self._toker = includeToker
-	
+
 					'parse the include file
 					parseCurrentFile(includeFile, attrs)
-	
+
 					'restore backup vars
 					Self._toker = oldToker
 				Catch e:TStreamException
-					DoErr "include read error - include '" + includeFile + "' raised: '" + e.ToString() + "'"
+					DoErr "Failed to include file '" + includeFile + "' : '" + e.ToString() + "'"
 				End Try
 
 				'move on to next toke (after include "xyz.bmx")
 				NextToke
-
-Rem
-	old idea
-				'each parser holds multiple "_blocks" (TBlockDecl) in a
-				'list named "_blockStack" (TList)
-				'so the idea is to parse the included file and append
-				'their blocklist to the calling one
-				'instead of "LoadText" "PreProcess" is used to include
-				'handling of conditionals and comments
-				Local includeSource:String = PreProcess(includeFile)
-				Local includeToker:TToker = New TToker.Create(includeFile, includeSource)
-
-				Local includeParser:TParser = New TParser.Create(includeToker, _app)
-				includeParser.parseMain()
-
-				If includeParser._blockStack
-					For local blockDecl:TBlockDecl = EachIn includeParser._blockStack
-						_blockStack.AddLast(blockDecl)
-					Next
-				Endif
-
-				If includeParser._module and includeParser._module._decls
-					For local decl:TDecl = EachIn includeParser._module._decls
-						'skip "localMain"-function
-						if decl.ident.ToLower() = "LocalMain".toLower() then continue
-
-						print "appending decl: "+decl.ToString()
-						_module._decls.AddLast(decl)
-					Next
-				Endif
-endrem
 
 			Default
 				ParseStmt
