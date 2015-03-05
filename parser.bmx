@@ -3143,20 +3143,24 @@ End Rem
 
 				'instead of "LoadText" "PreProcess" is used to include
 				'handling of conditionals and comments
-				Local includeSource:String = PreProcess(includeFile)
-				Local includeToker:TToker = New TToker.Create(includeFile, includeSource)
-
-				'backup old vars
-				Local oldToker:TToker = Self._toker
-
-				'assign temporary vars
-				Self._toker = includeToker
-
-				'parse the include file
-				parseCurrentFile(includeFile, attrs)
-
-				'restore backup vars
-				Self._toker = oldToker
+				Try
+					Local includeSource:String = PreProcess(includeFile)
+					Local includeToker:TToker = New TToker.Create(includeFile, includeSource)
+	
+					'backup old vars
+					Local oldToker:TToker = Self._toker
+	
+					'assign temporary vars
+					Self._toker = includeToker
+	
+					'parse the include file
+					parseCurrentFile(includeFile, attrs)
+	
+					'restore backup vars
+					Self._toker = oldToker
+				Catch e:TStreamException
+					DoErr "include read error - include '" + includeFile + "' raised: '" + e.ToString() + "'"
+				End Try
 
 				'move on to next toke (after include "xyz.bmx")
 				NextToke
