@@ -35,6 +35,7 @@ Import "base.stringhelper.bmx"
 Const DEBUG:Int = False
 Const ABORT_ON_NULL:Int = True
 Const PROFILER:Int = False
+Const DEBUGSTOP_ON_ERROR:Int = False
 
 Global ENV_LANG$
 
@@ -56,7 +57,9 @@ Function PopErr()
 End Function
 
 Function Err( err$ )
-DebugStop ' useful for debugging!
+	If DEBUGSTOP_ON_ERROR Then
+		DebugStop ' useful for debugging!
+	End If
 	Throw "Compile Error: "+err + "~n" + _errInfo + "~n"
 End Function
 
@@ -65,7 +68,9 @@ Function FormatError:String(path:String, line:Int, char:Int)
 End Function
 
 Function InternalErr()
-DebugStop ' useful for debugging!
+	If DEBUGSTOP_ON_ERROR Then
+		DebugStop ' useful for debugging!
+	End If
 	Throw "Internal Error.~n" + _errInfo + "~n"
 End Function
 
