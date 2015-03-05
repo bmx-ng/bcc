@@ -3140,6 +3140,10 @@ End Rem
 				'instead of merging the data of multiple parsers, the
 				'same parser is used for all included files - but each
 				'of them uses an individual toker
+				
+				If FileType( includeFile )<>FILETYPE_FILE
+					DoErr "File '"+ includeFile +"' not found."
+				EndIf
 
 				'instead of "LoadText" "PreProcess" is used to include
 				'handling of conditionals and comments
