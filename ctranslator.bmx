@@ -132,6 +132,17 @@ Type TCTranslator Extends TTranslator
 		If TObjectType( ty ) Then
 			Return ":" + TObjectType( ty ).classDecl.ident
 		End If
+		If TFunctionPtrType( ty ) Then
+			Local func:TFuncDecl = TFunctionPtrType( ty ).func
+			Local s:String = "("
+			For Local i:Int = 0 Until func.argDecls.length
+				If i Then
+					s :+ ","
+				End If
+				s :+ TransDebugScopeType(func.argDecls[i].ty)
+			Next
+			Return s + ")" + TransDebugScopeType(func.retType)
+		End If
 
 	End Method
 
