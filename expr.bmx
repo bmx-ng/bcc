@@ -355,7 +355,7 @@ Type TConstExpr Extends TExpr
 			EndIf
 
 		Else If TDecimalType( ty )
-			If Not (value.Contains("e") Or value.Contains("E") Or value.Contains("."))
+			If Not (value.Contains("e") Or value.Contains("E") Or value.Contains(".") Or value.Contains("inf") Or value.Contains("nan"))
 				value:+".0"
 			EndIf
 		EndIf

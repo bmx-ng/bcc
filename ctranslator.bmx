@@ -247,13 +247,13 @@ Type TCTranslator Extends TTranslator
 			If TIntType( ty ) Return value
 			If TLongType( ty ) Return value+"LL"
 			If TFloatType( ty ) Then
-				If value = "nan.0" Or value = "1.#IND0000" Then
+				If value = "nan" Or value = "1.#IND0000" Then
 					Return "bbPOSNANf"
-				Else If value="-nan.0" Or value = "-1.#IND0000" Then
+				Else If value="-nan" Or value = "-1.#IND0000" Then
 					Return "bbNEGNANf"
-				Else If value = "inf.0" Or value = "1.#INF0000" Then
+				Else If value = "inf" Or value = "1.#INF0000" Then
 					Return "bbPOSINFf"
-				Else If value = "-inf.0" Or value = "-1.#INF0000" Then
+				Else If value = "-inf" Or value = "-1.#INF0000" Then
 					Return "bbNEGINFf"
 				Else
 					If value.ToLower().Find("e")>=0 Then
@@ -266,13 +266,13 @@ Type TCTranslator Extends TTranslator
 				End If
 			End If
 			If TDoubleType( ty ) Then
-				If value = "nan.0" Or value = "1.#IND0000" Then
+				If value = "nan" Or value = "1.#IND0000" Then
 					Return "bbPOSNANd"
-				Else If value="-nan.0" Or value = "-1.#IND0000" Then
+				Else If value="-nan" Or value = "-1.#IND0000" Then
 					Return "bbNEGNANd"
-				Else If value = "inf.0" Or value = "1.#INF0000" Then
+				Else If value = "inf" Or value = "1.#INF0000" Then
 					Return "bbPOSINFd"
-				Else If value = "-inf.0" Or value = "-1.#INF0000" Then
+				Else If value = "-inf" Or value = "-1.#INF0000" Then
 					Return "bbNEGINFd"
 				Else
 					If value.ToLower().Find("e") >=0 Then
@@ -3190,7 +3190,11 @@ End Rem
 			If Not s Then
 				Return "0"
 			Else
-				Return s
+				If TDecimalType(expr.exprType) Then
+					Return s + TransIfcType(expr.exprType)
+				Else
+					Return s
+				End If
 			End If
 		EndIf
 

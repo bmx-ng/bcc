@@ -369,11 +369,30 @@ Type TIParser
 				expr=New TConstExpr.Create( New TLongType,_toke )
 				NextToke
 			Case TOKE_FLOATLIT
-				expr=New TConstExpr.Create( New TFloatType,_toke )
+				Local value:String = _toke
 				NextToke
+				If CParse("!") Then
+					expr=New TConstExpr.Create( New TDoubleType,value )
+				Else
+					CParse("#")
+					expr=New TConstExpr.Create( New TFloatType,value )
+				End If
 			Case TOKE_STRINGLIT
 				expr=New TConstExpr.Create( New TStringType,BmxUnquote( _toke ) )
 				NextToke
+			Case TOKE_IDENT
+				If _toke = "nan" Or _toke = "inf" Then
+					Local value:String = _toke
+					NextToke
+					If CParse("!") Then
+						expr=New TConstExpr.Create( New TDoubleType,value )
+					Else
+						CParse("#")
+						expr=New TConstExpr.Create( New TFloatType,value )
+					End If
+				Else
+					Err "Syntax error - unexpected token '"+_toke+"'"
+				End If
 			Default
 				Err "Syntax error - unexpected token '"+_toke+"'"
 			End Select
