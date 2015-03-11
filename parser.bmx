@@ -1991,6 +1991,10 @@ End Rem
 					mdecl.InsertDecl ParseFuncDecl( _toke,attrs )
 				Case "rem"
 					ParseRemStmt()
+				Default
+					If _toke <> "end" And _toke <> "endextern" Then
+						Err "Expecting expression but encountered '"+_toke+"'"
+					End If
 			End Select
 
 		Wend
