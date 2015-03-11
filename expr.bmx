@@ -706,7 +706,7 @@ Type TNewObjectExpr Extends TExpr
 				' find other member decl (field, etc)
 				Local decl:TVarDecl = TVarDecl(cdecl.GetDecl(id))
 				If decl Then
-					Local tmp:TLocalDecl=New TLocalDecl.Create( "", eType, expr )
+					Local tmp:TLocalDecl=New TLocalDecl.Create( "", eType, expr,, True )
 					Local varExpr:TExpr = New TMemberVarExpr.Create(New TVarExpr.Create( tmp ), decl).Semant()
 					expr = New TStmtExpr.Create( New TDeclStmt.Create( tmp ), varExpr ).Semant()
 					eType = decl.ty
@@ -1917,7 +1917,7 @@ Type TIdentExpr Extends TExpr
 			If fdecl.IsStatic() Or (scope=_env And Not _env.FuncScope().IsStatic())
 				lhs=New TInvokeExpr.Create( fdecl )
 			Else If expr
-				Local tmp:TLocalDecl=New TLocalDecl.Create( "",Null,expr )
+				Local tmp:TLocalDecl=New TLocalDecl.Create( "",Null,expr,, True )
 				lhs=New TInvokeMemberExpr.Create( New TVarExpr.Create( tmp ),fdecl )
 				lhs=New TStmtExpr.Create( New TDeclStmt.Create( tmp ),lhs )
 			Else
