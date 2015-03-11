@@ -339,6 +339,7 @@ Type TCTranslator Extends TTranslator
 							Local fdecl:TFuncDecl = TFuncDecl(TInvokeExpr(args[i]).decl.actual)
 							If Not fdecl.munged Then
 								MungDecl fdecl
+								TInvokeExpr(args[i]).decl.munged = fdecl.munged
 							End If
 
 							If TClassDecl(fdecl.scope) Then
@@ -519,18 +520,18 @@ t:+"NULLNULLNULL"
 
 	'***** Utility *****
 
-	Method TransLocalDecl$( munged$,init:TExpr, declare:Int = False )
+	Method TransLocalDecl$( decl:TLocalDecl,init:TExpr, declare:Int = False )
 		If Not declare And opt_debug Then
-			Return munged+"="+init.Trans() 
+			Return decl.munged+"="+init.Trans() 
 		Else
 			If TFunctionPtrType(init.exprType) Then
-				Return TransType( init.exprType, munged )+"="+init.Trans()
+				Return TransType( init.exprType, decl.munged )+"="+init.Trans()
 				'Return munged+"="+init.Trans()
 			Else
 				If TObjectType(init.exprType) Then
-					Return TransType( init.exprType, munged )+" volatile "+munged+"="+init.Trans()
+					Return TransType( init.exprType, decl.munged )+" volatile "+decl.munged+"="+init.Trans()
 				Else
-					Return TransType( init.exprType, munged )+" "+munged+"="+init.Trans()
+					Return TransType( init.exprType, decl.munged )+" "+decl.munged+"="+init.Trans()
 				End If
 			End If
 		End If

@@ -100,14 +100,18 @@ Type TExpr
 
 				' if an arg is a invocation without braces, it is *probably* a function pointer.
 				If TInvokeExpr(args[i]) And Not TInvokeExpr(args[i]).invokedWithBraces Then
-					TInvokeExpr(args[i]).exprType = New TFunctionPtrType
-					Local cp:TDecl = TInvokeExpr(args[i]).decl
-					TInvokeExpr(args[i]).decl = TFuncDecl(TInvokeExpr(args[i]).decl.Copy(False))
-					TInvokeExpr(args[i]).decl.actual = cp
-					TInvokeExpr(args[i]).decl.attrs :| FUNC_PTR
-					TFunctionPtrType(TInvokeExpr(args[i]).exprType).func = TInvokeExpr(args[i]).decl
+					' but not if we've already processed it...
+					If Not (TInvokeExpr(args[i]).decl.attrs & FUNC_PTR) Then
+						TInvokeExpr(args[i]).exprType = New TFunctionPtrType
+						Local cp:TDecl = TInvokeExpr(args[i]).decl
+						cp.Semant
+						TInvokeExpr(args[i]).decl = TFuncDecl(TInvokeExpr(args[i]).decl.Copy(False))
+						TInvokeExpr(args[i]).decl.actual = cp
+						TInvokeExpr(args[i]).decl.attrs :| FUNC_PTR
+						TFunctionPtrType(TInvokeExpr(args[i]).exprType).func = TInvokeExpr(args[i]).decl
 
-					TInvokeExpr(args[i]).decl.semant()
+						TInvokeExpr(args[i]).decl.semant()
+					End If
 				End If
 			End If
 		Next
@@ -139,7 +143,9 @@ Type TExpr
 				End If
 				
 				If (funcDecl.argDecls[i].ty._flags & TType.T_VAR) And Not (funcDecl.argDecls[i].ty.EqualsType(args[i].exprType)) Then
-					err "Variable for 'Var' parameter is not of matching type"
+					If (Not TObjectType(funcDecl.argDecls[i].ty)) Or (TObjectType(funcDecl.argDecls[i].ty) And Not args[i].exprType.ExtendsType(funcDecl.argDecls[i].ty)) Then
+						err "Variable for 'Var' parameter is not of matching type"
+					End If
 				End If
 
 				args[i]=args[i].Cast( funcDecl.argDecls[i].ty )
@@ -521,11 +527,11 @@ Type TInvokeExpr Extends TExpr
 		If Not decl.retType
 			decl.Semant()
 		End If
-		If TIdentType(decl.retType) Then
+		'If TIdentType(decl.retType) Then
 			exprType = decl.retType.Semant()
-		Else
-			exprType=decl.retType
-		End If
+		'Else
+		'	exprType=decl.retType
+		'End If
 
 		If ((isArg Or isRhs) And Not invokedWithBraces) And (args = Null Or args.length = 0) Then
 			' nothing to do here, as we are probably a function pointer. i.e. no braces and no 
@@ -976,18 +982,22 @@ Type TCastExpr Extends TExpr
 			Return expr
 		End If
 
-		If TIntType(ty) And Not IsPointerType(ty, 0, TType.T_POINTER) And IsPointerType(src, 0, TType.T_POINTER) Then
-			exprType = ty
-			If flags & CAST_EXPLICIT Then
-				Return Self
-			End If
-			Return expr
-		End If
+		'If TIntType(ty) And Not IsPointerType(ty, 0, TType.T_POINTER) And IsPointerType(src, 0, TType.T_POINTER) Then
+		'	exprType = ty
+		'	If flags & CAST_EXPLICIT Then
+		'		Return Self
+		'	End If
+		'	Return expr
+		'End If
 
 		' explicit cast to number
-		If IsNumericType(ty) And IsPointerType(src, 0, TType.T_POINTER) And flags = CAST_EXPLICIT Then
-			exprType = ty
-			Return Self
+		If IsNumericType(ty) And IsPointerType(src, 0, TType.T_POINTER) Then
+			If flags = CAST_EXPLICIT Then
+				exprType = ty
+				Return Self
+			Else
+				exprType = Null
+			End If
 		End If
 
 '		If TPointerType(ty) And TIntType(src) Then
@@ -1075,7 +1085,6 @@ Type TCastExpr Extends TExpr
 		End If
 
 		If Not exprType
-			DebugStop
 			Err "Unable to convert from "+src.ToString()+" to "+ty.ToString()+"."
 		EndIf
 
@@ -1266,6 +1275,8 @@ Type TBinaryMathExpr Extends TBinaryExpr
 				Err "Illegal expression type."
 			Else If IsPointerType( exprType, 0, TType.T_POINTER ) And op <> "+" And op <> "-" Then
 				Err "Illegal expression type."
+			Else If IsPointerType( lhs.exprType, 0, TType.T_POINTER ) And IsPointerType( rhs.exprType, 0, TType.T_POINTER ) And op <> "-" Then
+				Err "Illegal expression type."
 			EndIf
 		End Select
 
@@ -1279,6 +1290,10 @@ Type TBinaryMathExpr Extends TBinaryExpr
 			' with pointer addition we don't cast the numeric to a pointer
 		Else
 			rhs=rhs.Cast( exprType )
+		End If
+		
+		If IsPointerType( lhs.exprType, 0, TType.T_POINTER ) And IsPointerType( rhs.exprType, 0, TType.T_POINTER ) And op = "-" Then
+			exprType = New TIntType
 		End If
 
 		If TConstExpr( lhs ) And TConstExpr( rhs ) Return EvalConst()

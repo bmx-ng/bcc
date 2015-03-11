@@ -458,13 +458,13 @@ End Rem
 	Method CreateLocal$( expr:TExpr )
 		Local tmp:TLocalDecl=New TLocalDecl.Create( "",expr.exprType,expr, True )
 		MungDecl tmp
-		Emit TransLocalDecl( tmp.munged,expr, True )+";"
+		Emit TransLocalDecl( tmp,expr, True )+";"
 		Return tmp.munged
 	End Method
 
 	'***** Utility *****
 
-	Method TransLocalDecl$( munged$,init:TExpr, declare:Int = False ) Abstract
+	Method TransLocalDecl$( decl:TLocalDecl,init:TExpr, declare:Int = False ) Abstract
 
 	Method TransGlobalDecl$( munged$,init:TExpr, attrs:Int, ty:TType ) Abstract
 	
@@ -1077,7 +1077,7 @@ End Rem
 		Local decl:TLocalDecl=TLocalDecl( stmt.decl )
 		If decl
 			MungDecl decl
-			Return TransLocalDecl( decl.munged,decl.init, decl.generated Or declare )
+			Return TransLocalDecl( decl,decl.init, decl.generated Or declare )
 		EndIf
 		Local cdecl:TConstDecl=TConstDecl( stmt.decl )
 		If cdecl
