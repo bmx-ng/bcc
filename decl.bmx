@@ -846,7 +846,7 @@ End Rem
 				match=func
 				Exit
 			End If
-
+			
 			For Local i:Int=0 Until argDecls.Length
 
 				If i<argExprs.Length And argExprs[i]
@@ -1038,6 +1038,8 @@ Type TFuncDecl Extends TBlockDecl
 	
 	Field maybeFunctionPtr:Int
 	
+	Field returnTypeSubclassed:Int
+	
 	Method CreateF:TFuncDecl( ident$,ty:TType,argDecls:TArgDecl[],attrs:Int )
 		Self.ident=ident
 		Self.retTypeExpr=ty
@@ -1134,7 +1136,7 @@ Type TFuncDecl Extends TBlockDecl
 	End Method
 
 	Method EqualsFunc:Int( decl:TFuncDecl )
-		Return (retType.EqualsType( decl.retType ) Or decl.retType.EqualsType( retType )) And EqualsArgs( decl )
+		Return (retType.EqualsType( decl.retType ) Or retType.ExtendsType( decl.retType ) Or decl.retType.EqualsType( retType )) And EqualsArgs( decl )
 	End Method
 
 	Method OnSemant()
@@ -1231,6 +1233,10 @@ Type TFuncDecl Extends TBlockDecl
 
 						If EqualsFunc( decl ) 
 'DebugLog "Found"
+							If Not retType.EqualsType( decl.retType ) And retType.ExtendsType( decl.retType ) Then
+								returnTypeSubclassed = True
+							End If
+							
 							overrides=TFuncDecl( decl.actual )
 						'If overrides.munged
 						'	If munged And munged<>overrides.munged
@@ -1245,6 +1251,7 @@ Type TFuncDecl Extends TBlockDecl
 					If Not overrides Err "Overriding method does not match any overridden method."
 					' for overrides, make the ident match that of the superclass
 					ident = overrides.ident
+					
 					Exit
 				EndIf
 				sclass=sclass.superClass
@@ -1799,7 +1806,7 @@ End Rem
 						If decl.IsAbstract()
 							Local found:Int
 							For Local decl2:TFuncDecl=EachIn impls
-								If decl.EqualsFunc( decl2 )
+								If decl2.EqualsFunc( decl )
 									found=True
 									Exit
 								EndIf

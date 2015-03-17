@@ -1893,7 +1893,7 @@ End Rem
 
 		'Find decl we override
 		Local odecl:TFuncDecl=decl
-		If odecl.overrides Then Return
+		'If odecl.overrides And Not odecl.returnTypeSubclassed Then Return
 'DebugLog decl.ident
 '		While odecl.overrides
 '			odecl=odecl.overrides
@@ -2010,19 +2010,19 @@ End Rem
 		'End If
 
 '		If Not proto Or (proto And Not odecl.IsExtern()) Then
-			If Not TFunctionPtrType(odecl.retType) Then
+			If Not TFunctionPtrType(decl.retType) Then
 				If Not odecl.castTo Then
-					If Not decl.overrides Then
-						Emit pre + TransType( odecl.retType, "" )+" "+ Bra("*" + id)+Bra( args ) + bk
+					If Not decl.overrides Or decl.returnTypeSubclassed Then
+						Emit pre + TransType( decl.retType, "" )+" "+ Bra("*" + id)+Bra( args ) + bk
 					End If
 					If decl.IsMethod() Then
-						Emit TransType(odecl.retType, "") + " _" + decl.munged +Bra( args ) + bk
+						Emit TransType(decl.retType, "") + " _" + decl.munged +Bra( args ) + bk
 					Else
-						Emit TransType(odecl.retType, "") + " " + decl.munged +Bra( args ) + bk
+						Emit TransType(decl.retType, "") + " " + decl.munged +Bra( args ) + bk
 					End If
 				Else
 					If Not odecl.noCastGen Then
-						If Not decl.overrides Then
+						If Not decl.overrides Or decl.returnTypeSubclassed Then
 							Emit pre + odecl.castTo +" "+Bra("*" + id)+Bra( args ) + bk
 						End If
 						If decl.IsMethod() Then
@@ -2127,7 +2127,7 @@ End Rem
 		If proto Then
 			If odecl.IsExtern() Then
 				pre = "extern "
-				If TFunctionPtrType(odecl.retType) Then
+				If TFunctionPtrType(decl.retType) Then
 					pre = ""
 				End If
 			End If
@@ -2138,7 +2138,7 @@ End Rem
 		If Not IsStandardFunc(decl.munged) Then
 			If Not TFunctionPtrType(odecl.retType) Then
 				If Not odecl.castTo Then
-					Emit pre + TransType( odecl.retType, "" )+" "+id+Bra( args ) + bk
+					Emit pre + TransType( decl.retType, "" )+" "+id+Bra( args ) + bk
 				Else
 					If Not odecl.noCastGen Then
 						Emit pre + odecl.castTo +" "+id+Bra( args ) + bk
@@ -2146,7 +2146,7 @@ End Rem
 				End If
 			Else
 				If Not odecl.castTo Then
-					Emit pre + TransType( odecl.retType, id )+" "+Bra( args ) + bk
+					Emit pre + TransType( decl.retType, id )+" "+Bra( args ) + bk
 				Else
 					If Not odecl.noCastGen Then
 						Emit pre + odecl.castTo +" "+Bra( args ) + bk
@@ -2241,17 +2241,14 @@ End Rem
 
 	End Method
 
-	Method EmitBBClassClassFuncProto( classDecl:TClassDecl )
+	Method BBClassClassFuncProtoBuildList( classDecl:TClassDecl, list:TList )
 
 		Local reserved:String = ",New,Delete,ToString,Compare,SendMessage,_reserved1_,_reserved2_,_reserved3_,".ToLower()
 
 		If classDecl.superClass Then
-			EmitBBClassClassFuncProto(classDecl.superClass)
+			BBClassClassFuncProtoBuildList(classDecl.superClass, list)
 		End If
 
-		' user defined functions and methods
-		'Local fdecls:TFuncDecl[] = classDecl.GetAllFuncDecls()
-		'For Local fdecl:TFuncDecl = EachIn fdecls
 		For Local decl:TDecl=EachIn classDecl.Decls()
 			Local fdecl:TFuncDecl =TFuncDecl( decl )
 			If fdecl
@@ -2259,10 +2256,41 @@ End Rem
 					fdecl.Semant()
 				End If
 				If reserved.Find("," + fdecl.ident.ToLower() + ",") = -1 Then
-					EmitBBClassFuncProto( fdecl )
+				
+					Local ignore:Int
+					Local link:TLink=list._head._succ
+					While link<>list._head
+						If fdecl.ident = TFuncDecl(link._value).ident Then
+							If fdecl.overrides Then
+								If fdecl.returnTypeSubclassed Then
+									link._value = fdecl
+								End If
+								ignore = True
+								Exit
+							End If
+						EndIf
+						link = link._succ
+					Wend
+
+					If Not ignore Then
+						list.AddLast(fdecl)
+					End If
+				
 					Continue
 				End If
 			EndIf
+		Next
+
+	End Method
+
+	Method EmitBBClassClassFuncProto( classDecl:TClassDecl )
+
+		Local list:TList = New TList
+		
+		BBClassClassFuncProtoBuildList(classDecl, list)
+
+		For Local fdecl:TFuncDecl = EachIn list
+			EmitBBClassFuncProto( fdecl )
 		Next
 
 	End Method
