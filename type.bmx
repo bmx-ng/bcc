@@ -651,7 +651,7 @@ Type TObjectType Extends TType
 	
 	Method EqualsType:Int( ty:TType )
 		Local objty:TObjectType=TObjectType( ty )
-		Return TNullDecl(classDecl) <> Null Or (objty And (classDecl=objty.classDecl Or classDecl.ExtendsClass( objty.classDecl ))) 'Or TObjectVarPtrType(ty) <> Null
+		Return TNullDecl(classDecl) <> Null Or (objty And (classDecl=objty.classDecl))' Or classDecl.ExtendsClass( objty.classDecl ))) 'Or TObjectVarPtrType(ty) <> Null
 	End Method
 	
 	Method ExtendsType:Int( ty:TType )
