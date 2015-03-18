@@ -3741,11 +3741,21 @@ End If
 		Emit "if (!" + app.munged + "_inited) {"
 		Emit app.munged + "_inited = 1;"
 
+		' register incbins
+		For Local ib:TIncbin = EachIn app.incbins
+			Emit "bbIncbinAdd(&" + TStringConst(app.stringConsts.ValueForKey(ib.file)).id + ",&" + app.munged + "_ib_" + ib.id + "," + ib.length + ");"
+		Next
+		
+		Local importOnce:TMap = New TMap
+		
 		' call any imported mod inits
 		For Local decl:TModuleDecl=EachIn app.imported.Values()
 			For Local mdecl:TDecl=EachIn decl.imported.Values()
 				If TModuleDecl(mdecl) And app.mainModule <> mdecl And mdecl.ident <> "brl.classes" And mdecl.ident <> "brl.blitzkeywords" Then
-					EmitModuleInit(TModuleDecl(mdecl))
+					If Not importOnce.Contains(mdecl.ident) Then
+						EmitModuleInit(TModuleDecl(mdecl))
+						importOnce.Insert(mdecl.ident, "")
+					End If
 				End If
 			Next
 		Next
@@ -3762,11 +3772,6 @@ End If
 		Next
 		'
 
-		' register incbins
-		For Local ib:TIncbin = EachIn app.incbins
-			Emit "bbIncbinAdd(&" + TStringConst(app.stringConsts.ValueForKey(ib.file)).id + ",&" + app.munged + "_ib_" + ib.id + "," + ib.length + ");"
-		Next
-		
 		' defdata init
 		If Not app.dataDefs.IsEmpty() Then
 			Emit "_defDataOffset = &_defData;"
@@ -4019,7 +4024,10 @@ End If
 							file = dir + "/" + file
 						End If
 					End If
-					Emit "import " + Enquote(file)
+					If Not processed.Contains(file) Then
+						Emit "import " + Enquote(file)
+						processed.Insert(file, "")
+					End If
 				End If
 			End If
 		Next
