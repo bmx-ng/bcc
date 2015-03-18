@@ -585,7 +585,11 @@ Type TParser
 			NextToke
 			ty=CParsePrimitiveNumberType()
 			If Not ty Then
-				ty = ParseIdentType()
+				If CParse("string") Then
+					ty=New TStringType
+				Else
+					ty = ParseIdentType()
+				End If
 			Else
 				While CParse("ptr")
 					ty = TType.MapToPointerType(ty)
@@ -967,6 +971,14 @@ Type TParser
 			EndIf
 		Case "sizeof"
 			NextToke
+
+			Local ty:TType = ParseConstNumberType()
+			If ty Then
+				If Not TIntType(ty) Then
+					Err "Return type for 'SizeOf' must be Int"
+				End If
+			End If
+
 			' optional brackets
 			If CParse( "(" )
 				expr=ParseExpr()
@@ -978,6 +990,14 @@ Type TParser
 			EndIf
 		Case "len"
 			NextToke
+			
+			Local ty:TType = ParseConstNumberType()
+			If ty Then
+				If Not TIntType(ty) Then
+					Err "Return type for 'Len' must be Int"
+				End If
+			End If
+
 			' optional brackets
 			If CParse( "(" )
 				expr=ParseExpr()
@@ -1028,6 +1048,14 @@ Type TParser
 			expr=New TMaxExpr.Create( expr, expr2 )
 		Case "asc"
 			NextToke
+
+			Local ty:TType = ParseConstNumberType()
+			If ty Then
+				If Not TIntType(ty) Then
+					Err "Return type for 'Asc' must be Int"
+				End If
+			End If
+			
 			' optional brackets
 			If CParse( "(" )
 				expr=ParseExpr()
@@ -1039,6 +1067,14 @@ Type TParser
 			EndIf
 		Case "chr"
 			NextToke
+
+			Local ty:TType = ParseConstNumberType()
+			If ty Then
+				If Not TStringType(ty) Then
+					Err "Return type for 'Chr' must be String"
+				End If
+			End If
+			
 			' optional brackets
 			If CParse( "(" )
 				expr=ParseExpr()
