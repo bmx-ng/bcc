@@ -3407,7 +3407,7 @@ Function PreProcessNextToke$(toker:TToker)
 
 	Repeat
 		toker.NextToke()
-	Until toker.tokeType()<>TOKE_SPACE
+	Until toker.tokeType()<>TOKE_SPACE Or toker.Toke().Endswith("~n")
 
 	Return toker._toke
 End Function
@@ -3424,17 +3424,17 @@ Function PreProcess$( path$ )
 
 		If line
 			source.AddLast "~n"
-			While toker.Toke() And toker.Toke()<>"~n" And toker.TokeType()<>TOKE_LINECOMMENT
+			While toker.Toke() And Not toker.Toke().Endswith("~n") And toker.TokeType()<>TOKE_LINECOMMENT
 				PreProcessNextToke(toker)
-			Wend
+			Wend 
+
 			If Not toker.Toke() Exit
+
 			PreProcessNextToke(toker)
 		EndIf
 		line:+1
 
-		_errInfo=toker.Path()+"<"+toker.Line()+">"
-
-		If toker.TokeType()=TOKE_SPACE PreProcessNextToke(toker)
+		If toker.TokeType()=TOKE_SPACE And Not toker.Toke().Endswith("~n") PreProcessNextToke(toker)
 
 		If toker.Toke()<>"?"
 			If con
