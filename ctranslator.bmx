@@ -76,7 +76,7 @@ Type TCTranslator Extends TTranslator
 			s:+ TransArrayType(TArrayType( ty ).elemType)
 			Return Enquote(s.Replace("~q", ""))
 		End If
-		If TObjectType( ty ) Return "~q:~q"
+		If TObjectType( ty ) Return "~q:" + TObjectType(ty).classDecl.ident + "~q"
 		If TFunctionPtrType( ty ) Return "~q(~q"
 
 	End Method
