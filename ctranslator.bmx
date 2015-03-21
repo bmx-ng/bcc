@@ -317,6 +317,8 @@ Type TCTranslator Extends TTranslator
 				If TNullExpr(args[i]) Then
 					t :+ TransValue(ty, Null)
 					Continue
+				Else If TIndexExpr(args[i]) And (ty._flags & TType.T_VAR) Then
+						t:+ "&"
 				Else If TStringType(ty) And (ty._flags & TType.T_VAR) Then
 					If TCastExpr(args[i]) And TStringType(TCastExpr(args[i]).expr.exprType) Then
 						t:+ "&"

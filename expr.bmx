@@ -138,8 +138,10 @@ Type TExpr
 					End If
 				End If
 
-				If (TConstExpr(args[i]) Or TBinaryExpr(args[i])) And (funcDecl.argDecls[i].ty._flags & TType.T_VAR) Then
-					Err "Expression for 'Var' parameter must be a variable"
+				If funcDecl.argDecls[i].ty._flags & TType.T_VAR Then
+					If TConstExpr(args[i]) Or TBinaryExpr(args[i]) Or (TIndexExpr(args[i]) And TStringType(TIndexExpr(args[i]).expr.exprType)) Then
+						Err "Expression for 'Var' parameter must be a variable"
+					End If
 				End If
 				
 				If (funcDecl.argDecls[i].ty._flags & TType.T_VAR) And Not (funcDecl.argDecls[i].ty.EqualsType(args[i].exprType)) Then
