@@ -510,7 +510,9 @@ Type TFieldDecl Extends TVarDecl
 	End Method
 
 	Method OnCopy:TDecl(deep:Int = True)
-		Return New TFieldDecl.Create( ident,ty,CopyInit(),attrs )
+		Local f:TFieldDecl = New TFieldDecl.Create( ident,ty,CopyInit(),attrs )
+		f.metadata = metadata
+		Return f
 	End Method
 	
 	Method ToString$()
@@ -1070,6 +1072,7 @@ Type TFuncDecl Extends TBlockDecl
 		t.castTo = castTo
 		t.noCastGen = noCastGen
 		t.munged = munged
+		t.metadata = metadata
 		Return  t
 	End Method
 

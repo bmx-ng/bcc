@@ -1251,7 +1251,7 @@ Type TBinaryMathExpr Extends TBinaryExpr
 		rhs=rhs.Semant()
 
 		Select op
-		Case "&","~~","|","mod","shl","shr"
+		Case "&","~~","|","shl","shr"
 			If TDoubleType(lhs.exprType) Then
 				exprType=New TLongType
 			Else If TFloatType(lhs.exprType) Then
@@ -1340,6 +1340,7 @@ Type TBinaryMathExpr Extends TBinaryExpr
 			Case "^" Return x^y
 			Case "*" Return x * y
 			Case "/" Return x / y
+			Case "mod" Return x Mod y
 			Case "+" Return x + y
 			Case "-" Return x - y
 			End Select
@@ -1349,6 +1350,7 @@ Type TBinaryMathExpr Extends TBinaryExpr
 			Case "^" Return x^y
 			Case "*" Return x * y
 			Case "/" Return x / y
+			Case "mod" Return x Mod y
 			Case "+" Return x + y
 			Case "-" Return x - y
 			End Select

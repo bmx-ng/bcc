@@ -114,7 +114,32 @@ Type TAssignStmt Extends TStmt
 				ty._flags :~ TType.T_VAR
 				rhs=rhs.Cast( ty )
 			Else
-				rhs=rhs.Cast( lhs.exprType )
+				Local splitOp:Int = True
+				Select op
+					Case "="
+					
+						rhs=rhs.Cast( lhs.exprType )
+						splitOp = False
+						
+					Case "*=","/=","+=","-="
+					
+						If TNumericType( lhs.exprType ) And lhs.exprType.EqualsType( rhs.exprType ) Then
+							splitOp = False
+						End If
+					
+					Case "&=","|=","^=","<<=",">>=","%="
+					
+						If TIntType( lhs.exprType ) And lhs.exprType.EqualsType( rhs.exprType ) Then
+							splitOp = False
+						End If
+				
+				End Select
+				
+				If splitOp Then
+					rhs = New TBinaryMathExpr.Create(op[..op.length - 1], lhs, rhs).Semant().Cast(lhs.exprType)
+					op = "="
+				End If
+				
 			End If
 		EndIf
 	End Method

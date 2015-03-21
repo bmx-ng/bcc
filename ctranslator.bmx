@@ -1347,6 +1347,12 @@ t:+"NULLNULLNULL"
 			Return "pow" + Bra(t_lhs + ", " + t_rhs)
 		End If
 		
+		If expr.op = "mod" Then
+			If TDecimalType(expr.lhs.exprType) Or TDecimalType(expr.rhs.exprType) Then
+				Return "fmod" + Bra(t_lhs + ", " + t_rhs)
+			End If
+		End If
+		
 		If (expr.op = "shr" Or expr.op = "&" Or expr.op = "|") And TIntType(expr.exprType) Then
 			t_lhs = "(unsigned int)(" + t_lhs + ")"
 		End If
@@ -2533,6 +2539,7 @@ End Rem
 	End Method
 
 	Method EmitBBClassFuncsDebugScope(decl:TFuncDecl)
+
 			Emit "{"
 			If decl.IsMethod() Then
 				Emit "BBDEBUGDECL_TYPEMETHOD,"
@@ -2565,25 +2572,55 @@ End Rem
 			Emit "},"
 	End Method
 
-	Method EmitBBClassClassFuncsDebugScope(classDecl:TClassDecl)
+	Method BBClassClassFuncsDebugScopeBuildList(classDecl:TClassDecl, list:TList)
 		Local reserved:String = ",New,Delete,ToString,Compare,SendMessage,_reserved1_,_reserved2_,_reserved3_,".ToLower()
 
 		If classDecl.superClass Then
-			EmitBBClassClassFuncsDebugScope(classDecl.superClass)
+			BBClassClassFuncsDebugScopeBuildList(classDecl.superClass, list)
 		End If
 
 		For Local decl:TDecl=EachIn classDecl.Decls()
 			Local fdecl:TFuncDecl =TFuncDecl( decl )
 			If fdecl
-				If fdecl.overrides Then
-					Continue
+				If Not fdecl.IsSemanted()
+					fdecl.Semant()
 				End If
 				If reserved.Find("," + fdecl.ident.ToLower() + ",") = -1 Then
-					EmitBBClassFuncsDebugScope( fdecl )
+				
+					Local ignore:Int
+					Local link:TLink=list._head._succ
+					While link<>list._head
+						If fdecl.ident = TFuncDecl(link._value).ident Then
+							If fdecl.overrides Then
+								link._value = fdecl
+								ignore = True
+								Exit
+							End If
+						EndIf
+						link = link._succ
+					Wend
+
+					If Not ignore Then
+						list.AddLast(fdecl)
+					End If
+				
 					Continue
 				End If
 			EndIf
 		Next
+	End Method
+	
+
+	Method EmitBBClassClassFuncsDebugScope(classDecl:TClassDecl)
+	
+		Local list:TList = New TList
+		
+		BBClassClassFuncsDebugScopeBuildList(classDecl, list)
+	
+		For Local fdecl:TFuncDecl = EachIn list
+			EmitBBClassFuncsDebugScope( fdecl )
+		Next
+
 	End Method
 
 	Method EmitClassFuncsDebugScope(classDecl:TClassDecl)
