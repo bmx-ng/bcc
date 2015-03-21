@@ -74,7 +74,7 @@ Type TForEachinStmt Extends TLoopStmt
 
 				' array of object ?
 				
-				If TObjectType(TArrayType( expr.exprType ).elemType) Then
+				If TArrayType( expr.exprType ) And TObjectType(TArrayType( expr.exprType ).elemType) Then
 
 					Local cExpr:TExpr
 					
@@ -110,7 +110,7 @@ Type TForEachinStmt Extends TLoopStmt
 				End If
 			Else
 				
-				If TObjectType(TArrayType( expr.exprType ).elemType) Then
+				If TArrayType( expr.exprType ) And TObjectType(TArrayType( expr.exprType ).elemType) Then
 				' var = Null
 					If Not varty Then
 						Local decl:TValDecl = block.scope.FindValDecl(varid)
