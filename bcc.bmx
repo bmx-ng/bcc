@@ -50,7 +50,15 @@ End If
 Local app:TAppDecl 
 Local trans:TCTranslator 
 Try
+	If opt_verbose Then
+		Print "Parsing..."
+	End If
+
 	app = ParseApp(opt_filepath)
+
+	If opt_verbose Then
+		Print "Semanting..."
+	End If
 
 	app.Semant()
 
@@ -77,6 +85,10 @@ SaveIncBinHeader(opt_filepath, trans, FileMung(False), app)
 
 Function SaveInterface(file:String, trans:TCTranslator, mung:String)
 
+	If opt_verbose Then
+		Print "Generating interface..."
+	End If
+
 	Local path:String
 
 	If opt_buildtype = BUILDTYPE_MODULE Then
@@ -102,6 +114,10 @@ End Function
 
 Function SaveHeader(file:String, trans:TCTranslator, mung:String)
 
+	If opt_verbose Then
+		Print "Generating header..."
+	End If
+
 	Local path:String = OutputFilePath(file, mung, "h")
 
 	Local header:String = BuildHeaderName(path).ToUpper()
@@ -121,6 +137,10 @@ Function SaveHeader(file:String, trans:TCTranslator, mung:String)
 End Function
 
 Function SaveSource(file:String, trans:TCTranslator, mung:String)
+
+	If opt_verbose Then
+		Print "Generating source..."
+	End If
 
 	Local path:String = OutputFilePath(file, mung, "c")
 
