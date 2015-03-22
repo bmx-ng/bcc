@@ -638,7 +638,15 @@ t:+"NULLNULLNULL"
 			End If
 			Return decl.munged
 		Else If _env And decl.scope And decl.scope=_env.ClassScope()
-			Return decl.munged
+			' calling a class function from a method?
+			If TFuncDecl(decl) And TClassDecl(_env.scope) And TFuncDecl(_env) And TFuncDecl(_env).IsMethod() And Not (decl.attrs & FUNC_PTR) Then
+				Local scope:TScopeDecl = _env.scope
+				Local obj:String = Bra("struct " + scope.munged + "_obj*")
+				Local class:String = "(" + obj + "o)->clas"
+				Return class + "->fn_" + decl.ident
+			Else
+				Return decl.munged
+			End If
 		Else If TClassDecl( decl.scope )
 			'Return decl.scope.munged+"::"+decl.munged
 			Return decl.munged
@@ -695,7 +703,7 @@ t:+"NULLNULLNULL"
 	End Method
 
 	Method TransFunc$( decl:TFuncDecl,args:TExpr[],lhs:TExpr, sup:Int = False, scope:TScopeDecl = Null )
-'If decl.ident = "UseFloat_" DebugStop
+'If decl.ident = "GetClassName" DebugStop
 		' for calling the super class method instead
 		Local tSuper:String
 		If sup Then
