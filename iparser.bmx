@@ -283,7 +283,6 @@ Type TIParser
 							End If
 						EndIf
 
-						DebugLog ""
 						'state = STATE_CLASS
 						'Exit
 				'	Case "%"
@@ -410,8 +409,6 @@ Type TIParser
 		Local args:TClassDecl[]
 		Local superTy:TIdentType
 		Local imps:TIdentType[]
-
-		DebugLog "Found Class :  " + id
 
 		If CParse( "^" )
 

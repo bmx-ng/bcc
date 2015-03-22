@@ -175,7 +175,7 @@ Type TDecl
 		If scope 
 			'If Not IsExtern()
 			If TFuncDecl(Self) And attrs & FUNC_PTR
-			DebugLog "**** " + ident
+				'DebugLog "**** " + ident
 			Else
 
 				scope._semanted.AddLast Self
