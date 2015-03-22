@@ -2577,10 +2577,6 @@ End Rem
 	Method BBClassClassFuncsDebugScopeBuildList(classDecl:TClassDecl, list:TList)
 		Local reserved:String = ",New,Delete,ToString,Compare,SendMessage,_reserved1_,_reserved2_,_reserved3_,".ToLower()
 
-		If classDecl.superClass Then
-			BBClassClassFuncsDebugScopeBuildList(classDecl.superClass, list)
-		End If
-
 		For Local decl:TDecl=EachIn classDecl.Decls()
 			Local fdecl:TFuncDecl =TFuncDecl( decl )
 			If fdecl
@@ -2637,17 +2633,17 @@ End Rem
 		
 		EmitClassStandardMethodDebugScope("New", ret, "_" + classid + "_New")
 	
-		If classHierarchyHasFunction(classDecl, "ToString") Then
+		If classHasFunction(classDecl, "ToString") Then
 			EmitClassStandardMethodDebugScope("ToString", "()$", "_" + classidForFunction(classDecl, "ToString") + "_ToString")
 			'Emit "_" + classid + "_ToString,"
 		End If
 
-		If classHierarchyHasFunction(classDecl, "Compare") Then
+		If classHasFunction(classDecl, "Compare") Then
 			EmitClassStandardMethodDebugScope("Compare", "(:Object)i", "_" + classidForFunction(classDecl, "Compare") + "_Compare")
 			'Emit "_" + classid + "_ObjectCompare,"
 		End If
 
-		If classHierarchyHasFunction(classDecl, "SendMessage") Then
+		If classHasFunction(classDecl, "SendMessage") Then
 			EmitClassStandardMethodDebugScope("SendMessage", "(:Object):Object", "_" + classidForFunction(classDecl, "SendMessage") + "_SendMessage")
 			'Emit "_" + classid + "_SendMessage,"
 		End If
@@ -2670,16 +2666,9 @@ End Rem
 	Method CountBBClassClassFuncsDebugScope(classDecl:TClassDecl, count:Int Var)
 		Local reserved:String = ",New,Delete,ToString,Compare,SendMessage,_reserved1_,_reserved2_,_reserved3_,".ToLower()
 
-		If classDecl.superClass Then
-			CountBBClassClassFuncsDebugScope(classDecl.superClass, count)
-		End If
-
 		For Local decl:TDecl=EachIn classDecl.Decls()
 			Local fdecl:TFuncDecl =TFuncDecl( decl )
 			If fdecl
-				If fdecl.overrides Then
-					Continue
-				End If
 				If reserved.Find("," + fdecl.ident.ToLower() + ",") = -1 Then
 					count :+ 1
 				End If
@@ -2696,10 +2685,6 @@ End Rem
 
 	Method CountClassFieldsDebugScope(classDecl:TClassDecl, count:Int Var)
 
-		'If classDecl.superClass Then
-		'	CountClassFieldsDebugScope(classDecl.superClass, count)
-		'End If
-
 		For Local decl:TFieldDecl = EachIn classDecl.Decls()
 			count :+ 1
 		Next
@@ -2715,15 +2700,15 @@ End Rem
 		CountClassFieldsDebugScope(classDecl, count)
 		
 		' standard methods
-		If classHierarchyHasFunction(classDecl, "ToString") Then
+		If classHasFunction(classDecl, "ToString") Then
 			count :+ 1
 		End If
 
-		If classHierarchyHasFunction(classDecl, "Compare") Then
+		If classHasFunction(classDecl, "Compare") Then
 			count :+ 1
 		End If
 
-		If classHierarchyHasFunction(classDecl, "SendMessage") Then
+		If classHasFunction(classDecl, "SendMessage") Then
 			count :+ 1
 		End If
 		
