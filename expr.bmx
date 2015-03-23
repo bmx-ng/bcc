@@ -1258,8 +1258,8 @@ Type TBinaryMathExpr Extends TBinaryExpr
 				exprType=New TLongType
 			Else If TFloatType(lhs.exprType) Then
 				exprType=New TIntType
-			Else If TNumericType(lhs.exprType) Then
-				exprType=lhs.exprType.OnCopy()
+			Else If TLongType(lhs.exprType) Then
+				exprType=New TLongType
 			Else
 				exprType=New TIntType
 			End If
