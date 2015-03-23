@@ -350,7 +350,7 @@ Type TCTranslator Extends TTranslator
 									If _env.ClassScope().ExtendsClass(TClassDecl(fdecl.scope)) Then
 										Local scope:TScopeDecl = _env.scope
 										Local obj:String = Bra("struct " + scope.munged + "_obj*")
-										Local class:String = "(" + obj + "o)->clas"
+										Local class:String = "o->clas"
 				
 										t:+ class + "->fn_" + fdecl.ident
 									Else
