@@ -642,7 +642,7 @@ t:+"NULLNULLNULL"
 			If TFuncDecl(decl) And _env.ClassScope() And _env.FuncScope() And _env.FuncScope().IsMethod() And Not (decl.attrs & FUNC_PTR) Then
 				Local scope:TScopeDecl = _env.ClassScope()
 				Local obj:String = Bra("struct " + scope.munged + "_obj*")
-				Local class:String = "(" + obj + "o)->clas"
+				Local class:String = "o->clas"
 				Return class + "->fn_" + decl.ident
 			Else
 				Return decl.munged
@@ -1097,7 +1097,6 @@ t:+"NULLNULLNULL"
 		End If
 
 		If (dst._flags & TType.T_VARPTR) Or (dst._flags & TType.T_VAR) Then
-
 			If Not TConstExpr(expr.expr) Then
 				If TInvokeExpr(expr.expr) Return t
 
@@ -1112,7 +1111,11 @@ t:+"NULLNULLNULL"
 					If TObjectType(src).classDecl.IsExtern() Then
 						Return Bra("&" + t)
 					Else
-						Return Bra("(BBBYTE*)" + Bra("&" + t)) + "+" + Bra("sizeof(void*)")
+						If TObjectType(dst) Then
+							Return Bra("&" + t)
+						Else
+							Return Bra("(BBBYTE*)" + Bra("&" + t)) + "+" + Bra("sizeof(void*)")
+						End If
 					End If
 				End If
 				'If TPointerType( src) Return Bra("&"+t)

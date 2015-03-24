@@ -1018,8 +1018,9 @@ Type TCastExpr Extends TExpr
 			Return expr
 		End If
 
-		If TObjectType(src) And (ty._flags & TType.T_VAR) Then ' TODO : May be VARPTR instead?
-			exprType = NewPointerType(TType.T_BYTE)
+		If TObjectType(src) And TObjectType(ty) And (ty._flags & TType.T_VAR) Then ' TODO : May be VARPTR instead?
+			'exprType = NewPointerType(TType.T_BYTE)
+			exprType = ty
 			Return Self
 		End If
 		
