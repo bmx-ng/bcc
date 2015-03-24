@@ -142,6 +142,16 @@ Type TExpr
 					If TConstExpr(args[i]) Or TBinaryExpr(args[i]) Or (TIndexExpr(args[i]) And TStringType(TIndexExpr(args[i]).expr.exprType)) Then
 						Err "Expression for 'Var' parameter must be a variable"
 					End If
+
+					' Passing a "new" object into a Var, requires us to create a local variable and pass its address instead.
+					If TNewObjectExpr(args[i]) Then
+						Local tmp:TLocalDecl=New TLocalDecl.Create( "",TNewObjectExpr(args[i]).ty,args[i],, True )
+						tmp.Semant()
+						Local v:TVarExpr = New TVarExpr.Create( tmp )
+						Local stmt:TExpr = New TStmtExpr.Create( New TDeclStmt.Create( tmp ), v ).Semant()
+						stmt.exprType = TNewObjectExpr(args[i]).ty
+						args[i] = stmt
+					End If
 				End If
 				
 				If (funcDecl.argDecls[i].ty._flags & TType.T_VAR) And Not (funcDecl.argDecls[i].ty.EqualsType(args[i].exprType)) Then
