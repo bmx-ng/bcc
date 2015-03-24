@@ -354,6 +354,16 @@ Type TValDecl Extends TDecl
 			ty=init.exprType
 		End If
 		
+		If init Then
+			If TVarExpr(init) And TVarExpr(init).decl = Self Then
+				Err "Identifier '" + TVarExpr(init).decl.ident + "' not found."
+			End If
+			
+			If TNewObjectExpr(init) And TVarExpr(TNewObjectExpr(init).instanceExpr) And TVarExpr(TNewObjectExpr(init).instanceExpr).decl = Self Then
+				Err "Identifier '" + Self.ident + "' not found."
+			End If
+		End If
+		
 		' remove the temporary scope
 		If TFieldDecl(Self) And declInit Then
 			PopEnv()
