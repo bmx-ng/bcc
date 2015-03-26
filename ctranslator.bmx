@@ -1021,6 +1021,9 @@ t:+"NULLNULLNULL"
 	Field stringMap:TMap = New TMap
 
 	Method TransStringConst:String(value:String)
+		If value Then
+			_appInstance.mapStringConsts(value)
+		End If
 		Local sc:TStringConst = TStringConst(_app.stringConsts.ValueForKey(value))
 		Local s:String
 
