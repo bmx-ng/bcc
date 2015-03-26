@@ -281,7 +281,7 @@ Type TCTranslator Extends TTranslator
 					If value.Find(".") < 0 Then
 						value :+ ".0"
 					End If
-					Return value+"f"
+					Return value
 				End If
 			End If
 			If TStringType( ty ) Return TransStringConst(value )
