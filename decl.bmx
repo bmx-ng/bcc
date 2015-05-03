@@ -736,6 +736,11 @@ Type TScopeDecl Extends TDecl
 			Local fdecl:TFuncDecl = TFuncDecl(FindDecl("__LocalMain"))
 			If fdecl Then
 				decl = TValDecl( fdecl.FindDecl( ident ) )
+				
+				' a local variable from module local scope can't be seen outside of module local scope...
+				If TLocalDecl(decl) Then
+					decl = Null
+				End If
 			End If
 		End If
 		If Not decl Return Null
