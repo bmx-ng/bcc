@@ -1254,6 +1254,9 @@ t:+"NULLNULLNULL"
 				If src._flags & TType.T_CHAR_PTR Then
 					Return "bbStringFromCString"+Bra( t )
 				End If
+				If src._flags & TType.T_SHORT_PTR Then
+					Return "bbStringFromWString"+Bra( t )
+				End If
 				If src._flags & TType.T_VAR Then
 					If TSliceExpr( expr.expr ) Then
 						Return "&" + Bra(t)
