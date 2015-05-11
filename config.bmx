@@ -102,7 +102,7 @@ Function IsStandardFunc:Int(func:String)
 	func = func.ToLower()
 	
 	Global funcs:String = ";isalnum;isalpha;isascii;isblank;iscntrl;isdigit;isgraph;islower;isprint;ispunct;isspace;isupper;isxdigit;" + ..
-		"strlen;"
+		"strlen;_wgetenv;_wputenv;"
 	
 	Return funcs.Find(func) > 0
 End Function
