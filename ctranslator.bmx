@@ -162,7 +162,7 @@ Type TCTranslator Extends TTranslator
 		If TStringType( ty ) Then
 			If ty._flags & TType.T_CHAR_PTR Then
 				Return "BBBYTE *"
-			Else If ty._flags & TType.T_CHAR_PTR Then
+			Else If ty._flags & TType.T_SHORT_PTR Then
 				Return "BBSHORT *"
 			End If
 			Return "BBSTRING" + p
