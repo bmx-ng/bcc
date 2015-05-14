@@ -67,7 +67,7 @@ Try
 	trans.TransApp(app)
 Catch error:String
 	WriteStderr error
-	End
+	exit_(-1) ' return a non-zero exit code
 End Try
 
 Local makeApp:Int = False
