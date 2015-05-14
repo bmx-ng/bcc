@@ -394,6 +394,8 @@ End Rem
 		Case "=>" Return ">="
 		Case "&","|" Return op
 		Case "~~" Return "^"
+		Case "<<", ">>" Return Op
+		Case "%" Return Op
 		End Select
 		InternalErr
 	End Method
@@ -424,9 +426,9 @@ End Rem
 		Else If TBinaryExpr( expr )
 			Select TBinaryExpr( expr ).op
 			Case "^" Return 4
-			Case "*","/","mod" Return 5
+			Case "*","/","mod","%" Return 5
 			Case "+","-" Return 6
-			Case "shl","shr", "sar" Return 7
+			Case "shl","shr", "sar","<<", ">>" Return 7
 			Case "<","<=",">",">=", "=<", "=>" Return 8
 			Case "=","<>" Return 9
 			Case "&" Return 10
