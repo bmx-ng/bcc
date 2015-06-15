@@ -276,7 +276,7 @@ Type TIncbin
 			If FileType(dir) = FILETYPE_FILE Then
 				path = RealPath(dir)
 			Else
-				Internalerr '?
+				Return Null
 			End If
 		Else
 			path = RealPath(file)
@@ -3183,7 +3183,11 @@ End Rem
 				NextToke
 				Local s:String = ParseStringLit()
 				_app.mapStringConsts(s)
-				_app.incbins.AddLast(New TIncbin.Create(s, path))
+				Local ib:TIncBin = New TIncbin.Create(s, path)
+				If Not ib Then
+					DoErr "Incbin file '"+ s +"' not found."
+				End If
+				_app.incbins.AddLast(ib)
 			Case "include"
 				'include command is NOT just a pattern to replace with
 				'content. BlitzMax parses each included file before the
