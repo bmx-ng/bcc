@@ -186,7 +186,18 @@ Type TExpr
 		'	rhs = TType.MapVarPointerToPrim(rhs)
 		'End If
 
-		If TStringType( lhs ) Or TStringType( rhs ) Return New TStringType
+		If TStringType( lhs ) Or TStringType( rhs ) Then
+			If TObjectType(lhs) Or TObjectType(rhs) Then
+				If TObjectType(lhs) And TObjectType(lhs).classDecl.ident = "Object" Then
+					Return lhs
+				End If
+				If TObjectType(rhs) And TObjectType(rhs).classDecl.ident = "Object" Then
+					Return rhs
+				End If
+			Else
+				Return New TStringType
+			End If
+		End If
 		If TDoubleType( lhs ) Or TDoubleType( rhs ) Return New TDoubleType
 		If TFloatType( lhs ) Or TFloatType( rhs ) Return New TFloatType
 		If IsPointerType( lhs, 0, TType.T_POINTER ) Or IsPointerType( rhs, 0, TType.T_POINTER ) Then
@@ -914,10 +925,12 @@ Type TCastExpr Extends TExpr
 				Return Self
 			End If
 
-
-			If TStringType(src) And TObjectType(ty)
-				exprType = ty
-				Return expr
+			If TStringType(ty) And TObjectType(src)
+				' only if explicitly cast
+				If flags & CAST_EXPLICIT Then
+					exprType = ty
+					'Return Self
+				End If
 			End If
 			'Box/unbox?...
 			'If TObjectType( ty ) And Not TObjectType( src )
@@ -953,7 +966,32 @@ Type TCastExpr Extends TExpr
 				expr=New TInvokeMemberExpr.Create( expr,fdecl ).Semant()
 
 			EndIf
-			exprType=ty
+			
+			If TNullType(src) Then
+				exprType = ty
+			End If
+			
+			If TBoolType(src) And TNumericType(ty) Then
+				exprType = ty
+			End If
+			
+			If TNumericType(src) And (TNumericType(ty) Or TStringType(ty)) Then
+				exprType = ty
+			End If
+			
+			If TObjectType(ty) And (TObjectType(src) Or TStringType(src) Or TArrayType(src)) Then
+				exprType = ty
+				Return Self
+			End If
+			
+			If TFunctionPtrType(src) And IsPointerType(ty, 0, TType.T_POINTER) Then
+				exprType = ty
+			End If
+			
+			If TArrayType(ty) And TArrayType(src) Then
+				exprType = ty
+				Return Self
+			End If
 
 		Else If TBoolType( ty )
 
@@ -968,13 +1006,17 @@ Type TCastExpr Extends TExpr
 		Else If ty.ExtendsType( src )
 
 			If flags & CAST_EXPLICIT
-'DebugStop
+
 				'if both objects or both non-objects...
 				If (TObjectType(ty)<>Null)=(TObjectType(src)<>Null) Then
 					exprType=ty
 					Return Self
 				End If
-
+				
+				If (TStringType(ty) Or TArrayType(ty)) And TObjectType(src) Then
+					exprType=ty
+					Return Self
+				End If
 			'Else ' if not explicitly cast, we can't just auto-cast it ourselves here.
 				'If (TObjectType(ty)<>Null) And (TObjectType(src)<>Null) exprType=ty
 			EndIf
@@ -1048,6 +1090,8 @@ Type TCastExpr Extends TExpr
 					exprType = ty
 					Return Self
 				End If
+			Else
+				exprType = ty
 			End If
 		End If
 		
@@ -1148,6 +1192,10 @@ Type TCastExpr Extends TExpr
 			Return String( val )
 		Else If TByteType( exprType )
 			Return Byte( val )
+		Else If TObjectType( exprType )
+			If TStringType( expr.exprType )
+				Return val
+			End If
 		EndIf
 		Return Super.Eval()
 	End Method

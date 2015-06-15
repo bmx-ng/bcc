@@ -658,12 +658,6 @@ Type TObjectType Extends TType
 		Local objty:TObjectType=TObjectType( ty )
 		If objty Return classDecl.ExtendsClass( objty.classDecl )
 		If IsPointerType( ty, T_BYTE ) Return True
-		' we only "extend" String if we are a basic Object
-		If TStringType( ty ) And classDecl.ident="Object" Then
-			Return True
-		Else
-			Return False
-		EndIf
 	End Method
 	
 	Method GetClass:TClassDecl()
