@@ -971,7 +971,7 @@ Type TCastExpr Extends TExpr
 				exprType = ty
 			End If
 			
-			If TBoolType(src) And TNumericType(ty) Then
+			If TBoolType(src) And (TNumericType(ty) Or TStringType(ty)) Then
 				exprType = ty
 			End If
 			
