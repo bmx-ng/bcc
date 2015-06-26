@@ -1113,13 +1113,15 @@ Type TFuncDecl Extends TBlockDecl
 			q="Method "+Super.ToString()
 		Else
 			If IsMethod() q="Method " Else q="Function "
-			q:+Super.ToString()+":"
+			q:+Super.ToString()
 			If retType
-				q:+retType.ToString()
+				If Not TVoidType(retType) Then
+					q:+":"+retType.ToString()
+				End If
 			Else If retTypeExpr 
-				q:+retTypeExpr.ToString()
+				q:+":"+retTypeExpr.ToString()
 			Else
-				q:+"?"
+				q:+":"+"?"
 			EndIf
 		EndIf
 		Return q+"("+t+")"
@@ -1551,7 +1553,26 @@ End Rem
 		If superClass And includeSuper Then
 			funcs = superClass.GetAllFuncDecls(funcs)
 		End If
-		
+
+		' interface methods
+		For Local iface:TClassDecl=EachIn implmentsAll
+			For Local func:TFuncDecl=EachIn iface._decls
+				Local matched:Int = False
+
+				For Local i:Int = 0 Until funcs.length
+					' found a match - we are overriding it
+					If func.ident.ToLower() = funcs[i].ident.ToLower() Then
+						matched = True
+						Exit
+					End If
+				Next
+				
+				If Not matched Then
+					funcs :+ [func]
+				End If
+			Next
+		Next
+
 		
 		For Local func:TFuncDecl = EachIn _decls
 		
@@ -1621,7 +1642,7 @@ End Rem
 		For Local i:Int=0 Until impltys.Length
 			Local cdecl:TClassDecl=impltys[i].SemantClass()
 			If Not cdecl.IsInterface()
-				Err cdecl.ToString()+" is a class, not an interface."
+				Err cdecl.ToString()+" is a type, not an interface."
 			EndIf
 			For Local j:Int=0 Until i
 				If impls[j]=cdecl
@@ -1830,7 +1851,7 @@ End Rem
 								EndIf
 							Next
 							If Not found
-								Err "Can't create instance of class "+ToString()+" due to abstract method "+decl.ToString()+"."
+								Err "Can't create instance of type "+ToString()+" due to abstract method "+decl.ToString()+"."
 							EndIf
 						Else
 							impls.AddLast decl
@@ -1842,22 +1863,35 @@ End Rem
 			'
 			'Check we implement all interface methods!
 			'
-			For Local iface:TClassDecl=EachIn implmentsAll
-				For Local decl:TFuncDecl=EachIn iface.SemantedMethods()
-					Local found:Int
-					For Local decl2:TFuncDecl=EachIn SemantedMethods( decl.ident )
-						If decl.EqualsFunc( decl2 )
-							If decl2.munged
-								Err "Extern methods cannot be used to implement interface methods."
-							EndIf
-							found=True
+			If Not IsAbstract() Then
+
+				Local ints:TMap = GetInterfaces()
+
+				For Local iface:TClassDecl=EachIn ints.Values()
+					For Local decl:TFuncDecl=EachIn iface.SemantedMethods()
+						Local found:Int
+
+						Local cdecl:TClassDecl=Self
+						
+						While cdecl And Not found
+							For Local decl2:TFuncDecl=EachIn cdecl.SemantedMethods( decl.ident )
+								If decl.EqualsFunc( decl2 )
+									If decl2.munged
+										Err "Extern methods cannot be used to implement interface methods."
+									EndIf
+									found=True
+								EndIf
+							Next
+						
+							cdecl = cdecl.superClass
+						Wend
+
+						If Not found
+							Err decl.ToString() + " must be implemented by type " + ToString()
 						EndIf
 					Next
-					If Not found
-						Err decl.ToString()+" must be implemented by class "+ToString()
-					EndIf
 				Next
-			Next
+			End If
 		EndIf
 		
 		PopErr
@@ -1887,6 +1921,56 @@ End Rem
 		decl.offset = lastOffset
 		
 		lastOffset :+ modifier
+	End Method
+	
+	' returns a map of all interfaces implemented in this hierarchy
+	Method GetInterfaces:TMap(map:TMap = Null)
+		If Not map Then
+			map = New TMap
+		End If
+
+		For Local iface:TClassDecl=EachIn implmentsAll
+		
+			If iface.IsInterface() Then
+			
+				Local cdecl:TClassDecl = iface
+				While cdecl
+				
+					If cdecl.IsInterface() Then
+						If Not map.Contains(cdecl) Then
+							map.Insert(cdecl, cdecl)
+						End If
+					End If
+
+
+					cdecl=cdecl.superClass
+				Wend
+			
+			End If
+		Next
+
+		
+		If superClass Then
+			map = superClass.GetInterfaces(map)
+		End If
+		
+		Return map
+	End Method
+	
+	Method GetImplementedFuncs:TList(list:TList = Null)
+		If Not list Then
+			list = New TList
+		End If
+		
+		For Local idecl:TClassDecl = EachIn implmentsAll
+			idecl.GetImplementedFuncs(list)
+		Next
+		
+		For Local decl:TFuncDecl = EachIn SemantedMethods()
+			list.AddLast(decl)
+		Next
+
+		Return list
 	End Method
 	
 End Type

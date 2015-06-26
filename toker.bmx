@@ -53,7 +53,8 @@ Type TToker
 	"and;or;shl;shr;sar;end;if;then;else;elseif;endif;while;wend;repeat;until;forever;"+ ..
 	"for;to;step;next;return;"+ ..
 	"alias;rem;endrem;throw;assert;try;catch;nodebug;incbin;"+ ..
-	"endselect;endmethod;endfunction;endtype;endextern;endtry;pi;release;defdata;readdata;restoredata;"
+	"endselect;endmethod;endfunction;endtype;endextern;endtry;pi;release;defdata;readdata;restoredata;" + ..
+	"interface;implements;"
 
 	Global _symbols$[]=[ "..","[]",":*",":/",":+",":-",":|",":&",":~~",":shr",":shl",":sar",":mod" ]
 	Global _symbols_map$[]=[ "..","[]","*=","/=","+=","-=","|=","&=","^=",">>=", "<<=",">>=","%=" ]

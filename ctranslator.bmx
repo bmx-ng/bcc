@@ -30,6 +30,8 @@ Type TCTranslator Extends TTranslator
 	'Field stringConstCount:Int
 
 	Field prefix:String
+	
+	Field reserved_methods:String = ",New,Delete,ToString,Compare,SendMessage,_reserved1_,_reserved2_,_reserved3_,".ToLower()
 
 	Method New()
 		_trans = Self
@@ -739,8 +741,13 @@ t:+"NULLNULLNULL"
 						If decl.scope.IsExtern()
 							Return decl.munged + Bra(TransArgs( args,decl, TransSubExpr( lhs ) ))
 						Else
-							Local class:String = Bra(TransSubExpr( lhs )) + "->clas" + tSuper
-							Return class + "->" + TransFuncPrefix(cdecl, decl) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
+							If cdecl.IsInterface() And reserved_methods.Find("," + decl.ident.ToLower() + ",") = -1 Then
+								Local ifc:String = Bra("(struct " + cdecl.munged + "_methods*)" + Bra("bbObjectInterface(" + TransSubExpr( lhs ) + ", " + "&" + cdecl.munged + "_ifc)"))
+								Return ifc + "->" + TransFuncPrefix(cdecl, decl) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
+							Else
+								Local class:String = Bra(TransSubExpr( lhs )) + "->clas" + tSuper
+								Return class + "->" + TransFuncPrefix(cdecl, decl) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
+							End If
 						End If
 					End If
 				Else If TNewObjectExpr(lhs) Then
@@ -753,8 +760,13 @@ t:+"NULLNULLNULL"
 					If decl.attrs & FUNC_PTR Then
 						Return "(" + obj + TransSubExpr( lhs ) + ")->" + decl.munged+TransArgs( args,decl, Null)
 					Else
-						Local class:String = Bra("(" + obj + TransSubExpr( lhs ) + ")->clas" + tSuper)
-						Return class + "->" + TransFuncPrefix(cdecl, decl) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
+						If cdecl.IsInterface() And reserved_methods.Find("," + decl.ident.ToLower() + ",") = -1 Then
+							Local ifc:String = Bra("(struct " + cdecl.munged + "_methods*)" + Bra("bbObjectInterface(" + obj + TransSubExpr( lhs ) + ", " + "&" + cdecl.munged + "_ifc)"))
+							Return ifc + "->" + TransFuncPrefix(cdecl, decl) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
+						Else
+							Local class:String = Bra("(" + obj + TransSubExpr( lhs ) + ")->clas" + tSuper)
+							Return class + "->" + TransFuncPrefix(cdecl, decl) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
+						End If
 					End If
 				Else If TMemberVarExpr(lhs) Then
 					Local cdecl:TClassDecl = TObjectType(TMemberVarExpr(lhs).decl.ty).classDecl
@@ -1313,7 +1325,11 @@ t:+"NULLNULLNULL"
 			'If TStringType( src ) Return Bra("(BBOBJECT)"+t)
 			'If TObjectType( src ) Return t
 			If TNullType( src ) Return "&bbNullObject"
-			Return Bra(Bra(TransObject(TObjectType(dst).classDecl)) + "bbObjectDowncast" + Bra(t + ",&" + TObjectType(dst).classDecl.munged))
+			If TObjectType(dst).classDecl.IsInterface() Then
+				Return Bra(Bra(TransObject(TObjectType(dst).classDecl)) + "bbInterfaceDowncast" + Bra(t + ",&" + TObjectType(dst).classDecl.munged + "_ifc"))
+			Else
+				Return Bra(Bra(TransObject(TObjectType(dst).classDecl)) + "bbObjectDowncast" + Bra(t + ",&" + TObjectType(dst).classDecl.munged))
+			End If
 		EndIf
 
 		Return TransPtrCast( dst,src,t,"dynamic" )
@@ -2273,6 +2289,12 @@ End Rem
 		If classDecl.superClass Then
 			BBClassClassFuncProtoBuildList(classDecl.superClass, list)
 		End If
+		
+		If classDecl.IsInterface() Then
+			For Local idecl:TClassDecl = EachIn classDecl.implmentsAll
+				BBClassClassFuncProtoBuildList(idecl, list)
+			Next
+		End If
 
 		For Local decl:TDecl=EachIn classDecl.Decls()
 			Local fdecl:TFuncDecl =TFuncDecl( decl )
@@ -2394,16 +2416,22 @@ End Rem
 			Emit "int       instance_size;"
 			Emit "void      (*ctor)( BBOBJECT o );"
 			Emit "void      (*dtor)( BBOBJECT o );"
-			Emit "BBSTRING (*ToString)( BBOBJECT x );"
+			Emit "BBSTRING  (*ToString)( BBOBJECT x );"
 			Emit "int       (*Compare)( BBOBJECT x,BBOBJECT y );"
-			Emit "BBOBJECT (*SendMessage)( BBOBJECT m,BBOBJECT s );"
-			Emit "void      (*_reserved1_)();"
-			Emit "void      (*_reserved2_)();"
-			Emit "void      (*_reserved3_)();"
+			Emit "BBOBJECT  (*SendMessage)( BBOBJECT m,BBOBJECT s );"
+			Emit "BBINTERFACEOFFSETS ifc_offsets;"
+			Emit "void*     ifc_vtable;"
+			Emit "int       ifc_size;"
 
 			EmitBBClassClassFuncProto(classDecl)
 
 			Emit "};~n"
+
+			If classDecl.IsInterface() Then
+				Emit "struct " + classid + "_methods {"
+				EmitBBClassClassFuncProto(classDecl)
+				Emit "};~n"
+			End If
 
 		End If
 
@@ -2746,7 +2774,7 @@ End Rem
 		'	Return
 		'EndIf
 
-		If classDecl.IsInterface() Or classDecl.IsExtern() Then
+		If classDecl.IsExtern() Then
 			Return
 		EndIf
 
@@ -2852,6 +2880,54 @@ End Rem
 		Emit "}"
 
 		Emit "};"
+		
+		Local fdecls:TFuncDecl[] = classDecl.GetAllFuncDecls()
+		Local implementedInterfaces:TMap = classDecl.GetInterfaces()
+		Local ifcCount:Int
+
+		If classDecl.IsInterface()  Then
+			Emit "const struct BBInterface " + classid + "_ifc = { (const char *) ~q" + classDecl.ident + "~q };"
+		Else
+			' interface class implementation
+			
+			If Not implementedInterfaces.IsEmpty() Then
+				Emit "struct " + classid + "_vdef {"
+				For Local ifc:TClassDecl = EachIn implementedInterfaces.Values()
+					Emit "struct " + ifc.munged + "_methods interface_" + ifc.ident + ";"
+					ifcCount :+ 1
+				Next
+				Emit "};~n"
+			
+				Emit "static struct BBInterfaceOffsets " + classid + "_ifc_offsets[] = {"
+				For Local ifc:TClassDecl = EachIn implementedInterfaces.Values()
+					Emit "{&" + ifc.munged + "_ifc, offsetof(struct " + classid + "_vdef, interface_" + ifc.ident + ")},"
+				Next
+				Emit "};~n"
+	
+				Emit "struct " + classid + "_vdef " + classid + "_ifc_vtable = {"
+				For Local ifc:TClassDecl = EachIn implementedInterfaces.Values()
+					Emit ".interface_" + ifc.ident + "={"
+					
+					For Local func:TFuncDecl = EachIn ifc.GetImplementedFuncs()
+					
+						If func.IsMethod() Then
+						
+							For Local f:TFuncDecl = EachIn fdecls
+								Mungdecl f
+								If f.ident = func.ident Then
+									Emit "_" + f.munged + ","
+									Exit
+								End If
+							Next
+					
+						End If
+					Next
+					Emit "},"
+				Next
+				Emit "};~n"
+			End If
+		End If
+		
 
 		Emit "struct BBClass_" + classid + " " + classid + "={"
 
@@ -2923,14 +2999,20 @@ End Rem
 		'gc mark
 		'Emit "void mark();"
 
-		Emit "bbObjectReserved,"
-		Emit "bbObjectReserved,"
-		Emit "bbObjectReserved"
+		If classDecl.IsInterface() Or implementedInterfaces.IsEmpty() Then
+			Emit "0,"
+			Emit "0,"
+			Emit "0"
+		Else
+			Emit classid + "_ifc_offsets,"
+			Emit "&" + classid + "_ifc_vtable,"
+			Emit ifcCount
+		End If
 
 		' methods/funcs
 		'reserved = "New,Delete,ToString,ObjectCompare,SendMessage".ToLower()
 
-		Local fdecls:TFuncDecl[] = classDecl.GetAllFuncDecls()
+		
 		'For Local decl:TFuncDecl = EachIn classDecl.Decls()
 		For Local decl:TFuncDecl = EachIn fdecls
 			If reserved.Find("," + decl.ident.ToLower() + ",") = -1 Then
@@ -3540,6 +3622,9 @@ End Rem
 		For Local decl:TClassDecl=EachIn app.Semanted()
 			If decl.declImported Or decl.IsExtern() Continue
 			Emit "struct " + decl.munged + "_obj;"
+			If decl.IsInterface() Then
+				Emit "extern const struct BBInterface " + decl.munged + "_ifc;"
+			End If
 		Next
 
 		'prototypes/header!
