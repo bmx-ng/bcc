@@ -306,14 +306,18 @@ Type TParser
 
 	Field _externCasts:TMap = New TMap
 
-	Method SetErr()
-		If _toker.Path()
-			_errInfo=FormatError(_toker.Path(),_toker.Line(),0)
+	Method SetErr(toker:TToker = Null)
+		Local t:TToker = _toker
+		If toker Then
+			t = toker
+		End If
+		If t.Path()
+			_errInfo=FormatError(t.Path(),t.Line(),0)
 		EndIf
 	End Method
 
-	Method DoErr(error:String)
-		SetErr()
+	Method DoErr(error:String, toker:TToker = Null)
+		SetErr(toker)
 		Err error
 	End Method
 
@@ -395,7 +399,7 @@ Type TParser
 
 	Method ParseToker( toker:TToker, toke$ )
 		If Not CParseToker( toker, toke )
-			DoErr "Syntax error - expecting '"+toke+"'."
+			DoErr "Syntax error - expecting '"+toke+"'.", toker
 		EndIf
 	End Method
 
@@ -2735,8 +2739,8 @@ End Rem
 
 				If attrs & CLASS_INTERFACE
 					Err "Final cannot be used with interfaces."
-				EndIf
-
+				End If
+				
 				attrs:|DECL_FINAL
 
 			Else If CParse( "abstract" )
@@ -2744,7 +2748,7 @@ End Rem
 				If attrs & CLASS_INTERFACE
 					Err "Abstract cannot be used with interfaces."
 				EndIf
-
+				
 				attrs:|DECL_ABSTRACT
 			Else
 				Exit
@@ -2777,7 +2781,7 @@ End Rem
 
 		Local method_attrs:Int=decl_attrs|FUNC_METHOD | (attrs & DECL_NODEBUG)
 		If attrs & CLASS_INTERFACE method_attrs:|DECL_ABSTRACT
-
+		
 		Repeat
 			SkipEols
 			Select _toke
