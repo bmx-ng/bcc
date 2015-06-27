@@ -2794,7 +2794,21 @@ End Rem
 		Repeat
 			SkipEols
 			Select _toke
-			Case "end", "endtype"
+			Case "end"
+				NextToke
+				Exit
+			Case "endtype"
+				If attrs & CLASS_INTERFACE Then
+					Err "Syntax error - expecting End Interface, not 'EndType'"
+				End If
+				toke = Null
+				NextToke
+				Exit
+			Case "endinterface"
+				If Not (attrs & CLASS_INTERFACE) Then
+					Err "Syntax error - expecting End Type, not 'EndInterface'"
+				End If
+				toke = Null
 				NextToke
 				Exit
 			Case "private"
@@ -2825,7 +2839,7 @@ End Rem
 			End Select
 		Forever
 
-		If toke CParse toke
+		If toke Parse toke
 
 		Return classDecl
 	End Method
