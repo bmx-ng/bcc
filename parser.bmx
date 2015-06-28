@@ -3058,6 +3058,10 @@ End Rem
 						If CParseToker(toker, "unsigned") Then
 							at :+ " " + toker._toke
 						End If
+
+						If CParseToker(toker, "struct") Then
+							at :+ " " + toker._toke
+						End If
 	
 						NextTokeToker(toker)
 						If CParseToker(toker, "*") Then
