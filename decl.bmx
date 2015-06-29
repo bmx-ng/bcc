@@ -148,6 +148,7 @@ Type TDecl
 	End Method
 
 	Method Semant()
+
 		If IsSemanted() Return
 
 		If IsSemanting() Err "Cyclic declaration of '"+ident+"'."
@@ -614,10 +615,15 @@ Type TScopeDecl Extends TDecl
 	
 	Method SemantedMethods:TList( id$="" )
 		Local fdecls:TList=New TList
-		For Local decl:TDecl=EachIn _semanted
+		For Local decl:TDecl=EachIn _decls
 			If id And decl.ident<>id Continue
 			Local fdecl:TFuncDecl=TFuncDecl( decl )
-			If fdecl And fdecl.IsMethod() fdecls.AddLast fdecl
+			If fdecl And fdecl.IsMethod()
+				If Not fdecl.IsSemanted() Then
+					fdecl.Semant()
+				End If
+				fdecls.AddLast fdecl
+			End If
 		Next
 		Return fdecls
 	End Method
@@ -1120,8 +1126,8 @@ Type TFuncDecl Extends TBlockDecl
 				End If
 			Else If retTypeExpr 
 				q:+":"+retTypeExpr.ToString()
-			Else
-				q:+":"+"?"
+			'Else
+			'	q:+":"+"?"
 			EndIf
 		EndIf
 		Return q+"("+t+")"
@@ -1462,6 +1468,10 @@ End Rem
 		Return (attrs & CLASS_INTERFACE)<>0
 	End Method
 
+	Method IsFinal:Int()
+		Return (attrs & DECL_FINAL)<>0
+	End Method
+
 	Method IsThrowable:Int()
 		Return (attrs & CLASS_THROWABLE)<>0
 	End Method
@@ -1628,12 +1638,13 @@ End Rem
 		'		args[i].Semant
 		'	Next
 		'EndIf
-		
+
 		'Semant superclass		
 		If superTy
 			'superClass=superTy.FindClass()
 			superClass=superTy.SemantClass()
 			If superClass.IsInterface() Err superClass.ToString()+" is an interface, not a class."
+			If superClass.IsFinal() Err "Final types cannot be extended."
 		EndIf
 		
 		'Semant implemented interfaces
@@ -1816,6 +1827,8 @@ End Rem
 	End Method
 	
 	Method FinalizeClass()
+	
+		SemantParts()
 
 		PushErr errInfo
 		
@@ -1845,7 +1858,7 @@ End Rem
 						If decl.IsAbstract()
 							Local found:Int
 							For Local decl2:TFuncDecl=EachIn impls
-								If decl2.EqualsFunc( decl )
+								If decl.ident.ToLower() = decl2.ident.ToLower() And decl2.EqualsFunc( decl )
 									found=True
 									Exit
 								EndIf

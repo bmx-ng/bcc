@@ -2290,11 +2290,11 @@ End Rem
 			BBClassClassFuncProtoBuildList(classDecl.superClass, list)
 		End If
 		
-		If classDecl.IsInterface() Then
+		'If classDecl.IsInterface() Then
 			For Local idecl:TClassDecl = EachIn classDecl.implmentsAll
 				BBClassClassFuncProtoBuildList(idecl, list)
 			Next
-		End If
+		'End If
 
 		For Local decl:TDecl=EachIn classDecl.Decls()
 			Local fdecl:TFuncDecl =TFuncDecl( decl )
@@ -2314,6 +2314,10 @@ End Rem
 								End If
 								ignore = True
 								Exit
+							End If
+							
+							If TFuncDecl(link._value).IsMethod() Then
+								ignore = True
 							End If
 						EndIf
 						link = link._succ
@@ -3377,11 +3381,24 @@ End Rem
 
 	Method EmitIfcClassDecl(classDecl:TClassDecl)
 
+		Local head:String = classDecl.ident + "^"
 		If classDecl.superClass Then
-			Emit classDecl.ident + "^" + classDecl.superClass.ident + "{", False
+			head :+ classDecl.superClass.ident
 		Else
-			Emit classDecl.ident + "^Null{", False
+			head :+ "Null"
 		End If
+		
+		If classDecl.implments Then
+			head :+ "@"
+			For Local i:Int = 0 Until classDecl.implments.length
+				If i Then
+					head :+ ","
+				End If
+				head :+ classDecl.implments[i].ident
+			Next
+		End If
+		
+		Emit head + "{", False
 
 		'PushMungScope
 		BeginLocalScope
@@ -3430,8 +3447,22 @@ End Rem
 				EndIf
 
 			Next
+			
+			Local flags:String
+			
+			If classDecl.IsAbstract() Then
+				flags :+ "A"
+			End If
+			
+			If classDecl.attrs & DECL_FINAL Then
+				flags :+ "F"
+			End If
 
-			Emit "}=" + Enquote(classDecl.munged), False
+			If classDecl.attrs & CLASS_INTERFACE Then
+				flags :+ "I"
+			End If
+
+			Emit "}" + flags + "=" + Enquote(classDecl.munged), False
 		Else
 			For Local decl:TDecl=EachIn classDecl.Decls()
 

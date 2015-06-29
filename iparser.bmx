@@ -261,6 +261,8 @@ Type TIParser
 							class.attrs :| DECL_ABSTRACT | DECL_FINAL
 						Else If CParse("E")
 							class.attrs :| DECL_EXTERN
+						Else If CParse("AI")
+							class.attrs :| CLASS_INTERFACE | DECL_ABSTRACT
 						End If
 'DebugStop
 						If CParse( "=" )
@@ -425,7 +427,18 @@ Type TIParser
 		Else
 			superTy = New TIdentType.Create( "brl.classes.object" )
 		EndIf
-'DebugStop
+
+		' implements
+		If CParse("@") Then
+			Local nimps:Int
+			Repeat
+				If imps.Length=nimps imps=imps + New TIdentType[10]
+				imps[nimps]=ParseIdentType()
+				nimps:+1
+			Until Not CParse(",")
+			imps=imps[..nimps]
+		End If
+		
 		Local classDecl:TClassDecl=New TClassDecl.Create( id,args,superTy,imps,attrs )
 		
 		If classDecl.IsExtern()
@@ -727,7 +740,7 @@ Type TIParser
 			args=args[..nargs]
 		EndIf
 		Parse ")"
-		
+
 		Repeat		
 			If CParse( "F" )
 				attrs:|DECL_FINAL
