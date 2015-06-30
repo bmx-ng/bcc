@@ -2244,9 +2244,9 @@ End Rem
 			decl.Semant()
 
 			If Not TFunctionPtrType(decl.ty) Then
-				Emit TransType(decl.ty, classDecl.actual.munged) + " _" + classDecl.actual.munged.ToLower() + "_" + decl.ident.ToLower() + ";"
+				Emit TransType(decl.ty, classDecl.actual.munged) + " _" + classDecl.actual.munged.ToLower() + "_" + decl.IdentLower() + ";"
 			Else
-				Emit TransType(decl.ty, "_" + classDecl.actual.munged.ToLower() + "_" + decl.ident.ToLower()) + ";"
+				Emit TransType(decl.ty, "_" + classDecl.actual.munged.ToLower() + "_" + decl.IdentLower()) + ";"
 			End If
 		Next
 
@@ -2280,7 +2280,7 @@ End Rem
 				If Not fdecl.IsSemanted()
 					fdecl.Semant()
 				End If
-				If reserved.Find("," + fdecl.ident.ToLower() + ",") = -1 Then
+				If reserved.Find("," + fdecl.IdentLower() + ",") = -1 Then
 				
 					Local ignore:Int
 					Local link:TLink=list._head._succ
@@ -2366,7 +2366,7 @@ End Rem
 				Local fdecl:TFuncDecl =TFuncDecl( decl )
 				If fdecl
 
-					If reserved.Find("," + fdecl.ident.ToLower() + ",") = -1 Then
+					If reserved.Find("," + fdecl.IdentLower() + ",") = -1 Then
 						EmitClassFuncProto( fdecl )
 						Continue
 					End If
@@ -2448,9 +2448,9 @@ End Rem
 	End Method
 
 	Method classHasFunction:Int(classDecl:TClassDecl, func:String)
-'DebugStop
+		Local f:String = func.ToLower()
 		For Local decl:TFuncDecl = EachIn classDecl.Decls()
-			If decl.ident.ToLower() = func.toLower() Then
+			If decl.IdentLower() = f Then
 				Return True
 			End If
 		Next
@@ -2600,7 +2600,7 @@ End Rem
 				If Not fdecl.IsSemanted()
 					fdecl.Semant()
 				End If
-				If reserved.Find("," + fdecl.ident.ToLower() + ",") = -1 Then
+				If reserved.Find("," + fdecl.IdentLower() + ",") = -1 Then
 				
 					Local ignore:Int
 					Local link:TLink=list._head._succ
@@ -2686,7 +2686,7 @@ End Rem
 		For Local decl:TDecl=EachIn classDecl.Decls()
 			Local fdecl:TFuncDecl =TFuncDecl( decl )
 			If fdecl
-				If reserved.Find("," + fdecl.ident.ToLower() + ",") = -1 Then
+				If reserved.Find("," + fdecl.IdentLower() + ",") = -1 Then
 					count :+ 1
 				End If
 			End If
@@ -2776,7 +2776,7 @@ End Rem
 
 			Local fdecl:TFuncDecl=TFuncDecl( decl )
 			If fdecl
-				If reserved.Find("," + fdecl.ident.ToLower() + ",") = -1 Then
+				If reserved.Find("," + fdecl.IdentLower() + ",") = -1 Then
 					EmitGDBDebug(fdecl)
 					EmitFuncDecl fdecl, , True
 					Continue
@@ -2933,7 +2933,7 @@ End Rem
 		Local fdecls:TFuncDecl[] = classDecl.GetAllFuncDecls()
 		'For Local decl:TFuncDecl = EachIn classDecl.Decls()
 		For Local decl:TFuncDecl = EachIn fdecls
-			If reserved.Find("," + decl.ident.ToLower() + ",") = -1 Then
+			If reserved.Find("," + decl.IdentLower() + ",") = -1 Then
 
 				MungDecl decl
 
@@ -2994,7 +2994,7 @@ End Rem
 			Emit fld
 		Next
 
-		Local decl:TFuncDecl = classDecl.FindFuncDecl("New")
+		Local decl:TFuncDecl = classDecl.FindFuncDecl("new")
 		If decl Then
 			decl.Semant
 			If decl.munged <> "bbObjectCtor" Then
@@ -3018,7 +3018,7 @@ End Rem
 '			Emit "int _" + classid + "_Delete" + Bra(TransObject(classdecl) + " o") + " {"
 '		End If
 
-		Local decl:TFuncDecl = classDecl.FindFuncDecl("Delete")
+		Local decl:TFuncDecl = classDecl.FindFuncDecl("delete")
 		If decl Then
 			decl.Semant
 			EmitLocalDeclarations(decl)
@@ -3341,7 +3341,7 @@ End Rem
 
 				Local fdecl:TFuncDecl=TFuncDecl( decl )
 				If fdecl
-					If reserved.Find("," + fdecl.ident.ToLower() + ",") = -1 Then
+					If reserved.Find("," + fdecl.IdentLower() + ",") = -1 Then
 						EmitIfcClassFuncDecl fdecl
 					End If
 					Continue

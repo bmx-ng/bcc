@@ -734,7 +734,7 @@ Type TIdentType Extends TType
 		Local i:Int=ident.FindLast( "." )
 		
 		If i=-1
-			tyid=ident
+			tyid=ident.ToLower()
 			ty=_env.FindType( tyid,targs )
 
 			' finally scan all modules for it
@@ -745,25 +745,26 @@ Type TIdentType Extends TType
 				Next
 			End If
 		Else
-			i = ident.Find( "." )
+			Local id:String = ident.ToLower()
+			i = id.Find( "." )
 						
 			' try scope search first
-			tyid=ident[..i]
+			tyid=id[..i]
 			ty=_env.FindType( tyid,targs )
 			
 			If Not ty Then
-				i = ident.FindLast( "." )
+				i = id.FindLast( "." )
 		
 				' try scope search first
-				tyid=ident[..i]
+				tyid=id[..i]
 				ty=_env.FindType( tyid,targs )				
 
 				If Not ty Then
 					' no? now try module search
-					Local modid$=ident[..i]
+					Local modid$=id[..i]
 					Local mdecl:TModuleDecl=_env.FindModuleDecl( modid )
 					If Not mdecl Err "Module '"+modid+"' not found"
-					tyid=ident[i+1..]
+					tyid=id[i+1..]
 					ty=mdecl.FindType( tyid,targs )
 				End If
 			End If

@@ -703,11 +703,11 @@ Type TNewObjectExpr Extends TExpr
 		exprType=ty
 		
 		If it Then
-			Local parts:String[] = it.ident.Split(".")
+			Local parts:String[] = it.ident.ToLower().Split(".")
 			
 			Local i:Int = 0
 			
-			While i < parts.length And parts[i].ToLower() <> classDecl.ident.ToLower()
+			While i < parts.length And parts[i] <> classDecl.IdentLower()
 				i :+ 1
 			Wend
 			
@@ -812,19 +812,29 @@ Type TInvokeSuperExpr Extends TExpr
 	Field funcDecl:TFuncDecl
 	Field classScope:TClassDecl
 	Field superClass:TClassDecl
+	
+	Field _identLower:String
 
-	Method Create:TInvokeSuperExpr( ident$,args:TExpr[] = Null )
+	Method Create:TInvokeSuperExpr( ident$,args:TExpr[] = Null, _identLower:String = Null )
 		Self.ident=ident
 		If args Then
 			Self.args=args
 		Else
 			Self.args = New TExpr[0]
 		End If
+		Self._identLower = _identLower
 		Return Self
 	End Method
 
+	Method IdentLower:String()
+		If Not _identLower Then
+			_identLower = ident.ToLower()
+		End If
+		Return _identLower
+	End Method
+
 	Method Copy:TExpr()
-		Return New TInvokeSuperExpr.Create( ident,CopyArgs(args) )
+		Return New TInvokeSuperExpr.Create( ident,CopyArgs(args), _identLower )
 	End Method
 
 	Method Semant:TExpr()
@@ -838,8 +848,8 @@ Type TInvokeSuperExpr Extends TExpr
 		If Not superClass Err "Type has no super class."
 		
 		args=SemantArgs( args )
-		origFuncDecl=classScope.FindFuncDecl(ident,args)
-		funcDecl=superClass.FindFuncDecl( ident,args )
+		origFuncDecl=classScope.FindFuncDecl(IdentLower(),args)
+		funcDecl=superClass.FindFuncDecl( IdentLower(),args )
 
 		If Not funcDecl Err "Can't find superclass method '"+ident+"'."
 
@@ -1878,15 +1888,25 @@ Type TIdentExpr Extends TExpr
 	Field static:Int
 	Field isArg:Int
 	Field isRhs:Int
+	
+	Field _identLower:String
 
-	Method Create:TIdentExpr( ident$,expr:TExpr=Null )
+	Method IdentLower:String()
+		If Not _identLower Then
+			_identLower = ident.ToLower()
+		End If
+		Return _identLower
+	End Method
+
+	Method Create:TIdentExpr( ident$,expr:TExpr=Null, _identLower:String = Null )
 		Self.ident=ident
 		Self.expr=expr
+		Self._identLower = _identLower
 		Return Self
 	End Method
 
 	Method Copy:TExpr()
-		Return New TIdentExpr.Create( ident,CopyExpr(expr) )
+		Return New TIdentExpr.Create( ident,CopyExpr(expr), _identLower )
 	End Method
 
 	Method ToString$()
@@ -1938,7 +1958,7 @@ Type TIdentExpr Extends TExpr
 		If scope
 			Local close$
 			For Local decl:TDecl=EachIn scope.Decls()
-				If ident.ToLower()=decl.ident.ToLower()
+				If IdentLower()=decl.IdentLower()
 					close=decl.ident
 				EndIf
 			Next
@@ -1964,7 +1984,7 @@ Type TIdentExpr Extends TExpr
 		_Semant
 
 		'Local scope:TScopeDecl=IdentScope()
-		Local vdecl:TValDecl=scope.FindValDecl( ident, static )
+		Local vdecl:TValDecl=scope.FindValDecl( IdentLower(), static )
 		If vdecl
 
 			If TConstDecl( vdecl )
@@ -1987,7 +2007,7 @@ Type TIdentExpr Extends TExpr
 
 		If op And op<>"="
 
-			Local fdecl:TFuncDecl=scope.FindFuncDecl( ident )
+			Local fdecl:TFuncDecl=scope.FindFuncDecl( IdentLower() )
 			If Not fdecl IdentErr
 
 			If _env.ModuleScope().IsStrict() And Not fdecl.IsProperty() Err "Identifier '"+ident+"' cannot be used in this way."
@@ -2017,7 +2037,7 @@ Type TIdentExpr Extends TExpr
 		Local args:TExpr[]
 		If rhs args=[rhs]
 
-		Local fdecl:TFuncDecl=scope.FindFuncDecl( ident,args, , isArg, True )
+		Local fdecl:TFuncDecl=scope.FindFuncDecl( IdentLower(),args, , isArg, True )
 
 		If fdecl
 			If _env.ModuleScope().IsStrict() And Not fdecl.IsProperty() And Not isArg And Not fdecl.maybeFunctionPtr Err "Identifier '"+ident+"' cannot be used in this way."
@@ -2033,7 +2053,7 @@ Type TIdentExpr Extends TExpr
 		End If
 		
 		' maybe it's a classdecl?
-		Local cdecl:TClassDecl = TClassDecl(scope.FindDecl(ident))
+		Local cdecl:TClassDecl = TClassDecl(scope.FindDecl(IdentLower()))
 		
 		If cdecl Then
 			Local e:TIdentTypeExpr = New TIdentTypeExpr.Create(cdecl.objectType)
@@ -2042,14 +2062,14 @@ Type TIdentExpr Extends TExpr
 		End If
 
 		' maybe it's a loop label?
-		Local stmt:TLoopStmt = TLoopStmt(scope.FindLoop(ident))
+		Local stmt:TLoopStmt = TLoopStmt(scope.FindLoop(IdentLower()))
 		
 		If stmt Then
 			Return New TLoopLabelExpr.Create(stmt)
 		End If
 		
 		' maybe it's a data label?
-		Local ddecl:TDefDataDecl = TDefDataDecl(_appInstance.FindDataLabel(ident))
+		Local ddecl:TDefDataDecl = TDefDataDecl(_appInstance.FindDataLabel(IdentLower()))
 		
 		If ddecl Then
 			Return New TDataLabelExpr.Create(ddecl)
@@ -2063,7 +2083,7 @@ Type TIdentExpr Extends TExpr
 		_Semant
 
 		'Local scope:TScopeDecl=IdentScope()
-		Local fdecl:TFuncDecl=scope.FindFuncDecl( ident,args )
+		Local fdecl:TFuncDecl=scope.FindFuncDecl( IdentLower(),args )
 
 		' if our scope is static, but the scope of the found function/method is not
 		' then we should ignore it and continue looking higher up the scope stack.
@@ -2074,14 +2094,14 @@ Type TIdentExpr Extends TExpr
 			
 			' if fdecl was a method, this would be the Type's scope (ie. file/module)
 			If scope2.scope Then
-				fdecl = scope2.scope.FindFuncDecl( ident,args )
+				fdecl = scope2.scope.FindFuncDecl( IdentLower(),args )
 			End If
 		End If
 
 		' couldn't find it? try a global search
 		If Not fdecl Then
 			For Local mdecl:TModuleDecl = EachIn _appInstance.globalImports.Values()
-				fdecl=mdecl.FindFuncDecl( ident, args )
+				fdecl=mdecl.FindFuncDecl( IdentLower(), args )
 				If fdecl Exit
 			Next
 		End If
@@ -2104,7 +2124,7 @@ Type TIdentExpr Extends TExpr
 		'	If cdecl Return args[0].Cast( New TObjectType.Create(cdecl),CAST_EXPLICIT )
 		'EndIf
 
-		Local ty:TType=scope.FindType( ident,Null )
+		Local ty:TType=scope.FindType( IdentLower(),Null )
 		If ty Then
 			If args.Length=1 And args[0] Return args[0].Cast( ty,CAST_EXPLICIT )
 			Err "Illegal number of arguments for type conversion"
@@ -2114,18 +2134,18 @@ Type TIdentExpr Extends TExpr
 	End Method
 
 	Method SemantScope:TScopeDecl()
-		If Not expr Return _env.FindScopeDecl( ident )
+		If Not expr Return _env.FindScopeDecl( IdentLower() )
 		Local scope:TScopeDecl=expr.SemantScope()
 
 		' If scope is a namespace, then we are a module. Look up the module id and return it as the real scope.
 		If TNamespaceDecl(scope) Then
-			Local mdecl:TModuleDecl=TModuleDecl(scope.FindDecl(scope.ident + "." + ident))
+			Local mdecl:TModuleDecl=TModuleDecl(scope.FindDecl(scope.IdentLower() + "." + IdentLower()))
 			If mdecl Then
 				Return mdecl
 			End If
 		End If
 
-		If scope Return scope.FindScopeDecl( ident )
+		If scope Return scope.FindScopeDecl( IdentLower() )
 	End Method
 
 '	Method Trans$()

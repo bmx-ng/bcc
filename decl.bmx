@@ -71,12 +71,21 @@ Type TDecl
 	Field declImported:Int = False
 	Field generated:Int
 	
+	Field _identLower:String
+	
 	Method New()
 		errInfo=_errInfo
 		actual=Self
 	End Method
 	
 	Method OnCopy:TDecl(deep:Int = True) Abstract
+	
+	Method IdentLower:String()
+		If Not _identLower Then
+			_identLower = ident.ToLower()
+		End If
+		Return _identLower
+	End Method
 	
 	Method ToString$()
 		If TClassDecl( scope ) Return scope.ToString()+"."+ident
@@ -626,8 +635,8 @@ Type TScopeDecl Extends TDecl
 
 		If decl.scope And Not (decl.attrs & DECL_INITONLY) InternalErr
 		
-		Local ident$=decl.ident
-		If Not ident Return
+		'Local ident$=decl.ident
+		If Not decl.ident Return
 		
 		If Not decl.scope Then
 			decl.scope=Self
@@ -635,7 +644,7 @@ Type TScopeDecl Extends TDecl
 		_decls.AddLast decl
 
 		'Local _decls:TMap
-		Local tdecl_:Object=declsMap.ValueForKey( ident.ToLower() )
+		Local tdecl_:Object=declsMap.ValueForKey( decl.IdentLower() )
 		
 		'If TFuncDecl( decl )
 		'	Local funcs:TFuncDeclList=TFuncDeclList( tdecl_ )
@@ -651,7 +660,7 @@ Type TScopeDecl Extends TDecl
 		'Else
 		If Not tdecl_
 'DebugLog "Adding " + decl.ident
-			declsMap.Insert ident.ToLower(),decl
+			declsMap.Insert decl.IdentLower(),decl
 		Else
 			Err "Duplicate identifier '"+ident+"'."
 		EndIf
@@ -667,10 +676,10 @@ Type TScopeDecl Extends TDecl
 	'This is overridden by TClassDecl and TModuleDecl
 	Method GetDecl:Object( ident$ )
 'DebugLog "GetDecl (" + Self.ident + ") : " + ident
-		Local decl:Object=Object(declsMap.ValueForKey( ident.ToLower() ))
+		Local decl:Object=Object(declsMap.ValueForKey( ident ))
 		
 		If Not decl Then
-			If Self.ident.ToLower() = ident.ToLower() Then
+			If Self.IdentLower() = ident Then
 				' name matches but we are a "module", but not a *real* module..
 				' .. so we can't be looking for ourself
 				If TModuleDecl(Self) And Self.ident.Find(".") = - 1 Then
@@ -733,7 +742,7 @@ Type TScopeDecl Extends TDecl
 		If Not decl Then
 			' didn't find it? Maybe it is in module local scope?
 			' issue arises when a global initialises with a local variable in the module scope.
-			Local fdecl:TFuncDecl = TFuncDecl(FindDecl("__LocalMain"))
+			Local fdecl:TFuncDecl = TFuncDecl(FindDecl("__localmain"))
 			If fdecl Then
 				decl = TValDecl( fdecl.FindDecl( ident ) )
 				
@@ -1212,7 +1221,7 @@ Type TFuncDecl Extends TBlockDecl
 		
 		'append a return statement if necessary
 		If Not IsExtern() And Not TVoidType( retType ) And Not TReturnStmt( stmts.Last() )
-			If Not isCtor() And Not (isMethod() And ident.ToLower() = "delete") 
+			If Not isCtor() And Not (isMethod() And IdentLower() = "delete") 
 				Local stmt:TReturnStmt
 			'If IsCtor()
 			'	stmt=New TReturnStmt.Create( Null )
@@ -1237,11 +1246,11 @@ Type TFuncDecl Extends TBlockDecl
 					'	decl.Semant
 					'End If
 					
-					If decl.ident.ToLower() = ident.ToLower() Then
+					If decl.IdentLower() = IdentLower() Then
 'DebugLog "Method = " + decl.ident
 					
-						If ident.ToLower() = "new" Continue
-						If ident.ToLower() = "delete" Continue
+						If IdentLower() = "new" Continue
+						If IdentLower() = "delete" Continue
 'If ident = "Create" DebugStop
 						found=True
 
@@ -1559,7 +1568,7 @@ End Rem
 			
 			For Local i:Int = 0 Until funcs.length
 				' found a match - we are overriding it
-				If func.ident.ToLower() = funcs[i].ident.ToLower() Then
+				If func.IdentLower() = funcs[i].IdentLower() Then
 					matched = True
 					' set this to our own func
 					funcs[i] = func
@@ -2011,7 +2020,7 @@ Type TModuleDecl Extends TScopeDecl
 
 		If ident.Find(".") <> -1 Then
 			Local m:String = ident[..ident.Find(".")]
-			Local ns:TNamespaceDecl = TNamespaceDecl(_appInstance.GetDecl(m))
+			Local ns:TNamespaceDecl = TNamespaceDecl(_appInstance.GetDecl(m.ToLower()))
 			If Not ns Then
 				ns = New TNamespaceDecl.Create(m, m)
 				If _appInstance.mainModule Then
@@ -2089,7 +2098,7 @@ Type TModuleDecl Extends TScopeDecl
 	End Method
 
 	Method OnSemant()
-		Local decl:TFuncDecl = FindFuncDecl( "__LocalMain" )
+		Local decl:TFuncDecl = FindFuncDecl( "__localmain" )
 		If decl Then
 			decl.Semant
 		End If
@@ -2185,7 +2194,7 @@ Type TAppDecl Extends TScopeDecl
 
 		mainModule.Semant
 
-		mainFunc=mainModule.FindFuncDecl( "__LocalMain" )
+		mainFunc=mainModule.FindFuncDecl( "__localmain" )
 		
 		
 		' FIXME
