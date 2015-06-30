@@ -222,9 +222,12 @@ Type TUnorderedMap
 
 	Field list:TList = New TList
 	Field map:TMap = New TMap
+	
+	Field valuesList:TList = New TList
 
 	Method Insert( key:Object,value:Object )
 		list.AddLAst(New TKeyValue.Create(key, value))
+		valuesList.AddLast(value)
 		map.Insert(key, value)
 	End Method
 	
@@ -237,11 +240,11 @@ Type TUnorderedMap
 	End Method
 	
 	Method Values:TList()
-		Local vlist:TList = New TList
-		For Local kv:TKeyValue = EachIn list
-			vlist.AddLast(kv.value)
-		Next
-		Return vlist
+		'Local vlist:TList = New TList
+		'For Local kv:TKeyValue = EachIn list
+		'	vlist.AddLast(kv.value)
+		'Next
+		Return valuesList
 	End Method
 	
 	Method Contains:Int( key:Object )
