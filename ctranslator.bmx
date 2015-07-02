@@ -1811,6 +1811,14 @@ t:+"NULLNULLNULL"
 		Return s
 	End Method
 
+	Method TransAssertStmt$( stmt:TAssertStmt )
+		If opt_debug Then
+			Emit "if (!" + Bra(stmt.expr.Trans()) + ") {"
+			Emit "brl_blitz_RuntimeError(" + stmt.elseExpr.Trans() + ");"
+			Emit "}"
+		End If
+	End Method
+
 	Method TransEndStmt$( stmt:TEndStmt )
 		Emit "bbEnd();"
 	End Method

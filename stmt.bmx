@@ -555,6 +555,8 @@ Type TAssertStmt Extends TStmt
 		expr=expr.SemantAndCast( New TBoolType,CAST_EXPLICIT )
 		If elseExpr Then
 			elseExpr = elseExpr.SemantAndCast(New TStringType,CAST_EXPLICIT)
+		Else
+			elseExpr = New TConstExpr.Create(New TStringType, "Assert failed")
 		End If
 	End Method
 	

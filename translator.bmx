@@ -1320,11 +1320,7 @@ End Rem
 		broken=nbroken
 	End Method
 
-	Method TransAssertStmt$( stmt:TAssertStmt )
-		
-		Emit "// TODO : assert statement"
-
-	End Method
+	Method TransAssertStmt$( stmt:TAssertStmt ) Abstract
 
 	Method TransEndStmt$( stmt:TEndStmt ) Abstract
 
