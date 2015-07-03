@@ -113,7 +113,7 @@ Type TForEachinStmt Extends TLoopStmt
 				If TArrayType( expr.exprType ) And TObjectType(TArrayType( expr.exprType ).elemType) Then
 				' var = Null
 					If Not varty Then
-						Local decl:TValDecl = block.scope.FindValDecl(varid)
+						Local decl:TValDecl = block.scope.FindValDecl(varid.ToLower())
 						
 						If decl Then
 							decl.Semant()
@@ -203,7 +203,7 @@ Type TForEachinStmt Extends TLoopStmt
 			Else
 				
 				If Not varty Then
-					Local decl:TValDecl = block.scope.FindValDecl(varid)
+					Local decl:TValDecl = block.scope.FindValDecl(varid.ToLower())
 					
 					If decl Then
 						decl.Semant()
