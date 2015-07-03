@@ -1580,7 +1580,7 @@ End Rem
 
 				For Local i:Int = 0 Until funcs.length
 					' found a match - we are overriding it
-					If func.ident.ToLower() = funcs[i].ident.ToLower() Then
+					If func.IdentLower() = funcs[i].IdentLower() Then
 						matched = True
 						Exit
 					End If
@@ -1867,7 +1867,7 @@ End Rem
 						If decl.IsAbstract()
 							Local found:Int
 							For Local decl2:TFuncDecl=EachIn impls
-								If decl.ident.ToLower() = decl2.ident.ToLower() And decl2.EqualsFunc( decl )
+								If decl.IdentLower() = decl2.IdentLower() And decl2.EqualsFunc( decl )
 									found=True
 									Exit
 								EndIf
