@@ -741,7 +741,7 @@ t:+"NULLNULLNULL"
 						If decl.scope.IsExtern()
 							Return decl.munged + Bra(TransArgs( args,decl, TransSubExpr( lhs ) ))
 						Else
-							If cdecl.IsInterface() And reserved_methods.Find("," + decl.ident.ToLower() + ",") = -1 Then
+							If cdecl.IsInterface() And reserved_methods.Find("," + decl.IdentLower() + ",") = -1 Then
 								Local ifc:String = Bra("(struct " + cdecl.munged + "_methods*)" + Bra("bbObjectInterface(" + TransSubExpr( lhs ) + ", " + "&" + cdecl.munged + "_ifc)"))
 								Return ifc + "->" + TransFuncPrefix(cdecl, decl) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
 							Else
@@ -760,7 +760,7 @@ t:+"NULLNULLNULL"
 					If decl.attrs & FUNC_PTR Then
 						Return "(" + obj + TransSubExpr( lhs ) + ")->" + decl.munged+TransArgs( args,decl, Null)
 					Else
-						If cdecl.IsInterface() And reserved_methods.Find("," + decl.ident.ToLower() + ",") = -1 Then
+						If cdecl.IsInterface() And reserved_methods.Find("," + decl.IdentLower() + ",") = -1 Then
 							Local ifc:String = Bra("(struct " + cdecl.munged + "_methods*)" + Bra("bbObjectInterface(" + obj + TransSubExpr( lhs ) + ", " + "&" + cdecl.munged + "_ifc)"))
 							Return ifc + "->" + TransFuncPrefix(cdecl, decl) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
 						Else
