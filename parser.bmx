@@ -2710,7 +2710,7 @@ End Rem
 				superTy=New TIdentType.Create( "brl.classes.object" )
 			End If
 		EndIf
-Rem
+
 		If CParse( "implements" )
 
 			If attrs & DECL_EXTERN
@@ -2721,9 +2721,9 @@ Rem
 				Err "Implements cannot be used with interfaces."
 			EndIf
 
-			If attrs & CLASS_TEMPLATEARG
-				Err "Implements cannot be used with class parameters."
-			EndIf
+			'If attrs & CLASS_TEMPLATEARG
+			'	Err "Implements cannot be used with class parameters."
+			'EndIf
 
 			Local nimps:Int
 			Repeat
@@ -2733,12 +2733,20 @@ Rem
 			Until Not CParse(",")
 			imps=imps[..nimps]
 		EndIf
-End Rem
+
 		Repeat
 			If CParse( "final" )
 
 				If attrs & CLASS_INTERFACE
 					Err "Final cannot be used with interfaces."
+				End If
+				
+				If attrs & DECL_FINAL
+					Err "Duplicate type attribute."
+				End If
+
+				If attrs & DECL_ABSTRACT
+					Err "Classes cannot be both final and abstract."
 				End If
 				
 				attrs:|DECL_FINAL
@@ -2749,6 +2757,14 @@ End Rem
 					Err "Abstract cannot be used with interfaces."
 				EndIf
 				
+				If attrs & DECL_ABSTRACT
+					Err "Duplicate type attribute."
+				End If
+				
+				If attrs & DECL_FINAL
+					Err "Types cannot be both final and abstract."
+				End If
+
 				attrs:|DECL_ABSTRACT
 			Else
 				Exit
@@ -2757,9 +2773,6 @@ End Rem
 
 		'check for metadata
 		If CParse( "{" )
-			' TODO : do something with the metadata
-			'metadata for "type"s
-			'print "meta for type: "+id+ " -> "+ParseMetaData()
 			meta = ParseMetaData()
 		End If
 
@@ -2785,7 +2798,21 @@ End Rem
 		Repeat
 			SkipEols
 			Select _toke
-			Case "end", "endtype"
+			Case "end"
+				NextToke
+				Exit
+			Case "endtype"
+				If attrs & CLASS_INTERFACE Then
+					Err "Syntax error - expecting End Interface, not 'EndType'"
+				End If
+				toke = Null
+				NextToke
+				Exit
+			Case "endinterface"
+				If Not (attrs & CLASS_INTERFACE) Then
+					Err "Syntax error - expecting End Type, not 'EndInterface'"
+				End If
+				toke = Null
 				NextToke
 				Exit
 			Case "private"
@@ -2804,7 +2831,7 @@ End Rem
 				If decl.IsCtor() decl.retTypeExpr=New TObjectType.Create( classDecl )
 				classDecl.InsertDecl decl
 			Case "function"
-				If (attrs & CLASS_INTERFACE) And _toke<>"const"
+				If (attrs & CLASS_INTERFACE)
 					Err "Interfaces can only contain constants and methods."
 				EndIf
 				Local decl:TFuncDecl=ParseFuncDecl( _toke,decl_attrs )
@@ -2816,7 +2843,7 @@ End Rem
 			End Select
 		Forever
 
-		If toke CParse toke
+		If toke Parse toke
 
 		Return classDecl
 	End Method
@@ -3181,8 +3208,8 @@ End Rem
 				Next
 			Case "type"
 				_module.InsertDecl ParseClassDecl( _toke,attrs )
-			'Case "interface"
-			'	_module.InsertDecl ParseClassDecl( _toke,attrs|CLASS_INTERFACE|DECL_ABSTRACT )
+			Case "interface"
+				_module.InsertDecl ParseClassDecl( _toke,attrs|CLASS_INTERFACE|DECL_ABSTRACT )
 			Case "function"
 				_module.InsertDecl ParseFuncDecl( _toke,attrs )
 			Case "rem"

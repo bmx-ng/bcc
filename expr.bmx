@@ -1153,6 +1153,11 @@ Type TCastExpr Extends TExpr
 			Return Self
 		End If
 
+		If TObjectType(ty) And TObjectType(src) And TObjectType(src).classdecl.IsInterface() And flags & CAST_EXPLICIT Then
+			exprType = ty
+			Return Self
+		End If
+
 		If Not exprType
 			Err "Unable to convert from "+src.ToString()+" to "+ty.ToString()+"."
 		EndIf
