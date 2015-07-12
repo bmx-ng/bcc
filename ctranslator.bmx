@@ -2298,11 +2298,9 @@ End Rem
 			BBClassClassFuncProtoBuildList(classDecl.superClass, list)
 		End If
 		
-		'If classDecl.IsInterface() Then
-			For Local idecl:TClassDecl = EachIn classDecl.implmentsAll
-				BBClassClassFuncProtoBuildList(idecl, list)
-			Next
-		'End If
+		For Local idecl:TClassDecl = EachIn classDecl.implmentsAll
+			BBClassClassFuncProtoBuildList(idecl, list)
+		Next
 
 		For Local decl:TDecl=EachIn classDecl.Decls()
 			Local fdecl:TFuncDecl =TFuncDecl( decl )
@@ -2363,18 +2361,10 @@ End Rem
 		End If
 
 		If Not classDecl.IsExtern() Then
-'			If opt_issuperstrict Then
-				Emit "void _" + classid + "_New" + Bra(TransObject(classdecl) + " o") + ";"
-'			Else
-'				Emit "int _" + classid + "_New" + Bra(TransObject(classdecl) + " o") + ";"
-'			End If
+			Emit "void _" + classid + "_New" + Bra(TransObject(classdecl) + " o") + ";"
 			
 			If classHierarchyHasFunction(classDecl, "Delete") Then
-'				If opt_issuperstrict Then
-					Emit "void _" + classid + "_Delete" + Bra(TransObject(classdecl) + " o") + ";"
-'				Else
-'					Emit "int _" + classid + "_Delete" + Bra(TransObject(classdecl) + " o") + ";"
-'				End If
+				Emit "void _" + classid + "_Delete" + Bra(TransObject(classdecl) + " o") + ";"
 			End If
 
 			If classHasFunction(classDecl, "ToString") Then
@@ -2478,11 +2468,7 @@ End Rem
 
 		' fields
 		For Local decl:TFieldDecl = EachIn classDecl.Decls()
-'DebugStop
 			MungDecl decl
-
-			'Emit "#define " + decl.munged + " " + (OBJECT_BASE_OFFSET + decl.offset)
-
 		Next
 
 	End Method
@@ -2634,11 +2620,14 @@ End Rem
 	Method BBClassClassFuncsDebugScopeBuildList(classDecl:TClassDecl, list:TList)
 		Local reserved:String = ",New,Delete,ToString,Compare,SendMessage,_reserved1_,_reserved2_,_reserved3_,".ToLower()
 
-		For Local decl:TDecl=EachIn classDecl.Decls()
+		For Local decl:TDecl=EachIn classDecl.GetAllFuncDecls(Null, False)
 			Local fdecl:TFuncDecl =TFuncDecl( decl )
 			If fdecl
 				If Not fdecl.IsSemanted()
 					fdecl.Semant()
+				End If
+				If Not classDecl.IsInterface() And fdecl.IsAbstract() Then
+					Continue
 				End If
 				If reserved.Find("," + fdecl.IdentLower() + ",") = -1 Then
 				
@@ -2688,7 +2677,9 @@ End Rem
 			ret = "()"
 		End If
 		
-		EmitClassStandardMethodDebugScope("New", ret, "_" + classid + "_New")
+		If Not classDecl.IsInterface() Then
+			EmitClassStandardMethodDebugScope("New", ret, "_" + classid + "_New")
+		End If
 	
 		If classHasFunction(classDecl, "ToString") Then
 			EmitClassStandardMethodDebugScope("ToString", "()$", "_" + classidForFunction(classDecl, "ToString") + "_ToString")
@@ -2723,9 +2714,12 @@ End Rem
 	Method CountBBClassClassFuncsDebugScope(classDecl:TClassDecl, count:Int Var)
 		Local reserved:String = ",New,Delete,ToString,Compare,SendMessage,_reserved1_,_reserved2_,_reserved3_,".ToLower()
 
-		For Local decl:TDecl=EachIn classDecl.Decls()
+		For Local decl:TDecl=EachIn classDecl.GetAllFuncDecls(Null, False)
 			Local fdecl:TFuncDecl =TFuncDecl( decl )
 			If fdecl
+				If Not classDecl.IsInterface() And fdecl.IsAbstract() Then
+					Continue
+				End If
 				If reserved.Find("," + fdecl.IdentLower() + ",") = -1 Then
 					count :+ 1
 				End If
@@ -2749,6 +2743,11 @@ End Rem
 	
 	Method DebugScopeDeclCount:Int(classDecl:TClassDecl)
 		Local count:Int = 2 ' "New" counts as first one
+		
+		' but we don't use "New" for interfaces...
+		If classDecl.IsInterface() Then
+			count :- 1
+		End If
 
 		' consts		
 		CountClassConstsDebugScope(classDecl, count)
@@ -2871,7 +2870,12 @@ End Rem
 		Else
 			Emit "struct BBDebugScope " + classid + "_scope ={"
 		End If
-		Emit "BBDEBUGSCOPE_USERTYPE,"
+		
+		If classDecl.IsInterface() Then
+			Emit "BBDEBUGSCOPE_USERINTERFACE,"
+		Else
+			Emit "BBDEBUGSCOPE_USERTYPE,"
+		End If
 		Emit EnQuote(classDecl.ident + TransDebugMetaData(classDecl.metadata)) + ","
 
 		Emit "{"
@@ -2897,11 +2901,8 @@ End Rem
 		Local implementedInterfaces:TMap = classDecl.GetInterfaces()
 		Local ifcCount:Int
 
-		If classDecl.IsInterface()  Then
-			Emit "const struct BBInterface " + classid + "_ifc = { (const char *) ~q" + classDecl.ident + "~q };"
-		Else
-			' interface class implementation
-			
+		' interface class implementation
+		If Not classDecl.IsInterface()
 			If Not implementedInterfaces.IsEmpty() Then
 				Emit "struct " + classid + "_vdef {"
 				For Local ifc:TClassDecl = EachIn implementedInterfaces.Values()
@@ -2940,7 +2941,6 @@ End Rem
 			End If
 		End If
 		
-
 		Emit "struct BBClass_" + classid + " " + classid + "={"
 
 		' super class reference
@@ -3040,6 +3040,12 @@ End Rem
 		Next
 
 		Emit "};~n"
+
+		If classDecl.IsInterface()  Then
+			Emit "const struct BBInterface " + classid + "_ifc = { &" + classid + ", (const char *) ~q" + classDecl.ident + "~q };"
+		Else
+			
+		End If
 
 
 	End Method
@@ -3932,7 +3938,11 @@ End If
 
 			Local cdecl:TClassDecl=TClassDecl( decl )
 			If cdecl And Not cdecl.IsExtern()
-				Emit "bbObjectRegisterType(&" + cdecl.munged + ");"
+				If Not cdecl.IsInterface() Then
+					Emit "bbObjectRegisterType(&" + cdecl.munged + ");"
+				Else
+					Emit "bbObjectRegisterInterface(&" + cdecl.munged + "_ifc);"
+				End If
 			EndIf
 		Next
 		'
