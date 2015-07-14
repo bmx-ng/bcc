@@ -1563,7 +1563,7 @@ End Rem
 		Local block:TBlockDecl=New TBlockDecl.Create( _block )
 
 		PushBlock block
-		While Not CParse( "wend" )
+		While Not CParse( "wend" ) And Not CParse( "endwhile" )
 '			If CParse( "end" )
 '				CParse "while"
 '				Exit
