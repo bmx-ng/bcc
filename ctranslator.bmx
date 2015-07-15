@@ -62,6 +62,7 @@ Type TCTranslator Extends TTranslator
 	Method TransArrayType$( ty:TType)
 		Local p:String = TransSPointer(ty)
 		
+		If TBoolType( ty ) Return "~q" + p + "i~q"
 		If TByteType( ty ) Return "~q" + p + "b~q"
 		If TShortType( ty ) Return "~q" + p + "s~q"
 		If TIntType( ty ) Return "~q" + p + "i~q"
