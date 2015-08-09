@@ -848,7 +848,7 @@ t:+"NULLNULLNULL"
 			Return "BBOBJECT"
 		Else
 			If decl.IsExtern() Then
-				Return "struct " + decl.munged + "*"
+				Return "struct " + decl.munged + "_ext*"
 			Else
 				Return "struct " + decl.munged + "_obj*"
 			End If
@@ -2441,7 +2441,7 @@ End Rem
 
 		'Emit "typedef struct " + classid + "_obj {"
 		If classDecl.IsExtern() Then
-			Emit "struct " + classid + "_obj {"
+			Emit "struct " + classid + "_ext {"
 
 			BeginLocalScope
 			EmitClassFieldsProto(classDecl)

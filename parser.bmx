@@ -3723,10 +3723,22 @@ End Rem
 	env.InsertDecl New TConstDecl.Create( "threaded",New TIntType,New TConstExpr.Create( New TIntType,opt_threaded ),0 )
 
 	' macos
-	env.InsertDecl New TConstDecl.Create( "macos",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="macos" ),0 )
-	env.InsertDecl New TConstDecl.Create( "macosx86",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="macos" And opt_arch="x86"),0 )
-	env.InsertDecl New TConstDecl.Create( "macosppc",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="macos" And opt_arch="ppc"),0 )
-	env.InsertDecl New TConstDecl.Create( "macosx64",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="macos" And opt_arch="x64"),0 )
+	env.InsertDecl New TConstDecl.Create( "macos",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="macos" Or opt_platform="osx" Or opt_platform="ios"),0 )
+	env.InsertDecl New TConstDecl.Create( "macosx86",New TIntType,New TConstExpr.Create( New TIntType,(opt_platform="macos" Or opt_platform="osx" Or opt_platform="ios") And opt_arch="x86"),0 )
+	env.InsertDecl New TConstDecl.Create( "macosppc",New TIntType,New TConstExpr.Create( New TIntType,(opt_platform="macos" Or opt_platform="osx") And opt_arch="ppc"),0 )
+	env.InsertDecl New TConstDecl.Create( "macosx64",New TIntType,New TConstExpr.Create( New TIntType,(opt_platform="macos" Or opt_platform="osx" Or opt_platform="ios") And opt_arch="x64"),0 )
+
+	' osx
+	env.InsertDecl New TConstDecl.Create( "osx",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="macos" Or opt_platform="osx" ),0 )
+	env.InsertDecl New TConstDecl.Create( "osxx86",New TIntType,New TConstExpr.Create( New TIntType,(opt_platform="macos" Or opt_platform="osx")  And opt_arch="x86"),0 )
+	env.InsertDecl New TConstDecl.Create( "osxppc",New TIntType,New TConstExpr.Create( New TIntType,(opt_platform="macos" Or opt_platform="osx") And opt_arch="ppc"),0 )
+	env.InsertDecl New TConstDecl.Create( "osxx64",New TIntType,New TConstExpr.Create( New TIntType,(opt_platform="macos" Or opt_platform="osx") And opt_arch="x64"),0 )
+
+	' ios
+	env.InsertDecl New TConstDecl.Create( "ios",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="ios" ),0 )
+	env.InsertDecl New TConstDecl.Create( "iosx86",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="ios" And opt_arch="x86"),0 )
+	env.InsertDecl New TConstDecl.Create( "iosarmv7",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="ios" And opt_arch="armv7"),0 )
+	env.InsertDecl New TConstDecl.Create( "iosarm64",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="ios" And opt_arch="arm64"),0 )
 
 	' windows
 	env.InsertDecl New TConstDecl.Create( "win32",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="win32" ),0 )
@@ -3772,7 +3784,7 @@ End Rem
 	env.InsertDecl New TConstDecl.Create( "littleendian",New TIntType,New TConstExpr.Create( New TIntType,opt_arch<>"ppc" ),0 )
 
 	' opengles target platform
-	env.InsertDecl New TConstDecl.Create( "opengles",New TIntType,New TConstExpr.Create( New TIntType, opt_platform="android" Or opt_platform="raspberrypi" Or opt_platform="emscripten" ),0 )
+	env.InsertDecl New TConstDecl.Create( "opengles",New TIntType,New TConstExpr.Create( New TIntType, opt_platform="android" Or opt_platform="raspberrypi" Or opt_platform="emscripten" Or opt_platform="ios" ),0 )
 
 	' new compiler
 	env.InsertDecl New TConstDecl.Create( "bmxng",New TIntType,New TConstExpr.Create( New TIntType, True ),0 )
