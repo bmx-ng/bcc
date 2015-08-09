@@ -156,8 +156,24 @@ Function BmxEnquote$( str$ )
 	Return str
 End Function
 
-Function BmxUnquote$( str$ )
+Function BmxUnquote$( str$, unicodeConvert:Int = False )
 	str=str[1..str.Length-1]
+	If unicodeConvert Then
+		Local pos:Int = str.Find("~~")
+		While pos <> -1
+			If pos + 1 < str.length Then
+				If str[pos + 1] >= Asc("1") And str[pos + 1] <= Asc("9") Then
+					Local p2:Int = str.Find("~~", pos + 1)
+					If p2 <> -1 Then
+						Local s:String = Chr(str[pos + 1.. p2].ToInt())
+						str = str[..pos] + s + str[p2 + 1..]
+					End If
+				End If
+			End If
+		
+			pos = str.Find("~~", pos + 1)
+		Wend
+	End If
 	str=str.Replace( "~~~~","~~z" )	'a bit dodgy - uses bad esc sequence ~z 
 	str=str.Replace( "~~q","~q" )
 	str=str.Replace( "~~n","~n" )

@@ -379,7 +379,7 @@ Type TIParser
 					expr=New TConstExpr.Create( New TFloatType,value )
 				End If
 			Case TOKE_STRINGLIT
-				expr=New TConstExpr.Create( New TStringType,BmxUnquote( _toke ) )
+				expr=New TConstExpr.Create( New TStringType,BmxUnquote( _toke, True ) )
 				NextToke
 			Case TOKE_IDENT
 				If _toke = "nan" Or _toke = "inf" Then
@@ -623,7 +623,7 @@ Type TIParser
 
 	Method ParseStringLit$()
 		If _toker._tokeType<>TOKE_STRINGLIT Err "Expecting string literal."
-		Local str$=BmxUnquote( _toker._toke )
+		Local str$=BmxUnquote( _toker._toke, True )
 		'_toker.
 		NextToke
 		Return str

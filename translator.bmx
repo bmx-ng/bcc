@@ -363,6 +363,36 @@ End Rem
 	Method Enquote$( str$ )
 		Return LangEnquote( str )
 	End Method
+	
+	Method EscapeChars:String(str:String)
+		If str Then
+			Local found:Int = False
+			For Local i:Int = 0 Until str.length
+				If str[i] > 127 Then
+					found = True
+					Exit
+				End If
+			Next
+			
+			If Not found Then
+				Return str
+			End If
+		
+			Local s:String
+			
+			For Local i:Int = 0 Until str.length
+				Local char:Int = str[i]
+				
+				If char < 128 Then
+					s :+ Chr(char)
+				Else
+					s :+ "~~" + char + "~~"
+				End If
+			Next
+			
+			Return s
+		End If
+	End Method
 
 	Method TransUnaryOp$( op$ )
 		Select op

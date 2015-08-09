@@ -3317,7 +3317,7 @@ End Rem
 		End If
 
 		If TStringType(expr.exprType) Then
-			Return "$" + Enquote(expr.Eval())
+			Return "$" + Enquote(EscapeChars(expr.Eval()))
 		EndIf
 
 		If TArrayType(expr.exprType) Then
