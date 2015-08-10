@@ -3096,7 +3096,7 @@ End Rem
 		Next
 
 		Local decl:TFuncDecl = classDecl.FindFuncDecl("new")
-		If decl Then
+		If decl And decl.scope = classDecl Then ' only our own New method, not any from superclasses
 			decl.Semant
 			If decl.munged <> "bbObjectCtor" Then
 				EmitLocalDeclarations(decl)
