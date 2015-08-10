@@ -55,6 +55,8 @@ Type TTranslator
 	Field localScope:TStack = New TStack
 	Field ind:Int
 	Field debugOut:String
+	
+	Field processingReturnStatement:Int
 
 	Method PushVarScope()
 		varStack.Push customVarStack
@@ -668,7 +670,14 @@ End Rem
 		
 		If decl.munged.StartsWith( "$" ) Return TransIntrinsicExpr( decl,Null,expr.args )
 		
-		If decl Return TransFunc( TFuncDecl(decl),expr.args,Null )
+		If processingReturnStatement = 1 Then
+			If decl Then
+				processingReturnStatement :+ 1
+				Return CreateLocal(expr)
+			End If
+		Else
+			If decl Return TransFunc( TFuncDecl(decl),expr.args,Null )
+		End If
 		
 		InternalErr
 	End Method
@@ -678,7 +687,14 @@ End Rem
 
 		If decl.munged.StartsWith( "$" ) Return TransIntrinsicExpr( decl,expr.expr,expr.args )
 		
-		If decl Return TransFunc( TFuncDecl(decl),expr.args,expr.expr )	
+		If processingReturnStatement = 1 Then
+			If decl Then
+				processingReturnStatement :+ 1
+				Return CreateLocal(expr)
+			End If
+		Else
+			If decl Return TransFunc( TFuncDecl(decl),expr.args,expr.expr )	
+		End If
 		
 		InternalErr
 	End Method
@@ -688,7 +704,14 @@ End Rem
 
 		If decl.munged.StartsWith( "$" ) Return TransIntrinsicExpr( decl,expr )
 		
-		If decl Return TransSuperFunc( TFuncDecl( expr.funcDecl ),expr.args, expr.classScope )
+		If processingReturnStatement = 1 Then
+			If decl Then
+				processingReturnStatement :+ 1
+				Return CreateLocal(expr)
+			End If
+		Else
+			If decl Return TransSuperFunc( TFuncDecl( expr.funcDecl ),expr.args, expr.classScope )
+		End If
 		
 		InternalErr
 	End Method
@@ -1063,7 +1086,13 @@ End Rem
 
 			EmitGDBDebug(stmt)
 			
+			If TReturnStmt(stmt) And Not tryStack.IsEmpty() Then
+				processingReturnStatement = True
+			End If
+			
 			Local t$=stmt.Trans()
+			
+			processingReturnStatement = False
 			
 			If opt_debug And Not block.IsNoDebug() Then
 				If TReturnStmt(stmt) Then
