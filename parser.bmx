@@ -3737,6 +3737,7 @@ End Rem
 	' ios
 	env.InsertDecl New TConstDecl.Create( "ios",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="ios" ),0 )
 	env.InsertDecl New TConstDecl.Create( "iosx86",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="ios" And opt_arch="x86"),0 )
+	env.InsertDecl New TConstDecl.Create( "iosx64",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="ios" And opt_arch="x64"),0 )
 	env.InsertDecl New TConstDecl.Create( "iosarmv7",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="ios" And opt_arch="armv7"),0 )
 	env.InsertDecl New TConstDecl.Create( "iosarm64",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="ios" And opt_arch="arm64"),0 )
 
@@ -3778,6 +3779,8 @@ End Rem
 	env.InsertDecl New TConstDecl.Create( "armeabiv7a",New TIntType,New TConstExpr.Create( New TIntType,opt_arch="armeabiv7a" ),0 )
 	env.InsertDecl New TConstDecl.Create( "arm64v8a",New TIntType,New TConstExpr.Create( New TIntType,opt_arch="arm64v8a" ),0 )
 	env.InsertDecl New TConstDecl.Create( "js",New TIntType,New TConstExpr.Create( New TIntType,opt_arch="js" ),0 )
+	env.InsertDecl New TConstDecl.Create( "armv7",New TIntType,New TConstExpr.Create( New TIntType,opt_arch="armv7" ),0 )
+	env.InsertDecl New TConstDecl.Create( "arm64",New TIntType,New TConstExpr.Create( New TIntType,opt_arch="arm64" ),0 )
 
 	' endian
 	env.InsertDecl New TConstDecl.Create( "bigendian",New TIntType,New TConstExpr.Create( New TIntType,opt_arch="ppc" ),0 )
