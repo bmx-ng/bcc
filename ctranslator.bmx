@@ -1329,9 +1329,14 @@ t:+"NULLNULLNULL"
 			If TObjectType(dst).classDecl.IsInterface() Then
 				Return Bra(Bra(TransObject(TObjectType(dst).classDecl)) + "bbInterfaceDowncast" + Bra(t + ",&" + TObjectType(dst).classDecl.munged + "_ifc"))
 			Else
-				Return Bra(Bra(TransObject(TObjectType(dst).classDecl)) + "bbObjectDowncast" + Bra(t + ",&" + TObjectType(dst).classDecl.munged))
+				' no need to downcast to BBObject, as all objects extend it...
+				If TObjectType( dst ).classDecl.ident = "Object" Then
+					Return t
+				Else
+					Return Bra(Bra(TransObject(TObjectType(dst).classDecl)) + "bbObjectDowncast" + Bra(t + ",&" + TObjectType(dst).classDecl.munged))
+				End If
 			End If
-		EndIf
+		End If
 
 		Return TransPtrCast( dst,src,t,"dynamic" )
 
