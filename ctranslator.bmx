@@ -476,7 +476,7 @@ t:+"NULLNULLNULL"
 			'If TNullDecl(TObjectType(src).classDecl) Then
 			'	Return "&bbEmptyString"
 			'End If
-			Return "bbObjectDowncast" + Bra(expr + ",&" + TStringType(ty).cDecl.munged)
+			Return Bra("(BBString *)bbObjectDowncast" + Bra(expr + ",&" + TStringType(ty).cDecl.munged))
 		End If
 
 		'If TArrayType(ty) And TObjectType(src) Then
@@ -516,7 +516,7 @@ t:+"NULLNULLNULL"
 		'upcast?
 		If src.GetClass().ExtendsClass( ty.GetClass() ) Return expr
 		If TObjectType(ty) Then
-			Return "bbObjectDowncast" + Bra(expr + ",&" + TObjectType(ty).classDecl.munged)
+			Return Bra(Bra(TransObject(TObjectType(ty).classDecl)) + "bbObjectDowncast" + Bra(expr + ",&" + TObjectType(ty).classDecl.munged))
 		End If
 
 		Return cast+"_cast<"+TransType(ty, "TODO: TransPtrCast")+">"+Bra( expr )
