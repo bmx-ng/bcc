@@ -3782,6 +3782,9 @@ End Rem
 	env.InsertDecl New TConstDecl.Create( "armv7",New TIntType,New TConstExpr.Create( New TIntType,opt_arch="armv7" ),0 )
 	env.InsertDecl New TConstDecl.Create( "arm64",New TIntType,New TConstExpr.Create( New TIntType,opt_arch="arm64" ),0 )
 
+	env.InsertDecl New TConstDecl.Create( "ptr32",New TIntType,New TConstExpr.Create( New TIntType,opt_arch="x86" Or opt_arch="ppc" Or opt_arch="armv7" Or opt_arch="arm" Or opt_arch="armeabi" Or opt_arch="armeabiv7a" ),0 )
+	env.InsertDecl New TConstDecl.Create( "ptr64",New TIntType,New TConstExpr.Create( New TIntType,opt_arch="x64" Or opt_arch="arm64" Or opt_arch="arm64v8a" ),0 )
+
 	' endian
 	env.InsertDecl New TConstDecl.Create( "bigendian",New TIntType,New TConstExpr.Create( New TIntType,opt_arch="ppc" ),0 )
 	env.InsertDecl New TConstDecl.Create( "littleendian",New TIntType,New TConstExpr.Create( New TIntType,opt_arch<>"ppc" ),0 )
