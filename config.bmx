@@ -157,6 +157,9 @@ Function BmxEnquote$( str$ )
 End Function
 
 Function BmxUnquote$( str$, unicodeConvert:Int = False )
+	If str.length = 1 Or str[str.length - 1] <> Asc("~q") Then
+		Err "Expecting expression but encountered malformed string literal"
+	End If
 	str=str[1..str.Length-1]
 	If unicodeConvert Then
 		Local pos:Int = str.Find("~~")
