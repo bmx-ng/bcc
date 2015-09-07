@@ -1707,6 +1707,11 @@ t:+"NULLNULLNULL"
 			End If
 		Next
 		
+		' a method also includes "Self" reference back to parent Type
+		If TFuncDecl(block) And TFuncDecl(block).IsMethod() Then
+			count :+ 1
+		End If
+		
 		If Not count Then
 			Emit "struct BBDebugScope __scope = {"
 		Else
@@ -1728,6 +1733,15 @@ t:+"NULLNULLNULL"
 		End If
 			
 			Emit "{"
+			
+			If TFuncDecl(block) And TFuncDecl(block).IsMethod() Then
+				Emit "{"
+				Emit "BBDEBUGDECL_LOCAL,"
+				Emit "~qSelf~q,"
+				Emit Enquote(TransDebugScopeType(TClassDecl(block.scope).objectType)) + ","
+				Emit ".var_address=&o"
+				Emit "},"
+			End If
 			
 			' iterate through decls and add as appropriate
 			For Local decl:TDecl = EachIn block.Decls()
