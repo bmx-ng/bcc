@@ -742,6 +742,11 @@ t:+"NULLNULLNULL"
 						If decl.scope.IsExtern()
 							Return decl.munged + Bra(TransArgs( args,decl, TransSubExpr( lhs ) ))
 						Else
+							' Null test
+							If opt_debug Then
+								EmitDebugNullObjectError(TransSubExpr( lhs ))
+							End If
+
 							If cdecl.IsInterface() And reserved_methods.Find("," + decl.IdentLower() + ",") = -1 Then
 								Local ifc:String = Bra("(struct " + cdecl.munged + "_methods*)" + Bra("bbObjectInterface(" + TransSubExpr( lhs ) + ", " + "&" + cdecl.munged + "_ifc)"))
 								Return ifc + "->" + TransFuncPrefix(cdecl, decl) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
@@ -761,6 +766,11 @@ t:+"NULLNULLNULL"
 					If decl.attrs & FUNC_PTR Then
 						Return "(" + obj + TransSubExpr( lhs ) + ")->" + decl.munged+TransArgs( args,decl, Null)
 					Else
+						' Null test
+						If opt_debug Then
+							EmitDebugNullObjectError(TransSubExpr( lhs ))
+						End If
+
 						If cdecl.IsInterface() And reserved_methods.Find("," + decl.IdentLower() + ",") = -1 Then
 							Local ifc:String = Bra("(struct " + cdecl.munged + "_methods*)" + Bra("bbObjectInterface(" + obj + TransSubExpr( lhs ) + ", " + "&" + cdecl.munged + "_ifc)"))
 							Return ifc + "->" + TransFuncPrefix(cdecl, decl) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
@@ -776,6 +786,11 @@ t:+"NULLNULLNULL"
 					If decl.scope.IsExtern()
 						Return decl.munged + Bra(TransArgs( args,decl, TransSubExpr( lhs ) ))
 					Else
+						' Null test
+						If opt_debug Then
+							EmitDebugNullObjectError(TransSubExpr( lhs ))
+						End If
+
 						Local class:String = Bra("(" + obj + TransSubExpr( lhs ) + ")->clas" + tSuper)
 						'Local class:String = TransFuncClass(cdecl)
 						Return class + "->" + TransFuncPrefix(cdecl, decl) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
@@ -783,6 +798,11 @@ t:+"NULLNULLNULL"
 				Else If TInvokeExpr(lhs) Then
 					' create a local variable of the inner invocation
 					Local lvar:String = CreateLocal(lhs)
+
+					' Null test
+					If opt_debug Then
+						EmitDebugNullObjectError(lvar)
+					End If
 
 					Local obj:String = Bra(TransObject(decl.scope))
 					Local class:String = Bra("(" + obj + lvar +")->clas" + tSuper)
@@ -796,12 +816,23 @@ t:+"NULLNULLNULL"
 					' create a local variable of the inner invocation
 					Local lvar:String = CreateLocal(lhs)
 
+					' Null test
+					If opt_debug Then
+						EmitDebugNullObjectError(lvar)
+					End If
+
 					Local obj:String = lvar + "->clas" + tSuper
 					Return obj + "->" + TransFuncPrefix(decl.scope, decl)+ decl.ident+TransArgs( args,decl, lvar )
 
 				Else If TIndexExpr(lhs) Then
 					Local loc:String = CreateLocal(lhs)
 					Local obj:String = Bra(TransObject(decl.scope))
+
+					' Null test
+					If opt_debug Then
+						EmitDebugNullObjectError(loc)
+					End If
+
 					'Local class:String = Bra("(" + obj + loc +")->clas" + tSuper)
 					'Local class:String = Bra("&" + decl.scope.munged)
 					Local class:String = Bra(loc + "->clas" + tSuper)
@@ -824,6 +855,11 @@ t:+"NULLNULLNULL"
 
 					Local obj:String = Bra(TransObject(scope))
 					class = "(" + obj + "o)->clas" + tSuper
+
+					' Null test
+					If opt_debug Then
+						EmitDebugNullObjectError("o")
+					End If
 				Else
 
 					class = Bra("&" + scope.munged) + tSuper
@@ -835,6 +871,11 @@ t:+"NULLNULLNULL"
 				'Local class:String = Bra("&" + decl.scope.munged)
 				Return class + "->" + TransFuncPrefix(scope, decl) + decl.ident+TransArgs( args,decl, "o" )
 			Else
+				' Null test
+				If opt_debug Then
+					EmitDebugNullObjectError("o")
+				End If
+				
 				Local obj:String = Bra(TransObject(decl.scope))
 				Return Bra(obj + "o") + "->" + decl.munged+TransArgs( args,decl )
 			End If
@@ -919,13 +960,16 @@ t:+"NULLNULLNULL"
 	End Method
 
 	Method TransSgnExpr:String(expr:TSgnExpr)
+		Local s:String
 		If TFloatType(expr.expr.exprType) Or TDoubleType(expr.expr.exprType)
 			'decl.ident contains "sgn", same like "bbFloatSng"
-			Return "bbFloatSgn" + Bra(expr.expr.Trans())
+			s = "bbFloatSgn"
+		Else If TLongType(expr.expr.exprType) Then
+			s = "bbLongSgn"
 		Else
-			' TODO : Long support
-			Return "bbIntSgn" + Bra(expr.expr.Trans())
+			s = "bbIntSgn"
 		End If
+		Return s + Bra(expr.expr.Trans())
 	End Method
 
 	Method TransAbsExpr:String(expr:TAbsExpr)
@@ -1772,6 +1816,11 @@ t:+"NULLNULLNULL"
 		Emit "bbOnDebugEnterScope(&__scope);"
 	End Method
 	
+	Method EmitDebugNullObjectError(variable:String)
+		Emit "if (" + variable + " == &bbNullObject) brl_blitz_NullObjectError();"
+	End Method
+
+	
 	Method TransAssignStmt$( stmt:TAssignStmt )
 		If Not stmt.rhs Return stmt.lhs.Trans()
 
@@ -1869,6 +1918,10 @@ t:+"NULLNULLNULL"
 
 	Method TransReadDataStmt$( stmt:TReadDataStmt )
 		For Local expr:TExpr = EachIn stmt.args
+			' buffer overflow test
+			If opt_debug Then
+				Emit "if (_defDataOffset - _defData >= " + TDefDataDecl.count + ") brl_blitz_OutOfDataError();"
+			End If
 			Emit expr.Trans() + " = " + TransDefDataConversion(expr.exprType) + Bra("_defDataOffset++") + ";"
 		Next
 	End Method
@@ -3176,6 +3229,11 @@ End Rem
 
 		If variable.StartsWith("*") Then
 			variable = Bra(variable)
+		End If
+		
+		' Null test
+		If opt_debug Then
+			EmitDebugNullObjectError(variable)
 		End If
 
 		' array.length
