@@ -190,13 +190,13 @@ Type TReturnStmt Extends TStmt
 		Local fdecl:TFuncDecl=_env.FuncScope()
 		If expr
 			If fdecl.IsCtor() Err "Constructors may not return a value."
-			If TVoidType( fdecl.retType ) Err "Void functions may not return a value."
+			If TVoidType( fdecl.retType ) Err "Function can not return a value."
 			fRetType = fdecl.retType
 			expr=expr.SemantAndCast( fdecl.retType )
 		Else If fdecl.IsCtor()
 			expr=New TSelfExpr.Semant()
 		Else If Not TVoidType( fdecl.retType )
-			If _env.ModuleScope().IsSuperStrict() Err "Missing return expression."
+			If _env.ModuleScope().IsSuperStrict() Err "Function must return a value"
 			expr=New TConstExpr.Create( fdecl.retType,"" ).Semant()
 		EndIf
 	End Method

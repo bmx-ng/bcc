@@ -1695,7 +1695,7 @@ Type TSliceExpr Extends TExpr
 		If exprType Return Self
 
 		expr=expr.Semant()
-		If TArrayType( expr.exprType ) Or TStringType( expr.exprType )
+		If (TArrayType( expr.exprType ) And TArrayType( expr.exprType ).dims = 1) Or TStringType( expr.exprType )
 			If from from=from.SemantAndCast( New TIntType )
 			If term term=term.SemantAndCast( New TIntType )
 
@@ -1706,7 +1706,7 @@ Type TSliceExpr Extends TExpr
 				exprType._flags :~ TType.T_VAR
 			End If
 		Else
-			Err "Slices can only be used on strings or arrays."
+			Err "Slices can only be used with strings or one dimensional arrays"
 		EndIf
 
 '		If TConstExpr( expr ) And TConstExpr( from ) And TConstExpr( term ) Return EvalConst()
