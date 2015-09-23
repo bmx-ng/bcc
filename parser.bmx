@@ -36,21 +36,23 @@ Type TForEachinStmt Extends TLoopStmt
 	Field varlocal:Int
 	Field expr:TExpr
 	Field block:TBlockDecl
+	Field varExpr:TExpr
 	
 	Field stmts:TList=New TList
 
-	Method Create:TForEachinStmt( varid$,varty:TType,varlocal:Int,expr:TExpr,block:TBlockDecl,loopLabel:TLoopLabelDecl )
+	Method Create:TForEachinStmt( varid$,varty:TType,varlocal:Int,expr:TExpr,block:TBlockDecl,loopLabel:TLoopLabelDecl,varExpr:TExpr )
 		Self.varid=varid
 		Self.varty=varty
 		Self.varlocal=varlocal
 		Self.expr=expr
 		Self.block=block
 		Self.loopLabel=loopLabel
+		Self.varExpr = varExpr
 		Return Self
 	End Method
 
 	Method OnCopy:TStmt( scope:TScopeDecl )
-		Return New TForEachinStmt.Create( varid,varty,varlocal,expr.Copy(),block.CopyBlock( scope ),TLoopLabelDecl(loopLabel.Copy()) )
+		Return New TForEachinStmt.Create( varid,varty,varlocal,expr.Copy(),block.CopyBlock( scope ),TLoopLabelDecl(loopLabel.Copy()), varExpr.Copy() )
 	End Method
 
 	Method OnSemant()
@@ -113,16 +115,19 @@ Type TForEachinStmt Extends TLoopStmt
 				If TArrayType( expr.exprType ) And TObjectType(TArrayType( expr.exprType ).elemType) Then
 				' var = Null
 					If Not varty Then
-						Local decl:TValDecl = block.scope.FindValDecl(varid.ToLower())
+						varExpr = varExpr.Semant()
+						varty = varExpr.exprType
+						'Local decl:TValDecl = block.scope.FindValDecl(varid.ToLower())
 						
-						If decl Then
-							decl.Semant()
-							
-							varty = decl.ty.Copy()
-						End If
+						'If decl Then
+						'	decl.Semant()
+						'	
+						'	varty = decl.ty.Copy()
+						'End If
 					End If
 
-					expr=New TBinaryCompareExpr.Create( "=",New TIdentExpr.Create( varid ), New TNullExpr.Create(TType.nullObjectType))
+'					expr=New TBinaryCompareExpr.Create( "=",New TIdentExpr.Create( varid ), New TNullExpr.Create(TType.nullObjectType))
+					expr=New TBinaryCompareExpr.Create( "=",varExpr, New TNullExpr.Create(TType.nullObjectType))
 
 					' then continue
 					Local thenBlock:TBlockDecl=New TBlockDecl.Create( block.scope )
@@ -134,10 +139,12 @@ Type TForEachinStmt Extends TLoopStmt
 					'block.stmts.AddFirst New TDeclStmt.Create( varTmp )
 
 					block.stmts.AddFirst New TAssignStmt.Create( "=",New TVarExpr.Create( indexTmp ),addExpr, True )
-					block.stmts.AddFirst New TAssignStmt.Create( "=",New TIdentExpr.Create( varid ),New TCastExpr.Create( varty, indexExpr,CAST_EXPLICIT ), True )
+'					block.stmts.AddFirst New TAssignStmt.Create( "=",New TIdentExpr.Create( varid ),New TCastExpr.Create( varty, indexExpr,CAST_EXPLICIT ), True )
+					block.stmts.AddFirst New TAssignStmt.Create( "=",varExpr,New TCastExpr.Create( varty, indexExpr,CAST_EXPLICIT ), True )
 				Else
 					block.stmts.AddFirst New TAssignStmt.Create( "=",New TVarExpr.Create( indexTmp ),addExpr, True )
-					block.stmts.AddFirst New TAssignStmt.Create( "=",New TIdentExpr.Create( varid ),indexExpr, True )
+'					block.stmts.AddFirst New TAssignStmt.Create( "=",New TIdentExpr.Create( varid ),indexExpr, True )
+					block.stmts.AddFirst New TAssignStmt.Create( "=",varExpr,indexExpr, True )
 				End If
 
 			EndIf
@@ -201,19 +208,25 @@ Type TForEachinStmt Extends TLoopStmt
 				block.stmts.AddFirst New TIfStmt.Create( expr,thenBlock,elseBlock, True )
 				block.stmts.AddFirst New TDeclStmt.Create( varTmp, True )
 			Else
-				
+
 				If Not varty Then
-					Local decl:TValDecl = block.scope.FindValDecl(varid.ToLower())
-					
-					If decl Then
-						decl.Semant()
-						
-						varty = decl.ty.Copy()
-					End If
+					varExpr = varExpr.Semant()
+					varty = varExpr.exprType
 				End If
 				
+'				If Not varty Then
+'					Local decl:TValDecl = block.scope.FindValDecl(varid.ToLower())
+'					
+'					If decl Then
+'						decl.Semant()
+'						
+'						varty = decl.ty.Copy()
+'					End If
+'				End If
+				
 				' var = Null
-				Local expr:TExpr=New TBinaryCompareExpr.Create( "=",New TIdentExpr.Create( varid ), New TNullExpr.Create(TType.nullObjectType))
+'				Local expr:TExpr=New TBinaryCompareExpr.Create( "=",New TIdentExpr.Create( varid ), New TNullExpr.Create(TType.nullObjectType))
+				Local expr:TExpr=New TBinaryCompareExpr.Create( "=",varExpr, New TNullExpr.Create(TType.nullObjectType))
 
 				' then continue
 				Local thenBlock:TBlockDecl=New TBlockDecl.Create( block.scope )
@@ -224,7 +237,8 @@ Type TForEachinStmt Extends TLoopStmt
 				block.stmts.AddFirst New TIfStmt.Create( expr,thenBlock,elseBlock )
 				'block.stmts.AddFirst New TDeclStmt.Create( varTmp )
 
-				block.stmts.AddFirst New TAssignStmt.Create( "=",New TIdentExpr.Create( varid ),New TCastExpr.Create( varty, nextObjExpr,CAST_EXPLICIT ))
+'				block.stmts.AddFirst New TAssignStmt.Create( "=",New TIdentExpr.Create( varid ),New TCastExpr.Create( varty, nextObjExpr,CAST_EXPLICIT ))
+				block.stmts.AddFirst New TAssignStmt.Create( "=",varExpr,New TCastExpr.Create( varty, nextObjExpr,CAST_EXPLICIT ))
 			EndIf
 
 			Local whileStmt:TWhileStmt=New TWhileStmt.Create( hasNextExpr,block,Null, True )
@@ -462,10 +476,10 @@ Type TParser
 	Method CParseIdentType:TIdentType( inner:Int=False )
 		If _tokeType<>TOKE_IDENT Return Null
 		Local id$=ParseIdent()
-		If CParse( "." )
+		While CParse( "." )
 			If _tokeType<>TOKE_IDENT Return Null
 			id:+"."+ParseIdent()
-		End If
+		Wend
 		If Not CParse( "<" )
 			If inner Return New TIdentType.Create( id,Null )
 			Return Null
@@ -1616,10 +1630,11 @@ End Rem
 	End Method
 
 	Method ParseForStmt(loopLabel:TLoopLabelDecl = Null)
-'DebugStop
+
 		Parse "for"
 
 		Local varid$,varty:TType,varlocal:Int
+		Local varExpr:TExpr
 
 		If CParse( "local" )
 			varlocal=True
@@ -1633,10 +1648,24 @@ End Rem
 			'EndIf
 		Else
 			varlocal=False
-			varid=ParseIdent()
+			
+			varExpr=ParsePrimaryExpr( False )
+			
+			'varExpr = New TIdentExpr.Create( ParseIdent(),varExpr )
 
+			'ParseConstNumberType()
+			
+'			varid=ParseIdent()
+
+			'While Cparse(".")
+				'NextToke
+				
+			'	varExpr = New TIdentExpr.Create( ParseIdent(),varExpr )
+				
+			'	ParseConstNumberType()
+			'Wend
 			' eat any type stuff
-			ParseConstNumberType()
+'			ParseConstNumberType()
 
 			Parse "="
 		EndIf
@@ -1655,7 +1684,7 @@ End Rem
 			Wend
 			PopBlock
 
-			Local stmt:TForEachinStmt=New TForEachinStmt.Create( varid,varty,varlocal,expr,block,loopLabel )
+			Local stmt:TForEachinStmt=New TForEachinStmt.Create( varid,varty,varlocal,expr,block,loopLabel, varExpr )
 
 			_block.AddStmt stmt
 
@@ -1692,9 +1721,12 @@ End Rem
 			incr=New TAssignStmt.Create( "=",New TVarExpr.Create( indexVar ),New TBinaryMathExpr.Create( "+",New TVarExpr.Create( indexVar ),New TCastExpr.Create( varty,stp,1 ) ) )
 		Else
 			' varty is NULL here for the casts. We will back-populate it later.
-			init=New TAssignStmt.Create( "=",New TIdentExpr.Create( varid ),from )
-			expr=New TBinaryCompareExpr.Create( op,New TIdentExpr.Create( varid ),New TCastExpr.Create( varty,term,1 ) )
-			incr=New TAssignStmt.Create( "=",New TIdentExpr.Create( varid ),New TBinaryMathExpr.Create( "+",New TIdentExpr.Create( varid ),New TCastExpr.Create( varty,stp,1 ) ) )
+'			init=New TAssignStmt.Create( "=",New TIdentExpr.Create( varid ),from )
+'			expr=New TBinaryCompareExpr.Create( op,New TIdentExpr.Create( varid ),New TCastExpr.Create( varty,term,1 ) )
+'			incr=New TAssignStmt.Create( "=",New TIdentExpr.Create( varid ),New TBinaryMathExpr.Create( "+",New TIdentExpr.Create( varid ),New TCastExpr.Create( varty,stp,1 ) ) )
+			init=New TAssignStmt.Create( "=",varExpr,from )
+			expr=New TBinaryCompareExpr.Create( op,varExpr,New TCastExpr.Create( varty,term,1 ) )
+			incr=New TAssignStmt.Create( "=",varExpr,New TBinaryMathExpr.Create( "+",varExpr,New TCastExpr.Create( varty,stp,1 ) ) )
 		EndIf
 
 		Local block:TBlockDecl=New TBlockDecl.Create( _block )
