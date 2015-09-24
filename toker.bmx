@@ -66,8 +66,11 @@ Type TToker
 	Field _lines:String[]
 	Field _source$
 	Field _toke$
+	Field _tokeLower$
 	Field _tokeType:Int
 	Field _tokePos:Int
+	
+	Field _lookingForEndRem:Int
 	
 	Method Create:TToker( path$,source$ )
 		_path=path
@@ -92,9 +95,11 @@ Type TToker
 		_line=toker._line
 		_source=toker._source
 		_toke=toker._toke
+		_tokeLower=toker._tokeLower
 		_tokeType=toker._tokeType
 		_tokePos=toker._tokePos
 		_lines=toker._lines
+		_lookingForEndRem=toker._lookingForEndRem
 		Return Self
 	End Method
 	
@@ -137,11 +142,17 @@ Type TToker
 				_tokePos:+1
 			Wend
 			_toke=_source[start.._tokePos]
-			If _keywords.Contains( ";"+_toke.ToLower()+";" )
+			_tokeLower = _toke.ToLower()
+			If _keywords.Contains( ";"+_tokeLower+";" )
 				_tokeType=TOKE_KEYWORD
+
+				If Not _lookingForEndRem And _tokeLower = "rem" Then
+					_lookingForEndRem = True
+					ParseRemStmt()
+				End If
 			EndIf
 		Else If IsDigit( char ) Or (str="." And IsDigit( TCHR() ))
-'Print "IS DIGIT..."
+
 			_tokeType=TOKE_INTLIT
 			If str="." _tokeType=TOKE_FLOATLIT
 			While IsDigit( TCHR() )
@@ -190,13 +201,19 @@ Type TToker
 			If _tokePos<_source.Length _tokePos:+1 Else _tokeType=TOKE_STRINGLITEX
 		Else If str="'"
 			_tokeType=TOKE_LINECOMMENT
-			While TSTR() And TSTR()<>"~n"
-				_tokePos:+1
-			Wend
-			If _tokePos<_source.Length
-				_tokePos:+1
+			
+			SkipToEOL()
+
+			' completely ignore line comments
+			If TSTR()="~n" Then
+				start = _tokePos
+				If _tokePos<_source.Length
+					_tokePos:+1
+				End If
 				_line:+1
-			EndIf
+				_tokeType=TOKE_SYMBOL
+			End If
+
 		Else If str="." And TSTR()="." Then
 
 			Local pos:Int = _tokePos
@@ -249,8 +266,7 @@ Type TToker
 		EndIf
 
 		If Not _toke _toke=_source[start.._tokePos]
-				
-'Print "TOKE... : " + _toke		
+					
 		Return _toke
 	End Method
 	
@@ -270,7 +286,60 @@ Type TToker
 		Wend
 		Return count
 	End Method
+
+	Method ParseRemStmt()
+
+		NextToke()
+
+		While _toke
+			SkipEols()
+
+			 	Local line:String = _lines[_line - 1].Trim().toLower()
+				If line.startswith("endrem") Then
+					Exit
+				End If
+
+				If CParse( "end" )
+					CParse "rem"
+					Exit
+				End If
+
+				If line.startswith("end rem") Then
+					Exit
+				End If
+
+				SkipToEOL()
+				
+			NextToke
+
+		Wend
+		
+		SkipToEOL()
+
+		NextToke
+
+		_lookingForEndRem = False
+	End Method
+
+	Method CParse:Int( toke$ )
+		If _tokeLower<>toke
+			Return False
+		EndIf
+		NextToke
+		Return True
+	End Method
+
+	Method SkipEols()
+		While CParse( "~n" ) Or CParse(";")
+		Wend
+	End Method
 	
+	Method SkipToEOL()
+		While TSTR() And TSTR()<>"~n"
+			_tokePos:+1
+		Wend
+	End Method
+
 'Private
 
 	Method TCHR:Int( i:Int=0 )

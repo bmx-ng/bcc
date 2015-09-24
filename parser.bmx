@@ -364,7 +364,7 @@ Type TParser
 			_tokeType=_toker.TokeType()
 		Until _tokeType<>TOKE_SPACE
 
-		If _tokeType=TOKE_KEYWORD _toke=_toke.ToLower()
+		If _tokeType=TOKE_KEYWORD _toke=_toker._tokeLower
 
 		If toke="," SkipEols
 
@@ -2004,35 +2004,6 @@ End Rem
 		End If
 	End Method
 
-	Method ParseRemStmt()
-		Parse "rem"
-
-' TODO : end/rem should be at the beginning of a line... ignore otherwise
-		While _toke
-			SkipEols()
-'			If CParse( "endrem" ) Then
-'DebugStop
-			 	Local line:String = _toker._lines[_toker._line - 1].Trim().toLower()
-				If line.startswith("endrem") Then
-					Exit
-				End If
-
-				If CParse( "end" )
-					CParse "rem"
-				End If
-
-				If line.startswith("end rem") Then
-					Exit
-				End If
-
-'			EndIf
-			NextToke
-		Wend
-
-		NextToke
-
-	End Method
-
 	Method ParseExternBlock(mdecl:TModuleDecl, attrs:Int)
 
 		NextToke
@@ -2061,8 +2032,6 @@ End Rem
 					mdecl.InsertDecl ParseClassDecl( _toke,attrs )
 				Case "function"
 					mdecl.InsertDecl ParseFuncDecl( _toke,attrs )
-				Case "rem"
-					ParseRemStmt()
 				Default
 					If _toke <> "end" And _toke <> "endextern" Then
 						Err "Expecting expression but encountered '"+_toke+"'"
@@ -2082,8 +2051,6 @@ End Rem
 		Select _toke
 			Case ";","~n"
 				NextToke
-			Case "rem"
-				ParseRemStmt()
 			Case "const","local","global"
 				ParseDeclStmts
 			' nested function - needs to get added to the "module"
@@ -2868,8 +2835,6 @@ End Rem
 				EndIf
 				Local decl:TFuncDecl=ParseFuncDecl( _toke,decl_attrs )
 				classDecl.InsertDecl decl
-			Case "rem"
-				ParseRemStmt()
 			Default
 				Err "Syntax error - expecting class member declaration, not '" + _toke + "'"
 			End Select
@@ -3244,8 +3209,6 @@ End Rem
 				_module.InsertDecl ParseClassDecl( _toke,attrs|CLASS_INTERFACE|DECL_ABSTRACT )
 			Case "function"
 				_module.InsertDecl ParseFuncDecl( _toke,attrs )
-			Case "rem"
-				ParseRemStmt()
 			Case "incbin"
 				NextToke
 				Local s:String = ParseStringLit()
@@ -3446,8 +3409,6 @@ End Rem
 
 				'sanitize, remove non-allowed chars
 				_module.munged = TStringHelper.Sanitize(m)
-			Case "rem"
-				ParseRemStmt()
 			Case "nodebug"
 				mainFunc.attrs :| DECL_NODEBUG
 				attrs :| DECL_NODEBUG
@@ -3539,19 +3500,28 @@ Function PreProcess$( path$ )
 
 			PreProcessNextToke(toker)
 		EndIf
-		line:+1
+		
+		line :+ 1
+
+		' catch up with any skipped lines
+		While line < toker._line - 1
+			line:+1
+			source.AddLast "~n"
+		Wend
 
 		If toker.TokeType()=TOKE_SPACE And Not toker.Toke().Endswith("~n") PreProcessNextToke(toker)
 
 		If toker.Toke()<>"?"
 			If con
-				Local line$
+				Local textline$
 				While toker.Toke() And toker.Toke()<>"~n" And toker.TokeType()<>TOKE_LINECOMMENT
 					Local toke$=toker.Toke()
-					line:+toke
+					textline:+toke
 					toker.NextToke()
 				Wend
-				If line source.AddLast line
+				If textline Then
+					source.AddLast textline
+				EndIf
 
 			EndIf
 			Continue
