@@ -1291,14 +1291,17 @@ Type TFuncDecl Extends TBlockDecl
 								errorDetails :+ "Return type is ~q"+retType.ToString()+"~q, expected ~q"+decl.retType.ToString()+"~q. "
 							End If
 
-							If argDecls.Length<>decl.argDecls.Length
-								errorDetails :+ "Argument count differs. "
+							If argDecls.Length <> decl.argDecls.Length
+								errorDetails :+ "Argument count differs. Got " + argDecls.Length +", expected " + decl.argDecls.Length + " arguments."
 							End If
-							For Local i:Int=0 Until argDecls.Length
-								If Not argDecls[i].ty.EqualsType( decl.argDecls[i].ty )
-									errorDetails :+ "Argument #"+(i+1)+" is ~q" + argDecls[i].ty.ToString()+"~q, expected ~q"+decl.argDecls[i].ty.ToString()+"~q. "
-								End If
-							Next
+							local argCount:int = Min(argDecls.Length, decl.argDecls.Length)
+							if argCount > 0
+								For Local i:Int=0 Until argCount
+									If Not argDecls[i].ty.EqualsType( decl.argDecls[i].ty )
+										errorDetails :+ "Argument #"+(i+1)+" is ~q" + argDecls[i].ty.ToString()+"~q, expected ~q"+decl.argDecls[i].ty.ToString()+"~q. "
+									End If
+								Next
+							endif
 							'remove last space
 							errorDetails = errorDetails.Trim()
 						EndIf
