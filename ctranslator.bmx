@@ -2489,6 +2489,7 @@ End Rem
 			Emit "void      (*free)( BBObject *o );"
 			Emit "BBDebugScope* debug_scope;"
 			Emit "int       instance_size;"
+			Emit "void*     extra;"
 			Emit "void      (*ctor)( BBOBJECT o );"
 			Emit "void      (*dtor)( BBOBJECT o );"
 			Emit "BBSTRING  (*ToString)( BBOBJECT x );"
@@ -3023,6 +3024,8 @@ End Rem
 		Emit "&" + classid + "_scope,"
 		' object instance size
 		Emit "sizeof" + Bra("struct " + classid + "_obj") + ","
+		' extra pointer
+		Emit "0,"
 
 		' standard methods
 		Emit "_" + classid + "_New,"
