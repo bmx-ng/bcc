@@ -2489,15 +2489,14 @@ End Rem
 			Emit "void      (*free)( BBObject *o );"
 			Emit "BBDebugScope* debug_scope;"
 			Emit "int       instance_size;"
-			Emit "void*     extra;"
 			Emit "void      (*ctor)( BBOBJECT o );"
 			Emit "void      (*dtor)( BBOBJECT o );"
 			Emit "BBSTRING  (*ToString)( BBOBJECT x );"
 			Emit "int       (*Compare)( BBOBJECT x,BBOBJECT y );"
 			Emit "BBOBJECT  (*SendMessage)( BBOBJECT m,BBOBJECT s );"
-			Emit "BBINTERFACEOFFSETS ifc_offsets;"
-			Emit "void*     ifc_vtable;"
-			Emit "int       ifc_size;"
+			Emit "BBINTERFACETABLE itable;"
+			Emit "void*     extra;"
+			Emit "void*     reserved;"
 
 			EmitBBClassClassFuncProto(classDecl)
 
@@ -3012,6 +3011,12 @@ End Rem
 					Emit "},"
 				Next
 				Emit "};~n"
+				
+				Emit "struct BBInterfaceTable " + classid + "_itable = {"
+				Emit classid + "_ifc_offsets,"
+				Emit "&" + classid + "_ifc_vtable,"
+				Emit ifcCount
+				Emit "};~n"
 			End If
 		End If
 		
@@ -3024,8 +3029,7 @@ End Rem
 		Emit "&" + classid + "_scope,"
 		' object instance size
 		Emit "sizeof" + Bra("struct " + classid + "_obj") + ","
-		' extra pointer
-		Emit "0,"
+
 
 		' standard methods
 		Emit "_" + classid + "_New,"
@@ -3088,13 +3092,18 @@ End Rem
 		'Emit "void mark();"
 
 		If classDecl.IsInterface() Or implementedInterfaces.IsEmpty() Then
+			' itable
 			Emit "0,"
+			' extra pointer
 			Emit "0,"
+			' reserved
 			Emit "0"
 		Else
-			Emit classid + "_ifc_offsets,"
-			Emit "&" + classid + "_ifc_vtable,"
-			Emit ifcCount
+			Emit "&" + classid + "_itable,"
+			' extra pointer
+			Emit "0,"
+			' reserved
+			Emit "0"
 		End If
 
 		' methods/funcs
