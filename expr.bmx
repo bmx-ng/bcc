@@ -119,7 +119,9 @@ Type TExpr
 	End Method
 
 	Method CastArgs:TExpr[]( args:TExpr[],funcDecl:TFuncDecl )
-		If args.Length>funcDecl.argDecls.Length InternalErr
+		If args.Length>funcDecl.argDecls.Length Then
+			Err "Too many function parameters"
+		End If
 
 		' FIXME
 		'args=args.Resize( funcDecl.argDecls.Length )
