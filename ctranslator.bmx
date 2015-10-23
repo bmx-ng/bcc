@@ -32,6 +32,8 @@ Type TCTranslator Extends TTranslator
 	Field prefix:String
 	
 	Field reserved_methods:String = ",New,Delete,ToString,Compare,SendMessage,_reserved1_,_reserved2_,_reserved3_,".ToLower()
+	
+	Field _inBinary:Int
 
 	Method New()
 		_trans = Self
@@ -742,11 +744,6 @@ t:+"NULLNULLNULL"
 						If decl.scope.IsExtern()
 							Return decl.munged + Bra(TransArgs( args,decl, TransSubExpr( lhs ) ))
 						Else
-							' Null test
-							If opt_debug Then
-								EmitDebugNullObjectError(TransSubExpr( lhs ))
-							End If
-
 							If cdecl.IsInterface() And reserved_methods.Find("," + decl.IdentLower() + ",") = -1 Then
 								Local ifc:String = Bra("(struct " + cdecl.munged + "_methods*)" + Bra("bbObjectInterface(" + TransSubExpr( lhs ) + ", " + "&" + cdecl.munged + "_ifc)"))
 								Return ifc + "->" + TransFuncPrefix(cdecl, decl) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
@@ -1409,6 +1406,8 @@ t:+"NULLNULLNULL"
 
 	Method TransBinaryExpr$( expr:TBinaryExpr )
 		Local pri:Int=ExprPri( expr )
+		
+		_inBinary = True
 
 		Local t_lhs$=TransSubExpr( expr.lhs,pri )
 '		If TVarPtrType(expr.lhs.exprType) Then
@@ -1420,6 +1419,8 @@ t:+"NULLNULLNULL"
 '			t_rhs = "*" + t_rhs
 '		End If
 
+		_inBinary = False
+		
 		If expr.op = "+" Then
 			If TStringType(expr.exprType) Then
 				Return "bbStringConcat(" + t_lhs + "," + t_rhs + ")"
@@ -1817,7 +1818,10 @@ t:+"NULLNULLNULL"
 	End Method
 	
 	Method EmitDebugNullObjectError(variable:String)
-		Emit "if (" + variable + " == &bbNullObject) brl_blitz_NullObjectError();"
+		' FIXME : for now we don't generate this in a binary expression, because the test may not be required depending on context
+		If Not _inBinary Then
+			Emit "if (" + variable + " == &bbNullObject) brl_blitz_NullObjectError();"
+		End If
 	End Method
 
 	
@@ -2301,6 +2305,10 @@ End Rem
 			Else
 
 				decl.Semant()
+				
+				If opt_debug And decl.IsMethod() Then
+					EmitDebugNullObjectError("o")
+				End If
 
 				EmitLocalDeclarations(decl)
 
@@ -3512,6 +3520,8 @@ End Rem
 
 		' const
 		For Local cDecl:TConstDecl = EachIn classDecl.Decls()
+			cDecl.Semant()
+			
 			EmitIfcConstDecl(cDecl)
 		Next
 
