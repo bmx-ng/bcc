@@ -535,10 +535,14 @@ t:+"NULLNULLNULL"
 				Return TransType( init.exprType, decl.munged )+"="+init.Trans()
 				'Return munged+"="+init.Trans()
 			Else
-				If TObjectType(init.exprType) Then
-					Return TransType( init.exprType, decl.munged )+" volatile "+decl.munged+"="+init.Trans()
+				Local ty:TType = decl.ty
+				If TVoidType( ty ) Or Not ty Then
+					ty = init.exprType
+				End If
+				If TObjectType(ty) Then
+					Return TransType( ty, decl.munged )+" volatile "+decl.munged+"="+init.Trans()
 				Else
-					Return TransType( init.exprType, decl.munged )+" "+decl.munged+"="+init.Trans()
+					Return TransType( ty, decl.munged )+" "+decl.munged+"="+init.Trans()
 				End If
 			End If
 		End If
