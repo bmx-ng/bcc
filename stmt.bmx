@@ -654,6 +654,7 @@ Type TRestoreDataStmt Extends TStmt
 			Err "Expecting identifier"
 		Else
 			Local label:String = TIdentExpr(expr).ident
+			TIdentExpr(expr).ident = "#" + TIdentExpr(expr).ident
 			expr=expr.Semant()
 			
 			If Not expr Then

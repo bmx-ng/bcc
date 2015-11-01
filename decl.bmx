@@ -1252,7 +1252,7 @@ Type TFuncDecl Extends TBlockDecl
 'DebugStop
 'DebugLog ident + "..."
 			While sclass
-				local errorDetails:String = ""
+				Local errorDetails:String = ""
 'DebugLog "Checking Class : " + sclass.ident
 				Local found:Int
 				For Local decl:TFuncDecl=EachIn sclass.FuncDecls( )
@@ -1287,21 +1287,21 @@ Type TFuncDecl Extends TBlockDecl
 						'EndIf
 						Else
 							'prepare a more detailed error message
-							If (not retType.EqualsType( decl.retType ) or not retType.ExtendsType( decl.retType )) Or (decl.retType and not decl.retType.EqualsType( retType ))
+							If (Not retType.EqualsType( decl.retType ) Or Not retType.ExtendsType( decl.retType )) Or (decl.retType And Not decl.retType.EqualsType( retType ))
 								errorDetails :+ "Return type is ~q"+retType.ToString()+"~q, expected ~q"+decl.retType.ToString()+"~q. "
 							End If
 
 							If argDecls.Length <> decl.argDecls.Length
 								errorDetails :+ "Argument count differs. Got " + argDecls.Length +", expected " + decl.argDecls.Length + " arguments."
 							End If
-							local argCount:int = Min(argDecls.Length, decl.argDecls.Length)
-							if argCount > 0
+							Local argCount:Int = Min(argDecls.Length, decl.argDecls.Length)
+							If argCount > 0
 								For Local i:Int=0 Until argCount
 									If Not argDecls[i].ty.EqualsType( decl.argDecls[i].ty )
 										errorDetails :+ "Argument #"+(i+1)+" is ~q" + argDecls[i].ty.ToString()+"~q, expected ~q"+decl.argDecls[i].ty.ToString()+"~q. "
 									End If
 								Next
-							endif
+							EndIf
 							'remove last space
 							errorDetails = errorDetails.Trim()
 						EndIf
@@ -2024,14 +2024,17 @@ End Type
 
 Type TLoopLabelDecl Extends TDecl
 
+	Field realIdent:String
+
 	Method Create:TLoopLabelDecl( ident$, attrs:Int=0 )
-		Self.ident=ident
+		Self.ident="#" + ident
+		Self.realIdent = ident
 		Self.attrs=attrs
 		Return Self
 	End Method
 	
 	Method OnCopy:TDecl(deep:Int = True)
-		Return New TLoopLabelDecl.Create( ident,attrs )
+		Return New TLoopLabelDecl.Create( realIdent,attrs )
 	End Method
 	
 	Method OnSemant()
@@ -2041,16 +2044,18 @@ End Type
 
 Type TDataLabelDecl Extends TDecl
 
+	Field realIdent:String
 	Field index:Int
 
 	Method Create:TDataLabelDecl( ident$, attrs:Int=0 )
-		Self.ident=ident
+		Self.ident="#" + ident
+		Self.realIdent = ident
 		Self.attrs=attrs
 		Return Self
 	End Method
 	
 	Method OnCopy:TDecl(deep:Int = True)
-		Return New TDataLabelDecl.Create( ident,attrs )
+		Return New TDataLabelDecl.Create( realIdent,attrs )
 	End Method
 	
 	Method OnSemant()

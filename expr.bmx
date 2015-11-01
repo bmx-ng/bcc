@@ -2072,15 +2072,17 @@ Type TIdentExpr Extends TExpr
 			Return e
 		End If
 
+		Local loopLabel:String = "#" + IdentLower()
+
 		' maybe it's a loop label?
-		Local stmt:TLoopStmt = TLoopStmt(scope.FindLoop(IdentLower()))
+		Local stmt:TLoopStmt = TLoopStmt(scope.FindLoop(loopLabel))
 		
 		If stmt Then
 			Return New TLoopLabelExpr.Create(stmt)
 		End If
 		
 		' maybe it's a data label?
-		Local ddecl:TDefDataDecl = TDefDataDecl(_appInstance.FindDataLabel(IdentLower()))
+		Local ddecl:TDefDataDecl = TDefDataDecl(_appInstance.FindDataLabel(loopLabel))
 		
 		If ddecl Then
 			Return New TDataLabelExpr.Create(ddecl)
