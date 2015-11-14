@@ -1437,7 +1437,7 @@ t:+"NULLNULLNULL"
 			Return "pow" + Bra(t_lhs + ", " + t_rhs)
 		End If
 		
-		If expr.op = "mod" Then
+		If expr.op = "mod" Or expr.op = "%" Then
 			If TDecimalType(expr.lhs.exprType) Or TDecimalType(expr.rhs.exprType) Then
 				Return "fmod" + Bra(t_lhs + ", " + t_rhs)
 			End If
