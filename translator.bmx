@@ -1138,6 +1138,14 @@ End Rem
 		Local decl:TLocalDecl=TLocalDecl( stmt.decl )
 		If decl
 			MungDecl decl
+			' only generate local declarations once.
+			If decl.generated Then
+				If Not decl.done Then
+					decl.done = True
+				Else
+					Return ""
+				End If
+			End If
 			Return TransLocalDecl( decl,decl.init, decl.generated Or declare )
 		EndIf
 		Local cdecl:TConstDecl=TConstDecl( stmt.decl )

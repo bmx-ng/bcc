@@ -429,6 +429,8 @@ End Type
 
 Type TLocalDecl Extends TVarDecl
 
+	Field done:Int
+
 	Method Create:TLocalDecl( ident$,ty:TType,init:TExpr,attrs:Int=0, generated:Int = False )
 		Self.ident=ident
 		Self.declTy=ty
