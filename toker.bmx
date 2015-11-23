@@ -215,7 +215,6 @@ Type TToker
 			End If
 
 		Else If str="." And TSTR()="." Then
-
 			Local pos:Int = _tokePos
 			Local isValidTilEOL:Int = True
 			_tokePos:+1
@@ -230,6 +229,7 @@ Type TToker
 				_tokePos = pos + 1
 				_tokeType=TOKE_SYMBOL
 			Else
+				start = _tokePos
 				_tokePos:+1
 				_line:+1
 				_tokeType=TOKE_SPACE
