@@ -42,7 +42,7 @@ Type TIParser
 	Field _tokeSpace:Int
 	Field _tokerStack:TList=New TList'<TToker>
 
-	Method ParseModuleImport:Int(pmod:TModuleDecl, modpath:String, path:String, imp:String = Null, iData:String = Null, attrs:Int = 0, relPath:String = "")
+	Method ParseModuleImport:Int(pmod:TModuleDecl, modpath:String, path:String, imp:String = Null, iData:String = Null, attrs:Int = 0, relPath:String = "", isFileImport:Int = 0)
 
 		Const STATE_CLASS:Int = 1
 
@@ -70,7 +70,11 @@ Type TIParser
 			End If
 		End If
 		
-		Local _mod:TModuleDecl = New TModuleDecl.Create(modpath, "bb" + modpath, path, attrs)
+		Local prefix:String
+		If isFileImport Then
+			prefix = "____"
+		End If
+		Local _mod:TModuleDecl = New TModuleDecl.Create(prefix + modpath, "bb" + modpath, path, attrs)
 		Select modpath
 			Case "brl.classes", "brl.blitzkeywords"
 				_mod.filepath :+ "." + modpath
@@ -518,7 +522,7 @@ Type TIParser
 			If _toker._tokeType = TOKE_IDENT Then
 				' Const / Global?
 				'NextToke
-				
+
 				'decl_attrs :| DECL_CONST
 				
 				Local decl:TDecl= ParseDecl( _toke,decl_attrs | DECL_CONST)

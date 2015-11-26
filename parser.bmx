@@ -2902,7 +2902,7 @@ End Rem
 
 			' try to import interface
 			Local par:TIParser = New TIParser
-			If par.ParseModuleImport(_module, modpath, origPath, path, , , filepath) Return
+			If par.ParseModuleImport(_module, modpath, origPath, path, , , filepath, True) Return
 		Else If filepath.startswith("-") Then
 			If Not _app.fileimports.Contains(filepath) Then
 				_app.fileimports.AddLast filepath
