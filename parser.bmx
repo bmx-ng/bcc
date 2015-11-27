@@ -3304,6 +3304,10 @@ End Rem
 		If opt_ismain Then 'And opt_modulename <> "brl.blitz" Then
 			ident = opt_modulename
 		End If
+		
+		If opt_apptype Then
+			ident = "____" + ident
+		End If
 
 		_module=New TModuleDecl.Create( ident,munged,path,mattrs )
 
