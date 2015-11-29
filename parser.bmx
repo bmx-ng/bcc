@@ -3488,7 +3488,7 @@ Function PreProcess$( path$ )
 
 	Local ifnest:Int,con:Int=1,line:Int,source:TStringList=New TStringList
 
-	Local toker:TToker=New TToker.Create( path,LoadText( path ) )
+	Local toker:TToker=New TToker.Create( path,LoadText( path ), True )
 
 	PreProcessNextToke(toker)
 

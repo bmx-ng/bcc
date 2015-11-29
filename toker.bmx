@@ -71,8 +71,9 @@ Type TToker
 	Field _tokePos:Int
 	
 	Field _lookingForEndRem:Int
+	Field _preprocess:Int
 	
-	Method Create:TToker( path$,source$ )
+	Method Create:TToker( path$,source$, preprocess:Int = False )
 		_path=path
 		_line=1
 		_source=source
@@ -80,6 +81,7 @@ Type TToker
 		_tokeType=TOKE_EOF
 		_tokePos=0
 		_lines = source.split("~n")
+		_preprocess = preprocess
 		Return Self
 	End Method
 	
@@ -100,6 +102,7 @@ Type TToker
 		_tokePos=toker._tokePos
 		_lines=toker._lines
 		_lookingForEndRem=toker._lookingForEndRem
+		_preprocess=toker._preprocess
 		Return Self
 	End Method
 	
@@ -225,11 +228,12 @@ Type TToker
 				_tokePos:+1
 			Wend
 			
-			If Not isValidTilEOL Then
+			If Not isValidTilEOL Or _preprocess Then
 				_tokePos = pos + 1
 				_tokeType=TOKE_SYMBOL
 			Else
 				start = _tokePos
+				_toke = " "
 				_tokePos:+1
 				_line:+1
 				_tokeType=TOKE_SPACE
@@ -266,7 +270,7 @@ Type TToker
 		EndIf
 
 		If Not _toke _toke=_source[start.._tokePos]
-					
+
 		Return _toke
 	End Method
 	
