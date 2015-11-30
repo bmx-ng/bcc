@@ -3305,7 +3305,7 @@ End Rem
 			ident = opt_modulename
 		End If
 		
-		If opt_apptype Then
+		If opt_buildtype = BUILDTYPE_APP Then
 			ident = "____" + ident
 		End If
 
