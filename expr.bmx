@@ -210,6 +210,7 @@ Type TExpr
 			If TFunctionPtrType( lhs ) Return lhs
 			If TFunctionPtrType( rhs ) Return rhs
 		End If
+		If TSizeTType( lhs ) Or TSizeTType( rhs ) Return New TSizeTType
 		If TLongType( lhs ) Or TLongType( rhs ) Return New TLongType
 		If TIntType( lhs ) Or TIntType( rhs ) Return New TIntType
 		If TObjectType( lhs ) And TNullDecl(TObjectType( lhs ).classDecl) Then
@@ -1205,6 +1206,8 @@ Type TCastExpr Extends TExpr
 			Return Double( val )
 		Else If TLongType( exprType )
 			Return Long( val )
+		Else If TSizeTType( exprType )
+			Return Long( val )
 		Else If TStringType( exprType )
 			Return String( val )
 		Else If TByteType( exprType )
@@ -1338,6 +1341,8 @@ Type TBinaryMathExpr Extends TBinaryExpr
 				exprType=New TIntType
 			Else If TLongType(lhs.exprType) Then
 				exprType=New TLongType
+			Else If TSizeTType(lhs.exprType) Then
+				exprType=New TSizeTType
 			Else
 				exprType=New TIntType
 			End If
@@ -1399,7 +1404,7 @@ Type TBinaryMathExpr Extends TBinaryExpr
 			Case "~~" Return x ~ y
 			Case "|" Return x | y
 			End Select
-		Else If TLongType( exprType )
+		Else If TLongType( exprType ) Or TSizeTType(exprType)
 			Local x:Long=Long(lhs),y:Long=Long(rhs)
 			Select op
 			Case "^" Return x^y
@@ -1500,9 +1505,31 @@ Type TBinaryCompareExpr Extends TBinaryExpr
 			Case ">"  r=(lhs> rhs)
 			Case ">=", "=>" r=(lhs>=rhs)
 			End Select
+		Else If TLongType( ty ) Or TSizeTType( ty )
+			Local lhs:Long=Long( Self.lhs.Eval() )
+			Local rhs:Long=Long( Self.rhs.Eval() )
+			Select op
+			Case "="  r=(lhs= rhs)
+			Case "<>" r=(lhs<>rhs)
+			Case "<"  r=(lhs< rhs)
+			Case "<=", "=<" r=(lhs<=rhs)
+			Case ">"  r=(lhs> rhs)
+			Case ">=", "=>" r=(lhs>=rhs)
+			End Select
 		Else If TFloatType( ty )
 			Local lhs:Float=Float( Self.lhs.Eval() )
 			Local rhs:Float=Float( Self.rhs.Eval() )
+			Select op
+			Case "="  r=(lhs= rhs)
+			Case "<>" r=(lhs<>rhs)
+			Case "<"  r=(lhs< rhs)
+			Case "<=", "=<" r=(lhs<=rhs)
+			Case ">"  r=(lhs> rhs)
+			Case ">=", "=>" r=(lhs>=rhs)
+			End Select
+		Else If TDoubleType( ty )
+			Local lhs:Double=Double( Self.lhs.Eval() )
+			Local rhs:Double=Double( Self.rhs.Eval() )
 			Select op
 			Case "="  r=(lhs= rhs)
 			Case "<>" r=(lhs<>rhs)

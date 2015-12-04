@@ -25,7 +25,7 @@ SuperStrict
 
 Import "base.configmap.bmx"
 
-Const version:String = "0.67"
+Const version:String = "0.68"
 
 Const BUILDTYPE_APP:Int = 0
 Const BUILDTYPE_MODULE:Int = 1
@@ -190,7 +190,7 @@ Function ParseArgs:String[](args:String[])
 		opt_apptype = APPTYPE_NONE
 	End If
 	
-	If opt_arch = "x64" Then
+	If opt_arch = "x64" Or opt_arch = "arm64v8a" Or opt_arch = "arm64" Then
 		WORD_SIZE = 8
 	End If
 

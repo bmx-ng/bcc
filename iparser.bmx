@@ -1106,6 +1106,8 @@ End Rem
 
 			If CParse("%") Then
 				ty = New TLongType
+			ElseIf CParse("z") Then
+				ty = New TSizetType
 			End If
 			
 			If CParse("&") And Not (attrs & DECL_FIELD) Then
@@ -1276,6 +1278,16 @@ End Rem
 		End If
 		If CParse( "double" )
 			Local ty:TType = New TDoubleType
+			While CParse("ptr")
+				ty = TType.MapToPointerType(ty)
+			Wend
+			While CParse( "*" )
+				ty = TType.MapToPointerType(ty)
+			Wend
+			Return ty
+		End If
+		If CParse( "size_t" )
+			Local ty:TType = New TSizeTType
 			While CParse("ptr")
 				ty = TType.MapToPointerType(ty)
 			Wend

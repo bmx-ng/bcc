@@ -516,6 +516,7 @@ Type TParser
 		If CParse( "float" ) ty = New TFloatType
 		If CParse( "long" ) ty = New TLongType
 		If CParse( "double" ) ty = New TDoubleType
+		If CParse( "size_t" ) ty = New TSizeTType
 
 		While CParse("ptr")
 			ty = TType.MapToPointerType(ty)
@@ -530,6 +531,7 @@ Type TParser
 		If CParse( "float" ) Return New TFloatType
 		If CParse( "long" ) Return New TLongType
 		If CParse( "double" ) Return New TDoubleType
+		If CParse( "size_t" ) Return New TSizeTType
 	End	Method
 
 	Method ParseNewType:TType()
@@ -542,6 +544,7 @@ Type TParser
 		If CParse( "object" ) Return New TIdentType.Create( "brl.classes.object" )
 		If CParse( "long" ) Return New TLongType
 		If CParse( "double" ) Return New TDoubleType
+		If CParse( "size_t" ) Return New TSizeTType
 		Return ParseIdentType()
 	End Method
 
@@ -947,7 +950,7 @@ Type TParser
 		Case "false"
 			NextToke
 			expr=New TConstExpr.Create( New TIntType,"" )
-		Case "int","long","float","double","object","short","byte"
+		Case "int","long","float","double","object","short","byte","size_t"
 			Local id$=_toke
 			Local ty:TType=ParseType()
 
@@ -963,6 +966,8 @@ Type TParser
 						ty = New TFloatType
 					Case "double"
 						ty = New TDoubleType
+					Case "size_t"
+						ty = New TSizeTType
 				End Select
 			End If
 

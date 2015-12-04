@@ -1961,6 +1961,8 @@ End Rem
 			modifier = 8
 		Else If TByteType(ty) Then
 			modifier = 1
+		Else If TSizeTType(ty) Then
+			modifier = WORD_SIZE
 		End If
 
 		If modifier > 1 And lastOffset Mod modifier Then

@@ -176,6 +176,7 @@ Type TType
 	Const T_STRING:Int      = $040
 	Const T_ARRAY:Int       = $080
 	Const T_FUNCTIONPTR:Int = $100
+	Const T_SIZET:Int       = $200
 
 
 	Method Copy:TType()
@@ -217,6 +218,8 @@ Function NewType:TType(kind:Int = 0)
 			ty = New TIntType
 		Case TType.T_LONG
 			ty = New TLongType
+		Case TType.T_SIZET
+			ty = New TSizeTType
 		Case TType.T_FLOAT
 			ty = New TFloatType
 		Case TType.T_DOUBLE
@@ -268,6 +271,8 @@ Function IsType:Int(ty:TType, kind:Int)
 			Return TIntType(ty) <> Null
 		Case TType.T_LONG
 			Return TLongType(ty) <> Null
+		Case TType.T_SIZET
+			Return TSizeTType(ty) <> Null
 		Case TType.T_FLOAT
 			Return TFloatType(ty) <> Null
 		Case TType.T_DOUBLE
@@ -384,6 +389,37 @@ Type TIntType Extends TNumericType
 
 	Method GetSize:Int()
 		Return 4
+	End Method
+
+End Type
+
+Type TSizeTType Extends TNumericType
+	
+	Method EqualsType:Int( ty:TType )
+		Return TSizeTType( ty )<>Null And (_flags = ty._flags Or ..
+			(_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR) Or (_flags & T_VAR))
+	End Method
+	
+	Method ExtendsType:Int( ty:TType )
+		If TObjectType( ty )
+			Local expr:TExpr=New TConstExpr.Create( Self,"" ).Semant()
+			Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
+			Return ctor And ctor.IsCtor()
+		EndIf
+		If _flags & T_VARPTR And (TSizeTType(ty) <> Null Or IsPointerType(ty, 0, T_POINTER)) Return True
+		Return TNumericType( ty )<>Null Or TStringType( ty )<>Null 'Or TIntVarPtrType( ty )<> Null
+	End Method
+	
+	Method OnCopy:TType()
+		Return New TSizeTType
+	End Method
+
+	Method ToString$()
+		Return "size_t" + ToStringParts()
+	End Method
+
+	Method GetSize:Int()
+		Return WORD_SIZE
 	End Method
 
 End Type
