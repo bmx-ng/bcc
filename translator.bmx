@@ -852,7 +852,7 @@ End Rem
 
 				' No Try statements in the stack here..
 				If stmt.label And TLoopLabelExpr(stmt.label) Then
-					Emit "goto " + TransLoopLabelCont(TLoopLabelExpr(stmt.label).loop.loopLabel.ident, False)
+					Emit "goto " + TransLoopLabelCont(TLoopLabelExpr(stmt.label).loop.loopLabel.realIdent, False)
 				Else
 					Return "continue"
 				End If
@@ -916,7 +916,7 @@ End Rem
 				
 				' No Try statements in the stack here..
 				If stmt.label And TLoopLabelExpr(stmt.label) Then
-					Emit "goto " + TransLoopLabelExit(TLoopLabelExpr(stmt.label).loop.loopLabel.ident, False)
+					Emit "goto " + TransLoopLabelExit(TLoopLabelExpr(stmt.label).loop.loopLabel.realIdent, False)
 				Else
 					Return "break"
 				End If
@@ -1262,7 +1262,7 @@ End Rem
 		End If
 
 		If stmt.loopLabel Then
-			Emit TransLoopLabelCont(stmt.loopLabel.ident, True)
+			Emit TransLoopLabelCont(stmt.loopLabel.realIdent, True)
 		End If
 		
 		Emit "}"
@@ -1272,7 +1272,7 @@ End Rem
 		End If
 
 		If stmt.loopLabel Then
-			Emit TransLoopLabelExit(stmt.loopLabel.ident, True)
+			Emit TransLoopLabelExit(stmt.loopLabel.realIdent, True)
 		End If
 		
 		If broken=nbroken And TConstExpr( stmt.expr ) And TConstExpr( stmt.expr ).value unreachable=True
@@ -1304,7 +1304,7 @@ End Rem
 		End If
 
 		If stmt.loopLabel Then
-			Emit TransLoopLabelCont(stmt.loopLabel.ident, True)
+			Emit TransLoopLabelCont(stmt.loopLabel.realIdent, True)
 		End If
 		
 		SetOutput("source")
@@ -1320,7 +1320,7 @@ End Rem
 		End If
 
 		If stmt.loopLabel Then
-			Emit TransLoopLabelExit(stmt.loopLabel.ident, True)
+			Emit TransLoopLabelExit(stmt.loopLabel.realIdent, True)
 		End If
 
 		If broken=nbroken And TConstExpr( stmt.expr ) And Not TConstExpr( stmt.expr ).value unreachable=True
@@ -1366,7 +1366,7 @@ End Rem
 		End If
 
 		If stmt.loopLabel Then
-			Emit TransLoopLabelCont(stmt.loopLabel.ident, True)
+			Emit TransLoopLabelCont(stmt.loopLabel.realIdent, True)
 		End If
 		
 		Emit "}"
@@ -1380,7 +1380,7 @@ End Rem
 		End If
 
 		If stmt.loopLabel Then
-			Emit TransLoopLabelExit(stmt.loopLabel.ident, True)
+			Emit TransLoopLabelExit(stmt.loopLabel.realIdent, True)
 		End If
 		
 		If broken=nbroken And TConstExpr( stmt.expr ) And TConstExpr( stmt.expr ).value unreachable=True
