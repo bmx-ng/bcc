@@ -641,7 +641,7 @@ Type TArrayType Extends TType
 		
 	Method EqualsType:Int( ty:TType )
 		Local arrayType:TArrayType=TArrayType( ty )
-		Return arrayType And elemType.EqualsType( arrayType.elemType )
+		Return arrayType And elemType.EqualsType( arrayType.elemType ) And dims = arrayType.dims
 	End Method
 	
 	Method ExtendsType:Int( ty:TType )
@@ -668,7 +668,7 @@ Type TArrayType Extends TType
 	End Method
 
 	Method ToString$()
-		Return elemType.ToString()+"[]"
+		Return elemType.ToString()+" Array"
 	End Method
 End Type
 

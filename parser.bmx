@@ -911,6 +911,7 @@ Type TParser
 						ln = ln + [ParseExpr()]
 						If CParse("]") Exit
 						Parse(",")
+						dims :+ 1
 					Forever
 
 					If Not ln Then
@@ -921,7 +922,6 @@ Type TParser
 				If ln Then
 					ty = tmpTy
 				End If
-
 
 '				Repeat
 					'If CParse( "[" )

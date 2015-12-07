@@ -794,7 +794,7 @@ Type TNewArrayExpr Extends TExpr
 		If exprType Return Self
 
 		ty=ty.Semant()
-		exprType=New TArrayType.Create( ty )
+		exprType=New TArrayType.Create( ty, expr.length )
 		For Local i:Int = 0 Until expr.length
 			expr[i]=expr[i].SemantAndCast( New TIntType )
 		Next
@@ -1002,8 +1002,10 @@ Type TCastExpr Extends TExpr
 			End If
 			
 			If TArrayType(ty) And TArrayType(src) Then
-				exprType = ty
-				Return Self
+				If TArrayType(ty).dims = TArrayType(src).dims Then
+					exprType = ty
+					Return Self
+				End If
 			End If
 
 		Else If TBoolType( ty )
@@ -1104,7 +1106,9 @@ Type TCastExpr Extends TExpr
 					Return Self
 				End If
 			Else
-				exprType = ty
+				If TArrayType(ty).dims = TArrayType(src).dims Then
+					exprType = ty
+				End If
 			End If
 		End If
 		
