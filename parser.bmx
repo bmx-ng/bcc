@@ -3311,7 +3311,7 @@ End Rem
 		End If
 		
 		If opt_buildtype = BUILDTYPE_APP Then
-			ident = "____" + ident
+			ident = "m_" + ident
 		End If
 
 		_module=New TModuleDecl.Create( ident,munged,path,mattrs )

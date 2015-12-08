@@ -72,7 +72,7 @@ Type TIParser
 		
 		Local prefix:String
 		If isFileImport And opt_buildtype = BUILDTYPE_APP Then
-			prefix = "____"
+			prefix = "m_"
 		End If
 		Local _mod:TModuleDecl = New TModuleDecl.Create(prefix + modpath, "bb" + modpath, path, attrs)
 		Select modpath
