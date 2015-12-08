@@ -1553,7 +1553,7 @@ End Rem
 			If decl Then
 				Return decl
 			End If
-			Return FindFuncDecl2( ident,args,explicit )
+			Return FindFuncDecl2( ident,args,explicit,isIdentExpr )
 		EndIf
 		
 		Local fdecl:TFuncDecl=FindFuncDecl2( ident,args,True )
@@ -1587,8 +1587,8 @@ End Rem
 		Return fdecl
 	End Method
 	
-	Method FindFuncDecl2:TFuncDecl( ident$,args:TExpr[],explicit:Int )
-		Return Super.FindFuncDecl( ident,args,explicit )
+	Method FindFuncDecl2:TFuncDecl( ident$,args:TExpr[],explicit:Int, isIdentExpr:Int = False )
+		Return Super.FindFuncDecl( ident,args,explicit,,isIdentExpr )
 	End Method
 	
 	Method GetAllFuncDecls:TFuncDecl[](funcs:TFuncDecl[] = Null, includeSuper:Int = True)
