@@ -113,6 +113,7 @@ Type TExpr
 						TInvokeExpr(args[i]).decl.semant()
 					End If
 				End If
+				
 			End If
 		Next
 		Return args
@@ -135,6 +136,12 @@ Type TExpr
 
 			If i < args.length And args[i]
 				If TInvokeExpr(args[i]) And Not TInvokeExpr(args[i]).invokedWithBraces Then
+					If Not IsPointerType(funcDecl.argDecls[i].ty, TType.T_BYTE) And Not TFunctionPtrType(funcDecl.argDecls[i].ty) Then
+						Err "Unable to convert from '" + args[i].exprType.ToString() + "()' to '" + funcDecl.argDecls[i].ty.ToString() + "'"
+					End If
+				End If
+
+				If TInvokeMemberExpr(args[i]) And Not TInvokeMemberExpr(args[i]).invokedWithBraces Then
 					If Not IsPointerType(funcDecl.argDecls[i].ty, TType.T_BYTE) And Not TFunctionPtrType(funcDecl.argDecls[i].ty) Then
 						Err "Unable to convert from '" + args[i].exprType.ToString() + "()' to '" + funcDecl.argDecls[i].ty.ToString() + "'"
 					End If
@@ -589,8 +596,9 @@ Type TInvokeMemberExpr Extends TExpr
 	Field decl:TFuncDecl
 	Field args:TExpr[]
 	Field isResize:Int	'FIXME - butt ugly!
+	Field invokedWithBraces:Int
 
-	Method Create:TInvokeMemberExpr( expr:TExpr,decl:TFuncDecl,args:TExpr[]=Null )
+	Method Create:TInvokeMemberExpr( expr:TExpr,decl:TFuncDecl,args:TExpr[]=Null, invokedWithBraces:Int = True )
 		Self.expr=expr
 		Self.decl=decl
 		If args
@@ -598,6 +606,7 @@ Type TInvokeMemberExpr Extends TExpr
 		Else
 			Self.args = New TExpr[0]
 		End If
+		Self.invokedWithBraces = invokedWithBraces
 		Return Self
 	End Method
 
@@ -2087,7 +2096,7 @@ Type TIdentExpr Extends TExpr
 			fdecl.maybeFunctionPtr = False
 			
 			If Not fdecl.IsStatic()
-				If expr Return New TInvokeMemberExpr.Create( expr,fdecl,args ).Semant()
+				If expr Return New TInvokeMemberExpr.Create( expr,fdecl,args, False ).Semant()
 				If scope<>_env Or Not _env.FuncScope() Or _env.FuncScope().IsStatic() Err "Method '"+ident+"' cannot be accessed from here."
 			EndIf
 
