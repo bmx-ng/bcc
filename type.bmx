@@ -177,6 +177,8 @@ Type TType
 	Const T_ARRAY:Int       = $080
 	Const T_FUNCTIONPTR:Int = $100
 	Const T_SIZET:Int       = $200
+	Const T_UINT:Int        = $400
+	Const T_ULONG:Int       = $800
 
 
 	Method Copy:TType()
@@ -216,6 +218,8 @@ Function NewType:TType(kind:Int = 0)
 			ty = New TShortType
 		Case TType.T_INT
 			ty = New TIntType
+		Case TType.T_UINT
+			ty = New TUIntType
 		Case TType.T_LONG
 			ty = New TLongType
 		Case TType.T_SIZET
@@ -269,6 +273,8 @@ Function IsType:Int(ty:TType, kind:Int)
 			Return TShortType(ty) <> Null
 		Case TType.T_INT
 			Return TIntType(ty) <> Null
+		Case TType.T_UINT
+			Return TUIntType(ty) <> Null
 		Case TType.T_LONG
 			Return TLongType(ty) <> Null
 		Case TType.T_SIZET
@@ -393,6 +399,37 @@ Type TIntType Extends TNumericType
 
 End Type
 
+Type TUIntType Extends TNumericType
+	
+	Method EqualsType:Int( ty:TType )
+		Return TUIntType( ty )<>Null And (_flags = ty._flags Or ..
+			(_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR) Or (_flags & T_VAR))
+	End Method
+	
+	Method ExtendsType:Int( ty:TType )
+		If TObjectType( ty )
+			Local expr:TExpr=New TConstExpr.Create( Self,"" ).Semant()
+			Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
+			Return ctor And ctor.IsCtor()
+		EndIf
+		If _flags & T_VARPTR And (TUIntType(ty) <> Null Or IsPointerType(ty, 0, T_POINTER)) Return True
+		Return TNumericType( ty )<>Null Or TStringType( ty )<>Null 'Or TIntVarPtrType( ty )<> Null
+	End Method
+	
+	Method OnCopy:TType()
+		Return New TUIntType
+	End Method
+
+	Method ToString$()
+		Return "UInt" + ToStringParts()
+	End Method
+
+	Method GetSize:Int()
+		Return 4
+	End Method
+
+End Type
+
 Type TSizeTType Extends TNumericType
 	
 	Method EqualsType:Int( ty:TType )
@@ -509,6 +546,32 @@ Type TLongType Extends TNumericType ' BaH Long
 
 	Method ToString$()
 		Return "Long" + ToStringParts()
+	End Method
+End Type
+
+Type TULongType Extends TNumericType
+	
+	Method EqualsType:Int( ty:TType )
+		Return TULongType( ty )<>Null And (_flags = ty._flags Or ..
+			(_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR) Or (_flags & T_VAR))
+	End Method
+	
+	Method ExtendsType:Int( ty:TType )
+		If TObjectType( ty )
+			Local expr:TExpr=New TConstExpr.Create( Self,"" ).Semant()
+			Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
+			Return ctor And ctor.IsCtor()
+		EndIf
+		If _flags & T_VARPTR And (TULongType(ty) <> Null Or IsPointerType(ty, 0, T_POINTER)) Return True
+		Return TNumericType( ty )<>Null Or TStringType( ty )<>Null 'Or TLongVarPtrType( ty )<> Null
+	End Method
+	
+	Method OnCopy:TType()
+		Return New TULongType
+	End Method
+
+	Method ToString$()
+		Return "ULong" + ToStringParts()
 	End Method
 End Type
 

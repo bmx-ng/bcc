@@ -1953,11 +1953,11 @@ End Rem
 		
 		Local modifier:Int = POINTER_SIZE
 		
-		If TIntType(ty) Or TFloatType(ty) Then
+		If TIntType(ty) Or TFloatType(ty) Or TUIntType(ty) Then
 			modifier = 4
 		Else If TShortType(ty) Then
 			modifier = 2
-		Else If TLongType(ty) Or TDoubleType(ty) Then
+		Else If TLongType(ty) Or TDoubleType(ty) Or TULongType(ty) Then
 			modifier = 8
 		Else If TByteType(ty) Then
 			modifier = 1

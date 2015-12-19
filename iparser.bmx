@@ -1120,6 +1120,24 @@ End Rem
 				ty = TType.MapToPointerType(ty)
 			Wend
 			
+		Case "|"
+			NextToke
+			ty=New TUIntType
+
+			If CParse("|") Then
+				ty = New TULongType
+			End If
+			
+			If CParse("&") And Not (attrs & DECL_FIELD) Then
+				attrs :| DECL_GLOBAL
+				attrs :~ DECL_CONST
+			End If
+
+			' pointer
+			While CParse( "*" )
+				ty = TType.MapToPointerType(ty)
+			Wend
+			
 		Case "#"
 			NextToke
 			ty=New TFloatType
@@ -1254,6 +1272,16 @@ End Rem
 			Wend
 			Return ty
 		End If
+		If CParse( "uint" ) Or CParse( "|" )
+			Local ty:TType = New TUIntType
+			While CParse("ptr")
+				ty = TType.MapToPointerType(ty)
+			Wend
+			While CParse( "*" )
+				ty = TType.MapToPointerType(ty)
+			Wend
+			Return ty
+		End If
 		If CParse( "float" )
 			Local ty:TType = New TFloatType
 			While CParse("ptr")
@@ -1268,6 +1296,16 @@ End Rem
 		If CParse( "object" ) Return New TIdentType.Create( "brl.classes.object" )
 		If CParse( "long" )
 			Local ty:TType = New TLongType
+			While CParse("ptr")
+				ty = TType.MapToPointerType(ty)
+			Wend
+			While CParse( "*" )
+				ty = TType.MapToPointerType(ty)
+			Wend
+			Return ty
+		End If
+		If CParse( "ulong" )
+			Local ty:TType = New TULongType
 			While CParse("ptr")
 				ty = TType.MapToPointerType(ty)
 			Wend

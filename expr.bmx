@@ -219,7 +219,9 @@ Type TExpr
 		End If
 		If TSizeTType( lhs ) Or TSizeTType( rhs ) Return New TSizeTType
 		If TLongType( lhs ) Or TLongType( rhs ) Return New TLongType
+		If TULongType( lhs ) Or TULongType( rhs ) Return New TULongType
 		If TIntType( lhs ) Or TIntType( rhs ) Return New TIntType
+		If TUIntType( lhs ) Or TUIntType( rhs ) Return New TUIntType
 		If TObjectType( lhs ) And TNullDecl(TObjectType( lhs ).classDecl) Then
 			Return rhs
 		End If
@@ -1211,6 +1213,8 @@ Type TCastExpr Extends TExpr
 				Return "0"
 			EndIf
 			Return Int( val )
+		Else If TUIntType( exprType )
+			Return Long( val )
 		Else If TShortType( exprType )
 			Return Short( val )
 		Else If TFloatType( exprType )
@@ -1218,6 +1222,8 @@ Type TCastExpr Extends TExpr
 		Else If TDoubleType( exprType )
 			Return Double( val )
 		Else If TLongType( exprType )
+			Return Long( val )
+		Else If TULongType( exprType )
 			Return Long( val )
 		Else If TSizeTType( exprType )
 			Return Long( val )
@@ -1352,8 +1358,12 @@ Type TBinaryMathExpr Extends TBinaryExpr
 				exprType=New TLongType
 			Else If TFloatType(lhs.exprType) Then
 				exprType=New TIntType
+			Else If TUIntType(lhs.exprType) Then
+				exprType=New TUIntType
 			Else If TLongType(lhs.exprType) Then
 				exprType=New TLongType
+			Else If TULongType(lhs.exprType) Then
+				exprType=New TULongType
 			Else If TSizeTType(lhs.exprType) Then
 				exprType=New TSizeTType
 			Else
@@ -1417,7 +1427,7 @@ Type TBinaryMathExpr Extends TBinaryExpr
 			Case "~~" Return x ~ y
 			Case "|" Return x | y
 			End Select
-		Else If TLongType( exprType ) Or TSizeTType(exprType)
+		Else If TLongType( exprType ) Or TSizeTType(exprType) Or TUIntType(exprType) Or TULongType(exprType)
 			Local x:Long=Long(lhs),y:Long=Long(rhs)
 			Select op
 			Case "^" Return x^y
@@ -1518,7 +1528,7 @@ Type TBinaryCompareExpr Extends TBinaryExpr
 			Case ">"  r=(lhs> rhs)
 			Case ">=", "=>" r=(lhs>=rhs)
 			End Select
-		Else If TLongType( ty ) Or TSizeTType( ty )
+		Else If TLongType( ty ) Or TSizeTType( ty ) Or TUIntType( ty ) Or TULongType( ty )
 			Local lhs:Long=Long( Self.lhs.Eval() )
 			Local rhs:Long=Long( Self.rhs.Eval() )
 			Select op
