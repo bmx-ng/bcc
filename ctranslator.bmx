@@ -271,7 +271,7 @@ Type TCTranslator Extends TTranslator
 			If TBoolType( ty ) Return "1"
 			If TShortType( ty ) Return value
 			If TIntType( ty ) Return value
-			If TUIntType( ty ) Return value ' TODO - needs 'U' suffix?
+			If TUIntType( ty ) Return value+"U"
 			If TLongType( ty ) Return value+"LL"
 			If TULongType( ty ) Return value+"ULL"
 			If TSizeTType( ty ) Return value
@@ -555,9 +555,12 @@ t:+"NULLNULLNULL"
 		If Not declare And opt_debug Then
 			Return decl.munged+"="+init.Trans() 
 		Else
-			If TFunctionPtrType(init.exprType) Then
-				Return TransType( init.exprType, decl.munged )+"="+init.Trans()
-				'Return munged+"="+init.Trans()
+			If TFunctionPtrType(decl.ty) Then
+				If TInvokeExpr(init) And Not TInvokeExpr(init).invokedWithBraces Then
+					Return TransType( decl.ty, decl.munged ) + " = " + TInvokeExpr(init).decl.munged
+				Else
+					Return TransType( decl.ty, decl.munged ) + "=" + init.Trans()
+				End If
 			Else
 				Local ty:TType = decl.ty
 				If TVoidType( ty ) Or Not ty Then

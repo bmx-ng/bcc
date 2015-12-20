@@ -241,8 +241,7 @@ Type TIParser
 			Case "~r", "~n"
 				Continue
 			Default
-'DebugStop
-				
+
 				stm = toker.Toke()
 				
 				Local v:String = toker.NextToke()			
@@ -307,35 +306,96 @@ Type TIParser
 
 						Local decl:TFuncDecl = ParseFuncDecl( _toke, 0 )
 						decl.declImported = True
+
+						' an array of function pointers?
+						If CParse( "&" ) Then
+						End If
+
+						While IsArrayDef()
+							ty = ParseArrayType(ty)
+				
+							If CParse( "&" ) Then
+							End If
+						Wend
 						
 						If decl.attrs & FUNC_PTR Then
-							ty = New TFunctionPtrType
-							TFunctionPtrType(ty).func = decl
+
+							Local fpty:TType = New TFunctionPtrType
+							TFunctionPtrType(fpty).func = decl
+							
+							If TArrayType(ty) Then
+								TArrayType(ty).elemType = fpty
+							Else
+								ty = fpty
+							End If
+							
 							'Local declInit:TExpr = decl.declInit
 							'decl.declInit = Null
 							Local gdecl:TGlobalDecl = New TGlobalDecl.Create( decl.ident,ty, Null, DECL_GLOBAL )
 							gdecl.munged = decl.munged
 							_mod.InsertDecl gdecl
 							gdecl.declImported = True
+							
+							If CParse( "=" )
+				
+								If CParse("mem")
+								
+									If CParse(":")
+										If CParse("p")
+											If CParse("(") Then
+				
+												gdecl.munged = ParseStringLit()
+				
+												' for function pointers, ensure actual function reference is set too.
+												'If TFunctionPtrType(gdecl.declTy) Then
+												'	TFunctionPtrType(gdecl.declTy).func.munged = gdecl.munged
+												'Else If TArrayType(gdecl.declTy) Then
+												'	
+												'End If
+												TFunctionPtrType(fpty).func.munged = gdecl.munged
+				
+												Parse(")")
+				
+											EndIf
+										End If
+									Else
+										If CParse("(") Then
+				
+											gdecl.munged = ParseStringLit()
+				
+											Parse(")")
+				
+										EndIf
+									End If
+								Else
+									If TStringType(ty)
+										If CParse("$") Then
+											gdecl.declInit = ParseUnaryExpr()
+										End If
+									Else
+										' a default value ?
+										gdecl.declInit = ParseUnaryExpr()
+									End If
+								End If
+							End If
+	
 						Else
 							_mod.InsertDecl decl
 						End If
 						
-
 					Else
-'DebugStop
+
 						toker.rollback(pos)
 						toker.NextToke()
-						
+
 						Local decl:TDecl = ParseDecl( _toke, DECL_CONST | DECL_EXTERN)'DECL_GLOBAL | DECL_EXTERN )
 						_mod.InsertDecl decl
 						decl.declImported = True
 
 					End If
-				
+
 				End Select
 				
-				'Continue
 		End Select
 			line :+ 1
 			
@@ -970,7 +1030,6 @@ End Rem
 'DebugStop
 '		If decl.IsExtern() 
 			If CParse( "=" )
-				'decl.munged=ParseStringLit()
 
 				If CParse("mem")
 					' Change to global
@@ -1008,28 +1067,13 @@ End Rem
 						EndIf
 					End If
 				Else
-'					init = ParseUnaryExpr()
-					
 					If TStringType(ty)
 						If CParse("$") Then
 							decl.declInit = ParseUnaryExpr()
-'							decl.init=New TConstExpr.Create(ty, ParseStringLit())
 						End If
 					Else
 						' a default value ?
 						decl.declInit = ParseUnaryExpr()
-'					Local value:String
-						
-						'_toker.NextToke()
-						
-'						If CParse("-") Then
-'DebugStop
-'							value = "-"
-'							_toker.NextToke()
-'						End If
-						
-'						decl.init = New TConstExpr.Create(ty, value + _toker._toke)
-'						_toker.NextToke()
 					End If
 				End If
 				
