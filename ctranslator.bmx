@@ -2255,11 +2255,17 @@ End Rem
 
 		Local bk:String = ";"
 		Local pre:String = "typedef "
+		Local api:String
 		If decl.IsMethod() Then
 			id :+ "_md"
 		Else
 			id :+ "_fn"
 		End If
+		
+		If decl.attrs & DECL_API_WIN32 Then
+			api = " __stdcall "
+		End If
+
 		'If odecl.IsExtern() Then
 		'	pre = "extern "
 		'End If
@@ -2268,17 +2274,17 @@ End Rem
 			If Not TFunctionPtrType(decl.retType) Then
 				If Not odecl.castTo Then
 					If Not decl.overrides Or decl.returnTypeSubclassed Then
-						Emit pre + TransType( decl.retType, "" )+" "+ Bra("*" + id)+Bra( args ) + bk
+						Emit pre + TransType( decl.retType, "" )+" "+ Bra(api + "*" + id)+Bra( args ) + bk
 					End If
 					If decl.IsMethod() Then
 						Emit TransType(decl.retType, "") + " _" + decl.munged +Bra( args ) + bk
 					Else
-						Emit TransType(decl.retType, "") + " " + decl.munged +Bra( args ) + bk
+						Emit TransType(decl.retType, "") + api + " " + decl.munged +Bra( args ) + bk
 					End If
 				Else
 					If Not odecl.noCastGen Then
 						If Not decl.overrides Or decl.returnTypeSubclassed Then
-							Emit pre + odecl.castTo +" "+Bra("*" + id)+Bra( args ) + bk
+							Emit pre + odecl.castTo +" "+Bra(api + "*" + id)+Bra( args ) + bk
 						End If
 						If decl.IsMethod() Then
 							Emit odecl.castTo + " _" + decl.munged +Bra( args ) + bk
@@ -2379,6 +2385,7 @@ End Rem
 
 		Local bk:String = "{"
 		Local pre:String
+		Local api:String
 		If proto Then
 			If odecl.IsExtern() Then
 				pre = "extern "
@@ -2389,14 +2396,18 @@ End Rem
 			bk = ";"
 		End If
 
+		If decl.attrs & DECL_API_WIN32 Then
+			api = " __stdcall "
+		End If
+
 '		If Not proto Or (proto And Not odecl.IsExtern()) Then
 		If Not IsStandardFunc(decl.munged) Then
 			If Not TFunctionPtrType(odecl.retType) Then
 				If Not odecl.castTo Then
-					Emit pre + TransType( decl.retType, "" )+" "+id+Bra( args ) + bk
+					Emit pre + TransType( decl.retType, "" )+ api + " "+id+Bra( args ) + bk
 				Else
 					If Not odecl.noCastGen Then
-						Emit pre + odecl.castTo +" "+id+Bra( args ) + bk
+						Emit pre + odecl.castTo + api + " "+id+Bra( args ) + bk
 					End If
 				End If
 			Else

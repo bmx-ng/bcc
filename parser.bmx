@@ -513,8 +513,10 @@ Type TParser
 		If CParse( "short" ) ty = New TShortType
 		If CParse( "byte" ) ty = New TByteType
 		If CParse( "int" ) ty = New TIntType
+		If CParse( "uint" ) ty = New TUIntType
 		If CParse( "float" ) ty = New TFloatType
 		If CParse( "long" ) ty = New TLongType
+		If CParse( "ulong" ) ty = New TULongType
 		If CParse( "double" ) ty = New TDoubleType
 		If CParse( "size_t" ) ty = New TSizeTType
 
@@ -528,8 +530,10 @@ Type TParser
 		If CParse( "short" ) Return New TShortType
 		If CParse( "byte" ) Return New TByteType
 		If CParse( "int" ) Return New TIntType
+		If CParse( "uint" ) Return New TUIntType
 		If CParse( "float" ) Return New TFloatType
 		If CParse( "long" ) Return New TLongType
+		If CParse( "ulong" ) Return New TULongType
 		If CParse( "double" ) Return New TDoubleType
 		If CParse( "size_t" ) Return New TSizeTType
 	End	Method
@@ -539,10 +543,12 @@ Type TParser
 		If CParse( "short" ) Return New TShortType
 		If CParse( "byte" ) Return New TByteType
 		If CParse( "int" ) Return New TIntType
+		If CParse( "uint" ) Return New TUIntType
 		If CParse( "float" ) Return New TFloatType
 		If CParse( "string" ) Return TType.stringType
 		If CParse( "object" ) Return New TIdentType.Create( "brl.classes.object" )
 		If CParse( "long" ) Return New TLongType
+		If CParse( "ulong" ) Return New TULongType
 		If CParse( "double" ) Return New TDoubleType
 		If CParse( "size_t" ) Return New TSizeTType
 		Return ParseIdentType()
@@ -950,7 +956,7 @@ Type TParser
 		Case "false"
 			NextToke
 			expr=New TConstExpr.Create( New TIntType,"" )
-		Case "int","long","float","double","object","short","byte","size_t"
+		Case "int","long","float","double","object","short","byte","size_t","uint","ulong"
 			Local id$=_toke
 			Local ty:TType=ParseType()
 
@@ -960,8 +966,12 @@ Type TParser
 						ty = New TByteType
 					Case "short"
 						ty = New TShortType
+					Case "uint"
+						ty = New TUIntType
 					Case "long"
 						ty = New TLongType
+					Case "ulong"
+						ty = New TULongType
 					Case "float"
 						ty = New TFloatType
 					Case "double"
@@ -2014,7 +2024,10 @@ End Rem
 		NextToke
 
 		If _tokeType=TOKE_STRINGLIT
-			DebugLog "EXTERN : " + ParseStringLit()
+			Local api:String = ParseStringLit()
+			If api = "win32" Then
+				attrs:| DECL_API_WIN32
+			End If
 		End If
 
 
@@ -2547,7 +2560,10 @@ End Rem
 			Else If _tokeType=TOKE_STRINGLIT
 				' "win32", etc
 				' TODO ? something with this??
-				ParseStringLit()
+				Local api:String = ParseStringLit()
+				If api = "win32" Then
+					attrs :| DECL_API_WIN32
+				End If
 			Else
 				Exit
 			EndIf
@@ -3053,6 +3069,10 @@ End Rem
 	
 	
 					Local dets:TCastDets = New TCastDets
+					
+					If CParseToker(toker, "__stdcall") Then
+						dets.api = "__stdcall"
+					End If
 	
 					' fname
 					Local fn$=toker._toke
@@ -3835,6 +3855,7 @@ Type TCastDets
 	Field retType:String
 	Field noGen:Int
 	Field args:String[0]
-
+	Field api:String
+	
 End Type
 
