@@ -200,6 +200,10 @@ Type TCTranslator Extends TTranslator
 			TFunctionPtrType(ty).func.Semant
 
 			Local retType:String = TransType(TFunctionPtrType(ty).func.retType, "")
+			Local api:String
+			If TFunctionPtrType(ty).func.attrs & DECL_API_WIN32 Then
+				api = " __stdcall "
+			End If
 			Local args:String
 			For Local arg:TArgDecl = EachIn TFunctionPtrType(ty).func.argDecls
 				arg.Semant()
@@ -209,7 +213,7 @@ Type TCTranslator Extends TTranslator
 
 				args :+ TransType(arg.ty, "")
 			Next
-			Return retType + Bra("* " + ident) + Bra(args)
+			Return retType + Bra(api + "* " + ident) + Bra(args)
 		End If
 
 		If TExternObjectType( ty ) Return "struct " + TExternObjectType( ty ).classDecl.munged + p
@@ -327,7 +331,8 @@ Type TCTranslator Extends TTranslator
 					Return "&bbNullObject"
 				End If
 			End If
-			If TFunctionPtrType( ty) Return "&brl_blitz_NullFunctionError" ' todo ??
+			'If TFunctionPtrType( ty) Return "&brl_blitz_NullFunctionError" ' todo ??
+			If TFunctionPtrType( ty) Return "0" ' todo ??
 		EndIf
 		InternalErr
 	End Method
@@ -1302,7 +1307,8 @@ t:+"NULLNULLNULL"
 			'	If TNumericType( src ) Return Bra("(BBINT**)"+t)
 			End If
 		Else If TBoolType( dst )
-			If TFunctionPtrType(src) Return Bra( t+"!=&brl_blitz_NullFunctionError" )
+			'If TFunctionPtrType(src) Return Bra( t+"!=&brl_blitz_NullFunctionError" )
+			If TFunctionPtrType(src) Return Bra( t+"!=0" )
 			If IsPointerType( src, 0, TType.T_POINTER ) Return Bra( t )
 			If TBoolType( src ) Return t
 			If TByteType( src ) Return Bra( t+"!=0" )
