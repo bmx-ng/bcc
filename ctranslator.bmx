@@ -331,8 +331,7 @@ Type TCTranslator Extends TTranslator
 					Return "&bbNullObject"
 				End If
 			End If
-			'If TFunctionPtrType( ty) Return "&brl_blitz_NullFunctionError" ' todo ??
-			If TFunctionPtrType( ty) Return "0" ' todo ??
+			If TFunctionPtrType( ty) Return "&brl_blitz_NullFunctionError" ' todo ??
 		EndIf
 		InternalErr
 	End Method
@@ -1307,8 +1306,8 @@ t:+"NULLNULLNULL"
 			'	If TNumericType( src ) Return Bra("(BBINT**)"+t)
 			End If
 		Else If TBoolType( dst )
-			'If TFunctionPtrType(src) Return Bra( t+"!=&brl_blitz_NullFunctionError" )
-			If TFunctionPtrType(src) Return Bra( t+"!=0" )
+			If TFunctionPtrType(src) Return Bra(Bra( t+"!=0" ) + " && " + Bra( t+"!=&brl_blitz_NullFunctionError" ))
+			'If TFunctionPtrType(src) Return Bra( t+"!=0" )
 			If IsPointerType( src, 0, TType.T_POINTER ) Return Bra( t )
 			If TBoolType( src ) Return t
 			If TByteType( src ) Return Bra( t+"!=0" )
