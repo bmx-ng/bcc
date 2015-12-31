@@ -2331,6 +2331,12 @@ End Rem
 
 		' emit nested functions
 		If Not proto Then
+			' emit nested protos
+			For Local fdecl:TFuncDecl = EachIn decl._decls
+				EmitFuncDecl(fdecl, True, classFunc)
+			Next
+			
+			' emit nested bodies
 			For Local fdecl:TFuncDecl = EachIn decl._decls
 				EmitFuncDecl(fdecl, proto, classFunc)
 			Next
