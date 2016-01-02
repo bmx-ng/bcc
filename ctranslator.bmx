@@ -33,8 +33,6 @@ Type TCTranslator Extends TTranslator
 	
 	Field reserved_methods:String = ",New,Delete,ToString,Compare,SendMessage,_reserved1_,_reserved2_,_reserved3_,".ToLower()
 	
-	Field _inBinary:Int
-
 	Method New()
 		_trans = Self
 	End Method
@@ -761,6 +759,7 @@ t:+"NULLNULLNULL"
 				End If
 
 				If TStmtExpr(lhs) Then
+					lhs.Trans()
 					lhs = TStmtExpr(lhs).expr
 				End If
 
@@ -1541,7 +1540,7 @@ t:+"NULLNULLNULL"
 	Method TransBinaryExpr$( expr:TBinaryExpr )
 		Local pri:Int=ExprPri( expr )
 		
-		_inBinary = True
+		_inBinary :+ 1
 
 		Local t_lhs$=TransSubExpr( expr.lhs,pri )
 '		If TVarPtrType(expr.lhs.exprType) Then
@@ -1553,7 +1552,7 @@ t:+"NULLNULLNULL"
 '			t_rhs = "*" + t_rhs
 '		End If
 
-		_inBinary = False
+		_inBinary :- 1
 		
 		If expr.op = "+" Then
 			If TStringType(expr.exprType) Then

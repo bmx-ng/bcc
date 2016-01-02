@@ -61,7 +61,7 @@ Type TForEachinStmt Extends TLoopStmt
 		If TArrayType( expr.exprType ) Or TStringType( expr.exprType )
 
 			Local exprTmp:TLocalDecl=New TLocalDecl.Create( "",Null,expr,,True )
-			Local indexTmp:TLocalDecl=New TLocalDecl.Create( "",Null,New TConstExpr.Create( New TIntType,"0" ),,True )
+			Local indexTmp:TLocalDecl=New TLocalDecl.Create( "",Null,New TConstExpr.Create( New TUIntType,"0" ),,True )
 
 			Local lenExpr:TExpr=New TIdentExpr.Create( "Length",New TVarExpr.Create( exprTmp ) )
 

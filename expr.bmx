@@ -313,6 +313,7 @@ Type TStmtExpr Extends TExpr
 	End Method
 
 	Method Copy:TExpr()
+		If exprType Return Self
 		Return New TStmtExpr.Create( stmt,CopyExpr(expr) )
 	End Method
 
@@ -1626,6 +1627,8 @@ Type TIndexExpr Extends TExpr
 	End Method
 
 	Method Copy:TExpr()
+		If exprType Return Self
+		
 		Local ind:TExpr[]
 		For Local i:Int = 0 Until index.length
 			ind = ind + [CopyExpr(index[i])]
@@ -1638,11 +1641,7 @@ Type TIndexExpr Extends TExpr
 
 		expr=expr.Semant()
 		For Local i:Int = 0 Until index.length
-			If opt_arch = "x64" Then
-				index[i]=index[i].SemantAndCast( New TLongType )
-			Else
-				index[i]=index[i].SemantAndCast( New TIntType )
-			End If
+			index[i]=index[i].SemantAndCast( New TUIntType, True )
 		Next
 
 		If TStringType( expr.exprType )
@@ -1654,27 +1653,25 @@ Type TIndexExpr Extends TExpr
 			exprType= TArrayType( expr.exprType ).elemType
 
 			If TArrayType( expr.exprType ).dims > 1 Then
+
 				' a multi-dimensional array of arrays is slightly more complex
 				If TArrayType(exprType) Then
 
 				'	Local tmpArr:TLocalDecl=New TLocalDecl.Create( "", NewPointerType(TType.T_ARRAY), expr )
 				'	Local stmt:TExpr = New TStmtExpr.Create( New TDeclStmt.Create( tmp ), Self ).Semant()
 
-
-
-
 					Local sizeExpr:TExpr = New TArraySizeExpr.Create(expr, Null, index)
 					index = [sizeExpr]
-					Local tmp:TLocalDecl=New TLocalDecl.Create( "", NewPointerType(TType.T_INT), sizeExpr,,True )
+					Local tmp:TLocalDecl=New TLocalDecl.Create( "", NewPointerType(TType.T_UINT), sizeExpr,,True )
 					TArraySizeExpr(sizeExpr).val = tmp
 					Local stmt:TExpr = New TStmtExpr.Create( New TDeclStmt.Create( tmp ), Self ).Semant()
 					stmt.exprType = exprType
 
 					Return stmt
 				Else
-					Local sizeExpr:TExpr = New TArraySizeExpr.Create(expr, Null, index)
+					Local sizeExpr:TExpr = New TArraySizeExpr.Create(expr, Null, index).Semant()
 					index = [sizeExpr]
-					Local tmp:TLocalDecl=New TLocalDecl.Create( "", NewPointerType(TType.T_INT), sizeExpr,,True )
+					Local tmp:TLocalDecl=New TLocalDecl.Create( "", NewPointerType(TType.T_UINT), sizeExpr,,True )
 					TArraySizeExpr(sizeExpr).val = tmp
 					Local stmt:TExpr = New TStmtExpr.Create( New TDeclStmt.Create( tmp ), Self ).Semant()
 					stmt.exprType = exprType
@@ -1870,10 +1867,10 @@ Type TArraySizeExpr Extends TExpr
 		expr=expr.Semant()
 		
 		For Local i:Int = 0 Until index.length
-			index[i]=index[i].SemantAndCast( New TIntType )
+			index[i]=index[i].SemantAndCast( New TUIntType )
 		Next
 		
-		exprType=NewPointerType(TType.T_INT)
+		exprType=NewPointerType(TType.T_UINT)
 		Return Self
 	End Method
 
@@ -2146,7 +2143,16 @@ Type TIdentExpr Extends TExpr
 		_Semant
 
 		'Local scope:TScopeDecl=IdentScope()
-		Local fdecl:TFuncDecl=scope.FindFuncDecl( IdentLower(),args )
+		Local fdecl:TFuncDecl
+		Try
+			fdecl=scope.FindFuncDecl( IdentLower(),args,,,,True )
+		Catch errorMessage:String
+			If errorMessage.StartsWith("Compile Error") Then
+				Throw errorMessage
+			Else
+				' couldn't find an exact match, look elsewhere
+			End If
+		End Try
 
 		' if our scope is static, but the scope of the found function/method is not
 		' then we should ignore it and continue looking higher up the scope stack.

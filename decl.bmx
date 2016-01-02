@@ -835,7 +835,7 @@ End Rem
 		Return decl
 	End Method
 	
-	Method FindFuncDecl:TFuncDecl( ident$,argExprs:TExpr[] = Null,explicit:Int=False, isArg:Int = False, isIdentExpr:Int = False )
+	Method FindFuncDecl:TFuncDecl( ident$,argExprs:TExpr[] = Null,explicit:Int=False, isArg:Int = False, isIdentExpr:Int = False, throwOnNotMatched:Int = False )
 'DebugLog "FindFuncDecl : " + ident
 'If ident = "FixPath" Then DebugStop
 		'Local funcs:TFuncDeclList=TFuncDeclList( FindDecl( ident ) )
@@ -978,7 +978,11 @@ End Rem
 				If t t:+","
 				If argExprs[i] t:+argExprs[i].exprType.ToString()
 			Next
-			Err "Unable to find overload for "+ident+"("+t+")."
+			If throwOnNotMatched Then
+				Throw "Unable to find overload for "+ident+"("+t+")."
+			Else
+				Err "Unable to find overload for "+ident+"("+t+")."
+			End If
 		EndIf
 		
 		match.AssertAccess
@@ -1544,7 +1548,7 @@ End Rem
 		Return Super.GetDecl( ident )
 	End Method
 	
-	Method FindFuncDecl:TFuncDecl( ident$,args:TExpr[] = Null ,explicit:Int=False, isArg:Int = False, isIdentExpr:Int = False )
+	Method FindFuncDecl:TFuncDecl( ident$,args:TExpr[] = Null ,explicit:Int=False, isArg:Int = False, isIdentExpr:Int = False, throwOnNotMatched:Int = False )
 	
 		If args = Null Then
 			args = New TExpr[0]

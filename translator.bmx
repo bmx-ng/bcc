@@ -58,6 +58,8 @@ Type TTranslator
 	
 	Field processingReturnStatement:Int
 
+	Field _inBinary:Int
+
 	Method PushVarScope()
 		varStack.Push customVarStack
 		customVarStack = New TStack
@@ -275,6 +277,7 @@ Type TTranslator
 				TFunctionPtrType(TValDecl(decl).ty).func.munged = munged
 			End If
 		End If
+		
 	End Method
 
 Rem
@@ -1175,7 +1178,9 @@ End Rem
 				Emit "}"
 			EndIf
 		Else If stmt.elseBlock.stmts.First()
+			_inBinary :+ 1
 			Emit "if"+Bra( stmt.expr.Trans() )+"{"
+			_inBinary :- 1
 			EmitLocalDeclarations(stmt.thenBlock)
 			FreeVarsIfRequired(False)
 			PushVarScope
@@ -1199,8 +1204,10 @@ End Rem
 '					Emit "if"+Bra( stmt.expr.Trans() )+"{"
 '				End If
 '			Else
+			_inBinary :+ 1
 				Emit "if"+Bra( stmt.expr.Trans() )+"{"
 				FreeVarsIfRequired(False)
+			_inBinary :- 1
 '			End If
 			EmitLocalDeclarations(stmt.thenBlock)
 			PushVarScope
@@ -1242,7 +1249,9 @@ End Rem
 	Method TransWhileStmt$( stmt:TWhileStmt )
 		Local nbroken:Int=broken
 
+		_inBinary :+ 1
 		Emit "while"+Bra( stmt.expr.Trans() )+"{"
+		_inBinary :- 1
 		
 		Local check:TTryBreakCheck = New TTryBreakCheck
 		check.stmt = stmt
