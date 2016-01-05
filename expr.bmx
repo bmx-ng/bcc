@@ -705,7 +705,8 @@ Type TNewObjectExpr Extends TExpr
 		If classDecl.args And Not classDecl.instanceof Err "Cannot create instance of a generic class."
 
 		If classDecl.IsExtern()
-			If args Err "No suitable constructor found for class "+classDecl.ToString()+"."
+			Err "Cannot create instance of an extern type"
+			'If args Err "No suitable constructor found for class "+classDecl.ToString()+"."
 '		Else
 'DebugStop
 '			ctor=classDecl.FindFuncDecl( "new",args )

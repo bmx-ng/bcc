@@ -2050,6 +2050,8 @@ End Rem
 					mdecl.InsertDecl ParseClassDecl( _toke,attrs )
 				Case "function"
 					mdecl.InsertDecl ParseFuncDecl( _toke,attrs )
+				Case "interface"
+					mdecl.InsertDecl ParseClassDecl( _toke,attrs | CLASS_INTERFACE )
 				Default
 					If _toke <> "end" And _toke <> "endextern" Then
 						Err "Expecting expression but encountered '"+_toke+"'"
@@ -2665,9 +2667,9 @@ End Rem
 		Local imps:TIdentType[]
 		Local meta:String
 
-		If (attrs & CLASS_INTERFACE) And (attrs & DECL_EXTERN)
-			Err "Interfaces cannot be extern."
-		EndIf
+		'If (attrs & CLASS_INTERFACE) And (attrs & DECL_EXTERN)
+		'	Err "Interfaces cannot be extern."
+		'EndIf
 Rem
 		If CParse( "<" )
 
@@ -2700,19 +2702,20 @@ End Rem
 			'	Err "Extends cannot be used with class parameters."
 			'EndIf
 
-			If CParse( "null" )
-
-				If attrs & CLASS_INTERFACE
-					Err "Interfaces cannot extend null"
-				EndIf
-
-				If Not (attrs & DECL_EXTERN)
-					Err "Only extern objects can extend null."
-				EndIf
-
-				superTy=Null
-
-			Else If attrs & CLASS_INTERFACE
+'			If CParse( "null" )
+'
+'				If attrs & CLASS_INTERFACE
+'					Err "Interfaces cannot extend null"
+'				EndIf
+'
+'				If Not (attrs & DECL_EXTERN)
+'					Err "Only extern objects can extend null."
+'				EndIf
+'
+'				superTy=Null
+'
+'			Else
+			If attrs & CLASS_INTERFACE
 
 				Local nimps:Int
 				Repeat
