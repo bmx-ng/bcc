@@ -3347,6 +3347,13 @@ End Rem
 			fld :+ TransFieldRef(decl, "o")
 
 			If decl.init Then
+				If TObjectType(decl.ty) And TObjectType(decl.ty).classdecl.IsExtern() And Not TObjectType(decl.ty).classdecl.IsInterface() Then
+					' skip for uninitialised extern type
+					If Not isPointerType(decl.ty) And TConstExpr(decl.init) And Not TConstExpr(decl.init).value Then
+						Continue
+					End If
+				End If
+
 				' initial value
 				fld :+ "= " + decl.init.Trans() + ";";
 			Else
