@@ -217,11 +217,13 @@ Type TExpr
 			If TFunctionPtrType( lhs ) Return lhs
 			If TFunctionPtrType( rhs ) Return rhs
 		End If
-		If TSizeTType( lhs ) Or TSizeTType( rhs ) Return New TSizeTType
-		If TLongType( lhs ) Or TLongType( rhs ) Return New TLongType
 		If TULongType( lhs ) Or TULongType( rhs ) Return New TULongType
-		If TIntType( lhs ) Or TIntType( rhs ) Return New TIntType
+		If TSizeTType( lhs ) Or TSizeTType( rhs ) Return New TSizeTType
+		If TLongType( lhs ) And TUIntType( rhs ) Return New TULongType
+		If TUIntType( lhs ) And TLongType( rhs ) Return New TULongType
+		If TLongType( lhs ) Or TLongType( rhs ) Return New TLongType
 		If TUIntType( lhs ) Or TUIntType( rhs ) Return New TUIntType
+		If TIntType( lhs ) Or TIntType( rhs ) Return New TIntType
 		If TObjectType( lhs ) And TNullDecl(TObjectType( lhs ).classDecl) Then
 			Return rhs
 		End If
