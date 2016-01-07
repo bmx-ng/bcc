@@ -75,8 +75,10 @@ Type TForEachinStmt Extends TLoopStmt
 			If varlocal
 
 				' array of object ?
-				
-				If TArrayType( expr.exprType ) And TObjectType(TArrayType( expr.exprType ).elemType) Then
+
+				If TArrayType( expr.exprType ) And TObjectType(TArrayType( expr.exprType ).elemType) And (Not TObjectType(TArrayType( expr.exprType ).elemType).classdecl.IsExtern() ..
+							Or (TObjectType(TArrayType( expr.exprType ).elemType).classdecl.IsExtern() ..
+							And IsPointerType(TArrayType( expr.exprType ).elemType))) Then
 
 					Local cExpr:TExpr
 					

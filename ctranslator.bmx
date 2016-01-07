@@ -82,7 +82,17 @@ Type TCTranslator Extends TTranslator
 			s:+ TransArrayType(TArrayType( ty ).elemType)
 			Return Enquote(s.Replace("~q", ""))
 		End If
-		If TObjectType( ty ) Return "~q:" + TObjectType(ty).classDecl.ident + "~q"
+		If TObjectType( ty ) Then
+			If Not TObjectType( ty ).classdecl.IsExtern()
+				Return "~q:" + TObjectType(ty).classDecl.ident + "~q"
+			Else
+				If TObjectType( ty ).classdecl.IsInterface() Then
+					Return "~q" + p + "*#" + TObjectType(ty).classDecl.ident + "~q"
+				Else
+					Return "~q" + p + "#" + TObjectType(ty).classDecl.ident + "~q"
+				End If
+			End If
+		End If
 		If TFunctionPtrType( ty ) Return "~q(~q"
 
 	End Method
@@ -1191,7 +1201,11 @@ t:+"NULLNULLNULL"
 	Method TransNewArrayExpr$( expr:TNewArrayExpr )
 
 		If expr.expr.length = 1 Then
-			Return "bbArrayNew1D" + Bra(TransArrayType(expr.ty) + ", " + expr.expr[0].Trans())
+			If TObjectType(expr.ty) And TObjectType(expr.ty).classdecl.IsExtern() And Not TObjectType(expr.ty).classdecl.IsInterface() And Not IsPointerType(expr.ty) Then
+				Return "bbArrayNew1DStruct" + Bra(TransArrayType(expr.ty) + ", " + expr.expr[0].Trans() + ", sizeof" + Bra(TransObject(TObjectType(expr.ty).classdecl)))
+			Else
+				Return "bbArrayNew1D" + Bra(TransArrayType(expr.ty) + ", " + expr.expr[0].Trans())
+			End If
 		Else
 			' multiple array
 			Local s:String
