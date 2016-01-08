@@ -673,7 +673,7 @@ Type TScopeDecl Extends TDecl
 'DebugLog "Adding " + decl.ident
 			declsMap.Insert decl.IdentLower(),decl
 		Else
-			Err "Duplicate identifier '"+ident+"'."
+			Err "Duplicate identifier '"+decl.ident+"'."
 		EndIf
 
 	End Method
