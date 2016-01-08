@@ -158,7 +158,15 @@ Type TCTranslator Extends TTranslator
 			Return s + TransDebugScopeType(TArrayType( ty ).elemType)
 		End If
 		If TObjectType( ty ) Then
-			Return ":" + TObjectType( ty ).classDecl.ident
+			If Not TObjectType( ty ).classdecl.IsExtern()
+				Return ":" + TObjectType( ty ).classDecl.ident
+			Else
+				If TObjectType( ty ).classdecl.IsInterface() Then
+					Return p + "*#" + TObjectType(ty).classDecl.ident
+				Else
+					Return p + "#" + TObjectType(ty).classDecl.ident
+				End If
+			End If
 		End If
 		If TFunctionPtrType( ty ) Then
 			Local func:TFuncDecl = TFunctionPtrType( ty ).func
@@ -266,7 +274,17 @@ Type TCTranslator Extends TTranslator
 			Next
 			Return s + "]"
 		End If
-		If TObjectType( ty ) Return ":" + TObjectType(ty).classDecl.ident + p
+		If TObjectType( ty ) Then
+			Local t:String = ":"
+			If TObjectType(ty).classDecl.IsExtern() Then
+				If TObjectType(ty).classDecl.IsInterface() Then
+					t = "^^"
+				Else
+					t = "^"
+				End If
+			End If
+			Return t + TObjectType(ty).classDecl.ident + p
+		End If
 		If TFunctionPtrType( ty ) Return TransIfcType(TFunctionPtrType(ty).func.retType) + TransIfcArgs(TFunctionPtrType(ty).func)
 		If TExternObjectType( ty ) Return ":" + TExternObjectType(ty).classDecl.ident + p
 		InternalErr
@@ -604,7 +622,15 @@ t:+"NULLNULLNULL"
 			Return TransType( decl.ty, decl.munged ) + "=" + TransValue(decl.ty, "")
 		Else
 			If TObjectType(decl.ty) Then
-				Return TransType( decl.ty, decl.munged )+" volatile "+decl.munged + "=" + TransValue(decl.ty, "")
+				If TObjectType(decl.ty).classdecl.IsExtern() Then
+					If TObjectType(decl.ty).classdecl.IsInterface() Then
+						Return TransType( decl.ty, decl.munged )+" "+decl.munged+"=" + TransValue(decl.ty, "")
+					Else
+						Return TransType( decl.ty, decl.munged )+" "+decl.munged
+					End If
+				Else
+					Return TransType( decl.ty, decl.munged )+" volatile "+decl.munged + "=" + TransValue(decl.ty, "")
+				End If
 			Else
 				Return TransType( decl.ty, decl.munged )+" "+decl.munged + "=" + TransValue(decl.ty, "")
 			End If
@@ -3457,8 +3483,12 @@ End Rem
 		End If
 		
 		' Null test
-		If opt_debug Then
-			EmitDebugNullObjectError(variable)
+		If opt_debug
+			If TClassDecl(decl.scope) And decl.scope.IsExtern() And Not TClassDecl(decl.scope).IsInterface() Then
+				'
+			Else
+				EmitDebugNullObjectError(variable)
+			End If
 		End If
 
 		' array.length
@@ -3792,8 +3822,14 @@ End Rem
 				EndIf
 
 			Next
+			
+			Local flags:String = "E"
+			
+			If classDecl.IsInterface() Then
+				flags :+ "I"
+			End If
 
-			Emit "}E=0", False
+			Emit "}" + flags + "=0", False
 		End If
 
 		'PopMungScope

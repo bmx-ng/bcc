@@ -266,6 +266,8 @@ Type TIParser
 							class.attrs :| DECL_EXTERN
 						Else If CParse("AI")
 							class.attrs :| CLASS_INTERFACE | DECL_ABSTRACT
+						Else If CParse("EI")
+							class.attrs :| DECL_EXTERN | CLASS_INTERFACE
 						End If
 'DebugStop
 						If CParse( "=" )
@@ -1226,6 +1228,29 @@ End Rem
 
 		Case ":"
 			NextToke
+			ty=ParseNewType()
+			
+			If CParse("*") Then
+				If TIdentType(ty) Then
+					ty = TType.MapToPointerType(ty)
+
+					While CParse( "*" )
+						ty = TType.MapToPointerType(ty)
+					Wend
+
+				End If
+			End If
+			
+			CParse("&")
+		Case "^"
+			NextToke
+			
+			attrs :| DECL_EXTERN
+			
+			If CParse("^") Then
+				attrs :| CLASS_INTERFACE
+			End If
+			
 			ty=ParseNewType()
 			
 			If CParse("*") Then
