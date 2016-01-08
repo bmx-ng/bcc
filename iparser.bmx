@@ -1242,12 +1242,12 @@ End Rem
 			End If
 			
 			CParse("&")
-		Case "^"
+		Case "?"
 			NextToke
 			
 			attrs :| DECL_EXTERN
 			
-			If CParse("^") Then
+			If CParse("?") Then
 				attrs :| CLASS_INTERFACE
 			End If
 			

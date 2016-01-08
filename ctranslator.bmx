@@ -278,9 +278,9 @@ Type TCTranslator Extends TTranslator
 			Local t:String = ":"
 			If TObjectType(ty).classDecl.IsExtern() Then
 				If TObjectType(ty).classDecl.IsInterface() Then
-					t = "^^"
+					t = "??"
 				Else
-					t = "^"
+					t = "?"
 				End If
 			End If
 			Return t + TObjectType(ty).classDecl.ident + p
