@@ -1686,7 +1686,10 @@ End Rem
 		If superTy
 			'superClass=superTy.FindClass()
 			superClass=superTy.SemantClass()
-			If superClass.IsInterface() Err superClass.ToString()+" is an interface, not a class."
+			If superClass.IsInterface() Then
+				If Not IsExtern() Or Not superClass.IsExtern() Err superClass.ToString()+" is an interface, not a class."
+				If (IsExtern() And Not superClass.IsExtern()) Or (superClass.IsExtern() And Not IsExtern()) Err "Extern and non extern types cannot be mixed."
+			End If
 			If superClass.IsFinal() Err "Final types cannot be extended."
 		EndIf
 		

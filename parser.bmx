@@ -2717,7 +2717,7 @@ End Rem
 '				superTy=Null
 '
 '			Else
-			If attrs & CLASS_INTERFACE
+			If attrs & CLASS_INTERFACE And Not (attrs & DECL_EXTERN)
 
 				Local nimps:Int
 				Repeat
