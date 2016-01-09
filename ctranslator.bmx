@@ -867,7 +867,11 @@ t:+"NULLNULLNULL"
 					Local obj:String = Bra(TransObject(cdecl))
 					
 					If decl.scope.IsExtern()
-						Return decl.munged + Bra(TransArgs( args,decl, TransSubExpr( lhs ) ))
+						If TClassDecl(decl.scope) And TClassDecl(decl.scope).IsInterface() Then
+							Return TransSubExpr( lhs ) + "->vtbl" + decl.scope.ident + "->" + decl.munged + Bra(TransArgs( args,decl, TransSubExpr( lhs ) ))
+						Else
+							Return decl.munged + Bra(TransArgs( args,decl, TransSubExpr( lhs ) ))
+						End If
 					Else
 						' Null test
 						If opt_debug Then
@@ -899,13 +903,21 @@ t:+"NULLNULLNULL"
 					' create a local variable of the inner invocation
 					Local lvar:String = CreateLocal(lhs)
 
-					' Null test
-					If opt_debug Then
-						EmitDebugNullObjectError(lvar)
+					If decl.scope.IsExtern()
+						If TClassDecl(decl.scope) And TClassDecl(decl.scope).IsInterface() Then
+							Return lvar + "->vtbl" + decl.scope.ident + "->" + decl.munged + Bra(TransArgs( args,decl, lvar ))
+						End If
+						
+						Return "// TODO"
+					Else
+						' Null test
+						If opt_debug Then
+							EmitDebugNullObjectError(lvar)
+						End If
+	
+						Local obj:String = lvar + "->clas" + tSuper
+						Return obj + "->" + TransFuncPrefix(decl.scope, decl)+ decl.ident+TransArgs( args,decl, lvar )
 					End If
-
-					Local obj:String = lvar + "->clas" + tSuper
-					Return obj + "->" + TransFuncPrefix(decl.scope, decl)+ decl.ident+TransArgs( args,decl, lvar )
 
 				Else If TIndexExpr(lhs) Then
 					Local loc:String = CreateLocal(lhs)
