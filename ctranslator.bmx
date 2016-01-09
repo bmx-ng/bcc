@@ -826,7 +826,7 @@ t:+"NULLNULLNULL"
 						If decl.scope.IsExtern()
 							If cdecl.IsInterface()  Then
 								'Return decl.munged + Bra(TransArgs( args,decl, TransSubExpr( lhs ) ))
-								Return TransSubExpr( lhs ) + "->vtbl->" + decl.munged + Bra(TransArgs( args,decl, TransSubExpr( lhs ) ))
+								Return TransSubExpr( lhs ) + "->vtbl" + decl.scope.ident + "->" + decl.munged + Bra(TransArgs( args,decl, TransSubExpr( lhs ) ))
 							End If
 							Err "TODO extern types not allowed methods"
 						Else
@@ -2756,9 +2756,9 @@ End Rem
 
 	Method EmitExternClassFuncProto( classDecl:TClassDecl )
 
-		If classDecl.superClass Then
-			EmitExternClassFuncProto(classDecl.superClass)
-		End If
+		'If classDecl.superClass Then
+		'	EmitExternClassFuncProto(classDecl.superClass)
+		'End If
 
 		For Local decl:TFuncDecl = EachIn classDecl.Decls()
 			decl.Semant()
@@ -2780,13 +2780,23 @@ End Rem
 		Next
 	End Method
 
+	Method EmitExternInterfaceVTableProto( classDecl:TClassDecl )
+	
+		If classDecl.superClass Then
+			EmitExternInterfaceVTableProto(classDecl.superClass)
+		End If
+
+		Emit "struct " + classDecl.ident + "Vtbl* vtbl" + classDecl.ident + ";"
+		
+	End Method
+
 	Method EmitExternClassProto( classDecl:TClassDecl )
 
 		If classDecl.IsInterface() Then
 			Emit "typedef struct " + classDecl.ident + " " + classDecl.ident + ";"
 			
 			' vtable
-			Emit "typedef struct " + classDecl.ident  + "Vtbl {"
+			Emit "struct " + classDecl.ident  + "Vtbl {"
 			
 			' methods
 			EmitExternClassFuncProto(classDecl)
@@ -2794,7 +2804,8 @@ End Rem
 			Emit "};"
 			
 			Emit "struct " + classDecl.ident + " {"
-			Emit "struct " + classDecl.ident + "Vtbl* vtbl;"
+'			Emit "struct " + classDecl.ident + "Vtbl* vtbl;"
+			EmitExternInterfaceVTableProto(classDecl)
 			Emit "};"
 
 		Else
