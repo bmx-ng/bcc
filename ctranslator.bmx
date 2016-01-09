@@ -826,7 +826,7 @@ t:+"NULLNULLNULL"
 						If decl.scope.IsExtern()
 							If cdecl.IsInterface()  Then
 								'Return decl.munged + Bra(TransArgs( args,decl, TransSubExpr( lhs ) ))
-								Return TransSubExpr( lhs ) + "->" + decl.munged + Bra(TransArgs( args,decl, "" ))
+								Return TransSubExpr( lhs ) + "->vtbl->" + decl.munged + Bra(TransArgs( args,decl, TransSubExpr( lhs ) ))
 							End If
 							Err "TODO extern types not allowed methods"
 						Else
@@ -2753,21 +2753,62 @@ End Rem
 
 	End Method
 
+
+	Method EmitExternClassFuncProto( classDecl:TClassDecl )
+
+		If classDecl.superClass Then
+			EmitExternClassFuncProto(classDecl.superClass)
+		End If
+
+		For Local decl:TFuncDecl = EachIn classDecl.Decls()
+			decl.Semant()
+
+			' code is written as a method, but emitted as a function pointer
+			' with self as the first parameter
+			Local func:TFuncDecl = TFuncDecl(decl.Copy())
+			Local argDecl:TArgDecl = New TArgDecl.Create("This", classDecl.objectType, Null)
+
+			func.argDecls = [argDecl] + func.argDecls
+			
+			func.Semant()
+			
+			Local ty:TFunctionPtrType = New TFunctionPtrType
+			ty.func = func
+			
+			Emit TransType(ty, decl.Ident) + ";"
+
+		Next
+	End Method
+
 	Method EmitExternClassProto( classDecl:TClassDecl )
 
-		Emit "struct " + classDecl.ident + " {"
-
 		If classDecl.IsInterface() Then
-		
+			Emit "typedef struct " + classDecl.ident + " " + classDecl.ident + ";"
+			
+			' vtable
+			Emit "typedef struct " + classDecl.ident  + "Vtbl {"
+			
+			' methods
+			EmitExternClassFuncProto(classDecl)
+
+			Emit "};"
+			
+			Emit "struct " + classDecl.ident + " {"
+			Emit "struct " + classDecl.ident + "Vtbl* vtbl;"
+			Emit "};"
+
 		Else
+
+			Emit "struct " + classDecl.ident + " {"
+
 		
 			BeginLocalScope
 			EmitClassFieldsProto(classDecl)
 			EndLocalScope
 
-		End If
+			Emit "};"
 
-		Emit "};"
+		End If
 
 	End Method
 	
