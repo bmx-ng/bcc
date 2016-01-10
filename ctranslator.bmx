@@ -826,7 +826,7 @@ t:+"NULLNULLNULL"
 						If decl.scope.IsExtern()
 							If cdecl.IsInterface()  Then
 								'Return decl.munged + Bra(TransArgs( args,decl, TransSubExpr( lhs ) ))
-								Return TransSubExpr( lhs ) + "->vtbl" + decl.scope.ident + "->" + decl.munged + Bra(TransArgs( args,decl, TransSubExpr( lhs ) ))
+								Return TransSubExpr( lhs ) + "->vtbl->" + decl.munged + Bra(TransArgs( args,decl, TransSubExpr( lhs ) ))
 							End If
 							Err "TODO extern types not allowed methods"
 						Else
@@ -868,7 +868,7 @@ t:+"NULLNULLNULL"
 					
 					If decl.scope.IsExtern()
 						If TClassDecl(decl.scope) And TClassDecl(decl.scope).IsInterface() Then
-							Return TransSubExpr( lhs ) + "->vtbl" + decl.scope.ident + "->" + decl.munged + Bra(TransArgs( args,decl, TransSubExpr( lhs ) ))
+							Return TransSubExpr( lhs ) + "->vtbl->" + decl.munged + Bra(TransArgs( args,decl, TransSubExpr( lhs ) ))
 						Else
 							Return decl.munged + Bra(TransArgs( args,decl, TransSubExpr( lhs ) ))
 						End If
@@ -905,7 +905,7 @@ t:+"NULLNULLNULL"
 
 					If decl.scope.IsExtern()
 						If TClassDecl(decl.scope) And TClassDecl(decl.scope).IsInterface() Then
-							Return lvar + "->vtbl" + decl.scope.ident + "->" + decl.munged + Bra(TransArgs( args,decl, lvar ))
+							Return lvar + "->vtbl->" + decl.munged + Bra(TransArgs( args,decl, lvar ))
 						End If
 						
 						Return "// TODO"
@@ -2768,9 +2768,9 @@ End Rem
 
 	Method EmitExternClassFuncProto( classDecl:TClassDecl )
 
-		'If classDecl.superClass Then
-		'	EmitExternClassFuncProto(classDecl.superClass)
-		'End If
+		If classDecl.superClass Then
+			EmitExternClassFuncProto(classDecl.superClass)
+		End If
 
 		For Local decl:TFuncDecl = EachIn classDecl.Decls()
 			decl.Semant()
@@ -2792,16 +2792,6 @@ End Rem
 		Next
 	End Method
 
-	Method EmitExternInterfaceVTableProto( classDecl:TClassDecl )
-	
-		If classDecl.superClass Then
-			EmitExternInterfaceVTableProto(classDecl.superClass)
-		End If
-
-		Emit "struct " + classDecl.ident + "Vtbl* vtbl" + classDecl.ident + ";"
-		
-	End Method
-
 	Method EmitExternClassProto( classDecl:TClassDecl )
 
 		If classDecl.IsInterface() Then
@@ -2816,15 +2806,13 @@ End Rem
 			Emit "};"
 			
 			Emit "struct " + classDecl.ident + " {"
-'			Emit "struct " + classDecl.ident + "Vtbl* vtbl;"
-			EmitExternInterfaceVTableProto(classDecl)
+			Emit "struct " + classDecl.ident + "Vtbl* vtbl;"
 			Emit "};"
 
 		Else
 
 			Emit "struct " + classDecl.ident + " {"
 
-		
 			BeginLocalScope
 			EmitClassFieldsProto(classDecl)
 			EndLocalScope
