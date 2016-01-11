@@ -368,8 +368,9 @@ Type TCTranslator Extends TTranslator
 	
 	Method TransArgs$( args:TExpr[],decl:TFuncDecl, objParam:String = Null )
 'If decl.ident="ToHex" DebugStop
+
 		Local t$
-		If objParam And decl.IsMethod() And Not decl.IsExtern() Then
+		If objParam And decl.IsMethod() And ((Not decl.IsExtern()) Or (decl.IsExtern() And TClassDecl(decl.scope) And TClassDecl(decl.scope).IsInterface())) Then
 			t:+ objParam
 		End If
 		For Local i:Int=0 Until decl.argDecls.Length
