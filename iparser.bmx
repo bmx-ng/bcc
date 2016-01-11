@@ -264,10 +264,16 @@ Type TIParser
 							class.attrs :| DECL_ABSTRACT | DECL_FINAL
 						Else If CParse("E")
 							class.attrs :| DECL_EXTERN
+
+							ApplyFunctionAttributes(class, DECL_EXTERN)
 						Else If CParse("AI")
 							class.attrs :| CLASS_INTERFACE | DECL_ABSTRACT
+
+							ApplyFunctionAttributes(class, DECL_ABSTRACT)
 						Else If CParse("EI")
 							class.attrs :| DECL_EXTERN | CLASS_INTERFACE
+							
+							ApplyFunctionAttributes(class, DECL_EXTERN | DECL_ABSTRACT)
 						End If
 'DebugStop
 						If CParse( "=" )
@@ -1404,6 +1410,12 @@ End Rem
 			Return ty
 		End If
 		Return ParseIdentType()
+	End Method
+	
+	Method ApplyFunctionAttributes(classDecl:TClassDecl, attrs:Int)
+		For Local decl:TFuncDecl = EachIn classDecl._decls
+			decl.attrs :| attrs
+		Next
 	End Method
 
 	Method SetErr()
