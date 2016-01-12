@@ -2815,7 +2815,7 @@ End Rem
 
 		'If classDecl.IsTemplateArg() Return classDecl
 
-		Local decl_attrs:Int=(attrs & DECL_EXTERN) | (attrs & DECL_NODEBUG)
+		Local decl_attrs:Int=(attrs & DECL_EXTERN) | (attrs & DECL_NODEBUG) | (attrs & DECL_API_WIN32)
 
 		Local method_attrs:Int=decl_attrs|FUNC_METHOD | (attrs & DECL_NODEBUG)
 		If attrs & CLASS_INTERFACE method_attrs:|DECL_ABSTRACT
