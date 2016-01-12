@@ -291,7 +291,6 @@ Type TCTranslator Extends TTranslator
 	End Method
 
 	Method TransRefType$( ty:TType, ident:String )
-		If TObjectType( ty ) And ty.GetClass().IsInterface() Return "gc_iptr<"+ty.GetClass().actual.munged+">"
 		Return TransType( ty, ident )
 	End Method
 
@@ -2039,9 +2038,6 @@ t:+"NULLNULLNULL"
 
 		Local s:String
 
-'		If ObjectType( stmt.rhs.exprType )
-'			If stmt.rhs.exprType.GetClass().IsInterface() rhs="GC_IPTR"+Bra(rhs)
-'		Endif
 		If IsPointerType(stmt.lhs.exprType, TType.T_BYTE) And rhs = "&bbNullObject" Then
 			rhs = "0"
 		End If
