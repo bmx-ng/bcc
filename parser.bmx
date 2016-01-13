@@ -445,7 +445,7 @@ Type TParser
 	Method ParseIdent$()
 		Select _toke
 		Case "@" NextToke
-		Case "string","object"
+		Case "string","object", "self"
 		Default
 			If _tokeType<>TOKE_IDENT Err "Syntax error - expecting identifier."
 		End Select

@@ -900,8 +900,12 @@ Type TSelfExpr Extends TExpr
 	Method Semant:TExpr()
 		If exprType Return Self
 
-		If _env.FuncScope().IsStatic() Err "Illegal use of Self within static scope."
-		exprType=New TObjectType.Create( _env.ClassScope() )
+		'If _env.FuncScope().IsStatic() Err "Illegal use of Self within static scope."
+		Local scope:TClassDecl = _env.ClassScope()
+		If Not scope Then
+			Err "'Self' can only be used within methods."
+		End If
+		exprType=New TObjectType.Create( scope )
 		Return Self
 	End Method
 
@@ -1091,11 +1095,11 @@ Type TCastExpr Extends TExpr
 '			Return expr
 '		End If
 
-		If TIntType(ty) And TObjectType(src) Then
+'		If TIntType(ty) And TObjectType(src) Then
 ' DebugStop ' Bah woz ere
-			exprType = ty
-			Return expr
-		End If
+'			exprType = ty
+'			Return expr
+'		End If
 
 		If TObjectType(src) And TNullDecl(TObjectType(src).classDecl) Then
 			exprType = ty

@@ -834,7 +834,21 @@ Type TIdentType Extends TType
 		
 		If i=-1
 			tyid=ident.ToLower()
-			ty=_env.FindType( tyid,targs )
+			
+			If tyid = "self" Then
+				' find owning class
+				Local scope:TClassDecl = _env.ClassScope()
+				If scope Then
+					tyid = scope.ident
+					ty = New TObjectType.Create(scope)
+				Else
+					Err "'Self' can only be used within methods."
+				End If
+			End If
+			
+			If Not ty Then
+				ty=_env.FindType( tyid,targs )
+			End If
 
 			' finally scan all modules for it
 			If Not ty Then
