@@ -1395,7 +1395,17 @@ t:+"NULLNULLNULL"
 			If TDoubleType( src ) Return Bra( t+"!=0.0f" )
 			If TArrayType( src ) Return Bra( t+"!= &bbEmptyArray" )
 			If TStringType( src ) Return Bra( t+"!= &bbEmptyString" )
-			If TObjectType( src ) Return Bra( t+"!= &bbNullObject" )
+			If TObjectType( src ) Then
+				If TObjectType(src).classDecl.IsExtern() Then
+					If TObjectType(src).classDecl.IsInterface() Then
+						Return Bra( t+"!=0" )
+					Else
+						Return Bra("1")
+					End If
+				Else
+					Return Bra( t+"!= &bbNullObject" )
+				End If
+			End If
 		Else If TIntType( dst )
 			If TBoolType( src ) Return Bra( t )
 			If TByteType( src) Return Bra("(BBINT)"+t)
@@ -1571,15 +1581,23 @@ t:+"NULLNULLNULL"
 			'If TArrayType( src ) Return Bra("(BBOBJECT)"+t)
 			'If TStringType( src ) Return Bra("(BBOBJECT)"+t)
 			'If TObjectType( src ) Return t
-			If TNullType( src ) Return "&bbNullObject"
-			If TObjectType(dst).classDecl.IsInterface() Then
-				Return Bra(Bra(TransObject(TObjectType(dst).classDecl)) + "bbInterfaceDowncast" + Bra(t + ",&" + TObjectType(dst).classDecl.munged + "_ifc"))
+			If Not TObjectType( dst ).classDecl.IsExtern() Then
+				If TNullType( src ) Return "&bbNullObject"
+				If TObjectType(dst).classDecl.IsInterface() Then
+					Return Bra(Bra(TransObject(TObjectType(dst).classDecl)) + "bbInterfaceDowncast" + Bra(t + ",&" + TObjectType(dst).classDecl.munged + "_ifc"))
+				Else
+					' no need to downcast to BBObject, as all objects extend it...
+					If TObjectType( dst ).classDecl.ident = "Object" Then
+						Return t
+					Else
+						Return Bra(Bra(TransObject(TObjectType(dst).classDecl)) + "bbObjectDowncast" + Bra(t + ",&" + TObjectType(dst).classDecl.munged))
+					End If
+				End If
 			Else
-				' no need to downcast to BBObject, as all objects extend it...
-				If TObjectType( dst ).classDecl.ident = "Object" Then
+				If TObjectType( dst ).classDecl.IsInterface() Then
 					Return t
 				Else
-					Return Bra(Bra(TransObject(TObjectType(dst).classDecl)) + "bbObjectDowncast" + Bra(t + ",&" + TObjectType(dst).classDecl.munged))
+					Return "" ' TODO??
 				End If
 			End If
 		End If
