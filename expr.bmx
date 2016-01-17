@@ -347,9 +347,12 @@ End Type
 Type TConstExpr Extends TExpr
 	Field ty:TType
 	Field value$
+	Field originalValue$
 
 	Method Create:TConstExpr( ty:TType,value$ )
-
+	
+		originalValue = value
+		
 		If TNumericType( ty ) And IsPointerType(ty, 0, TType.T_POINTER) Then
 			Self.ty=ty
 			If value Then
@@ -360,7 +363,7 @@ Type TConstExpr Extends TExpr
 			Return Self
 		End If
 		
-		If TIntType( ty ) Or TShortType( ty ) Or TByteType( ty ) Or TLongType( ty )
+		If TIntType( ty ) Or TShortType( ty ) Or TByteType( ty ) Or TLongType( ty ) Or TUIntType( ty ) Or TULongType( ty )
 			Local radix:Int
 			If value.StartsWith( "%" )
 				radix=1
@@ -408,6 +411,10 @@ Type TConstExpr Extends TExpr
 		Self.ty=ty
 		Self.value=value
 		Return Self
+	End Method
+	
+	Method UpdateType(ty:TType)
+		Create(ty, originalValue)
 	End Method
 
 	Method Copy:TExpr()

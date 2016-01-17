@@ -274,6 +274,8 @@ Type TIParser
 							class.attrs :| DECL_EXTERN | CLASS_INTERFACE
 							
 							ApplyFunctionAttributes(class, DECL_EXTERN | DECL_ABSTRACT)
+						Else If CParse("ES")
+							class.attrs :| DECL_EXTERN | CLASS_STRUCT
 						End If
 'DebugStop
 						If CParse( "=" )
@@ -816,14 +818,20 @@ Type TIParser
 		Repeat		
 			If CParse( "F" )
 				attrs:|DECL_FINAL
+			Else If CParse( "FW" )
+				attrs:|DECL_FINAL | DECL_API_WIN32
 			Else If CParse( "A" )
 				attrs:|DECL_ABSTRACT
-			Else If CParse( "property" )
-				If attrs & FUNC_METHOD
-					attrs:|FUNC_PROPERTY
-				Else
-					Err "Only methods can be properties."
-				EndIf
+			Else If CParse( "AW" )
+				attrs:|DECL_ABSTRACT | DECL_API_WIN32
+			Else If CParse( "W" )
+				attrs:|DECL_API_WIN32
+			'Else If CParse( "property" )
+			'	If attrs & FUNC_METHOD
+			'		attrs:|FUNC_PROPERTY
+			'	Else
+			'		Err "Only methods can be properties."
+			'	EndIf
 			Else
 				Exit
 			EndIf
@@ -1256,6 +1264,25 @@ End Rem
 			If CParse("?") Then
 				attrs :| CLASS_INTERFACE
 			End If
+			
+			ty=ParseNewType()
+			
+			If CParse("*") Then
+				If TIdentType(ty) Then
+					ty = TType.MapToPointerType(ty)
+
+					While CParse( "*" )
+						ty = TType.MapToPointerType(ty)
+					Wend
+
+				End If
+			End If
+			
+			CParse("&")
+		Case "~~"
+			NextToke
+			
+			attrs :| DECL_EXTERN | CLASS_STRUCT
 			
 			ty=ParseNewType()
 			

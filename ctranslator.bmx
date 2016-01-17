@@ -88,6 +88,8 @@ Type TCTranslator Extends TTranslator
 			Else
 				If TObjectType( ty ).classdecl.IsInterface() Then
 					Return "~q" + p + "*#" + TObjectType(ty).classDecl.ident + "~q"
+				ElseIf TObjectType( ty ).classdecl.IsStruct()
+					Return "~q" + p + "@" + TObjectType(ty).classDecl.ident + "~q"
 				Else
 					Return "~q" + p + "#" + TObjectType(ty).classDecl.ident + "~q"
 				End If
@@ -163,6 +165,8 @@ Type TCTranslator Extends TTranslator
 			Else
 				If TObjectType( ty ).classdecl.IsInterface() Then
 					Return p + "*#" + TObjectType(ty).classDecl.ident
+				ElseIf TObjectType( ty ).classdecl.IsStruct() Then
+					Return p + "@" + TObjectType(ty).classDecl.ident
 				Else
 					Return p + "#" + TObjectType(ty).classDecl.ident
 				End If
@@ -279,6 +283,8 @@ Type TCTranslator Extends TTranslator
 			If TObjectType(ty).classDecl.IsExtern() Then
 				If TObjectType(ty).classDecl.IsInterface() Then
 					t = "??"
+				ElseIf TObjectType(ty).classDecl.IsStruct() Then
+					t = "~~"
 				Else
 					t = "?"
 				End If
@@ -351,7 +357,7 @@ Type TCTranslator Extends TTranslator
 			If TArrayType( ty ) Return "&bbEmptyArray"
 			If TObjectType( ty ) Then
 				If TObjectType( ty ).classDecl.IsExtern() Then
-					If TObjectType( ty ).classDecl.IsInterface() Or IsPointerType(ty) Then
+					If TObjectType( ty ).classDecl.IsInterface() Or IsPointerType(ty) Or (Not TObjectType( ty ).classDecl.IsStruct()) Then
 						Return "0"
 					Else
 						Return "{}"
@@ -369,7 +375,7 @@ Type TCTranslator Extends TTranslator
 'If decl.ident="ToHex" DebugStop
 
 		Local t$
-		If objParam And decl.IsMethod() And ((Not decl.IsExtern()) Or (decl.IsExtern() And TClassDecl(decl.scope) And TClassDecl(decl.scope).IsInterface())) Then
+		If objParam And decl.IsMethod() And ((Not decl.IsExtern()) Or (decl.IsExtern() And TClassDecl(decl.scope) And Not TClassDecl(decl.scope).IsStruct())) Then
 			t:+ objParam
 		End If
 		For Local i:Int=0 Until decl.argDecls.Length
@@ -623,7 +629,7 @@ t:+"NULLNULLNULL"
 		Else
 			If TObjectType(decl.ty) Then
 				If TObjectType(decl.ty).classdecl.IsExtern() Then
-					If TObjectType(decl.ty).classdecl.IsInterface() Then
+					If Not TObjectType(decl.ty).classdecl.IsStruct() Then
 						Return TransType( decl.ty, decl.munged )+" "+decl.munged+"=" + TransValue(decl.ty, "")
 					Else
 						Return TransType( decl.ty, decl.munged )+" "+decl.munged
@@ -824,7 +830,7 @@ t:+"NULLNULLNULL"
 						Return TransSubExpr( lhs ) + "->" + decl.munged+TransArgs( args,decl, Null)
 					Else
 						If decl.scope.IsExtern()
-							If cdecl.IsInterface()  Then
+							If Not cdecl.IsStruct()  Then
 								'Return decl.munged + Bra(TransArgs( args,decl, TransSubExpr( lhs ) ))
 								Return TransSubExpr( lhs ) + "->vtbl->" + decl.munged + Bra(TransArgs( args,decl, TransSubExpr( lhs ) ))
 							End If
@@ -867,7 +873,7 @@ t:+"NULLNULLNULL"
 					Local obj:String = Bra(TransObject(cdecl))
 					
 					If decl.scope.IsExtern()
-						If TClassDecl(decl.scope) And TClassDecl(decl.scope).IsInterface() Then
+						If TClassDecl(decl.scope) And Not TClassDecl(decl.scope).IsStruct() Then
 							Return TransSubExpr( lhs ) + "->vtbl->" + decl.munged + Bra(TransArgs( args,decl, TransSubExpr( lhs ) ))
 						Else
 							Return decl.munged + Bra(TransArgs( args,decl, TransSubExpr( lhs ) ))
@@ -904,7 +910,7 @@ t:+"NULLNULLNULL"
 					Local lvar:String = CreateLocal(lhs)
 
 					If decl.scope.IsExtern()
-						If TClassDecl(decl.scope) And TClassDecl(decl.scope).IsInterface() Then
+						If TClassDecl(decl.scope) And Not TClassDecl(decl.scope).IsStruct() Then
 							Return lvar + "->vtbl->" + decl.munged + Bra(TransArgs( args,decl, lvar ))
 						End If
 						
@@ -984,7 +990,7 @@ t:+"NULLNULLNULL"
 			Return "BBOBJECT"
 		Else
 			If decl.IsExtern() Then
-				If TClassDecl(decl).IsInterface() Then
+				If Not TClassDecl(decl).IsStruct() Then
 					Return "struct " + decl.ident + "*"
 				Else
 					Return "struct " + decl.ident
@@ -1239,7 +1245,7 @@ t:+"NULLNULLNULL"
 	Method TransNewArrayExpr$( expr:TNewArrayExpr )
 
 		If expr.expr.length = 1 Then
-			If TObjectType(expr.ty) And TObjectType(expr.ty).classdecl.IsExtern() And Not TObjectType(expr.ty).classdecl.IsInterface() And Not IsPointerType(expr.ty) Then
+			If TObjectType(expr.ty) And TObjectType(expr.ty).classdecl.IsExtern() And TObjectType(expr.ty).classdecl.IsStruct() And Not IsPointerType(expr.ty) Then
 				Return "bbArrayNew1DStruct" + Bra(TransArrayType(expr.ty) + ", " + expr.expr[0].Trans() + ", sizeof" + Bra(TransObject(TObjectType(expr.ty).classdecl)))
 			Else
 				Return "bbArrayNew1D" + Bra(TransArrayType(expr.ty) + ", " + expr.expr[0].Trans())
@@ -1397,7 +1403,7 @@ t:+"NULLNULLNULL"
 			If TStringType( src ) Return Bra( t+"!= &bbEmptyString" )
 			If TObjectType( src ) Then
 				If TObjectType(src).classDecl.IsExtern() Then
-					If TObjectType(src).classDecl.IsInterface() Then
+					If Not TObjectType(src).classDecl.IsStruct() Then
 						Return Bra( t+"!=0" )
 					Else
 						Return Bra("1")
@@ -2407,6 +2413,11 @@ End Rem
 
 	Method EmitFuncDecl( decl:TFuncDecl, proto:Int = False, classFunc:Int = False )
 		'If Not proto And decl.IsAbstract() Return
+		
+		Local tmpDebug:Int = opt_debug
+		If decl.isNoDebug() Then
+			opt_debug = False
+		End If
 
 		'PushMungScope
 		BeginLocalScope
@@ -2561,6 +2572,9 @@ End Rem
 
 		EndLocalScope
 		'PopMungScope
+		
+		opt_debug = tmpDebug
+		
 	End Method
 	
 	Method EmitLocalDeclarations(decl:TScopeDecl, ignoreVar:TValDecl = Null)
@@ -3454,7 +3468,7 @@ End Rem
 			fld :+ TransFieldRef(decl, "o")
 
 			If decl.init Then
-				If TObjectType(decl.ty) And TObjectType(decl.ty).classdecl.IsExtern() And Not TObjectType(decl.ty).classdecl.IsInterface() Then
+				If TObjectType(decl.ty) And TObjectType(decl.ty).classdecl.IsExtern() And TObjectType(decl.ty).classdecl.IsStruct() Then
 					' skip for uninitialised extern type
 					If Not isPointerType(decl.ty) And TConstExpr(decl.init) And Not TConstExpr(decl.init).value Then
 						Continue
@@ -3539,7 +3553,7 @@ End Rem
 		Local s:String = variable
 
 		Local ind:String = "->"
-		If decl.scope And TClassDecl(decl.scope) And decl.scope.IsExtern() And Not TClassDecl(decl.scope).IsInterface() Then
+		If decl.scope And TClassDecl(decl.scope) And decl.scope.IsExtern() And TClassDecl(decl.scope).IsStruct() Then
 			If exprType And Not IsPointerType(exprType) Then
 				ind = "."
 			End If
@@ -3551,7 +3565,7 @@ End Rem
 		
 		' Null test
 		If opt_debug
-			If TClassDecl(decl.scope) And decl.scope.IsExtern() And Not TClassDecl(decl.scope).IsInterface() Then
+			If TClassDecl(decl.scope) And decl.scope.IsExtern() And TClassDecl(decl.scope).IsStruct() Then
 				'
 			Else
 				EmitDebugNullObjectError(variable)
@@ -3894,6 +3908,8 @@ End Rem
 			
 			If classDecl.IsInterface() Then
 				flags :+ "I"
+			Else If classDecl.IsStruct() Then
+				flags :+ "S"
 			End If
 
 			Emit "}" + flags + "=0", False

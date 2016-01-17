@@ -22,26 +22,27 @@
 '    distribution.
 '
 
-Const DECL_EXTERN:Int=		$010000
-Const DECL_PRIVATE:Int=	    $020000
-Const DECL_ABSTRACT:Int=	$040000
-Const DECL_FINAL:Int=		$080000
+Const DECL_EXTERN:Int=      $010000
+Const DECL_PRIVATE:Int=     $020000
+Const DECL_ABSTRACT:Int=    $040000
+Const DECL_FINAL:Int=       $080000
 
 Const DECL_SEMANTED:Int=    $100000
 Const DECL_SEMANTING:Int=   $200000
 
 Const DECL_POINTER:Int=     $400000
 
-Const DECL_ARG:Int=        $800000
-Const DECL_INITONLY:Int=  $1000000
+Const DECL_ARG:Int=         $800000
+Const DECL_INITONLY:Int=   $1000000
 
-Const DECL_NODEBUG:Int=   $2000000
+Const DECL_NODEBUG:Int=    $2000000
 
-Const DECL_API_WIN32:Int=$10000000
+Const DECL_API_WIN32:Int= $10000000
 Const DECL_API_OS:Int=DECL_API_WIN32
 
-Const CLASS_INTERFACE:Int=	$001000
-Const CLASS_THROWABLE:Int=	$002000
+Const CLASS_INTERFACE:Int=  $001000
+Const CLASS_THROWABLE:Int=  $002000
+Const CLASS_STRUCT:Int=     $004000
 
 Global _env:TScopeDecl
 Global _envStack:TList=New TList
@@ -1521,6 +1522,10 @@ End Rem
 
 	Method IsFinalized:Int()
 		Return (attrs & CLASS_FINALIZED)<>0
+	End Method
+	
+	Method IsStruct:Int()
+		Return (attrs & CLASS_STRUCT)<>0
 	End Method
 
 	Method ExtendsObject:Int()
