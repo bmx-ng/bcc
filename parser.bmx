@@ -2740,9 +2740,9 @@ End Rem
 
 		If CParse( "implements" )
 
-			If attrs & DECL_EXTERN
-				Err "Implements cannot be used with external classes."
-			EndIf
+			'If attrs & DECL_EXTERN
+			'	Err "Implements cannot be used with external classes."
+			'EndIf
 
 			If attrs & CLASS_INTERFACE
 				Err "Implements cannot be used with interfaces."

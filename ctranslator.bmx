@@ -2821,24 +2821,55 @@ End Rem
 		Next
 	End Method
 
+	Method EmitExternClassTypeFuncProto( classDecl:TClassDecl )
+
+		Local doneCtorDtor:Int
+		Local iDecl:TClassDecl
+
+		For Local decl:TFuncDecl = EachIn classDecl.GetAllOriginalFuncDecls(Null, True)
+			decl.Semant()
+			
+			' first interface preceeds ctor/dtor
+			If Not doneCtorDtor
+				If Not iDecl And TClassDecl(decl.scope).IsInterface() Then
+					iDecl = TClassDecl(decl.scope)
+				End If
+				
+				If iDecl
+					If iDecl <> TClassDecl(decl.scope) Then
+						' a different interface
+						doneCtorDtor = True
+						Emit "void(*_ctor)();"
+						Emit "void(*_dtor)();"
+					End If
+				Else
+					doneCtorDtor = True
+					Emit "void(*_ctor)();"
+					Emit "void(*_dtor)();"
+				End If
+				
+			End If
+
+			' code is written as a method, but emitted as a function pointer
+			' with self as the first parameter
+			Local func:TFuncDecl = TFuncDecl(decl.Copy())
+			Local argDecl:TArgDecl = New TArgDecl.Create("This", classDecl.objectType, Null)
+
+			func.argDecls = [argDecl] + func.argDecls
+			
+			func.Semant()
+			
+			Local ty:TFunctionPtrType = New TFunctionPtrType
+			ty.func = func
+			
+			Emit TransType(ty, decl.Ident) + ";"
+
+		Next
+	End Method
+
 	Method EmitExternClassProto( classDecl:TClassDecl )
 
-		If classDecl.IsInterface() Then
-			Emit "typedef struct " + classDecl.ident + " " + classDecl.ident + ";"
-			
-			' vtable
-			Emit "struct " + classDecl.ident  + "Vtbl {"
-			
-			' methods
-			EmitExternClassFuncProto(classDecl)
-
-			Emit "};"
-			
-			Emit "struct " + classDecl.ident + " {"
-			Emit "struct " + classDecl.ident + "Vtbl* vtbl;"
-			Emit "};"
-
-		Else
+		If classDecl.IsStruct() Then
 
 			Emit "struct " + classDecl.ident + " {"
 
@@ -2846,6 +2877,25 @@ End Rem
 			EmitClassFieldsProto(classDecl)
 			EndLocalScope
 
+			Emit "};"
+
+		Else
+			Emit "typedef struct " + classDecl.ident + " " + classDecl.ident + ";"
+			
+			' vtable
+			Emit "struct " + classDecl.ident  + "Vtbl {"
+			
+			' methods
+			If classDecl.IsInterface() Then
+				EmitExternClassFuncProto(classDecl)
+			Else
+				EmitExternClassTypeFuncProto(classDecl)
+			End If
+
+			Emit "};"
+			
+			Emit "struct " + classDecl.ident + " {"
+			Emit "struct " + classDecl.ident + "Vtbl* vtbl;"
 			Emit "};"
 
 		End If
