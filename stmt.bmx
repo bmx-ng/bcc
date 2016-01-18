@@ -505,8 +505,16 @@ Type TForStmt Extends TLoopStmt
 			TCastExpr(TBinaryCompareExpr(expr).rhs).ty = TVarExpr(TAssignStmt(init).lhs).exprType.Copy()
 			TCastExpr(TBinaryMathExpr(TAssignStmt(incr).rhs).rhs).ty = TVarExpr(TAssignStmt(init).lhs).exprType.Copy()
 		End If
-		
+
 		expr=expr.Semant()
+
+		' for functions and index access, use a new local variable
+		If Not TConstExpr(TBinaryCompareExpr(expr).rhs) And Not TVarExpr(TBinaryCompareExpr(expr).rhs) And Not TMemberVarExpr(TBinaryCompareExpr(expr).rhs) Then
+			Local tmp:TLocalDecl=New TLocalDecl.Create( "", TBinaryCompareExpr(expr).rhs.exprType,TBinaryCompareExpr(expr).rhs,, True )
+			tmp.Semant()
+			Local v:TVarExpr = New TVarExpr.Create( tmp )
+			TBinaryCompareExpr(expr).rhs = New TStmtExpr.Create( New TDeclStmt.Create( tmp ), v ).Semant()
+		End If
 		
 		_loopnest:+1
 		block.Semant
