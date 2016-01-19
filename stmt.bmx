@@ -509,7 +509,7 @@ Type TForStmt Extends TLoopStmt
 		expr=expr.Semant()
 
 		' for functions and index access, use a new local variable
-		If Not TConstExpr(TBinaryCompareExpr(expr).rhs) And Not TVarExpr(TBinaryCompareExpr(expr).rhs) And Not TMemberVarExpr(TBinaryCompareExpr(expr).rhs) Then
+		If Not TConstExpr(TBinaryCompareExpr(expr).rhs) Then
 			Local tmp:TLocalDecl=New TLocalDecl.Create( "", TBinaryCompareExpr(expr).rhs.exprType,TBinaryCompareExpr(expr).rhs,, True )
 			tmp.Semant()
 			Local v:TVarExpr = New TVarExpr.Create( tmp )
