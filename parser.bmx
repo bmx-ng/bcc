@@ -2109,18 +2109,27 @@ End Rem
 			Case "#"
 				Local decl:TLoopLabelDecl = ParseLoopLabelDecl()
 				NextToke
-				Select _toke.ToLower()
-					Case "while"
-						ParseWhileStmt(decl)
-					Case "repeat"
-						ParseRepeatStmt(decl)
-					Case "for"
-						ParseForStmt(decl)
-					Case "defdata"
-						ParseDefDataStmt(decl)
-					Default
-						Err "Labels must appear before a loop or DefData statement"
-				End Select
+				While _toke
+					SetErr
+					Select _toke.ToLower()
+						Case "~n"
+							NextToke
+						Case "while"
+							ParseWhileStmt(decl)
+							Exit
+						Case "repeat"
+							ParseRepeatStmt(decl)
+							Exit
+						Case "for"
+							ParseForStmt(decl)
+							Exit
+						Case "defdata"
+							ParseDefDataStmt(decl)
+							Exit
+						Default
+							Err "Labels must appear before a loop or DefData statement"
+					End Select
+				Wend
 			Case "release"
 				ParseReleaseStmt()
 			Case "defdata"
