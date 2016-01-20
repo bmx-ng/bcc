@@ -1,4 +1,4 @@
-' Copyright (c) 2014-2015 Ronny Otto
+' Copyright (c) 2014-2016 Ronny Otto
 '
 ' This software is provided 'as-is', without any express or implied
 ' warranty. In no event will the authors be held liable for any damages
