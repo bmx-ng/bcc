@@ -217,11 +217,13 @@ Type TExpr
 			If TFunctionPtrType( lhs ) Return lhs
 			If TFunctionPtrType( rhs ) Return rhs
 		End If
-		If TSizeTType( lhs ) Or TSizeTType( rhs ) Return New TSizeTType
-		If TLongType( lhs ) Or TLongType( rhs ) Return New TLongType
 		If TULongType( lhs ) Or TULongType( rhs ) Return New TULongType
-		If TIntType( lhs ) Or TIntType( rhs ) Return New TIntType
+		If TSizeTType( lhs ) Or TSizeTType( rhs ) Return New TSizeTType
+		If TLongType( lhs ) And TUIntType( rhs ) Return New TULongType
+		If TUIntType( lhs ) And TLongType( rhs ) Return New TULongType
+		If TLongType( lhs ) Or TLongType( rhs ) Return New TLongType
 		If TUIntType( lhs ) Or TUIntType( rhs ) Return New TUIntType
+		If TIntType( lhs ) Or TIntType( rhs ) Return New TIntType
 		If TObjectType( lhs ) And TNullDecl(TObjectType( lhs ).classDecl) Then
 			Return rhs
 		End If
@@ -345,9 +347,12 @@ End Type
 Type TConstExpr Extends TExpr
 	Field ty:TType
 	Field value$
+	Field originalValue$
 
 	Method Create:TConstExpr( ty:TType,value$ )
-
+	
+		originalValue = value
+		
 		If TNumericType( ty ) And IsPointerType(ty, 0, TType.T_POINTER) Then
 			Self.ty=ty
 			If value Then
@@ -358,7 +363,7 @@ Type TConstExpr Extends TExpr
 			Return Self
 		End If
 		
-		If TIntType( ty ) Or TShortType( ty ) Or TByteType( ty ) Or TLongType( ty )
+		If TIntType( ty ) Or TShortType( ty ) Or TByteType( ty ) Or TLongType( ty ) Or TUIntType( ty ) Or TULongType( ty )
 			Local radix:Int
 			If value.StartsWith( "%" )
 				radix=1
@@ -406,6 +411,10 @@ Type TConstExpr Extends TExpr
 		Self.ty=ty
 		Self.value=value
 		Return Self
+	End Method
+	
+	Method UpdateType(ty:TType)
+		Create(ty, originalValue)
 	End Method
 
 	Method Copy:TExpr()
@@ -705,7 +714,8 @@ Type TNewObjectExpr Extends TExpr
 		If classDecl.args And Not classDecl.instanceof Err "Cannot create instance of a generic class."
 
 		If classDecl.IsExtern()
-			If args Err "No suitable constructor found for class "+classDecl.ToString()+"."
+			Err "Cannot create instance of an extern type"
+			'If args Err "No suitable constructor found for class "+classDecl.ToString()+"."
 '		Else
 'DebugStop
 '			ctor=classDecl.FindFuncDecl( "new",args )
@@ -897,8 +907,12 @@ Type TSelfExpr Extends TExpr
 	Method Semant:TExpr()
 		If exprType Return Self
 
-		If _env.FuncScope().IsStatic() Err "Illegal use of Self within static scope."
-		exprType=New TObjectType.Create( _env.ClassScope() )
+		'If _env.FuncScope().IsStatic() Err "Illegal use of Self within static scope."
+		Local scope:TClassDecl = _env.ClassScope()
+		If Not scope Then
+			Err "'Self' can only be used within methods."
+		End If
+		exprType=New TObjectType.Create( scope )
 		Return Self
 	End Method
 
@@ -1088,11 +1102,11 @@ Type TCastExpr Extends TExpr
 '			Return expr
 '		End If
 
-		If TIntType(ty) And TObjectType(src) Then
+'		If TIntType(ty) And TObjectType(src) Then
 ' DebugStop ' Bah woz ere
-			exprType = ty
-			Return expr
-		End If
+'			exprType = ty
+'			Return expr
+'		End If
 
 		If TObjectType(src) And TNullDecl(TObjectType(src).classDecl) Then
 			exprType = ty
@@ -1640,6 +1654,15 @@ Type TIndexExpr Extends TExpr
 		If exprType Return Self
 
 		expr=expr.Semant()
+
+		' for functions and index access, use a new local variable
+		If Not TVarExpr(expr) And Not TMemberVarExpr(expr) Then
+			Local tmp:TLocalDecl=New TLocalDecl.Create( "", expr.exprType, expr,, True )
+			tmp.Semant()
+			Local v:TVarExpr = New TVarExpr.Create( tmp )
+			expr = New TStmtExpr.Create( New TDeclStmt.Create( tmp ), v ).Semant()
+		End If
+
 		For Local i:Int = 0 Until index.length
 			index[i]=index[i].SemantAndCast( New TUIntType, True )
 		Next

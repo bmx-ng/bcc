@@ -22,26 +22,27 @@
 '    distribution.
 '
 
-Const DECL_EXTERN:Int=		$010000
-Const DECL_PRIVATE:Int=	    $020000
-Const DECL_ABSTRACT:Int=	$040000
-Const DECL_FINAL:Int=		$080000
+Const DECL_EXTERN:Int=      $010000
+Const DECL_PRIVATE:Int=     $020000
+Const DECL_ABSTRACT:Int=    $040000
+Const DECL_FINAL:Int=       $080000
 
 Const DECL_SEMANTED:Int=    $100000
 Const DECL_SEMANTING:Int=   $200000
 
 Const DECL_POINTER:Int=     $400000
 
-Const DECL_ARG:Int=        $800000
-Const DECL_INITONLY:Int=  $1000000
+Const DECL_ARG:Int=         $800000
+Const DECL_INITONLY:Int=   $1000000
 
-Const DECL_NODEBUG:Int=   $2000000
+Const DECL_NODEBUG:Int=    $2000000
 
-Const DECL_API_WIN32:Int=$10000000
+Const DECL_API_WIN32:Int= $10000000
 Const DECL_API_OS:Int=DECL_API_WIN32
 
-Const CLASS_INTERFACE:Int=	$001000
-Const CLASS_THROWABLE:Int=	$002000
+Const CLASS_INTERFACE:Int=  $001000
+Const CLASS_THROWABLE:Int=  $002000
+Const CLASS_STRUCT:Int=     $004000
 
 Global _env:TScopeDecl
 Global _envStack:TList=New TList
@@ -673,7 +674,7 @@ Type TScopeDecl Extends TDecl
 'DebugLog "Adding " + decl.ident
 			declsMap.Insert decl.IdentLower(),decl
 		Else
-			Err "Duplicate identifier '"+ident+"'."
+			Err "Duplicate identifier '"+decl.ident+"'."
 		EndIf
 
 	End Method
@@ -1522,6 +1523,10 @@ End Rem
 	Method IsFinalized:Int()
 		Return (attrs & CLASS_FINALIZED)<>0
 	End Method
+	
+	Method IsStruct:Int()
+		Return (attrs & CLASS_STRUCT)<>0
+	End Method
 
 	Method ExtendsObject:Int()
 		Return (attrs & CLASS_EXTENDSOBJECT)<>0
@@ -1649,6 +1654,61 @@ End Rem
 		
 		Return funcs
 	End Method
+
+	' returns a list of original function decls (i.e. decls in the scope of their original declarations).
+	' this is useful for generating vtables for extern types
+	Method GetAllOriginalFuncDecls:TFuncDecl[](funcs:TFuncDecl[] = Null, includeSuper:Int = True)
+		If Not funcs Then
+			funcs = New TFuncDecl[0]
+		End If
+		
+		If superClass And includeSuper Then
+			funcs = superClass.GetAllOriginalFuncDecls(funcs, True)
+		End If
+
+		' interface methods
+		For Local iface:TClassDecl=EachIn implmentsAll
+			For Local func:TFuncDecl=EachIn iface._decls
+				Local matched:Int = False
+
+'				For Local i:Int = 0 Until funcs.length
+'					' found a match - we are overriding it
+'					If func.IdentLower() = funcs[i].IdentLower() Then
+'						matched = True
+'						Exit
+'					End If
+'				Next
+				
+				If Not matched Then
+					funcs :+ [func]
+				End If
+			Next
+		Next
+
+		
+		For Local func:TFuncDecl = EachIn _decls
+		
+			Local matched:Int = False
+			
+			' dont count any that are already in the funcs list
+			For Local i:Int = 0 Until funcs.length
+				' found a match - we are overriding it
+				If func.IdentLower() = funcs[i].IdentLower() Then
+					matched = True
+					' set this to our own func
+					'funcs[i] = func
+					Exit
+				End If
+			Next
+			
+			If Not matched Then
+				funcs :+ [func]
+			End If
+		
+		Next
+		
+		Return funcs
+	End Method
 	
 	Method ExtendsClass:Int( cdecl:TClassDecl )
 		'If Self=nullObjectClass Return True
@@ -1686,7 +1746,10 @@ End Rem
 		If superTy
 			'superClass=superTy.FindClass()
 			superClass=superTy.SemantClass()
-			If superClass.IsInterface() Err superClass.ToString()+" is an interface, not a class."
+			If superClass.IsInterface() Then
+				If Not IsExtern() Or Not superClass.IsExtern() Err superClass.ToString()+" is an interface, not a class."
+				If (IsExtern() And Not superClass.IsExtern()) Or (superClass.IsExtern() And Not IsExtern()) Err "Extern and non extern types cannot be mixed."
+			End If
 			If superClass.IsFinal() Err "Final types cannot be extended."
 		EndIf
 		
@@ -1709,9 +1772,10 @@ End Rem
 				implsall.Push tdecl_
 			Next
 		Next
-		implmentsAll=New TClassDecl[implsall.Length()]
-		For Local i:Int=0 Until implsall.Length()
-			implmentsAll[i]=TClassDecl(implsall.Get(i))
+		Local length:Int = implsall.Length()
+		implmentsAll=New TClassDecl[length]
+		For Local i:Int=0 Until length
+			implmentsAll[i]=TClassDecl(implsall.Get(length - i - 1))
 		Next
 		implments=impls
 
@@ -1924,6 +1988,11 @@ End Rem
 				Local ints:TMap = GetInterfaces()
 
 				For Local iface:TClassDecl=EachIn ints.Values()
+				
+					If (Not IsExtern() And iface.IsExtern()) Or (IsExtern() And Not iface.IsExtern()) Then
+						Err "Cannot mix Extern and non Extern Types and Interfaces."
+					End If
+				
 					For Local decl:TFuncDecl=EachIn iface.SemantedMethods()
 						Local found:Int
 
@@ -1932,7 +2001,7 @@ End Rem
 						While cdecl And Not found
 							For Local decl2:TFuncDecl=EachIn cdecl.SemantedMethods( decl.ident )
 								If decl.EqualsFunc( decl2 )
-									If decl2.munged
+									If decl2.munged And Not iface.IsExtern()
 										Err "Extern methods cannot be used to implement interface methods."
 									EndIf
 									found=True

@@ -55,7 +55,7 @@ Type TToker
 	"alias;rem;endrem;throw;assert;try;catch;nodebug;incbin;"+ ..
 	"endselect;endmethod;endfunction;endtype;endextern;endtry;endwhile;pi;release;defdata;readdata;restoredata;" + ..
 	"interface;endinterface;implements;"+ ..
-	"size_t;uint;ulong;"
+	"size_t;uint;ulong;struct;endstruct;"
 
 	Global _symbols$[]=[ "..","[]",":*",":/",":+",":-",":|",":&",":~~",":shr",":shl",":sar",":mod" ]
 	Global _symbols_map$[]=[ "..","[]","*=","/=","+=","-=","|=","&=","^=",">>=", "<<=",">>=","%=" ]

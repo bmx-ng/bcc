@@ -75,8 +75,10 @@ Type TForEachinStmt Extends TLoopStmt
 			If varlocal
 
 				' array of object ?
-				
-				If TArrayType( expr.exprType ) And TObjectType(TArrayType( expr.exprType ).elemType) Then
+
+				If TArrayType( expr.exprType ) And TObjectType(TArrayType( expr.exprType ).elemType) And (Not TObjectType(TArrayType( expr.exprType ).elemType).classdecl.IsExtern() ..
+							Or (TObjectType(TArrayType( expr.exprType ).elemType).classdecl.IsExtern() ..
+							And IsPointerType(TArrayType( expr.exprType ).elemType))) Then
 
 					Local cExpr:TExpr
 					
@@ -443,7 +445,7 @@ Type TParser
 	Method ParseIdent$()
 		Select _toke
 		Case "@" NextToke
-		Case "string","object"
+		Case "string","object", "self"
 		Default
 			If _tokeType<>TOKE_IDENT Err "Syntax error - expecting identifier."
 		End Select
@@ -1204,7 +1206,7 @@ Type TParser
 
 				Local ty:TType = ParseConstNumberType()
 				If ty Then
-					TConstExpr(expr).ty = ty
+					TConstExpr(expr).UpdateType(ty)
 				End If
 			Case TOKE_LONGLIT
 				expr=New TConstExpr.Create( New TLongType,_toke )
@@ -2046,10 +2048,14 @@ End Rem
 					NextToke
 				Case "const","global"
 					mdecl.InsertDecls ParseDecls( _toke,attrs )
+				Case "struct"
+					mdecl.InsertDecl ParseClassDecl( _toke,attrs | CLASS_STRUCT )
 				Case "type"
 					mdecl.InsertDecl ParseClassDecl( _toke,attrs )
 				Case "function"
 					mdecl.InsertDecl ParseFuncDecl( _toke,attrs )
+				Case "interface"
+					mdecl.InsertDecl ParseClassDecl( _toke,attrs | CLASS_INTERFACE )
 				Default
 					If _toke <> "end" And _toke <> "endextern" Then
 						Err "Expecting expression but encountered '"+_toke+"'"
@@ -2103,18 +2109,27 @@ End Rem
 			Case "#"
 				Local decl:TLoopLabelDecl = ParseLoopLabelDecl()
 				NextToke
-				Select _toke.ToLower()
-					Case "while"
-						ParseWhileStmt(decl)
-					Case "repeat"
-						ParseRepeatStmt(decl)
-					Case "for"
-						ParseForStmt(decl)
-					Case "defdata"
-						ParseDefDataStmt(decl)
-					Default
-						Err "Labels must appear before a loop or DefData statement"
-				End Select
+				While _toke
+					SetErr
+					Select _toke.ToLower()
+						Case "~n"
+							NextToke
+						Case "while"
+							ParseWhileStmt(decl)
+							Exit
+						Case "repeat"
+							ParseRepeatStmt(decl)
+							Exit
+						Case "for"
+							ParseForStmt(decl)
+							Exit
+						Case "defdata"
+							ParseDefDataStmt(decl)
+							Exit
+						Default
+							Err "Labels must appear before a loop or DefData statement"
+					End Select
+				Wend
 			Case "release"
 				ParseReleaseStmt()
 			Case "defdata"
@@ -2665,9 +2680,9 @@ End Rem
 		Local imps:TIdentType[]
 		Local meta:String
 
-		If (attrs & CLASS_INTERFACE) And (attrs & DECL_EXTERN)
-			Err "Interfaces cannot be extern."
-		EndIf
+		'If (attrs & CLASS_INTERFACE) And (attrs & DECL_EXTERN)
+		'	Err "Interfaces cannot be extern."
+		'EndIf
 Rem
 		If CParse( "<" )
 
@@ -2700,19 +2715,20 @@ End Rem
 			'	Err "Extends cannot be used with class parameters."
 			'EndIf
 
-			If CParse( "null" )
-
-				If attrs & CLASS_INTERFACE
-					Err "Interfaces cannot extend null"
+'			If CParse( "null" )
+'
+				If attrs & CLASS_STRUCT
+					Err "Structs cannot be extended"
 				EndIf
-
-				If Not (attrs & DECL_EXTERN)
-					Err "Only extern objects can extend null."
-				EndIf
-
-				superTy=Null
-
-			Else If attrs & CLASS_INTERFACE
+'
+'				If Not (attrs & DECL_EXTERN)
+'					Err "Only extern objects can extend null."
+'				EndIf
+'
+'				superTy=Null
+'
+'			Else
+			If attrs & CLASS_INTERFACE And Not (attrs & DECL_EXTERN)
 
 				Local nimps:Int
 				Repeat
@@ -2733,9 +2749,9 @@ End Rem
 
 		If CParse( "implements" )
 
-			If attrs & DECL_EXTERN
-				Err "Implements cannot be used with external classes."
-			EndIf
+			'If attrs & DECL_EXTERN
+			'	Err "Implements cannot be used with external classes."
+			'EndIf
 
 			If attrs & CLASS_INTERFACE
 				Err "Implements cannot be used with interfaces."
@@ -2761,6 +2777,10 @@ End Rem
 					Err "Final cannot be used with interfaces."
 				End If
 				
+				If attrs & CLASS_STRUCT
+					Err "Final cannot be used with structs."
+				End If
+				
 				If attrs & DECL_FINAL
 					Err "Duplicate type attribute."
 				End If
@@ -2775,6 +2795,10 @@ End Rem
 
 				If attrs & CLASS_INTERFACE
 					Err "Abstract cannot be used with interfaces."
+				EndIf
+				
+				If attrs & CLASS_STRUCT
+					Err "Abstract cannot be used with structs."
 				EndIf
 				
 				If attrs & DECL_ABSTRACT
@@ -2793,6 +2817,10 @@ End Rem
 
 		'check for metadata
 		If CParse( "{" )
+			If attrs & CLASS_STRUCT
+				Err "Structs cannot store metadata."
+			EndIf
+
 			meta = ParseMetaData()
 		End If
 
@@ -2810,7 +2838,7 @@ End Rem
 
 		'If classDecl.IsTemplateArg() Return classDecl
 
-		Local decl_attrs:Int=(attrs & DECL_EXTERN) | (attrs & DECL_NODEBUG)
+		Local decl_attrs:Int=(attrs & DECL_EXTERN) | (attrs & DECL_NODEBUG) | (attrs & DECL_API_WIN32)
 
 		Local method_attrs:Int=decl_attrs|FUNC_METHOD | (attrs & DECL_NODEBUG)
 		If attrs & CLASS_INTERFACE method_attrs:|DECL_ABSTRACT
@@ -2825,12 +2853,28 @@ End Rem
 				If attrs & CLASS_INTERFACE Then
 					Err "Syntax error - expecting End Interface, not 'EndType'"
 				End If
+				If attrs & CLASS_STRUCT Then
+					Err "Syntax error - expecting End Struct, not 'EndType'"
+				End If
+				toke = Null
+				NextToke
+				Exit
+			Case "endstruct"
+				If attrs & CLASS_INTERFACE Then
+					Err "Syntax error - expecting End Interface, not 'EndStruct'"
+				End If
+				If Not (attrs & CLASS_STRUCT) Then
+					Err "Syntax error - expecting End Type, not 'EndStruct'"
+				End If
 				toke = Null
 				NextToke
 				Exit
 			Case "endinterface"
-				If Not (attrs & CLASS_INTERFACE) Then
+				If Not (attrs & CLASS_INTERFACE) And Not (attrs & CLASS_STRUCT) Then
 					Err "Syntax error - expecting End Type, not 'EndInterface'"
+				End If
+				If Not (attrs & CLASS_INTERFACE) And (attrs & CLASS_STRUCT) Then
+					Err "Syntax error - expecting End Struct, not 'EndInterface'"
 				End If
 				toke = Null
 				NextToke
@@ -2842,11 +2886,25 @@ End Rem
 				NextToke
 				decl_attrs=decl_attrs & ~DECL_PRIVATE
 			Case "const","global","field"
+				If attrs & DECL_EXTERN Then
+					If (attrs & CLASS_INTERFACE) Then
+						Err "Extern Interfaces can only contain methods."
+					End If
+					If Not (attrs & CLASS_STRUCT) Then
+						Err "Extern Types can only contain methods."
+					End If
+				End If
 				If (attrs & CLASS_INTERFACE) And _toke<>"const"
 					Err "Interfaces can only contain constants and methods."
 				EndIf
+				If (attrs & CLASS_STRUCT) And _toke<>"field"
+					Err "Structs can only contain fields."
+				EndIf
 				classDecl.InsertDecls ParseDecls( _toke,decl_attrs )
 			Case "method"
+				If attrs & CLASS_STRUCT Then
+					Err "Structs can only contain fields."
+				EndIf
 				Local decl:TFuncDecl=ParseFuncDecl( _toke,method_attrs )
 				If decl.IsCtor() decl.retTypeExpr=New TObjectType.Create( classDecl )
 				classDecl.InsertDecl decl
@@ -2854,6 +2912,12 @@ End Rem
 				If (attrs & CLASS_INTERFACE)
 					Err "Interfaces can only contain constants and methods."
 				EndIf
+				If attrs & CLASS_STRUCT Then
+					Err "Structs can only contain fields."
+				EndIf
+				If attrs & DECL_EXTERN Then
+					Err "Extern Types can only contain methods."
+				End If
 				Local decl:TFuncDecl=ParseFuncDecl( _toke,decl_attrs )
 				classDecl.InsertDecl decl
 			Default
@@ -3182,43 +3246,7 @@ End Rem
 			Case "extern"
 
 				ParseExternBlock(_module, attrs)
-Rem
-				NextToke
 
-				If _tokeType=TOKE_STRINGLIT
-					DebugLog "EXTERN : " + ParseStringLit()
-				End If
-
-
-				attrs=DECL_EXTERN
-				If CParse( "private" ) attrs=attrs|DECL_PRIVATE
-
-
-				While _toke<>"endextern"
-					If CParse( "end" )
-						If Parse("extern")
-							Exit
-						End If
-					EndIf
-
-					SetErr
-					Select _toke
-						Case "~n"
-							NextToke
-						Case "const","global"
-							_module.InsertDecls ParseDecls( _toke,attrs )
-						Case "type"
-							_module.InsertDecl ParseClassDecl( _toke,attrs )
-						Case "function"
-							_module.InsertDecl ParseFuncDecl( _toke,attrs )
-						Case "rem"
-							ParseRemStmt()
-					End Select
-
-				Wend
-
-				attrs = 0
-End Rem
 			Case "const"
 				_module.InsertDecls ParseDecls( _toke,attrs )
 			Case "global"
