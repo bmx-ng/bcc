@@ -492,18 +492,20 @@ End Type
 Type TGlobalDecl Extends TVarDecl
 
 	Field inited:Int
+	Field funcGlobal:Int
 	
-	Method Create:TGlobalDecl( ident$,ty:TType,init:TExpr,attrs:Int=0 )
+	Method Create:TGlobalDecl( ident$,ty:TType,init:TExpr,attrs:Int=0,funcGlobal:Int=False )
 		Self.deferInit = True
 		Self.ident=ident
 		Self.declTy=ty
 		Self.declInit=init
 		Self.attrs=attrs
+		Self.funcGlobal=funcGlobal
 		Return Self
 	End Method
 
 	Method OnCopy:TDecl(deep:Int = True)
-		Return New TGlobalDecl.Create( ident,ty,CopyInit(),attrs )
+		Return New TGlobalDecl.Create( ident,ty,CopyInit(),attrs,funcGlobal )
 	End Method
 	
 	Method ToString$()

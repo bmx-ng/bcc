@@ -71,7 +71,10 @@ Type TDeclStmt Extends TStmt
 	
 	Method OnSemant()
 		decl.Semant
-		_env.InsertDecl decl
+		' if scope is already set, don't try to add it to the current scope.
+		If Not decl.scope Then
+			_env.InsertDecl decl
+		End If
 	End Method
 	
 	Method Trans$()

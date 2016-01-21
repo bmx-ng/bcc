@@ -643,55 +643,69 @@ t:+"NULLNULLNULL"
 		End If
 	End Method
 
-	Method TransGlobalDecl$( munged$,init:TExpr, attrs:Int, ty:TType )
+	Method TransGlobalDecl$( gdecl:TGlobalDecl )
 		Local glob:String
 
-		If Not (attrs & DECL_INITONLY) Then
-			glob :+"static " + TransType( init.exprType, munged )+" "
-		End If
-
-		glob :+ munged+"="
-
-		If (TNewObjectExpr(init) Or TNewArrayExpr(init)) And Not (attrs & DECL_INITONLY) Then
-			glob :+ "0;~n"
-			glob :+ indent + "if (" + munged + "==0) {~n"
-			glob :+ indent + "~t" + munged + "=" + init.Trans() + ";~n"
-			glob :+ indent + "}"
-		Else If TArrayExpr(init) And Not (attrs & DECL_INITONLY) Then
-			glob :+ "0;~n"
-			Emit glob
-			Emit "if (" + munged + "==0) {"
-			
-			glob = munged + "=" + init.Trans() + ";"
-			Emit glob
-			Emit "}"
-			glob = ""
-		Else
-			If init Then
-				If TFunctionPtrType(ty) Then
-					If TInvokeExpr(init) And Not TInvokeExpr(init).invokedWithBraces Then
-						glob :+ TInvokeExpr(init).decl.munged
-					Else
-						glob :+ init.Trans()
-					End If
-				Else If Not TConstExpr(init) And Not (attrs & DECL_INITONLY) Then
-					' for non const, we need to add an initialiser
-					glob :+ TransValue(ty, "") + ";~n"
-					glob :+ indent +"static int _" + munged + "_inited = 0;~n"
-					glob :+ indent + "if (!_" + munged + "_inited) {~n"
-					glob :+ indent + "~t_" + munged + "_inited = 1;~n"
-					glob :+ indent + "~t" + munged + " = " + init.Trans() + ";~n"
-					glob :+ indent + "}"
-				Else
-					glob :+ init.Trans()
-				End If
+		If Not gdecl.funcGlobal Then
+			If Not (gdecl.attrs & DECL_INITONLY) Then
+				glob :+"static " + TransType( gdecl.init.exprType, gdecl.munged )+" "
+			End If
+	
+			glob :+ gdecl.munged+"="
+	
+			If (TNewObjectExpr(gdecl.init) Or TNewArrayExpr(gdecl.init)) And Not (gdecl.attrs & DECL_INITONLY) Then
+				glob :+ "0;~n"
+				glob :+ indent + "if (" + gdecl.munged + "==0) {~n"
+				glob :+ indent + "~t" + gdecl.munged + "=" + gdecl.init.Trans() + ";~n"
+				glob :+ indent + "}"
+			Else If TArrayExpr(gdecl.init) And Not (gdecl.attrs & DECL_INITONLY) Then
+				glob :+ "0;~n"
+				Emit glob
+				Emit "if (" + gdecl.munged + "==0) {"
+				
+				glob = gdecl.munged + "=" + gdecl.init.Trans() + ";"
+				Emit glob
+				Emit "}"
+				glob = ""
 			Else
-				If TFunctionPtrType(ty) Then
-					glob :+ "&brl_blitz_NullFunctionError"
+				If gdecl.init Then
+					If TFunctionPtrType(gdecl.ty) Then
+						If TInvokeExpr(gdecl.init) And Not TInvokeExpr(gdecl.init).invokedWithBraces Then
+							glob :+ TInvokeExpr(gdecl.init).decl.munged
+						Else
+							glob :+ gdecl.init.Trans()
+						End If
+					Else If Not TConstExpr(gdecl.init) And Not (gdecl.attrs & DECL_INITONLY) Then
+						' for non const, we need to add an initialiser
+						glob :+ TransValue(gdecl.ty, "") + ";~n"
+						glob :+ indent +"static int _" + gdecl.munged + "_inited = 0;~n"
+						glob :+ indent + "if (!_" + gdecl.munged + "_inited) {~n"
+						glob :+ indent + "~t_" + gdecl.munged + "_inited = 1;~n"
+						glob :+ indent + "~t" + gdecl.munged + " = " + gdecl.init.Trans() + ";~n"
+						glob :+ indent + "}"
+					Else
+						glob :+ gdecl.init.Trans()
+					End If
 				Else
-					glob :+ "0"
+					If TFunctionPtrType(gdecl.ty) Then
+						glob :+ "&brl_blitz_NullFunctionError"
+					Else
+						glob :+ "0"
+					End If
 				End If
 			End If
+		Else
+			glob :+ "static int _" + gdecl.munged + "_inited = 0;~n"
+			glob :+ indent + "if (!_" + gdecl.munged + "_inited) {~n"
+			glob :+ indent + "~t_" + gdecl.munged + "_inited = 1;~n"
+			glob :+ indent + "~t" + gdecl.munged + " = " 
+			If gdecl.init Then
+				glob :+ gdecl.init.Trans()
+			Else
+				glob :+ TransValue(gdecl.ty, "")
+			End If
+			glob :+ ";~n"
+			glob :+ indent + "}"
 		End If
 
 		Return glob
@@ -4324,7 +4338,7 @@ End If
 
 				If Not TFunctionPtrType(gdecl.ty) Then
 					If TConstExpr(gdecl.init) Then
-						Emit TransRefType( gdecl.ty, "WW" )+" "+TransGlobalDecl(gdecl.munged, gdecl.init, gdecl.attrs, gdecl.ty)+";"
+						Emit TransRefType( gdecl.ty, "WW" )+" "+TransGlobalDecl(gdecl)+";"
 						gdecl.inited = True
 					Else
 If Not gdecl.IsExtern() Then
@@ -4336,6 +4350,20 @@ End If
 				End If
 				Continue
 			EndIf
+			
+		Next
+
+		For Local gdecl:TGlobalDecl=EachIn app.SemantedGlobals
+			If gdecl And gdecl.funcGlobal Then
+				MungDecl gdecl
+				
+				If Not TFunctionPtrType(gdecl.ty) Then
+					Emit "static " + TransRefType( gdecl.ty, "WW" )+" "+gdecl.munged+";"
+				Else
+					Emit "static " + TransRefType( gdecl.ty, gdecl.munged ) + ";"
+				End If
+				Continue
+			End If
 		Next
 
 
@@ -4348,7 +4376,7 @@ End If
 			If gdecl
 				If Not TFunctionPtrType(gdecl.ty) And Not gdecl.IsPrivate() Then
 					If TConstExpr(gdecl.init) Then
-						Emit TransRefType( gdecl.ty, "WW" )+" "+TransGlobalDecl(gdecl.munged, gdecl.init, gdecl.attrs, gdecl.ty)+";"
+						Emit TransRefType( gdecl.ty, "WW" )+" "+TransGlobalDecl(gdecl)+";"
 						gdecl.inited = True
 					Else
 If Not gdecl.IsExtern() Then
@@ -4447,7 +4475,9 @@ End If
 						Emit TransGlobal( decl )+"="+decl.init.Trans()+";"
 					End If
 				Else
-					Emit TransGlobal( decl )+"="+decl.init.Trans()+";"
+					If Not decl.funcGlobal Then
+						Emit TransGlobal( decl )+"="+decl.init.Trans()+";"
+					End If
 				End If
 			End If
 		Next

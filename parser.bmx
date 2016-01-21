@@ -2363,6 +2363,17 @@ End Rem
 		Repeat
 			Local decl:TDecl=ParseDecl( toke,0 )
 			_block.AddStmt New TDeclStmt.Create( decl )
+			
+			' reset the decl scope, adding decl to the block decl list.
+			' this improves scope visibilty - for decls such as embedded functions
+			If TConstDecl(decl) Or TGlobalDecl(decl) Then
+				decl.scope = Null
+				_block.InsertDecl(decl)
+				If TGlobalDecl(decl) Then
+					TGlobalDecl(decl).funcGlobal = True
+				End If
+			End If
+			
 		Until Not CParse(",")
 	End Method
 	
