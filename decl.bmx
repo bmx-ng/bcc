@@ -519,7 +519,7 @@ Type TGlobalDecl Extends TVarDecl
 		inst.declInit=declInit
 		Return inst
 	End Method
-	
+
 End Type
 
 Type TFieldDecl Extends TVarDecl
@@ -689,7 +689,7 @@ Type TScopeDecl Extends TDecl
 	Method GetDecl:Object( ident$ )
 'DebugLog "GetDecl (" + Self.ident + ") : " + ident
 		Local decl:Object=Object(declsMap.ValueForKey( ident ))
-		
+
 		If Not decl Then
 			If Self.IdentLower() = ident Then
 				' name matches but we are a "module", but not a *real* module..
@@ -996,7 +996,7 @@ End Rem
 		If TBlockDecl(Self) And TBlockDecl(Self).extra Then
 			Local loop:TLoopStmt = TLoopStmt(TBlockDecl(Self).extra)
 			If ident Then
-				If loop.loopLabel And loop.loopLabel.ident = ident Then
+				If loop.loopLabel And loop.loopLabel.IdentLower() = ident Then
 					Return loop
 				End If
 			Else
