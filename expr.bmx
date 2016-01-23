@@ -1176,7 +1176,9 @@ Type TCastExpr Extends TExpr
 
 		If TVarPtrType(ty) Then
 			If Not TVarExpr(expr) And Not TMemberVarExpr(expr) Then
-				Err "Subexpression for 'Ptr' must be a variable"
+				If Not TIndexExpr(expr) Or (TIndexExpr(expr) And Not TVarExpr(TIndexExpr(expr).expr) And Not TMemberVarExpr(TIndexExpr(expr).expr)) Then
+					Err "Subexpression for 'Ptr' must be a variable"
+				End If
 			End If
 			exprType = src.Copy()
 			exprType._flags :| TType.T_VARPTR
