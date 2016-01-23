@@ -1162,6 +1162,9 @@ Type TCastExpr Extends TExpr
 				If TNumericType(TArrayType(src).elemType) Then
 					exprType = TNumericType(TArrayType(src).elemType).ToPointer()
 					Return Self
+				Else
+					' map arrays to byte ptr
+					exprType = TType.MapToPointerType(New TByteType)
 				End If
 			Else If TStringType(src) Then
 				exprType = ty
