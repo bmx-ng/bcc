@@ -350,7 +350,7 @@ Type TConstExpr Extends TExpr
 	Field originalValue$
 
 	Method Create:TConstExpr( ty:TType,value$ )
-	
+
 		originalValue = value
 		
 		If TNumericType( ty ) And IsPointerType(ty, 0, TType.T_POINTER) Then
@@ -1051,6 +1051,11 @@ Type TCastExpr Extends TExpr
 				'if both objects or both non-objects...
 				If (TObjectType(ty)<>Null)=(TObjectType(src)<>Null) Then
 					exprType=ty
+					
+					If TFunctionPtrType(ty) And TInvokeExpr(expr) And Not TInvokeExpr(expr).invokedWithBraces Then
+						Return expr
+					End If
+					
 					Return Self
 				End If
 				
