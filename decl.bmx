@@ -868,14 +868,12 @@ End Rem
 			argExprs = New TExpr[0]
 		End If
 	
-		'For Local func:TFuncDecl=EachIn funcs
-			func.Semant()
-		'Next
+		func.Semant()
 		
 		Local match:TFuncDecl,isexact:Int
 		Local _err$
-'DebugStop
-		'For Local func:TFuncDecl=EachIn funcs
+		Local errorDetails:String
+
 		While True
 			If Not func.CheckAccess() Exit
 			
@@ -917,6 +915,9 @@ End Rem
 					exact=False
 					
 					If Not explicit And exprTy.ExtendsType( declTy ) Continue
+
+					' make a more helpful error message
+					errorDetails :+ "Argument #"+(i+1)+" is ~q" + exprTy.ToString()+"~q but declaration is ~q"+declTy.ToString()+"~q. "
 
 				Else If Not argDecls[i].init
 
@@ -982,9 +983,9 @@ End Rem
 				If argExprs[i] t:+argExprs[i].exprType.ToString()
 			Next
 			If throwOnNotMatched Then
-				Throw "Unable to find overload for "+ident+"("+t+")."
+				Throw "Unable to find overload for "+ident+"("+t+"). " + errorDetails
 			Else
-				Err "Unable to find overload for "+ident+"("+t+")."
+				Err "Unable to find overload for "+ident+"("+t+"). " + errorDetails
 			End If
 		EndIf
 		
