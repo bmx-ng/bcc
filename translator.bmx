@@ -843,7 +843,6 @@ End Rem
 				Else
 					InternalErr
 				End If
-				PopLoopLocalStack()
 			Else
 
 				If opt_debug And stmt.loop And Not stmt.loop.block.IsNoDebug() Then
@@ -866,7 +865,7 @@ End Rem
 	Method TransBreakStmt$( stmt:TBreakStmt )
 		unreachable=True
 		broken:+1
-		
+
 		Local brkLoop:TStmt
 		' if we are exiting with a loop label, we'll need to find it in the stack
 		If stmt.label And TLoopLabelExpr(stmt.label) Then
@@ -907,7 +906,6 @@ End Rem
 				Else
 					InternalErr
 				End If
-				PopLoopLocalStack()
 			Else
 
 				If opt_debug And stmt.loop And Not stmt.loop.block.IsNoDebug() Then
