@@ -846,7 +846,7 @@ t:+"NULLNULLNULL"
 						If decl.scope.IsExtern()
 							If Not cdecl.IsStruct()  Then
 								'Return decl.munged + Bra(TransArgs( args,decl, TransSubExpr( lhs ) ))
-								Return TransSubExpr( lhs ) + "->vtbl->" + decl.munged + Bra(TransArgs( args,decl, TransSubExpr( lhs ) ))
+								Return Bra(TransSubExpr( lhs )) + "->vtbl->" + decl.munged + Bra(TransArgs( args,decl, TransSubExpr( lhs ) ))
 							End If
 							Err "TODO extern types not allowed methods"
 						Else
@@ -888,7 +888,7 @@ t:+"NULLNULLNULL"
 					
 					If decl.scope.IsExtern()
 						If TClassDecl(decl.scope) And Not TClassDecl(decl.scope).IsStruct() Then
-							Return TransSubExpr( lhs ) + "->vtbl->" + decl.munged + Bra(TransArgs( args,decl, TransSubExpr( lhs ) ))
+							Return Bra(TransSubExpr( lhs )) + "->vtbl->" + decl.munged + Bra(TransArgs( args,decl, TransSubExpr( lhs ) ))
 						Else
 							Return decl.munged + Bra(TransArgs( args,decl, TransSubExpr( lhs ) ))
 						End If
@@ -925,7 +925,7 @@ t:+"NULLNULLNULL"
 
 					If decl.scope.IsExtern()
 						If TClassDecl(decl.scope) And Not TClassDecl(decl.scope).IsStruct() Then
-							Return lvar + "->vtbl->" + decl.munged + Bra(TransArgs( args,decl, lvar ))
+							Return Bra(lvar) + "->vtbl->" + decl.munged + Bra(TransArgs( args,decl, lvar ))
 						End If
 						
 						Return "// TODO"
