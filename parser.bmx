@@ -358,6 +358,35 @@ Type TParser
 		Return path
 	End Method
 
+	Method ActualPath:String(path:String)
+		Local dir:String = ExtractDir(path)
+		Local origFile:String = StripDir(path)
+		Local lowerFile:String = origFile.ToLower()
+		
+		Local actualDir:String = ExtractDir(RealPath(path))
+
+		Local files:String[] = LoadDir(actualDir)
+		For Local file:String = EachIn files
+
+			If file.ToLower() = lowerFile Then
+				If file <> origFile Then
+					' we could raise as a warning instead, but an error encourages the user to fix their code ;-)
+					Err "Actual file '" + file + "' differs in case with import '" + origFile + "'"
+					
+					' what we might do were we to warn instead...
+					If dir Then
+						Return dir + "/" + file
+					Else
+						Return file
+					End If
+				End If
+				Exit
+			End If
+		Next
+		Return path
+	End Method
+	
+
 	Method NextToke$()
 		Local toke$=_toke
 
@@ -2965,14 +2994,13 @@ End Rem
 	Method ImportFile( filepath$ )
 
 		If filepath.Endswith(".bmx") Then
-
+			filepath = ActualPath(filepath)
 			Local origPath:String = RealPath(filepath)
 			Local path:String = OutputFilePath(origPath, FileMung(), "i")
 
 			If FileType( path )<>FILETYPE_FILE
 				Err "File '"+ path +"' not found."
 			EndIf
-
 
 			If _module.imported.Contains( path ) Return
 
@@ -3004,8 +3032,15 @@ End Rem
 				_app.fileimports.AddLast filepath
 			End If
 		Else
-			If filepath.EndsWith(".h") And filepath.Find("*") = -1 Then
-				_app.headers.AddLast filepath
+			If filepath.EndsWith(".h") 
+				If filepath.Find("*") = -1 Then
+					_app.headers.AddLast filepath
+				End If
+			Else
+				Local path:String = ActualPath(RealPath(filepath))
+				If FileType( path )<>FILETYPE_FILE
+					Err "File '"+ path +"' not found."
+				End If
 			End If
 		End If
 
