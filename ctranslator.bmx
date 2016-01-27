@@ -2729,7 +2729,7 @@ End Rem
 		End If
 
 		If classHasFunction(classDecl, "SendMessage") Then
-			Emit "void _" + classid + "_SendMessage(BBOBJECT o, BBOBJECT message, BBOBJECT source);"
+			Emit "BBOBJECT _" + classid + "_SendMessage(" + TransObject(classdecl) + " o, BBOBJECT message, BBOBJECT source);"
 		End If
 
 		Local reserved:String = ",New,Delete,ToString,Compare,SendMessage,_reserved1_,_reserved2_,_reserved3_,".ToLower()
@@ -2773,7 +2773,7 @@ End Rem
 		Emit "void      (*dtor)( BBOBJECT o );"
 		Emit "BBSTRING  (*ToString)( BBOBJECT x );"
 		Emit "int       (*Compare)( BBOBJECT x,BBOBJECT y );"
-		Emit "BBOBJECT  (*SendMessage)( BBOBJECT m,BBOBJECT s );"
+		Emit "BBOBJECT  (*SendMessage)( BBOBJECT o,BBOBJECT m,BBOBJECT s );"
 		Emit "BBINTERFACETABLE itable;"
 		Emit "void*     extra;"
 		Emit "void*     reserved;"
@@ -3135,7 +3135,7 @@ End Rem
 		End If
 
 		If classHasFunction(classDecl, "SendMessage") Then
-			EmitClassStandardMethodDebugScope("SendMessage", "(:Object):Object", "_" + classidForFunction(classDecl, "SendMessage") + "_SendMessage")
+			EmitClassStandardMethodDebugScope("SendMessage", "(:Object, :Object):Object", "_" + classidForFunction(classDecl, "SendMessage") + "_SendMessage")
 			'Emit "_" + classid + "_SendMessage,"
 		End If
 
