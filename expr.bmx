@@ -705,11 +705,18 @@ Type TNewObjectExpr Extends TExpr
 		If Not objTy
 			Err "Expression is not a class."
 		EndIf
+		
+		' 
+		If objTy.instance Then
+			instanceExpr = New TSelfExpr.Semant()
+		End If
 
 		classDecl=objTy.classDecl
 
-		If classDecl.IsInterface() Err "Cannot create instance of an interface."
-		If classDecl.IsAbstract() Err "Cannot create instance of an abstract class."
+		If Not instanceExpr Then
+			If classDecl.IsInterface() Err "Cannot create instance of an interface."
+			If classDecl.IsAbstract() Err "Cannot create instance of an abstract class."
+		End If
 		'If classDecl.IsTemplateArg() Err "Cannot create instance of a generic argument."
 		If classDecl.args And Not classDecl.instanceof Err "Cannot create instance of a generic class."
 
@@ -732,7 +739,7 @@ Type TNewObjectExpr Extends TExpr
 			
 			Local i:Int = 0
 			
-			While i < parts.length And parts[i] <> classDecl.IdentLower()
+			While i < parts.length And parts[i] <> classDecl.IdentLower() And parts[i] <> "self"
 				i :+ 1
 			Wend
 			
