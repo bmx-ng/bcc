@@ -3235,8 +3235,38 @@ End Rem
 		Local classid$=classDecl.munged
 		Local superid$=classDecl.superClass.actual.munged
 
+		' process nested functions for new
+		Local decl:TFuncDecl = classDecl.FindFuncDecl("new")
+		If decl And decl.scope = classDecl Then ' only our own New method, not any from superclasses
+			decl.Semant
+			' emit nested protos
+			For Local fdecl:TFuncDecl = EachIn decl._decls
+				EmitFuncDecl(fdecl, True, False)
+			Next
+			
+			' emit nested bodies
+			For Local fdecl:TFuncDecl = EachIn decl._decls
+				EmitFuncDecl(fdecl, False, False)
+			Next
+		End If
+
 		EmitClassDeclNew(classDecl)
 		
+		' process nested functions for delete
+		decl = classDecl.FindFuncDecl("delete")
+		If decl Then
+			decl.Semant
+			' emit nested protos
+			For Local fdecl:TFuncDecl = EachIn decl._decls
+				EmitFuncDecl(fdecl, True, False)
+			Next
+			
+			' emit nested bodies
+			For Local fdecl:TFuncDecl = EachIn decl._decls
+				EmitFuncDecl(fdecl, False, False)
+			Next
+		End If
+
 		If classHierarchyHasFunction(classDecl, "Delete") Then
 			EmitClassDeclDelete(classDecl)
 		End If
