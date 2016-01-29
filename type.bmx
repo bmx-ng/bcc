@@ -765,7 +765,7 @@ Type TObjectType Extends TType
 	End Method
 	
 	Method ToString$()
-		Return classDecl.ToString()
+		Return classDecl.ToTypeString()
 	End Method
 
 	Method OnCopy:TType()
@@ -1000,7 +1000,7 @@ Type TExternObjectType Extends TType
 	End Method
 	
 	Method ToString$()
-		Return classDecl.ToString()
+		Return classDecl.ToTypeString()
 	End Method
 
 	Method OnCopy:TType()
@@ -1055,7 +1055,7 @@ Type TFunctionPtrType Extends TType
 	End Method
 	
 	Method ToString$()
-		Return "Function Ptr"
+		Return func.ToTypeString()
 	End Method
 
 	Method OnCopy:TType()

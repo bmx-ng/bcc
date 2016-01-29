@@ -955,7 +955,7 @@ Type TCastExpr Extends TExpr
 		expr=expr.Semant()
 
 		Local src:TType=expr.exprType
-
+		
 		'equal?
 		If src.EqualsType( ty ) Return expr
 
@@ -1087,8 +1087,22 @@ Type TCastExpr Extends TExpr
 '		End If
 
 		If TFunctionPtrType(ty) And TInvokeExpr(expr) Then
-			exprType = ty
-			Return expr
+			' a function ptr to function ptr
+			If Not TInvokeExpr(expr).invokedWithBraces Then
+				src = New TFunctionPtrType
+				TFunctionPtrType(src).func = TInvokeExpr(expr).decl
+			
+				' signatures should match
+				If TFunctionPtrType(ty).func.EqualsFunc(TInvokeExpr(expr).decl) Then
+					exprType = ty
+					Return expr
+				End If
+			Else
+				' return type should be function ptr?
+				' TODO
+				exprType = ty
+				Return expr
+			End If
 		End If
 
 		'If TIntType(ty) And Not IsPointerType(ty, 0, TType.T_POINTER) And IsPointerType(src, 0, TType.T_POINTER) Then

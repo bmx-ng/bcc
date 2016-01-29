@@ -96,6 +96,9 @@ Type TDecl
 		Return ident
 	End Method
 	
+	Method ToTypeString:String()
+	End Method
+	
 	Method IsExtern:Int()
 		Return (attrs & DECL_EXTERN)<>0
 	End Method
@@ -260,6 +263,11 @@ Type TValDecl Extends TDecl
 		If ty Return t+":"+ty.ToString()
 		If declTy Return t+":"+declTy.ToString()
 		Return t+":?"
+	End Method
+
+	Method ToTypeString:String()
+		If ty Return ty.ToString()
+		If declTy Return declTy.ToString()
 	End Method
 
 	Method CopyInit:TExpr()
@@ -485,7 +493,6 @@ Type TArgDecl Extends TLocalDecl
 	Method ToString$()
 		Return Super.ToString()
 	End Method
-
 	
 End Type
 
@@ -1159,7 +1166,26 @@ Type TFuncDecl Extends TBlockDecl
 		EndIf
 		Return q+"("+t+")"
 	End Method
-	
+
+	Method ToTypeString:String()
+		Local t$
+		For Local decl:TArgDecl=EachIn argDecls
+			If t t:+","
+			t:+decl.ToTypeString()
+		Next
+		Local q$
+		If Not IsCtor() Then
+			If retType
+				If Not TVoidType(retType) Then
+					q:+retType.ToString()
+				End If
+			Else If retTypeExpr 
+				q:+retTypeExpr.ToString()
+			EndIf
+		End If
+		Return q+"("+t+")"
+	End Method
+
 	Method IsBuiltIn:Int()
 		Return (attrs & FUNC_BUILTIN)<>0
 	End Method
@@ -1193,6 +1219,7 @@ Type TFuncDecl Extends TBlockDecl
 	End Method
 
 	Method OnSemant()
+
 		'semant ret type
 		If Not retTypeExpr Then
 			If Not retType Then ' may have previously been set (if this is a function pointer)
@@ -1400,6 +1427,10 @@ Type TClassDecl Extends TScopeDecl
 		End If
 		If t t="<"+t+">"
 		Return ident+t
+	End Method
+
+	Method ToTypeString:String()
+		Return ident
 	End Method
 Rem	
 	Method GenClassInstance:TClassDecl( instArgs:TClassDecl[] )
