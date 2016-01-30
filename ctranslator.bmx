@@ -4373,6 +4373,9 @@ End If
 					Else
 If Not gdecl.IsExtern() Then
 						Emit TransRefType( gdecl.ty, "WW" )+" "+gdecl.munged+";"
+Else
+					' delcare in source for any references to it locally in this module
+					Emit "extern "+TransRefType( gdecl.ty, "WW" )+" "+gdecl.munged+";"
 End If
 					End If
 				Else
