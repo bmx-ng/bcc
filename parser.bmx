@@ -3856,7 +3856,7 @@ End Rem
 	env.InsertDecl New TConstDecl.Create( "linux",New TIntType,New TConstExpr.Create( New TIntType,(opt_platform="linux" Or opt_platform="android" Or opt_platform="raspberrypi")),0 )
 	env.InsertDecl New TConstDecl.Create( "linuxx86",New TIntType,New TConstExpr.Create( New TIntType,(opt_platform="linux" Or opt_platform="android") And opt_arch="x86"),0 )
 	env.InsertDecl New TConstDecl.Create( "linuxx64",New TIntType,New TConstExpr.Create( New TIntType,(opt_platform="linux" Or opt_platform="android") And opt_arch="x64"),0 )
-	env.InsertDecl New TConstDecl.Create( "linuxARM",New TIntType,New TConstExpr.Create( New TIntType, ((opt_platform="android" Or opt_platform="linux") And (opt_arch="arm" Or opt_arch="armeabi" Or opt_arch="armeabiv7a" Or opt_arch="arm64v8a")) Or (opt_platform="raspberrypi" And opt_arch="arm")),0 )
+	env.InsertDecl New TConstDecl.Create( "linuxarm",New TIntType,New TConstExpr.Create( New TIntType, ((opt_platform="android" Or opt_platform="linux") And (opt_arch="arm" Or opt_arch="armeabi" Or opt_arch="armeabiv7a" Or opt_arch="arm64v8a")) Or (opt_platform="raspberrypi" And opt_arch="arm")),0 )
 
 	' android
 	env.InsertDecl New TConstDecl.Create( "android",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="android" ),0 )
@@ -3895,7 +3895,7 @@ End Rem
 	env.InsertDecl New TConstDecl.Create( "littleendian",New TIntType,New TConstExpr.Create( New TIntType,opt_arch<>"ppc" ),0 )
 
 	' opengles target platform
-	env.InsertDecl New TConstDecl.Create( "opengles",New TIntType,New TConstExpr.Create( New TIntType, opt_platform="android" Or opt_platform="raspberrypi" Or opt_platform="emscripten" Or opt_platform="ios" ),0 )
+	env.InsertDecl New TConstDecl.Create( "opengles",New TIntType,New TConstExpr.Create( New TIntType, opt_platform="android" Or opt_platform="raspberrypi" Or opt_platform="emscripten" Or opt_platform="ios" Or (opt_platform="linux" And opt_arch="arm") ),0 )
 
 	' new compiler
 	env.InsertDecl New TConstDecl.Create( "bmxng",New TIntType,New TConstExpr.Create( New TIntType, True ),0 )
