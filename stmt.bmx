@@ -505,8 +505,8 @@ Type TForStmt Extends TLoopStmt
 		If updateCastTypes Then
 			' ty in the casts are currently Null - we didn't know at the time of creating the statement, what the variable type was.
 			' Now we do, so we'll fill in the gaps.
-			TCastExpr(TBinaryCompareExpr(expr).rhs).ty = TVarExpr(TAssignStmt(init).lhs).exprType.Copy()
-			TCastExpr(TBinaryMathExpr(TAssignStmt(incr).rhs).rhs).ty = TVarExpr(TAssignStmt(init).lhs).exprType.Copy()
+			TCastExpr(TBinaryCompareExpr(expr).rhs).ty = TAssignStmt(init).lhs.exprType.Copy()
+			TCastExpr(TBinaryMathExpr(TAssignStmt(incr).rhs).rhs).ty = TAssignStmt(init).lhs.exprType.Copy()
 		End If
 
 		expr=expr.Semant()
