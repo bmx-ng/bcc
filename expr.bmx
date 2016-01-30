@@ -952,6 +952,13 @@ Type TCastExpr Extends TExpr
 		If exprType Return Self
 
 		ty=ty.Semant()
+		
+		If TInvokeExpr(expr) Then
+			TInvokeExpr(expr).isRhs = True
+		Else If TIdentExpr(expr) Then
+			TIdentExpr(expr).isRhs = True
+		End If
+		
 		expr=expr.Semant()
 
 		Local src:TType=expr.exprType

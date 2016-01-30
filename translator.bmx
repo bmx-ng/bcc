@@ -671,6 +671,8 @@ End Rem
 		
 		If ((decl.attrs & FUNC_PTR) Or (expr.decl.attrs & FUNC_PTR)) And Not expr.InvokedWithBraces Return decl.munged
 		
+		If Not expr.InvokedWithBraces And expr.IsRhs And Not expr.args Return decl.munged
+		
 		If decl.munged.StartsWith( "$" ) Return TransIntrinsicExpr( decl,Null,expr.args )
 		
 		If processingReturnStatement = 1 Then
