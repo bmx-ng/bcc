@@ -2006,6 +2006,7 @@ Type TIdentExpr Extends TExpr
 	Field static:Int
 	Field isArg:Int
 	Field isRhs:Int
+	Field fixedScope:Int
 	
 	Field _identLower:String
 
@@ -2045,10 +2046,10 @@ Type TIdentExpr Extends TExpr
 				expr=expr.Semant()
 				scope=expr.exprType.GetClass()
 				If Not scope Then
-					DebugStop
 					Err "Expression has no scope"
 				End If
 			End If
+			fixedScope = True
 		Else
 			scope=_env
 			' determines if access is via static (like Function, or via a Type)
@@ -2107,6 +2108,26 @@ Type TIdentExpr Extends TExpr
 
 		'Local scope:TScopeDecl=IdentScope()
 		Local vdecl:TValDecl=scope.FindValDecl( IdentLower(), static )
+		
+		If TLocalDecl( vdecl )
+			' local variable should (at least) be in the same function scope.
+			If vdecl.FuncScope() <> scope.FuncScope() Then
+				vdecl = Null
+			End If
+		End If
+		
+		If vdecl And fixedScope And static Then
+			If TClassDecl(vdecl.scope) And TClassDecl(scope) Then
+				If Not TClassDecl(scope).ExtendsClass(TClassDecl(vdecl.scope)) Then
+					vdecl = Null
+				End If
+			Else
+				If vdecl.scope <> scope Then
+					vdecl = Null
+				End If
+			End If
+		End If
+		
 		If vdecl
 
 			If TConstDecl( vdecl )
@@ -2122,6 +2143,7 @@ Type TIdentExpr Extends TExpr
 				If expr Return New TMemberVarExpr.Create( expr,TVarDecl( vdecl ) ).Semant()
 '				If expr Return New TMemberVarExpr.Create( expr,TVarDecl( vdecl ) ).Semant()
 '				If scope<>_env Or Not _env.FuncScope() Or _env.FuncScope().IsStatic() Err "Field '"+ident+"' cannot be accessed from here."
+
 			EndIf
 
 			Return New TVarExpr.Create( TVarDecl( vdecl ) ).Semant()
