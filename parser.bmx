@@ -3032,7 +3032,7 @@ End Rem
 				_app.fileimports.AddLast filepath
 			End If
 		Else
-			If filepath.EndsWith(".h") 
+			If filepath.EndsWith(".h") Or filepath.EndsWith(".hpp") Or filepath.EndsWith(".hxx") Then
 				If filepath.Find("*") = -1 Then
 					_app.headers.AddLast filepath
 				End If
