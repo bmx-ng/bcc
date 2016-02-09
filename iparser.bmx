@@ -274,8 +274,14 @@ Type TIParser
 							class.attrs :| DECL_EXTERN | CLASS_INTERFACE
 							
 							ApplyFunctionAttributes(class, DECL_EXTERN | DECL_ABSTRACT)
+						Else If CParse("EIW")
+							class.attrs :| DECL_EXTERN | CLASS_INTERFACE | DECL_API_WIN32
+							
+							ApplyFunctionAttributes(class, DECL_EXTERN | DECL_ABSTRACT | DECL_API_WIN32)
 						Else If CParse("ES")
 							class.attrs :| DECL_EXTERN | CLASS_STRUCT
+						Else If CParse("ESW")
+							class.attrs :| DECL_EXTERN | CLASS_STRUCT | DECL_API_WIN32 
 						End If
 'DebugStop
 						If CParse( "=" )

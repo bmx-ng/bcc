@@ -4005,6 +4005,10 @@ End Rem
 			Else If classDecl.IsStruct() Then
 				flags :+ "S"
 			End If
+			
+			If classDecl.attrs & DECL_API_WIN32 Then
+				flags :+ "W"
+			End If
 
 			Emit "}" + flags + "=0", False
 		End If
