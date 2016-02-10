@@ -2251,6 +2251,9 @@ Type TIdentExpr Extends TExpr
 			If scope2.scope Then
 				fdecl = scope2.scope.FindFuncDecl( IdentLower(),args )
 			End If
+		Else If static And Not fdecl And _env.classScope() Then
+			' try searching from our class parent scope
+			fdecl = _env.classScope().scope.FindFuncDecl( IdentLower(),args )
 		End If
 
 		' couldn't find it? try a global search
