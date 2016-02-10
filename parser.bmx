@@ -2055,7 +2055,7 @@ End Rem
 		NextToke
 
 		If _tokeType=TOKE_STRINGLIT
-			Local api:String = ParseStringLit()
+			Local api:String = ParseStringLit().ToLower()
 			If api = "win32" Then
 				attrs:| DECL_API_WIN32
 			End If
@@ -2615,7 +2615,7 @@ End Rem
 			Else If _tokeType=TOKE_STRINGLIT
 				' "win32", etc
 				' TODO ? something with this??
-				Local api:String = ParseStringLit()
+				Local api:String = ParseStringLit().ToLower()
 				If api = "win32" Then
 					attrs :| DECL_API_WIN32
 				End If
