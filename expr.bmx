@@ -1211,8 +1211,8 @@ Type TCastExpr Extends TExpr
 		End If
 
 		If TVarPtrType(ty) Then
-			If Not TVarExpr(expr) And Not TMemberVarExpr(expr) Then
-				If Not TIndexExpr(expr) Or (TIndexExpr(expr) And Not TVarExpr(TIndexExpr(expr).expr) And Not TMemberVarExpr(TIndexExpr(expr).expr)) Then
+			If Not TVarExpr(expr) And Not TMemberVarExpr(expr) And Not (TStmtExpr(expr) And TIndexExpr(TStmtExpr(expr).expr)) Then
+				If Not TIndexExpr(expr) Or (TIndexExpr(expr) And Not TVarExpr(TIndexExpr(expr).expr) And Not TMemberVarExpr(TIndexExpr(expr).expr))  Then
 					Err "Subexpression for 'Ptr' must be a variable"
 				End If
 			End If
