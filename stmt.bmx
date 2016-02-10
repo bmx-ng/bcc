@@ -634,7 +634,9 @@ Type TReadDataStmt Extends TStmt
 			For Local i:Int = 0 Until args.length
 				args[i]=args[i].Semant()
 				
-				If Not TVarExpr(args[i]) And Not TMemberVarExpr(args[i]) And Not TIndexExpr(args[i]) Then
+				Local arg:TExpr = args[i]
+				
+				If Not TVarExpr(arg) And Not TMemberVarExpr(arg) And Not TIndexExpr(arg) And Not (TStmtExpr(arg) And TIndexExpr(TStmtExpr(arg).expr)) Then
 					Err "Expression must be a variable"
 				End If
 			Next
