@@ -150,6 +150,9 @@ Type TIParser
 		
 		
 		Select toker.Toke().ToLower()
+			Case "superstrict"
+				_mod.attrs :| MODULE_SUPERSTRICT
+				Continue
 			Case "import"
 			
 				toker.NextToke()

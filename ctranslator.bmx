@@ -241,14 +241,14 @@ Type TCTranslator Extends TTranslator
 		InternalErr
 	End Method
 
-	Method TransIfcType$( ty:TType )
+	Method TransIfcType$( ty:TType, isSuperStrict:Int = False )
 		Local p:String = TransSPointer(ty)
 		If ty And (ty._flags & TType.T_VAR) Then
 			p :+ " Var"
 		End If
 		
 		If TVoidType( ty ) Or Not ty Then
-			If opt_issuperstrict Then
+			If opt_issuperstrict Or isSuperStrict Then
 				Return p
 			Else
 				Return "%" + p
@@ -291,7 +291,7 @@ Type TCTranslator Extends TTranslator
 			End If
 			Return t + TObjectType(ty).classDecl.ident + p
 		End If
-		If TFunctionPtrType( ty ) Return TransIfcType(TFunctionPtrType(ty).func.retType) + TransIfcArgs(TFunctionPtrType(ty).func)
+		If TFunctionPtrType( ty ) Return TransIfcType(TFunctionPtrType(ty).func.retType, TFunctionPtrType(ty).func.ModuleScope().IsSuperStrict()) + TransIfcArgs(TFunctionPtrType(ty).func)
 		If TExternObjectType( ty ) Return ":" + TExternObjectType(ty).classDecl.ident + p
 		InternalErr
 	End Method
@@ -3761,7 +3761,7 @@ End Rem
 
 		func :+ funcDecl.ident
 
-		func :+ TransIfcType(funcDecl.retType)
+		func :+ TransIfcType(funcDecl.retType, funcDecl.ModuleScope().IsSuperStrict())
 
 		' function args
 		func :+ TransIfcArgs(funcDecl)
@@ -3789,7 +3789,7 @@ End Rem
 		' ensure the function has been semanted
 		funcDecl.Semant()
 
-		func :+ TransIfcType(funcDecl.retType)
+		func :+ TransIfcType(funcDecl.retType, funcDecl.ModuleScope().IsSuperStrict())
 
 		' function args
 		func :+ TransIfcArgs(funcDecl)
@@ -3894,7 +3894,7 @@ End Rem
 	End Method
 
 	Method EmitIfcFieldDecl(fieldDecl:TFieldDecl)
-		Local f:String = "." + fieldDecl.ident + TransIfcType(fieldDecl.ty)
+		Local f:String = "." + fieldDecl.ident + TransIfcType(fieldDecl.ty, fieldDecl.ModuleScope().IsSuperStrict())
 
 		f :+ "&"
 
@@ -4024,7 +4024,7 @@ End Rem
 
 		Local g:String = globalDecl.ident
 
-		g:+ TransIfcType(globalDecl.ty)
+		g:+ TransIfcType(globalDecl.ty, globalDecl.ModuleScope().IsSuperStrict())
 
 		g:+ "&"
 
@@ -4721,6 +4721,10 @@ End If
 	Method TransInterface(app:TAppDecl)
 
 		SetOutput("interface")
+
+		If app.mainModule.IsSuperStrict() Then
+			Emit "superstrict"
+		End If
 
 		' module info
 		For Local info:String = EachIn app.mainModule.modInfo
