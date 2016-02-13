@@ -1501,6 +1501,7 @@ t:+"NULLNULLNULL"
 			'If TDoubleVarPtrType( src ) Return Bra("*" + t)
 			'If TPointerType( src ) Return Bra("(BBDOUBLE)"+t)
 		Else If TStringType( dst )
+			If IsPointerType(src, 0, TType.T_POINTER) Return "bbStringFromSizet"+Bra( t )
 			If TBoolType( src ) Return "bbStringFromInt"+Bra( t )
 			If TByteType( src ) Return "bbStringFromInt"+Bra( t )
 			If TShortType( src ) Return "bbStringFromInt"+Bra( t )
