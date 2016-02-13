@@ -1167,7 +1167,9 @@ t:+"NULLNULLNULL"
 			If TNumericType(expr.expr.exprType) Then
 				' remove Var-ness first, if any
 				Local t:TType = expr.expr.exprType.Copy()
-				t._flags :~ TType.T_VAR
+				If t._flags & TType.T_VAR Then
+					t._flags :~ TType.T_VAR
+				End If
 
 				Return "sizeof" + Bra(TransType(t, ""))
 
