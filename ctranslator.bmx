@@ -383,34 +383,36 @@ Type TCTranslator Extends TTranslator
 		
 			If t t:+","
 			If i < args.length
-				If TNullExpr(args[i]) Then
+				Local arg:TExpr = args[i]
+				
+				If TNullExpr(arg) Then
 					t :+ TransValue(ty, Null)
 					Continue
-				Else If TIndexExpr(args[i]) And (ty._flags & TType.T_VAR) Then
+				Else If TIndexExpr(arg) And (ty._flags & TType.T_VAR) Then
 						t:+ "&"
 				Else If TStringType(ty) And (ty._flags & TType.T_VAR) Then
-					If TCastExpr(args[i]) And TStringType(TCastExpr(args[i]).expr.exprType) Then
+					If TCastExpr(arg) And TStringType(TCastExpr(arg).expr.exprType) Then
 						t:+ "&"
 					End If
 				Else If TArrayType(ty) And (ty._flags & TType.T_VAR) Then
-					If TVarExpr(args[i]) And TArrayType(TVarExpr(args[i]).exprType) And Not (args[i].exprType._flags & TType.T_VAR) Then
+					If TVarExpr(arg) And TArrayType(TVarExpr(arg).exprType) And Not (arg.exprType._flags & TType.T_VAR) Then
 						t:+ "&"
 					End If
 				Else If TObjectType(ty) And (ty._flags & TType.T_VAR) Then
-					If TVarExpr(args[i]) And TObjectType(TVarExpr(args[i]).exprType) And Not (args[i].exprType._flags & TType.T_VAR) Then
+					If (TVarExpr(arg) Or TMemberVarExpr(arg)) And TObjectType(arg.exprType) And Not (arg.exprType._flags & TType.T_VAR) Then
 						t:+ "&"
 					End If
 				Else If TFunctionPtrType(ty) Or IsPointerType(ty, TType.T_BYTE) Then
-					If TInvokeExpr(args[i]) And Not TInvokeExpr(args[i]).decl.IsMethod() Then
+					If TInvokeExpr(arg) And Not TInvokeExpr(arg).decl.IsMethod() Then
 						If IsPointerType(ty, TType.T_BYTE) Then
-							t:+ TInvokeExpr(args[i]).Trans()
+							t:+ TInvokeExpr(arg).Trans()
 						Else
 							' need to test scopes to see if we need to use the current instance's function or not
 							' use the "actual", not the copy we made for the function pointer.
-							Local fdecl:TFuncDecl = TFuncDecl(TInvokeExpr(args[i]).decl.actual)
+							Local fdecl:TFuncDecl = TFuncDecl(TInvokeExpr(arg).decl.actual)
 							If Not fdecl.munged Then
 								MungDecl fdecl
-								TInvokeExpr(args[i]).decl.munged = fdecl.munged
+								TInvokeExpr(arg).decl.munged = fdecl.munged
 							End If
 
 							If TClassDecl(fdecl.scope) Then
@@ -435,23 +437,23 @@ Type TCTranslator Extends TTranslator
 						Continue
 					End If
 					' some cases where we are passing a function pointer via a void* parameter.
-					If TCastExpr(args[i]) And TInvokeExpr(TCastExpr(args[i]).expr) And Not TInvokeExpr(TCastExpr(args[i]).expr).invokedWithBraces Then
-						If Not TInvokeExpr(TCastExpr(args[i]).expr).decl.munged Then
-							t:+ TInvokeExpr(TCastExpr(args[i]).expr).decl.actual.munged
+					If TCastExpr(arg) And TInvokeExpr(TCastExpr(arg).expr) And Not TInvokeExpr(TCastExpr(arg).expr).invokedWithBraces Then
+						If Not TInvokeExpr(TCastExpr(arg).expr).decl.munged Then
+							t:+ TInvokeExpr(TCastExpr(arg).expr).decl.actual.munged
 						Else
-							t:+ TInvokeExpr(TCastExpr(args[i]).expr).decl.munged
+							t:+ TInvokeExpr(TCastExpr(arg).expr).decl.munged
 						End If
 						Continue
 					End If
 
 					' Object -> Byte Ptr
-					If IsPointerType(ty, TType.T_BYTE) And TObjectType(args[i].exprType) Then
-						t:+ Bra("(BBBYTE*)" + Bra(args[i].Trans())) + "+" + Bra("sizeof(void*)")
+					If IsPointerType(ty, TType.T_BYTE) And TObjectType(arg.exprType) Then
+						t:+ Bra("(BBBYTE*)" + Bra(arg.Trans())) + "+" + Bra("sizeof(void*)")
 						Continue
 					End If
 
 				Else If IsNumericType(ty)  Then
-					If TObjectType(args[i].exprType) 'And TObjectType(args[i].exprType).classDecl = TClassDecl.nullObjectClass Then
+					If TObjectType(arg.exprType) 'And TObjectType(args[i].exprType).classDecl = TClassDecl.nullObjectClass Then
 					err "NULL"
 						t:+ "0"
 						Continue
@@ -459,15 +461,15 @@ Type TCTranslator Extends TTranslator
 				End If
 				
 				If decl.argDecls[i].castTo Then
-					t:+ Bra(decl.argDecls[i].castTo) + args[i].Trans()
+					t:+ Bra(decl.argDecls[i].castTo) + arg.Trans()
 				Else
 
-					Local tc:String = TransTemplateCast( ty,args[i].exprType,args[i].Trans() )
+					Local tc:String = TransTemplateCast( ty,arg.exprType,arg.Trans() )
 				
 					' *sigh*
 					' if var is going to var, remove any leading dereference character.
 					' rather hacky. Would be better to cast variable to varptr during semanting (well done if you can work out where!)
-					If args[i].exprType.EqualsType( ty.ActualType() ) And (ty._flags & TType.T_VAR) And (args[i].exprType._flags & TType.T_VAR) Then
+					If arg.exprType.EqualsType( ty.ActualType() ) And (ty._flags & TType.T_VAR) And (arg.exprType._flags & TType.T_VAR) Then
 						If tc.startswith("*") Then
 							tc = tc[1..]
 						End If
