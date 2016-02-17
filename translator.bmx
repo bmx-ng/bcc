@@ -194,9 +194,17 @@ Type TTranslator
 		funcs.AddLast fdecl
 	End Method
 	
-	Method MungDecl( decl:TDecl, allowDupes:Int = False )
+	Method MungDecl( decl:TDecl, addIfNotInScope:Int = False )
 
-		If decl.munged Return
+		If decl.munged Then
+			' ensure function args get into local scope correctly.
+			If addIfNotInScope Then
+				If Not mungScope.Contains( decl.munged ) Then
+					mungScope.Insert(decl.munged, decl)
+				End If
+			End If
+			Return
+		End If
 
 		Local fdecl:TFuncDecl=TFuncDecl( decl )
 		
@@ -236,7 +244,7 @@ Type TTranslator
 
 '		End Select
 'DebugStop
-		
+
 		If Not munged
 			If TLocalDecl( decl )
 				munged="bbt_"+id
@@ -254,7 +262,7 @@ Type TTranslator
 				End If
 			EndIf
 		EndIf
-		
+
 		'sanitize non-mung-able characters
 		munged = TStringHelper.Sanitize(munged)
 

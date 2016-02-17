@@ -2476,7 +2476,7 @@ End Rem
 		For Local i:Int=0 Until decl.argDecls.Length
 			Local arg:TArgDecl=decl.argDecls[i]
 			Local oarg:TArgDecl=odecl.argDecls[i]
-			MungDecl arg
+			MungDecl arg, True
 			If args args:+","
 			If Not TFunctionPtrType(oarg.ty) Then
 				If Not odecl.castTo Then
