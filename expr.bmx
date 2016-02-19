@@ -207,12 +207,12 @@ Type TExpr
 				Return New TStringType
 			End If
 		End If
-		If TDoubleType( lhs ) Or TDoubleType( rhs ) Return New TDoubleType
-		If TFloatType( lhs ) Or TFloatType( rhs ) Return New TFloatType
 		If IsPointerType( lhs, 0, TType.T_POINTER ) Or IsPointerType( rhs, 0, TType.T_POINTER ) Then
 			If IsPointerType( lhs, 0, TType.T_POINTER ) Return lhs
 			If IsPointerType( rhs, 0, TType.T_POINTER ) Return rhs
 		End If
+		If TDoubleType( lhs ) Or TDoubleType( rhs ) Return New TDoubleType
+		If TFloatType( lhs ) Or TFloatType( rhs ) Return New TFloatType
 		If TFunctionPtrType( lhs ) Or TFunctionPtrType( rhs ) Then
 			If TFunctionPtrType( lhs ) Return lhs
 			If TFunctionPtrType( rhs ) Return rhs
