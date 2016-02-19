@@ -132,6 +132,23 @@ Type TType
 
 		Return Null
 	End Function
+
+	Rem
+	bbdoc: map a var pointer to it's pointer equivalent (strip out var)
+	End Rem
+	Function MapVarPointerToPointerType:TType(ty:TType)
+		If ty = stringType Then
+			ty = ty.Copy()
+		End If
+
+		If (ty._flags & T_VARPTR) Then
+			ty._flags :~ T_VARPTR
+			
+			Return MapToPointerType(ty)
+		End If
+
+		Return ty
+	End Function
 	
 	Function MapPointerToPrim:TType(ty:TNumericType)
 		Local nty:TType = ty.Copy()

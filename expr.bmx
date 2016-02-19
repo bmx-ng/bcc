@@ -1859,6 +1859,8 @@ Type TArrayExpr Extends TExpr
 
 		exprs[0]=exprs[0].Semant()
 		Local ty:TType=exprs[0].exprType
+		' convert from varptr to ptr if required
+		ty = TType.MapVarPointerToPointerType(ty.Copy())
 		
 		If TInvokeExpr(exprs[0]) And Not TInvokeExpr(exprs[0]).invokedWithBraces Then
 			ty = New TFunctionPtrType
