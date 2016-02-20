@@ -25,7 +25,7 @@ SuperStrict
 
 Import "base.configmap.bmx"
 
-Const version:String = "0.73"
+Const version:String = "0.74"
 
 Const BUILDTYPE_APP:Int = 0
 Const BUILDTYPE_MODULE:Int = 1
@@ -93,6 +93,10 @@ Global opt_issuperstrict:Int = False
 ' gdbdebug
 '    output debug useful for gdb, #line <bmx line> <bmx file> 
 Global opt_gdbdebug:Int = False
+' 
+'    upgrade strict subclass method/function return types to match superstrict superclass.
+'    default is to auto-upgrade. Set flag if you want to throw an error - because of mismatch. (strict is Int, superstrict is Void).
+Global opt_strictupgrade:Int = True
 
 Global opt_filepath:String
 
@@ -134,6 +138,9 @@ Function ParseArgs:String[](args:String[])
 				opt_release=True
 			Case "h"
 				opt_threaded=True
+			Case "s"
+				' disable with option
+				opt_strictupgrade=False
 			Case "g"
 				count:+1
 				If count = args.length Then

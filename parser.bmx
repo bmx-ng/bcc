@@ -736,13 +736,8 @@ Type TParser
 			End If
 
 		Case "("
-			' nothing to see here.
-			If _module.IsSuperStrict() Then
-				' BaH : default return type when not defined
-				ty=New TVoidType
-			Else
-				ty=New TIntType
-			End If
+			' for Strict code, void will be converted to Int during semanting.
+			ty=New TVoidType
 		Default
 			If _module.IsSuperStrict() Err "Illegal type expression."
 			ty=New TIntType

@@ -1220,6 +1220,8 @@ Type TFuncDecl Extends TBlockDecl
 
 	Method OnSemant()
 
+		Local strictVoidToInt:Int = False
+		
 		'semant ret type
 		If Not retTypeExpr Then
 			If Not retType Then ' may have previously been set (if this is a function pointer)
@@ -1229,6 +1231,12 @@ Type TFuncDecl Extends TBlockDecl
 			End If
 		Else
 			retType=retTypeExpr.Semant()
+			
+			' for Strict code, a void return type becomes Int
+			If TVoidType(retType) And Not ModuleScope().IsSuperStrict() Then
+				strictVoidToInt = True
+				retType = New TIntType
+			End If
 		End If
 		
 		If TArrayType( retType ) And Not retType.EqualsType( retType.ActualType() )
@@ -1272,63 +1280,56 @@ Type TFuncDecl Extends TBlockDecl
 '			EndIf
 '		EndIf
 		
-		'append a return statement if necessary
-		If Not IsExtern() And Not TVoidType( retType ) And Not TReturnStmt( stmts.Last() )
-			If Not isCtor() And Not (isMethod() And IdentLower() = "delete") 
-				Local stmt:TReturnStmt
-			'If IsCtor()
-			'	stmt=New TReturnStmt.Create( Null )
-			'Else
-				stmt=New TReturnStmt.Create( New TConstExpr.Create( retType,"" ) )
-				stmt.generated = True
-			'EndIf
-				stmt.errInfo=errInfo
-				stmts.AddLast stmt
-			End If
-		EndIf
-
 		'check we exactly match an override
 		If sclass 'And IsMethod()
-'DebugStop
-'DebugLog ident + "..."
+
 			While sclass
 				Local errorDetails:String = ""
-'DebugLog "Checking Class : " + sclass.ident
+
 				Local found:Int
 				For Local decl:TFuncDecl=EachIn sclass.FuncDecls( )
-					'If Not decl.IsSemanted() Then
-					'	decl.Semant
-					'End If
 					
 					If decl.IdentLower() = IdentLower() Then
-'DebugLog "Method = " + decl.ident
-					
+
 						If IdentLower() = "new" Continue
 						If IdentLower() = "delete" Continue
-'If ident = "Create" DebugStop
+
 						found=True
 
 						If Not decl.IsSemanted() Then
 							decl.Semant
 						End If
 
-						If EqualsFunc( decl ) 
-'DebugLog "Found"
+						' check void return type strictness, and fail if appropriate.
+						Local voidReturnTypeFail:Int = False
+						' super has void return type... so it is superstrict (or inherited from)
+						If TVoidType(decl.retType) And TIntType(retType) Then
+							' if we are only strict, we may fail on type mismatch
+							If Not ModuleScope().IsSuperStrict() Then
+								' we have the option of upgrading our return type to match superstrict parent
+								If opt_strictupgrade And strictVoidToInt Then
+									retType = TType.voidType
+								Else
+									' otherwise...
+									voidReturnTypeFail = True
+								End If
+							End If
+						End If
+
+						If EqualsFunc( decl ) And Not voidReturnTypeFail
+
 							If Not retType.EqualsType( decl.retType ) And retType.ExtendsType( decl.retType ) Then
 								returnTypeSubclassed = True
 							End If
 							
 							overrides=TFuncDecl( decl.actual )
-						'If overrides.munged
-						'	If munged And munged<>overrides.munged
-						'		InternalErr
-						'	EndIf
-						'	munged=overrides.munged
-						'EndIf
 						Else
 							'prepare a more detailed error message
-							If (Not retType.EqualsType( decl.retType ) Or Not retType.ExtendsType( decl.retType )) Or (decl.retType And Not decl.retType.EqualsType( retType ))
+							If (Not retType.EqualsType( decl.retType ) Or Not retType.ExtendsType( decl.retType )) Or (decl.retType And Not decl.retType.EqualsType( retType )) Or voidReturnTypeFail
 								errorDetails :+ "Return type is ~q"+retType.ToString()+"~q, expected ~q"+decl.retType.ToString()+"~q. "
+								If voidReturnTypeFail Then
+									errorDetails :+ "You may have Strict type overriding SuperStrict type. "
+								End If
 							End If
 
 							If argDecls.Length <> decl.argDecls.Length
@@ -1357,7 +1358,20 @@ Type TFuncDecl Extends TBlockDecl
 				sclass=sclass.superClass
 			Wend
 		EndIf
-'If ident = "OnDebugStop" DebugStop
+
+		'append a return statement if necessary
+		If Not IsExtern() And Not TVoidType( retType ) And Not TReturnStmt( stmts.Last() )
+			If Not isCtor() And Not (isMethod() And IdentLower() = "delete") 
+				Local stmt:TReturnStmt
+
+				stmt=New TReturnStmt.Create( New TConstExpr.Create( retType,"" ) )
+				stmt.generated = True
+
+				stmt.errInfo=errInfo
+				stmts.AddLast stmt
+			End If
+		EndIf
+
 		attrs:|DECL_SEMANTED
 		
 		Super.OnSemant()

@@ -193,7 +193,13 @@ Type TReturnStmt Extends TStmt
 		Local fdecl:TFuncDecl=_env.FuncScope()
 		If expr
 			If fdecl.IsCtor() Err "Constructors may not return a value."
-			If TVoidType( fdecl.retType ) Err "Function can not return a value."
+			If TVoidType( fdecl.retType ) Then
+				Local errorText:String = "Function can not return a value."
+				If Not _env.ModuleScope().IsSuperStrict() Then
+					errorText :+ " You may have Strict type overriding SuperStrict type."
+				End If
+				Err errorText
+			End If
 			fRetType = fdecl.retType
 			expr=expr.SemantAndCast( fdecl.retType )
 		Else If fdecl.IsCtor()
