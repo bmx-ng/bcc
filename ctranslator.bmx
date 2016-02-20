@@ -3829,7 +3829,7 @@ End Rem
 		End If
 
 		If TStringType(expr.exprType) Then
-			Return "$" + Enquote(EscapeChars(expr.Eval()))
+			Return "$" + EscapeChars(BmxEnquote(expr.Eval()))
 		EndIf
 
 		If TArrayType(expr.exprType) Then
