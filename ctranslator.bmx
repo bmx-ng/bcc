@@ -247,12 +247,15 @@ Type TCTranslator Extends TTranslator
 			p :+ " Var"
 		End If
 		
-		If TVoidType( ty ) Or Not ty Then
+		If Not ty Then
 			If opt_issuperstrict Or isSuperStrict Then
 				Return p
 			Else
 				Return "%" + p
 			End If
+		End If
+		If TVoidType( ty ) Then
+			Return p
 		End If
 		If TByteType( ty ) Return "@" + p
 		If TShortType( ty ) Return "@@" + p
