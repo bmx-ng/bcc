@@ -789,6 +789,15 @@ End Rem
 
 		FreeVarsIfRequired()
 		
+		' if this is a Delete() method, we need to call the dtor first
+		Local funcScope:TFuncDecl = _env.FuncScope()
+		If funcScope And funcScope.IdentLower() = "delete" Then
+			Local classScope:TClassDecl = funcScope.ClassScope()
+			If classScope Then
+				EmitClassDeclDeleteDtor(classScope)
+			End If
+		End If
+		
 		Return t
 	End Method
 	
@@ -1580,6 +1589,9 @@ End Rem
 				Emit "#line " + infoArray[1] + " " + Enquote(infoArray[0])
 			End If
 		End If
+	End Method
+	
+	Method EmitClassDeclDeleteDtor( classDecl:TClassDecl )
 	End Method
 	
 End Type

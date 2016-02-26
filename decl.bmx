@@ -1074,6 +1074,7 @@ End Type
 Const FUNC_METHOD:Int=   $0001			'mutually exclusive with ctor
 Const FUNC_CTOR:Int=     $0002
 Const FUNC_PROPERTY:Int= $0004
+Const FUNC_DTOR:Int=     $0008
 Const FUNC_PTR:Int=      $0100
 Const FUNC_BUILTIN:Int = $0080
 Const FUNC_INIT:Int =    $0200
@@ -1194,6 +1195,10 @@ Type TFuncDecl Extends TBlockDecl
 		Return (attrs & FUNC_CTOR)<>0
 	End Method
 
+	Method IsDtor:Int()
+		Return (attrs & FUNC_DTOR)<>0
+	End Method
+
 	Method IsMethod:Int()
 		Return (attrs & FUNC_METHOD)<>0
 	End Method
@@ -1228,12 +1233,18 @@ Type TFuncDecl Extends TBlockDecl
 				retType = TType.voidType
 			Else If TIdentType(retType)
 				retType = retType.Semant()
+			Else
+				' for Strict code, a void return type becomes Int
+				If TVoidType(retType) And Not ModuleScope().IsSuperStrict() Then
+					strictVoidToInt = True
+					retType = New TIntType
+				End If
 			End If
 		Else
 			retType=retTypeExpr.Semant()
 			
 			' for Strict code, a void return type becomes Int
-			If TVoidType(retType) And Not ModuleScope().IsSuperStrict() Then
+			If TVoidType(retType) And Not ModuleScope().IsSuperStrict() And Not IsDTor() Then
 				strictVoidToInt = True
 				retType = New TIntType
 			End If
@@ -1361,7 +1372,7 @@ Type TFuncDecl Extends TBlockDecl
 
 		'append a return statement if necessary
 		If Not IsExtern() And Not TVoidType( retType ) And Not TReturnStmt( stmts.Last() )
-			If Not isCtor() And Not (isMethod() And IdentLower() = "delete") 
+			If Not isCtor() And Not isDtor()
 				Local stmt:TReturnStmt
 
 				stmt=New TReturnStmt.Create( New TConstExpr.Create( retType,"" ) )

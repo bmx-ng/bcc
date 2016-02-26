@@ -2525,8 +2525,11 @@ End Rem
 				End If
 
 				' Delete() return type should always be Void
-				If id.ToLower() = "delete" And TIntType(ty) Then
-					ty = New TVoidType
+				If id.ToLower() = "delete" Then
+					attrs:|FUNC_DTOR
+					If TIntType(ty) Then
+						ty = New TVoidType
+					End If
 				End If
 			EndIf
 		Else

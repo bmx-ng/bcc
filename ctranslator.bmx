@@ -3641,14 +3641,20 @@ End Rem
 		Next
 
 		' finally, call super delete
+		EmitClassDeclDeleteDtor(classDecl)
+
+		'
+		Emit "}"
+	End Method
+	
+	Method EmitClassDeclDeleteDtor( classDecl:TClassDecl )
+		Local superid$=classDecl.superClass.actual.munged
+		
 		If classDecl.superClass.ident = "Object" Or Not classHierarchyHasFunction(classDecl.superClass, "Delete") Then
 			Emit "bbObjectDtor(o);"
 		Else
 			Emit "_" + superid + "_Delete(o);"
 		End If
-
-		'
-		Emit "}"
 	End Method
 
 	Method TransFieldRef:String(decl:TFieldDecl, variable:String, exprType:TType = Null)
