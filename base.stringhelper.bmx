@@ -36,7 +36,7 @@ Type TStringHelper
 	'the string "replaceInvalidCharsWith"
 	'certain characters (German umlauts, French accents) are replaced
 	'with their basic characters (é = e)
-	Function Sanitize:String(value:String, replaceInvalidCharsWith:String="_")
+	Function Sanitize:String(value:String, replaceInvalidCharsWith:String="_", requiresAlphaPrefix:Int = False)
 		Local result:String = ""
 		Local char:String = ""
 
@@ -51,6 +51,12 @@ Type TStringHelper
 
 			'append the char - or the replacement
 			If char <> ""
+				If Not i Then
+					Local n:Int = char[0]
+					If n >= Asc("0") And n <= Asc("9") Then
+						result :+ replaceInvalidCharsWith
+					End If
+				End If
 				result :+ char
 			Else
 				result :+ replaceInvalidCharsWith

@@ -317,7 +317,7 @@ Function BuildHeaderName:String(path:String)
 		path = dir + "_" + file
 	End If
 	
-	Return TStringHelper.Sanitize(path)
+	Return TStringHelper.Sanitize(path, , True)
 End Function
 
 Rem
