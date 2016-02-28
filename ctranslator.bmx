@@ -1348,7 +1348,8 @@ t:+"NULLNULLNULL"
 
 			If TStringType(src) Then
 				Local tmp:String
-				If IsPointerType( dst, 0, TType.T_SHORT_PTR ) Then
+
+				If IsPointerType( dst, 0, TType.T_SHORT_PTR ) Or IsPointerType( dst, TType.T_SHORT, TType.T_PTR ) Then
 					tmp = CreateLocal2(NewPointerType(TType.T_SHORT), t)
 				Else
 					tmp = CreateLocal2(NewPointerType(TType.T_BYTE), t)
