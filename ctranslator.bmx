@@ -426,7 +426,7 @@ Type TCTranslator Extends TTranslator
 										Local obj:String = Bra("struct " + scope.munged + "_obj*")
 										Local class:String = "o->clas"
 				
-										t:+ class + "->fn_" + fdecl.ident
+										t:+ class + "->f_" + fdecl.ident
 									Else
 										t:+ fdecl.munged
 									End If
@@ -754,7 +754,7 @@ t:+"NULLNULLNULL"
 				Local scope:TScopeDecl = _env.ClassScope()
 				Local obj:String = Bra("struct " + scope.munged + "_obj*")
 				Local class:String = "o->clas"
-				Return class + "->fn_" + decl.ident
+				Return class + "->f_" + decl.ident
 			Else
 				Return decl.munged
 			End If
@@ -857,17 +857,17 @@ t:+"NULLNULLNULL"
 						Else
 							If cdecl.IsInterface() And reserved_methods.Find("," + decl.IdentLower() + ",") = -1 Then
 								Local ifc:String = Bra("(struct " + cdecl.munged + "_methods*)" + Bra("bbObjectInterface(" + TransSubExpr( lhs ) + ", " + "&" + cdecl.munged + "_ifc)"))
-								Return ifc + "->" + TransFuncPrefix(cdecl, decl) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
+								Return ifc + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, TransSubExpr( lhs ) )
 							Else
 								Local class:String = Bra(TransSubExpr( lhs )) + "->clas" + tSuper
-								Return class + "->" + TransFuncPrefix(cdecl, decl) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
+								Return class + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, TransSubExpr( lhs ) )
 							End If
 						End If
 					End If
 				Else If TNewObjectExpr(lhs) Then
 					Local cdecl:TClassDecl = TNewObjectExpr(lhs).classDecl
 					Local class:String = cdecl.munged
-					Return class + "." + TransFuncPrefix(cdecl, decl) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
+					Return class + "." + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, TransSubExpr( lhs ) )
 				Else If TCastExpr(lhs) Then
 					Local cdecl:TClassDecl = TObjectType(TCastExpr(lhs).ty).classDecl
 					Local obj:String = Bra(TransObject(cdecl))
@@ -881,10 +881,10 @@ t:+"NULLNULLNULL"
 
 						If cdecl.IsInterface() And reserved_methods.Find("," + decl.IdentLower() + ",") = -1 Then
 							Local ifc:String = Bra("(struct " + cdecl.munged + "_methods*)" + Bra("bbObjectInterface(" + obj + TransSubExpr( lhs ) + ", " + "&" + cdecl.munged + "_ifc)"))
-							Return ifc + "->" + TransFuncPrefix(cdecl, decl) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
+							Return ifc + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, TransSubExpr( lhs ) )
 						Else
 							Local class:String = Bra("(" + obj + TransSubExpr( lhs ) + ")->clas" + tSuper)
-							Return class + "->" + TransFuncPrefix(cdecl, decl) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
+							Return class + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, TransSubExpr( lhs ) )
 						End If
 					End If
 				Else If TMemberVarExpr(lhs) Then
@@ -905,7 +905,7 @@ t:+"NULLNULLNULL"
 
 						Local class:String = Bra("(" + obj + TransSubExpr( lhs ) + ")->clas" + tSuper)
 						'Local class:String = TransFuncClass(cdecl)
-						Return class + "->" + TransFuncPrefix(cdecl, decl) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
+						Return class + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, TransSubExpr( lhs ) )
 					End If
 				Else If TInvokeExpr(lhs) Then
 					' create a local variable of the inner invocation
@@ -918,7 +918,7 @@ t:+"NULLNULLNULL"
 
 					Local obj:String = Bra(TransObject(decl.scope))
 					Local class:String = Bra("(" + obj + lvar +")->clas" + tSuper)
-					Return class + "->" + TransFuncPrefix(decl.scope, decl)+ decl.ident+TransArgs( args,decl, lvar )
+					Return class + "->" + TransFuncPrefix(decl.scope, decl)+ FuncDeclMangleIdent(decl)+TransArgs( args,decl, lvar )
 
 					'Local obj:String = Bra("struct " + decl.scope.munged + "_obj*")
 					'Local class:String = Bra("(" + obj + TransSubExpr( lhs ) +")->clas" + tSuper)
@@ -941,7 +941,7 @@ t:+"NULLNULLNULL"
 						End If
 	
 						Local obj:String = lvar + "->clas" + tSuper
-						Return obj + "->" + TransFuncPrefix(decl.scope, decl)+ decl.ident+TransArgs( args,decl, lvar )
+						Return obj + "->" + TransFuncPrefix(decl.scope, decl)+ FuncDeclMangleIdent(decl)+TransArgs( args,decl, lvar )
 					End If
 
 				Else If TIndexExpr(lhs) Then
@@ -956,7 +956,7 @@ t:+"NULLNULLNULL"
 					'Local class:String = Bra("(" + obj + loc +")->clas" + tSuper)
 					'Local class:String = Bra("&" + decl.scope.munged)
 					Local class:String = Bra(loc + "->clas" + tSuper)
-					Return class + "->" + TransFuncPrefix(decl.scope, decl) + decl.ident+TransArgs( args,decl, loc )
+					Return class + "->" + TransFuncPrefix(decl.scope, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, loc )
 				Else
 					InternalErr
 				End If
@@ -989,7 +989,7 @@ t:+"NULLNULLNULL"
 				'Local obj:String = Bra("struct " + scope.munged + "_obj*")
 				'Local class:String = Bra("(" + obj + "o)->clas" + tSuper)
 				'Local class:String = Bra("&" + decl.scope.munged)
-				Return class + "->" + TransFuncPrefix(scope, decl) + decl.ident+TransArgs( args,decl, "o" )
+				Return class + "->" + TransFuncPrefix(scope, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, "o" )
 			Else
 				' Null test
 				If opt_debug Then
@@ -1034,9 +1034,9 @@ t:+"NULLNULLNULL"
 			Return ""
 		Else
 			If fdecl.IsMethod() Then
-				Return "md_"
+				Return "m_"
 			Else
-				Return "fn_"
+				Return "f_"
 			End If
 		End If
 	End Method
@@ -2278,11 +2278,11 @@ End Rem
 		Local pre:String
 
 		If decl.IsMethod() Then
-			id :+ "_md"
-			pre = "md_"
+			id :+ "_m"
+			pre = "m_"
 		Else
-			id :+ "_fn"
-			pre = "fn_"
+			id :+ "_f"
+			pre = "f_"
 		End If
 
 		Local bk:String = ";"
@@ -2291,7 +2291,7 @@ End Rem
 		'	pre = "extern "
 		'End If
 'DebugLog "id = " + id
-		Emit id + " " + pre + odecl.ident + ";"
+		Emit id + " " + pre + FuncDeclMangleIdent(odecl) + ";"
 
 '		If Not proto Or (proto And Not odecl.IsExtern()) Then
 Rem
@@ -2320,6 +2320,24 @@ Rem
 End Rem
 		'PopMungScope
 		EndLocalScope
+	End Method
+	
+	Method FuncDeclMangleIdent:String(fdecl:TFuncDecl)
+	
+		If Not fdecl.IsMethod() Or equalsBuiltInFunc(fdecl.classScope(), fdecl) Then
+			Return fdecl.ident
+		End If	
+	
+		If Not fdecl.mangled Then
+			fdecl.mangled = fdecl.ident + MangleMethodArgs(fdecl)
+		End If
+
+		Return fdecl.mangled		
+'		If fdecl.olIndex Then
+'			Return fdecl.ident + fdecl.olIndex
+'		Else
+'			Return fdecl.ident
+'		End If
 	End Method
 
 	Method EmitClassFuncProto( decl:TFuncDecl)
@@ -2377,9 +2395,9 @@ End Rem
 		Local pre:String = "typedef "
 		Local api:String
 		If decl.IsMethod() Then
-			id :+ "_md"
+			id :+ "_m"
 		Else
-			id :+ "_fn"
+			id :+ "_f"
 		End If
 		
 		If decl.attrs & DECL_API_WIN32 Then
@@ -2436,7 +2454,7 @@ End Rem
 
 	Method EmitFuncDecl( decl:TFuncDecl, proto:Int = False, classFunc:Int = False )
 		'If Not proto And decl.IsAbstract() Return
-		
+
 		Local tmpDebug:Int = opt_debug
 		If decl.isNoDebug() Then
 			opt_debug = False
@@ -2676,7 +2694,8 @@ End Rem
 					Local ignore:Int
 					Local link:TLink=list._head._succ
 					While link<>list._head
-						If fdecl.ident = TFuncDecl(link._value).ident Then
+						Local ofdecl:TFuncDecl = TFuncDecl(link._value)
+						If fdecl.ident = ofdecl.ident And fdecl.EqualsArgs(ofdecl) Then
 							If fdecl.overrides Then
 								If fdecl.returnTypeSubclassed Then
 									link._value = fdecl
@@ -2925,10 +2944,26 @@ End Rem
 
 	End Method
 	
+	Method equalsBuiltInFunc:Int(classDecl:TClassDecl, func:TFuncDecl, checked:Int = False)
+		If checked Or func.IdentLower() = "tostring" Or func.IdentLower() = "compare" Or func.IdentLower() = "sendmessage" Then
+			If classDecl.munged = "bbObjectClass" Then
+				For Local decl:TFuncDecl = EachIn classDecl.Decls()
+					If decl.IdentLower() = func.IdentLower() Then
+						Return decl.EqualsFunc(func)
+					End If
+				Next
+			End If
+			If classDecl.superClass Then
+				Return equalsBuiltInFunc(classDecl.superClass, func, True)
+			End If
+		End If
+		Return False
+	End Method
+	
 	Method classHasFunction:Int(classDecl:TClassDecl, func:String)
 		Local f:String = func.ToLower()
 		For Local decl:TFuncDecl = EachIn classDecl.Decls()
-			If decl.IdentLower() = f Then
+			If decl.IdentLower() = f And equalsBuiltInFunc(classDecl.superClass, decl) Then
 				Return True
 			End If
 		Next
@@ -4188,6 +4223,7 @@ End Rem
 '			Emit prefix + decl.munged+";"
 
 			'PushMungScope
+			funcMungs = New TMap
 			BeginLocalScope
 
 			For Local decl:TDecl=EachIn cdecl.Semanted()

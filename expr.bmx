@@ -686,7 +686,7 @@ Type TNewObjectExpr Extends TExpr
 		If exprType Return Self
 
 		Local it:TIdentType = TIdentType(ty)
-		Local iArgs:TExpr[] = CopyArgs(args)
+		Local iArgs:TExpr[] = SemantArgs(CopyArgs(args))
 
 		ty=ty.Semant(True)
 		If Not ty Then
@@ -2253,9 +2253,19 @@ Type TIdentExpr Extends TExpr
 			If scope2.scope Then
 				fdecl = scope2.scope.FindFuncDecl( IdentLower(),args )
 			End If
-		Else If static And Not fdecl And _env.classScope() Then
-			' try searching from our class parent scope
-			fdecl = _env.classScope().scope.FindFuncDecl( IdentLower(),args )
+		Else If static And Not fdecl Then
+			If _env.classScope() Then
+				' try searching from our class scope
+				'fdecl = _env.classScope().FindFuncDecl( IdentLower(),args )
+
+				If Not fdecl Then				
+					' try searching from our class parent scope
+					fdecl = _env.classScope().scope.FindFuncDecl( IdentLower(),args )
+				End If
+			Else If _env.ModuleScope() Then ' bah
+				' finally, try searching from our module scope
+				fdecl = _env.ModuleScope().FindFuncDecl( IdentLower(),args )
+			End If
 		End If
 
 		' couldn't find it? try a global search
