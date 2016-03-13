@@ -229,6 +229,22 @@ Type TTranslator
 		Return s
 	End Method
 
+	Method equalsBuiltInFunc:Int(classDecl:TClassDecl, func:TFuncDecl, checked:Int = False)
+		If checked Or func.IdentLower() = "tostring" Or func.IdentLower() = "compare" Or func.IdentLower() = "sendmessage" Or func.IdentLower() = "new"  Then
+			If classDecl.munged = "bbObjectClass" Then
+				For Local decl:TFuncDecl = EachIn classDecl.Decls()
+					If decl.IdentLower() = func.IdentLower() Then
+						Return decl.EqualsFunc(func)
+					End If
+				Next
+			End If
+			If classDecl.superClass Then
+				Return equalsBuiltInFunc(classDecl.superClass, func, True)
+			End If
+		End If
+		Return False
+	End Method
+
 	Method MungMethodDecl( fdecl:TFuncDecl )
 
 		If fdecl.munged Return
@@ -247,7 +263,11 @@ Type TTranslator
 		EndIf
 
 		If fdecl.scope Then
-			fdecl.munged = fdecl.scope.munged + "_" + fdecl.ident + MangleMethodArgs(fdecl)
+			fdecl.munged = fdecl.scope.munged + "_" + fdecl.ident
+			
+			If Not equalsBuiltInFunc(fdecl.classScope(), fdecl) Then
+				fdecl.munged :+ MangleMethodArgs(fdecl)
+			End If
 			
 			' fields are lowercase with underscore prefix.
 			' a function pointer with FUNC_METHOD is a field function pointer.
@@ -275,7 +295,9 @@ Type TTranslator
 
 		Local fdecl:TFuncDecl=TFuncDecl( decl )
 		
-		If fdecl And fdecl.IsMethod() 
+		' apply mangling to methods and New (ctors)
+		' but don't apply mangling to function pointers
+		If fdecl And (fdecl.IsMethod() Or fdecl.IsCtor()) And Not (fdecl.attrs & FUNC_PTR)
 			MungMethodDecl( fdecl )
 			Return
 		End If

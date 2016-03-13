@@ -405,11 +405,11 @@ Type TIntType Extends TNumericType
 	End Method
 	
 	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
-		If TObjectType( ty )
-			Local expr:TExpr=New TConstExpr.Create( Self,"" ).Semant()
-			Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
-			Return ctor And ctor.IsCtor()
-		EndIf
+		'If TObjectType( ty )
+		'	Local expr:TExpr=New TConstExpr.Create( Self,"" ).Semant()
+		'	Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True,,,,SCOPE_CLASS_HEIRARCHY )
+		'	Return ctor And ctor.IsCtor()
+		'EndIf
 		If _flags & T_VARPTR And (TIntType(ty) <> Null Or IsPointerType(ty, 0, T_POINTER)) Return True
 		Return (widensTest And WidensToType(ty)) Or (Not widensTest And TNumericType( ty )<>Null) Or (Not noExtendString And TStringType( ty )<>Null)
 	End Method
@@ -464,11 +464,11 @@ Type TUIntType Extends TNumericType
 	End Method
 	
 	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
-		If TObjectType( ty )
-			Local expr:TExpr=New TConstExpr.Create( Self,"" ).Semant()
-			Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
-			Return ctor And ctor.IsCtor()
-		EndIf
+		'If TObjectType( ty )
+		'	Local expr:TExpr=New TConstExpr.Create( Self,"" ).Semant()
+		'	Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
+		'	Return ctor And ctor.IsCtor()
+		'EndIf
 		If _flags & T_VARPTR And (TUIntType(ty) <> Null Or IsPointerType(ty, 0, T_POINTER)) Return True
 		Return (widensTest And WidensToType(ty)) Or (Not widensTest And TNumericType( ty )<>Null) Or (Not noExtendString And TStringType( ty )<>Null) 'Or TIntVarPtrType( ty )<> Null
 	End Method
@@ -539,11 +539,11 @@ Type TSizeTType Extends TNumericType
 	End Method
 	
 	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
-		If TObjectType( ty )
-			Local expr:TExpr=New TConstExpr.Create( Self,"" ).Semant()
-			Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
-			Return ctor And ctor.IsCtor()
-		EndIf
+		'If TObjectType( ty )
+		'	Local expr:TExpr=New TConstExpr.Create( Self,"" ).Semant()
+		'	Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
+		'	Return ctor And ctor.IsCtor()
+		'EndIf
 		If _flags & T_VARPTR And (TSizeTType(ty) <> Null Or IsPointerType(ty, 0, T_POINTER)) Return True
 		Return (widensTest And WidensToType(ty)) Or (Not widensTest And TNumericType( ty )<>Null) Or (Not noExtendString And TStringType( ty )<>Null) 'Or TIntVarPtrType( ty )<> Null
 	End Method
@@ -633,11 +633,11 @@ Type TByteType Extends TNumericType
 	End Method
 	
 	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
-		If TObjectType( ty )
-			Local expr:TExpr=New TConstExpr.Create( Self,"" ).Semant()
-			Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
-			Return ctor And ctor.IsCtor()
-		EndIf
+		'If TObjectType( ty )
+		'	Local expr:TExpr=New TConstExpr.Create( Self,"" ).Semant()
+		'	Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
+		'	Return ctor And ctor.IsCtor()
+		'EndIf
 		If (_flags & T_VARPTR) And (TByteType(ty) <> Null Or IsPointerType(ty, 0, T_POINTER)) Return True
 		Return (widensTest And WidensToType(ty)) Or (Not widensTest And TNumericType( ty )<>Null) Or (Not noExtendString And TStringType( ty )<>Null) 'Or TByteVarPtrType( ty )<> Null
 	End Method
@@ -716,11 +716,11 @@ Type TShortType Extends TNumericType
 	End Method
 	
 	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
-		If TObjectType( ty )
-			Local expr:TExpr=New TConstExpr.Create( Self,"" ).Semant()
-			Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
-			Return ctor And ctor.IsCtor()
-		EndIf
+		'If TObjectType( ty )
+		'	Local expr:TExpr=New TConstExpr.Create( Self,"" ).Semant()
+		'	Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
+		'	Return ctor And ctor.IsCtor()
+		'EndIf
 		If _flags & T_VARPTR And (TShortType(ty) <> Null Or IsPointerType(ty, 0, T_POINTER)) Return True
 		Return (widensTest And WidensToType(ty)) Or (Not widensTest And TNumericType( ty )<>Null) Or (Not noExtendString And TStringType( ty )<>Null) 'Or TShortVarPtrType( ty )<> Null
 	End Method
@@ -795,11 +795,11 @@ Type TLongType Extends TNumericType ' BaH Long
 	End Method
 	
 	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
-		If TObjectType( ty )
-			Local expr:TExpr=New TConstExpr.Create( Self,"" ).Semant()
-			Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
-			Return ctor And ctor.IsCtor()
-		EndIf
+		'If TObjectType( ty )
+		'	Local expr:TExpr=New TConstExpr.Create( Self,"" ).Semant()
+		'	Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
+		'	Return ctor And ctor.IsCtor()
+		'EndIf
 		If _flags & T_VARPTR And (TLongType(ty) <> Null Or IsPointerType(ty, 0, T_POINTER)) Return True
 		Return (widensTest And WidensToType(ty)) Or (Not widensTest And TNumericType( ty )<>Null) Or (Not noExtendString And TStringType( ty )<>Null) 'Or TLongVarPtrType( ty )<> Null
 	End Method
@@ -845,11 +845,11 @@ Type TULongType Extends TNumericType
 	End Method
 	
 	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
-		If TObjectType( ty )
-			Local expr:TExpr=New TConstExpr.Create( Self,"" ).Semant()
-			Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
-			Return ctor And ctor.IsCtor()
-		EndIf
+		'If TObjectType( ty )
+		'	Local expr:TExpr=New TConstExpr.Create( Self,"" ).Semant()
+		'	Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
+		'	Return ctor And ctor.IsCtor()
+		'EndIf
 		If _flags & T_VARPTR And (TULongType(ty) <> Null Or IsPointerType(ty, 0, T_POINTER)) Return True
 		Return (widensTest And WidensToType(ty)) Or (Not widensTest And TNumericType( ty )<>Null) Or (Not noExtendString And TStringType( ty )<>Null) 'Or TLongVarPtrType( ty )<> Null
 	End Method
@@ -906,11 +906,11 @@ Type TFloatType Extends TDecimalType
 	End Method
 	
 	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
-		If TObjectType( ty )
-			Local expr:TExpr=New TConstExpr.Create( Self,"" ).Semant()
-			Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
-			Return ctor And ctor.IsCtor()
-		EndIf	
+		'If TObjectType( ty )
+		'	Local expr:TExpr=New TConstExpr.Create( Self,"" ).Semant()
+		'	Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
+		'	Return ctor And ctor.IsCtor()
+		'EndIf	
 		If _flags & T_VARPTR And (TFloatType(ty) <> Null Or IsPointerType(ty, 0, T_POINTER)) Return True
 		Return (widensTest And WidensToType(ty)) Or (Not widensTest And TNumericType( ty )<>Null) Or (Not noExtendString And TStringType( ty )<>Null) 'Or TFloatVarPtrType( ty )<> Null
 	End Method
@@ -957,11 +957,11 @@ Type TDoubleType Extends TDecimalType
 	End Method
 	
 	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
-		If TObjectType( ty )
-			Local expr:TExpr=New TConstExpr.Create( Self,"" ).Semant()
-			Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
-			Return ctor And ctor.IsCtor()
-		EndIf	
+		'If TObjectType( ty )
+		'	Local expr:TExpr=New TConstExpr.Create( Self,"" ).Semant()
+		'	Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
+		'	Return ctor And ctor.IsCtor()
+		'EndIf	
 		If _flags & T_VARPTR And (TDoubleType(ty) <> Null Or IsPointerType(ty, 0, T_POINTER)) Return True
 		Return (widensTest And WidensToType(ty)) Or (Not widensTest And TNumericType( ty )<>Null) Or (Not noExtendString And TStringType( ty )<>Null) 'Or TDoubleVarPtrType( ty )<> Null
 	End Method
@@ -1347,7 +1347,7 @@ Type TExternObjectType Extends TType
 		Else
 			Return False
 		EndIf
-		Local fdecl:TFuncDecl=GetClass().FindFuncDecl( op,Null,True )
+		Local fdecl:TFuncDecl=GetClass().FindFuncDecl( op,Null,True,,,,SCOPE_CLASS_HEIRARCHY )
 		Return fdecl And fdecl.IsMethod() And fdecl.retType.EqualsType( ty )
 	End Method
 	
@@ -1378,7 +1378,7 @@ Type TFunctionPtrType Extends TType
 	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
 		If TObjectType( ty )
 			Local expr:TExpr=New TConstExpr.Create( Self,"" ).Semant()
-			Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
+			Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True,,,,SCOPE_CLASS_HEIRARCHY )
 			Return ctor And ctor.IsCtor()
 		EndIf
 		Return IsPointerType( ty, 0, T_POINTER )<>Null

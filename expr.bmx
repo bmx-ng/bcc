@@ -348,6 +348,7 @@ Type TConstExpr Extends TExpr
 	Field ty:TType
 	Field value$
 	Field originalValue$
+	Field typeSpecific:Int
 
 	Method Create:TConstExpr( ty:TType,value$ )
 
@@ -414,11 +415,15 @@ Type TConstExpr Extends TExpr
 	End Method
 	
 	Method UpdateType(ty:TType)
+		typeSpecific = True
 		Create(ty, originalValue)
 	End Method
 
 	Method Copy:TExpr()
-		Return New TConstExpr.Create( ty,value )
+		Local e:TConstExpr = New TConstExpr.Create( ty,value )
+		e.originalValue = originalValue
+		e.typeSpecific = typeSpecific
+		Return e
 	End Method
 
 	Method ToString$()
@@ -720,14 +725,25 @@ Type TNewObjectExpr Extends TExpr
 		'If classDecl.IsTemplateArg() Err "Cannot create instance of a generic argument."
 		If classDecl.args And Not classDecl.instanceof Err "Cannot create instance of a generic class."
 
+		Local parts:String[]
+		If it Then
+			parts = it.ident.ToLower().Split(".")
+		End If
+
 		If classDecl.IsExtern()
 			Err "Cannot create instance of an extern type"
 			'If args Err "No suitable constructor found for class "+classDecl.ToString()+"."
-'		Else
-'DebugStop
-'			ctor=classDecl.FindFuncDecl( "new",args )
-'			If Not ctor	Err "No suitable constructor found for class "+classDecl.ToString()+"."
-'			args=CastArgs( args,ctor )
+		Else
+			' if the New Type doesn't have extra idents (like a create method), then don't use the args in the search.
+			' otherwise, the args are for the constructor.
+			If Not parts Or parts.length = 1 Then
+				ctor=classDecl.FindFuncDecl( "new",args,,,,,SCOPE_CLASS_HEIRARCHY )
+				If Not ctor	Err "No suitable constructor found for class "+classDecl.ToString()+"."
+				args=CastArgs( args,ctor )
+			Else
+				ctor=classDecl.FindFuncDecl( "new",,,,,,SCOPE_CLASS_HEIRARCHY )
+				If Not ctor	Err "No suitable constructor found for class "+classDecl.ToString()+"."
+			End If
 		EndIf
 
 		classDecl.attrs:|CLASS_INSTANCED
@@ -735,7 +751,7 @@ Type TNewObjectExpr Extends TExpr
 		exprType=ty
 		
 		If it Then
-			Local parts:String[] = it.ident.ToLower().Split(".")
+			'Local parts:String[] = it.ident.ToLower().Split(".")
 			
 			Local i:Int = 0
 			
@@ -754,7 +770,16 @@ Type TNewObjectExpr Extends TExpr
 				i :+ 1
 				
 				' find member function.method
-				Local fdecl:TFuncDecl = cdecl.FindFuncDecl(id, iArgs)
+				Local fdecl:TFuncDecl
+				Try
+					fdecl = cdecl.FindFuncDecl(id, iArgs,,,,True,SCOPE_CLASS_HEIRARCHY)
+				Catch errorMessage:String
+					If errorMessage.StartsWith("Compile Error") Then
+						Throw errorMessage
+					Else
+						' couldn't find an exact match, look elsewhere
+					End If
+				End Try
 				If fdecl Then
 					expr = New TInvokeMemberExpr.Create( expr,fdecl, iArgs ).Semant()
 					eType = expr.exprType
@@ -766,6 +791,7 @@ Type TNewObjectExpr Extends TExpr
 					End If
 					Continue
 				End If
+				
 				' find other member decl (field, etc)
 				Local decl:TVarDecl = TVarDecl(cdecl.GetDecl(id))
 				If decl Then
@@ -880,8 +906,19 @@ Type TInvokeSuperExpr Extends TExpr
 		If Not superClass Err "Type has no super class."
 		
 		args=SemantArgs( args )
-		origFuncDecl=classScope.FindFuncDecl(IdentLower(),args)
-		funcDecl=superClass.FindFuncDecl( IdentLower(),args )
+		Try
+			' get the local version of the method from local class scope
+			origFuncDecl=classScope.FindFuncDecl(IdentLower(),args,,,,True,SCOPE_CLASS_LOCAL)
+		Catch errorMessage:String
+			If errorMessage.StartsWith("Compile Error") Then
+				Throw errorMessage
+			Else
+				' if there isn't one, we'll just use a Super version of it anyway as a reference.
+				origFuncDecl=classScope.FindFuncDecl(IdentLower(),args,,,,,SCOPE_CLASS_HEIRARCHY)
+			End If
+		End Try
+
+		funcDecl=superClass.FindFuncDecl( IdentLower(),args,,,,,SCOPE_CLASS_HEIRARCHY )
 
 		If Not funcDecl Err "Can't find superclass method '"+ident+"'."
 
@@ -1015,7 +1052,7 @@ Type TCastExpr Extends TExpr
 				Else
 					InternalErr
 				EndIf
-				Local fdecl:TFuncDecl=src.GetClass().FindFuncDecl( op )
+				Local fdecl:TFuncDecl=src.GetClass().FindFuncDecl( op,,,,,,SCOPE_ALL )
 				expr=New TInvokeMemberExpr.Create( expr,fdecl ).Semant()
 
 			EndIf
@@ -2079,7 +2116,7 @@ Type TIdentExpr Extends TExpr
 		Return scope
 	End Method
 
-	Method IdentErr( )
+	Method IdentErr( errorDetails:String = Null )
 		If scope
 			Local close$
 			For Local decl:TDecl=EachIn scope.Decls()
@@ -2091,7 +2128,11 @@ Type TIdentExpr Extends TExpr
 				Err "Identifier '"+ident+"' not found - perhaps you meant '"+close+"'?"
 			EndIf
 		EndIf
-		Err "Identifier '"+ident+"' not found."
+		If errorDetails Then
+			Err errorDetails
+		Else
+			Err "Identifier '"+ident+"' not found."
+		End If
 	End Method
 
 	Method IdentNotFound()
@@ -2153,7 +2194,7 @@ Type TIdentExpr Extends TExpr
 
 		If op And op<>"="
 
-			Local fdecl:TFuncDecl=scope.FindFuncDecl( IdentLower() )
+			Local fdecl:TFuncDecl=scope.FindFuncDecl( IdentLower(),,,,,,SCOPE_ALL )
 			If Not fdecl IdentErr
 
 			If _env.ModuleScope().IsStrict() And Not fdecl.IsProperty() Err "Identifier '"+ident+"' cannot be used in this way."
@@ -2183,7 +2224,7 @@ Type TIdentExpr Extends TExpr
 		Local args:TExpr[]
 		If rhs args=[rhs]
 
-		Local fdecl:TFuncDecl=scope.FindFuncDecl( IdentLower(),args, , isArg, True )
+		Local fdecl:TFuncDecl=scope.FindFuncDecl( IdentLower(),args, , isArg, True,,SCOPE_ALL )
 
 		If fdecl
 			If _env.ModuleScope().IsStrict() And Not fdecl.IsProperty() And Not isArg And Not fdecl.maybeFunctionPtr Err "Identifier '"+ident+"' cannot be used in this way."
@@ -2230,15 +2271,33 @@ Type TIdentExpr Extends TExpr
 
 		_Semant
 
+		Local errorDetails:String
+
 		'Local scope:TScopeDecl=IdentScope()
+		Local initialScope:Int = SCOPE_ALL
+		If scope And TClassDecl(scope) Then
+			initialScope = SCOPE_CLASS_HEIRARCHY
+		End If
+		
 		Local fdecl:TFuncDecl
 		Try
-			fdecl=scope.FindFuncDecl( IdentLower(),args,,,,True )
+			fdecl=scope.FindFuncDecl( IdentLower(),args,,,,True,initialScope )
+'			Local decl:Object=scope.FindFuncDecl( IdentLower(),args,,,,True,SCOPE_ALL )
+'			If decl Then
+'				If TFuncDecl(decl) Then
+'					fdecl = TFuncDecl(decl)
+'				Else If TFuncDeclList(decl) Then
+'					If Not TFuncDeclList(decl).IsEmpty() Then
+'						fdecl = TFuncDecl(TFuncDeclList(decl).First())
+'					End If
+'				End If
+'			End If
 		Catch errorMessage:String
 			If errorMessage.StartsWith("Compile Error") Then
 				Throw errorMessage
 			Else
 				' couldn't find an exact match, look elsewhere
+				errorDetails = errorMessage
 			End If
 		End Try
 
@@ -2251,7 +2310,7 @@ Type TIdentExpr Extends TExpr
 			
 			' if fdecl was a method, this would be the Type's scope (ie. file/module)
 			If scope2.scope Then
-				fdecl = scope2.scope.FindFuncDecl( IdentLower(),args )
+				fdecl = scope2.scope.FindFuncDecl( IdentLower(),args,,,,,SCOPE_CLASS_HEIRARCHY )
 			End If
 		Else If static And Not fdecl Then
 			If _env.classScope() Then
@@ -2260,18 +2319,45 @@ Type TIdentExpr Extends TExpr
 
 				If Not fdecl Then				
 					' try searching from our class parent scope
-					fdecl = _env.classScope().scope.FindFuncDecl( IdentLower(),args )
+					Try
+						fdecl = _env.classScope().scope.FindFuncDecl( IdentLower(),args,,,,True,SCOPE_ALL )
+					Catch errorMessage:String
+						If errorMessage.StartsWith("Compile Error") Then
+							Throw errorMessage
+						Else
+							' couldn't find an exact match, look elsewhere
+							errorDetails = errorMessage
+						End If
+					End Try
 				End If
 			Else If _env.ModuleScope() Then ' bah
 				' finally, try searching from our module scope
-				fdecl = _env.ModuleScope().FindFuncDecl( IdentLower(),args )
+				Try
+					fdecl = _env.ModuleScope().FindFuncDecl( IdentLower(),args,,,,True,SCOPE_ALL )
+				Catch errorMessage:String
+					If errorMessage.StartsWith("Compile Error") Then
+						Throw errorMessage
+					Else
+						' couldn't find an exact match, look elsewhere
+						errorDetails = errorMessage
+					End If
+				End Try
 			End If
 		End If
 
 		' couldn't find it? try a global search
 		If Not fdecl Then
 			For Local mdecl:TModuleDecl = EachIn _appInstance.globalImports.Values()
-				fdecl=mdecl.FindFuncDecl( IdentLower(), args )
+				Try
+					fdecl=mdecl.FindFuncDecl( IdentLower(), args,,,,True,SCOPE_ALL )
+				Catch errorMessage:String
+					If errorMessage.StartsWith("Compile Error") Then
+						Throw errorMessage
+					Else
+						' couldn't find an exact match, look elsewhere
+						errorDetails = errorMessage
+					End If
+				End Try
 				If fdecl Exit
 			Next
 		End If
@@ -2300,7 +2386,7 @@ Type TIdentExpr Extends TExpr
 			Err "Illegal number of arguments for type conversion"
 		End If
 
-		If throwError IdentErr
+		If throwError IdentErr(errorDetails)
 	End Method
 
 	Method SemantScope:TScopeDecl()
