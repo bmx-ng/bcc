@@ -855,7 +855,12 @@ Type TIParser
 			EndIf
 		Forever
 		
-		Local funcDecl:TFuncDecl=New TFuncDecl.CreateF( id,ty,args,attrs )
+		Local funcDecl:TFuncDecl
+		If attrs & FUNC_CTOR Then
+			funcDecl = New TNewDecl.CreateF( id,ty,args,attrs )
+		Else
+			funcDecl = New TFuncDecl.CreateF( id,ty,args,attrs )
+		End If
 		
 		funcDecl.retType = ty
 		

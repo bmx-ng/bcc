@@ -1670,6 +1670,15 @@ Type TFuncDecl Extends TBlockDecl
 	
 End Type
 
+Type TNewDecl Extends TFuncDecl
+
+	Field chainedCtor:TNewExpr
+	
+	
+
+End Type
+
+
 'Const CLASS_INTERFACE:Int=1
 'Const CLASS_TEMPLATEARG:Int=2
 'Const CLASS_TEMPLATEINST:Int=4

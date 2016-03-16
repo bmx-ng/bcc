@@ -2764,7 +2764,7 @@ End Rem
 			superid=classDecl.superClass.actual.munged
 		End If
 
-		Emit "void _" + classid + "_New" + Bra(TransObject(classdecl) + " o") + ";"
+		'Emit "void _" + classid + "_New" + Bra(TransObject(classdecl) + " o") + ";"
 		
 		EmitClassDeclNewListProto(classDecl)
 		
@@ -3590,7 +3590,7 @@ End Rem
 	Method EmitClassDeclNew( classDecl:TClassDecl, fdecl:TFuncDecl )
 		Local classid$=classDecl.munged
 		Local superid$=classDecl.superClass.actual.munged
-Emit "// EmitClassDeclNew for " + classDecl.ident
+'Emit "// EmitClassDeclNew for " + classDecl.ident
 		Local t:String = "void _" 
 		
 		If fdecl.argDecls.Length Then
@@ -3634,45 +3634,61 @@ Emit "// EmitClassDeclNew for " + classDecl.ident
 		
 		Emit t + Bra(args) + " {"
 		
-		If classDecl.superClass.ident = "Object" Then
-			Emit "bbObjectCtor(o);"
+		Local newDecl:TNewDecl = TNewDecl(fdecl)
+		
+		' calling constructor?
+		If newDecl And newDecl.chainedCtor Then
+			mungdecl newDecl.chainedCtor.ctor
+			
+			Emit "_" + newDecl.chainedCtor.ctor.ClassScope().munged + "_" + newDecl.chainedCtor.ctor.ident + MangleMethodArgs(newDecl.chainedCtor.ctor) + TransArgs(newDecl.chainedCtor.args, newDecl.chainedCtor.ctor, "o") + ";"
 		Else
-			Emit "_" + superid + "_New(o);"
+			If classDecl.superClass.ident = "Object" Then
+				Emit "bbObjectCtor(o);"
+			Else
+				Emit "_" + superid + "_New(o);"
+			End If
 		End If
 
 		Emit "o->clas = (BBClass*)&" + classid + ";"
 
-		' field initialisation
-		For Local decl:TFieldDecl=EachIn classDecl.Decls()
-			Local fld:String
+		' only initialise fields if we are not chaining to a local (in our class) constructor.
+		' this prevents fields being re-initialised through the call-chain.
+		If Not newDecl.chainedCtor Or (newDecl.chainedCtor And classDecl <> newDecl.chainedCtor.ctor.scope) Then
 
-			' ((int*)((char*)o + 5))[0] =
-			fld :+ TransFieldRef(decl, "o")
-
-			If decl.init Then
-				If TObjectType(decl.ty) And TObjectType(decl.ty).classdecl.IsExtern() And TObjectType(decl.ty).classdecl.IsStruct() Then
-					' skip for uninitialised extern type
-					If Not isPointerType(decl.ty) And TConstExpr(decl.init) And Not TConstExpr(decl.init).value Then
-						Continue
+			' field initialisation
+			For Local decl:TFieldDecl=EachIn classDecl.Decls()
+			
+				Local fld:String
+	
+				' ((int*)((char*)o + 5))[0] =
+				fld :+ TransFieldRef(decl, "o")
+	
+				If decl.init Then
+					If TObjectType(decl.ty) And TObjectType(decl.ty).classdecl.IsExtern() And TObjectType(decl.ty).classdecl.IsStruct() Then
+						' skip for uninitialised extern type
+						If Not isPointerType(decl.ty) And TConstExpr(decl.init) And Not TConstExpr(decl.init).value Then
+							Continue
+						End If
+					End If
+	
+					' initial value
+					fld :+ "= " + decl.init.Trans() + ";";
+				Else
+					If TNumericType(decl.ty) Or TObjectType(decl.ty) Or IsPointerType(decl.ty, 0, TType.T_POINTER) Then
+						fld :+ "= 0;"
+					Else If TFunctionPtrType(decl.ty) Then
+						fld :+ "= &brl_blitz_NullFunctionError;"
+					Else If TStringType(decl.ty) Then
+						fld :+ "= &bbEmptyString;"
+					Else If TArrayType(decl.ty) Then
+						fld :+ "= &bbEmptyArray;"
 					End If
 				End If
-
-				' initial value
-				fld :+ "= " + decl.init.Trans() + ";";
-			Else
-				If TNumericType(decl.ty) Or TObjectType(decl.ty) Or IsPointerType(decl.ty, 0, TType.T_POINTER) Then
-					fld :+ "= 0;"
-				Else If TFunctionPtrType(decl.ty) Then
-					fld :+ "= &brl_blitz_NullFunctionError;"
-				Else If TStringType(decl.ty) Then
-					fld :+ "= &bbEmptyString;"
-				Else If TArrayType(decl.ty) Then
-					fld :+ "= &bbEmptyArray;"
-				End If
-			End If
-
-			Emit fld
-		Next
+	
+				Emit fld
+			Next
+		
+		End If
 
 		'Local decl:TFuncDecl = classDecl.FindFuncDecl("new",,,,,,SCOPE_CLASS_LOCAL)
 		If fdecl And (fdecl.scope = classDecl Or fdecl.argDecls.Length) Then ' only our own New method, not any from superclasses
@@ -3716,9 +3732,11 @@ Emit "// EmitClassDeclNew for " + classDecl.ident
 		
 		For Local fdecl:TFuncDecl = EachIn newDecls
 		
+			EmitClassDeclNewProto(classDecl, fdecl)
+		
 			' generate "objectNew" function if required
 			If fdecl.argDecls And fdecl.argDecls.length Then
-				EmitClassDeclNewProto(classDecl, fdecl)
+				EmitClassDeclObjectNewProto(classDecl, fdecl)
 			End If
 		
 		Next
@@ -3793,7 +3811,55 @@ Emit "// EmitClassDeclNew for " + classDecl.ident
 		
 	End Method
 
-	Method EmitClassDeclNewProto(classDecl:TClassDecl, fdecl:TFuncDecl)
+	Method EmitClassDeclNewProto( classDecl:TClassDecl, fdecl:TFuncDecl )
+		Local classid$=classDecl.munged
+		Local superid$=classDecl.superClass.actual.munged
+'Emit "// EmitClassDeclNew for " + classDecl.ident
+		Local t:String = "void _" 
+		
+		If fdecl.argDecls.Length Then
+			If classDecl = fdecl.scope Then
+				t :+ fdecl.munged
+			Else
+				t :+ classDecl.munged + "_" + fdecl.ident + MangleMethodArgs(fdecl)
+			End If
+		Else
+			t :+ classid + "_New"
+		End If
+		
+		'Find decl we override
+		Local odecl:TFuncDecl=fdecl
+		While odecl.overrides
+			odecl=odecl.overrides
+		Wend
+
+		Local args:String = TransObject(classdecl) + " o"
+
+		For Local i:Int=0 Until fdecl.argDecls.Length
+			Local arg:TArgDecl=fdecl.argDecls[i]
+			Local oarg:TArgDecl=odecl.argDecls[i]
+			MungDecl arg, True
+			If args args:+","
+			If Not TFunctionPtrType(oarg.ty) Then
+				If Not odecl.castTo Then
+					args:+TransType( oarg.ty, arg.munged )+" "+arg.munged
+				Else
+					args:+ oarg.castTo + " " + arg.munged
+				End If
+			Else
+				If Not odecl.castTo Then
+					args:+TransType( oarg.ty, arg.munged )
+				Else
+					args:+ oarg.castTo
+				End If
+			End If
+			If arg.ty.EqualsType( oarg.ty ) Continue
+		Next
+		
+		Emit t + Bra(args) + ";"
+	End Method
+	
+	Method EmitClassDeclObjectNewProto(classDecl:TClassDecl, fdecl:TFuncDecl)
 
 		Local t:String = TransObject(classdecl) + " _"
 		

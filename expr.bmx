@@ -2763,6 +2763,71 @@ Type TScopeExpr Extends TExpr
 	End Method
 End Type
 
+Type TNewExpr Extends TExpr
+	Field isSuper:Int
+	Field args:TExpr[]
+	Field ctor:TFuncDecl
+
+	Method Create:TNewExpr( args:TExpr[]=Null, isSuper:Int = False )
+		If args Then
+			Self.args=args
+		Else
+			Self.args = New TExpr[0]
+		End If
+		Self.isSuper = isSuper
+		Return Self
+	End Method
+
+	Method Semant:TExpr()
+
+		Local fdecl:TFuncDecl = _env.FuncScope()
+		If Not fdecl Or TNewDecl(fdecl) = Null Or Not _env.ClassScope() Then
+			Err "Call to constructor not valid in this context."
+		End If
+	
+		' must be first statement of New() method
+		Local stmt:TStmt = TStmt(fdecl.stmts.First())
+		
+		If TExprStmt(stmt) = Null Or TExprStmt(stmt).expr <> Self Then
+			Err "Call to constructor must be first statement in New()."
+		End If
+	
+		args=SemantArgs( args )
+		
+		' validate called constructor
+		Try
+			Local cDecl:TClassDecl = _env.ClassScope()
+			If isSuper Then
+				cDecl = cDecl.superClass
+			End If
+			ctor = cDecl.FindFuncDecl("new",args,,,,True,SCOPE_CLASS_HEIRARCHY )
+		Catch errorMessage:String
+			If errorMessage.StartsWith("Compile Error") Then
+				Throw errorMessage
+			Else
+				Err errorMessage
+			End If
+		End Try
+		
+		' TODO : expand to full recursive test
+		If ctor = fdecl Then
+			Err "Recursive constructor invocation."
+		End If
+		
+		ctor.Semant
+		
+		' attach to ctor
+		TNewDecl(fdecl).chainedCtor = Self
+		
+		Return Self
+	End Method
+
+	Method Trans$()
+		'Return _trans.TransFuncCallExpr( Self )
+	End Method
+
+End Type
+
 Type TNullExpr Extends TExpr
 
 	Method Create:TNullExpr(ty:TType)
