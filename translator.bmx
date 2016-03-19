@@ -229,12 +229,30 @@ Type TTranslator
 		Return s
 	End Method
 
+	Method equalsTorFunc:Int(classDecl:TClassDecl, func:TFuncDecl)
+		If func.IdentLower() = "new" Or func.IdentLower() = "delete" Then
+			Return True
+		End If
+		Return False
+	End Method
+
 	Method equalsBuiltInFunc:Int(classDecl:TClassDecl, func:TFuncDecl, checked:Int = False)
-		If checked Or func.IdentLower() = "tostring" Or func.IdentLower() = "compare" Or func.IdentLower() = "sendmessage" Or func.IdentLower() = "new"  Then
+		If func.equalsBuiltIn > -1 Then
+			Return func.equalsBuiltIn
+		End If
+	
+		If checked Or func.IdentLower() = "tostring" Or func.IdentLower() = "compare" Or func.IdentLower() = "sendmessage" Or func.IdentLower() = "new" Or func.IdentLower() = "delete" Then
 			If classDecl.munged = "bbObjectClass" Then
 				For Local decl:TFuncDecl = EachIn classDecl.Decls()
+					If Not decl.IsSemanted() Then
+						decl.Semant
+					End If
 					If decl.IdentLower() = func.IdentLower() Then
-						Return decl.EqualsFunc(func)
+						Local res:Int = decl.EqualsFunc(func)
+						If res Then
+							func.equalsBuiltIn = True
+						End If
+						Return res
 					End If
 				Next
 			End If
@@ -242,6 +260,7 @@ Type TTranslator
 				Return equalsBuiltInFunc(classDecl.superClass, func, True)
 			End If
 		End If
+		func.equalsBuiltIn = False
 		Return False
 	End Method
 

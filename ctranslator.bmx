@@ -856,7 +856,8 @@ t:+"NULLNULLNULL"
 							End If
 							Err "TODO extern types not allowed methods"
 						Else
-							If cdecl.IsInterface() And reserved_methods.Find("," + decl.IdentLower() + ",") = -1 Then
+
+							If cdecl.IsInterface() And Not equalsBuiltInFunc(cdecl, decl) Then
 								Local ifc:String = Bra("(struct " + cdecl.munged + "_methods*)" + Bra("bbObjectInterface(" + TransSubExpr( lhs ) + ", " + "&" + cdecl.munged + "_ifc)"))
 								Return ifc + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, TransSubExpr( lhs ) )
 							Else
@@ -880,7 +881,7 @@ t:+"NULLNULLNULL"
 							EmitDebugNullObjectError(TransSubExpr( lhs ))
 						End If
 
-						If cdecl.IsInterface() And reserved_methods.Find("," + decl.IdentLower() + ",") = -1 Then
+						If cdecl.IsInterface() And Not equalsBuiltInFunc(cdecl, decl) Then
 							Local ifc:String = Bra("(struct " + cdecl.munged + "_methods*)" + Bra("bbObjectInterface(" + obj + TransSubExpr( lhs ) + ", " + "&" + cdecl.munged + "_ifc)"))
 							Return ifc + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, TransSubExpr( lhs ) )
 						Else
@@ -1031,7 +1032,8 @@ t:+"NULLNULLNULL"
 
 	Method TransFuncPrefix:String(decl:TScopeDecl, fdecl:TFuncDecl)
 		Local ident:String = fdecl.ident
-		If Not decl Or decl.ident = "Object" Or ident = "ToString" Or ident = "Compare" Or ident = "SendMessage" Then
+
+		If Not decl Or decl.ident = "Object" Or equalsBuiltInFunc(fdecl.ClassScope(), fdecl)
 			Return ""
 		Else
 			If fdecl.IsMethod() Then
@@ -2695,7 +2697,7 @@ End Rem
 
 	Method BBClassClassFuncProtoBuildList( classDecl:TClassDecl, list:TList )
 
-		Local reserved:String = ",New,Delete,ToString,Compare,SendMessage,_reserved1_,_reserved2_,_reserved3_,".ToLower()
+		'Local reserved:String = ",New,Delete,ToString,Compare,SendMessage,_reserved1_,_reserved2_,_reserved3_,".ToLower()
 
 		If classDecl.superClass Then
 			BBClassClassFuncProtoBuildList(classDecl.superClass, list)
@@ -2711,7 +2713,8 @@ End Rem
 				If Not fdecl.IsSemanted()
 					fdecl.Semant()
 				End If
-				If reserved.Find("," + fdecl.IdentLower() + ",") = -1 Then
+
+				If Not equalsBuiltInFunc(classDecl, fdecl) And Not equalsTorFunc(classDecl, fdecl) Then
 				
 					Local ignore:Int
 					Local link:TLink=list._head._succ
@@ -2784,7 +2787,7 @@ End Rem
 			Emit "BBOBJECT _" + classid + "_SendMessage(" + TransObject(classdecl) + " o, BBOBJECT message, BBOBJECT source);"
 		End If
 
-		Local reserved:String = ",New,Delete,ToString,Compare,SendMessage,_reserved1_,_reserved2_,_reserved3_,".ToLower()
+		'Local reserved:String = ",New,Delete,ToString,Compare,SendMessage,_reserved1_,_reserved2_,_reserved3_,".ToLower()
 
 		classDecl.SemantParts()
 
@@ -2795,7 +2798,7 @@ End Rem
 			Local fdecl:TFuncDecl =TFuncDecl( decl )
 			If fdecl
 
-				If reserved.Find("," + fdecl.IdentLower() + ",") = -1 Then
+				If Not equalsBuiltInFunc(classDecl, fdecl) And Not equalsTorFunc(classDecl, fdecl) Then
 					EmitClassFuncProto( fdecl )
 					Continue
 				End If
@@ -2971,6 +2974,9 @@ End Rem
 	Method classHasFunction:Int(classDecl:TClassDecl, func:String)
 		Local f:String = func.ToLower()
 		For Local decl:TFuncDecl = EachIn classDecl.Decls()
+			If Not decl.IsSemanted() Then
+				decl.Semant
+			End If
 			If decl.IdentLower() = f And equalsBuiltInFunc(classDecl.superClass, decl) Then
 				Return True
 			End If
@@ -3104,7 +3110,7 @@ End Rem
 			s:+ TransDebugMetaData(decl.metadata)
 
 			Emit Enquote(s) + ","
-			If decl.IsMethod() Then
+			If decl.IsMethod() Or decl.IsCTor() Then 
 				Emit "&_" + decl.munged
 			Else
 				Emit "&" + decl.munged
@@ -3113,7 +3119,7 @@ End Rem
 	End Method
 
 	Method BBClassClassFuncsDebugScopeBuildList(classDecl:TClassDecl, list:TList)
-		Local reserved:String = ",New,Delete,ToString,Compare,SendMessage,_reserved1_,_reserved2_,_reserved3_,".ToLower()
+		'Local reserved:String = ",New,Delete,ToString,Compare,SendMessage,_reserved1_,_reserved2_,_reserved3_,".ToLower()
 
 		For Local decl:TDecl=EachIn classDecl.GetAllFuncDecls(Null, False)
 			Local fdecl:TFuncDecl =TFuncDecl( decl )
@@ -3124,7 +3130,8 @@ End Rem
 				If Not classDecl.IsInterface() And fdecl.IsAbstract() Then
 					Continue
 				End If
-				If reserved.Find("," + fdecl.IdentLower() + ",") = -1 Then
+
+				If Not equalsBuiltInFunc(classDecl, fdecl) Then
 				
 					Local ignore:Int
 					Local link:TLink=list._head._succ
@@ -3207,7 +3214,6 @@ End Rem
 	End Method
 
 	Method CountBBClassClassFuncsDebugScope(classDecl:TClassDecl, count:Int Var)
-		Local reserved:String = ",New,Delete,ToString,Compare,SendMessage,_reserved1_,_reserved2_,_reserved3_,".ToLower()
 
 		For Local decl:TDecl=EachIn classDecl.GetAllFuncDecls(Null, False)
 			Local fdecl:TFuncDecl =TFuncDecl( decl )
@@ -3215,7 +3221,8 @@ End Rem
 				If Not classDecl.IsInterface() And fdecl.IsAbstract() Then
 					Continue
 				End If
-				If reserved.Find("," + fdecl.IdentLower() + ",") = -1 Then
+
+				If Not equalsBuiltInFunc(classDecl, fdecl) Then
 					count :+ 1
 				End If
 			End If
@@ -3564,7 +3571,8 @@ End Rem
 		
 		'For Local decl:TFuncDecl = EachIn classDecl.Decls()
 		For Local decl:TFuncDecl = EachIn fdecls
-			If reserved.Find("," + decl.IdentLower() + ",") = -1 Then
+
+			If Not equalsBuiltInFunc(classDecl, decl) And Not equalsTorFunc(classDecl, decl) Then
 
 				MungDecl decl
 
@@ -4064,7 +4072,7 @@ End Rem
 		Local func:String
 
 		' method / function
-		If funcDecl.IsMethod() Then
+		If funcDecl.IsMethod() Or funcDecl.IsCTor() Then
 			func :+ "-"
 		Else
 			func :+ "+"
@@ -4269,13 +4277,14 @@ End Rem
 				Emit "-Delete()=" + Enquote("_" + classDecl.munged + "_Delete")
 			End If
 
-			Local reserved:String = ",New,Delete,_reserved1_,_reserved2_,_reserved3_,".ToLower()
+			'Local reserved:String = ",New,Delete,_reserved1_,_reserved2_,_reserved3_,".ToLower()
 
 			For Local decl:TDecl=EachIn classDecl.Decls()
 
 				Local fdecl:TFuncDecl=TFuncDecl( decl )
 				If fdecl
-					If reserved.Find("," + fdecl.IdentLower() + ",") = -1 Then
+
+					If Not equalsBuiltInFunc(classDecl, fdecl) Then
 						EmitIfcClassFuncDecl fdecl
 					End If
 					Continue

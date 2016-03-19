@@ -1369,6 +1369,8 @@ Type TFuncDecl Extends TBlockDecl
 	
 	Field mangled:String
 	
+	Field equalsBuiltIn:Int = -1
+	
 	Method CreateF:TFuncDecl( ident$,ty:TType,argDecls:TArgDecl[],attrs:Int )
 		Self.ident=ident
 		Self.retTypeExpr=ty
