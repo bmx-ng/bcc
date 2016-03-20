@@ -3459,7 +3459,7 @@ End Rem
 						
 							For Local f:TFuncDecl = EachIn fdecls
 								Mungdecl f
-								If f.ident = func.ident Then
+								If f.ident = func.ident And func.EqualsFunc(f) Then
 									Emit "_" + f.munged + ","
 									Exit
 								End If
