@@ -426,7 +426,7 @@ Type TCTranslator Extends TTranslator
 										Local obj:String = Bra("struct " + scope.munged + "_obj*")
 										Local class:String = "o->clas"
 				
-										t:+ class + "->f_" + fdecl.ident
+										t:+ class + "->f_" + fdecl.ident + MangleMethod(fdecl)
 									Else
 										t:+ fdecl.munged
 									End If
@@ -754,7 +754,7 @@ t:+"NULLNULLNULL"
 				Local scope:TScopeDecl = _env.ClassScope()
 				Local obj:String = Bra("struct " + scope.munged + "_obj*")
 				Local class:String = "o->clas"
-				Return class + "->f_" + decl.ident
+				Return class + "->f_" + decl.ident + MangleMethod(TFuncDecl(decl))
 			Else
 				Return decl.munged
 			End If
@@ -1269,7 +1269,7 @@ t:+"NULLNULLNULL"
 			If expr.classDecl = expr.ctor.scope Then
 				ctorMunged = expr.ctor.munged
 			Else
-				ctorMunged = expr.classDecl.actual.munged + "_" + expr.ctor.ident + MangleMethodArgs(expr.ctor)
+				ctorMunged = expr.classDecl.actual.munged + "_" + expr.ctor.ident + MangleMethod(expr.ctor)
 			End If
 
 			If expr.instanceExpr Then
@@ -2348,12 +2348,12 @@ End Rem
 	
 	Method FuncDeclMangleIdent:String(fdecl:TFuncDecl)
 
-		If Not fdecl.IsMethod() Or equalsBuiltInFunc(fdecl.classScope(), fdecl) Then
+		If (Not fdecl.ClassScope()) Or equalsBuiltInFunc(fdecl.classScope(), fdecl) Then
 			Return fdecl.ident
 		End If	
 	
 		If Not fdecl.mangled Then
-			fdecl.mangled = fdecl.ident + MangleMethodArgs(fdecl)
+			fdecl.mangled = fdecl.ident + MangleMethod(fdecl)
 		End If
 
 		Return fdecl.mangled		
@@ -3027,7 +3027,7 @@ End Rem
 			Emit "{"
 			Emit "BBDEBUGDECL_CONST,"
 			Emit Enquote(decl.ident) + ","
-			Emit Enquote(TransDebugScopeType(decl.ty) + TransDebugMetaData(decl.metadata)) + ","
+			Emit Enquote(TransDebugScopeType(decl.ty) + TransDebugMetaData(decl.metadata.metadataString)) + ","
 			
 			_appInstance.mapStringConsts(decl.value)
 			
@@ -3048,7 +3048,7 @@ End Rem
 			Emit "{"
 			Emit "BBDEBUGDECL_FIELD,"
 			Emit Enquote(decl.ident) + ","
-			Emit Enquote(TransDebugScopeType(decl.ty) + TransDebugMetaData(decl.metadata)) + ","
+			Emit Enquote(TransDebugScopeType(decl.ty) + TransDebugMetaData(decl.metadata.metadataString)) + ","
 
 			Local offset:String = ".field_offset=offsetof" + Bra("struct " + classDecl.munged + "_obj," + decl.munged)
 '			If WORD_SIZE = 8 Then
@@ -3107,7 +3107,7 @@ End Rem
 				s:+ TransDebugScopeType(decl.retType)
 			End If
 
-			s:+ TransDebugMetaData(decl.metadata)
+			s:+ TransDebugMetaData(decl.metadata.metadataString)
 
 			Emit Enquote(s) + ","
 			If decl.IsMethod() Or decl.IsCTor() Then 
@@ -3408,7 +3408,7 @@ End Rem
 		Else
 			Emit "BBDEBUGSCOPE_USERTYPE,"
 		End If
-		Emit EnQuote(classDecl.ident + TransDebugMetaData(classDecl.metadata)) + ","
+		Emit EnQuote(classDecl.ident + TransDebugMetaData(classDecl.metadata.metadataString)) + ","
 
 		Emit "{"
 		
@@ -3605,7 +3605,7 @@ End Rem
 			If classDecl = fdecl.scope Then
 				t :+ fdecl.munged
 			Else
-				t :+ classDecl.munged + "_" + fdecl.ident + MangleMethodArgs(fdecl)
+				t :+ classDecl.munged + "_" + fdecl.ident + MangleMethod(fdecl)
 			End If
 		Else
 			t :+ classid + "_New"
@@ -3648,7 +3648,7 @@ End Rem
 		If newDecl And newDecl.chainedCtor Then
 			mungdecl newDecl.chainedCtor.ctor
 			
-			Emit "_" + newDecl.chainedCtor.ctor.ClassScope().munged + "_" + newDecl.chainedCtor.ctor.ident + MangleMethodArgs(newDecl.chainedCtor.ctor) + TransArgs(newDecl.chainedCtor.args, newDecl.chainedCtor.ctor, "o") + ";"
+			Emit "_" + newDecl.chainedCtor.ctor.ClassScope().munged + "_" + newDecl.chainedCtor.ctor.ident + MangleMethod(newDecl.chainedCtor.ctor) + TransArgs(newDecl.chainedCtor.args, newDecl.chainedCtor.ctor, "o") + ";"
 		Else
 			If classDecl.superClass.ident = "Object" Then
 				Emit "bbObjectCtor(o);"
@@ -3758,7 +3758,7 @@ End Rem
 		If classDecl = fdecl.scope Then
 			funcMunged = fdecl.munged
 		Else
-			funcMunged = classDecl.munged + "_" + fdecl.ident + MangleMethodArgs(fdecl)
+			funcMunged = classDecl.munged + "_" + fdecl.ident + MangleMethod(fdecl)
 		End If
 
 		Local t:String = TransObject(classdecl) + " _" + funcMunged + "_ObjectNew"
@@ -3829,7 +3829,7 @@ End Rem
 			If classDecl = fdecl.scope Then
 				t :+ fdecl.munged
 			Else
-				t :+ classDecl.munged + "_" + fdecl.ident + MangleMethodArgs(fdecl)
+				t :+ classDecl.munged + "_" + fdecl.ident + MangleMethod(fdecl)
 			End If
 		Else
 			t :+ classid + "_New"
@@ -3874,7 +3874,7 @@ End Rem
 		If classDecl = fdecl.scope Then
 			t :+ fdecl.munged
 		Else
-			t :+ classDecl.munged + "_" + fdecl.ident + MangleMethodArgs(fdecl)
+			t :+ classDecl.munged + "_" + fdecl.ident + MangleMethod(fdecl)
 		End If
 		
 		t:+ "_ObjectNew"

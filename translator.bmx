@@ -217,7 +217,23 @@ Type TTranslator
 			Return s + "_" + TransMangleType(func.retType) + "_"
 		End If
 	End Method
-		
+
+	Method MangleMethod:String(fdecl:TFuncDecl)
+		If fdecl.IsMethod() Or fdecl.IsCtor() Then
+			Return MangleMethodArgs(fdecl)
+		Else
+			Return MangleMethodRetType(fdecl) + MangleMethodArgs(fdecl)
+		End If
+	End Method
+	
+	Method MangleMethodRetType:String(fdecl:TFuncDecl)
+		If fdecl.retType Then
+			Return "_" + TransMangleType(fdecl.retType)
+		Else
+			Return "_v"
+		End If
+	End Method
+	
 	Method MangleMethodArgs:String(fdecl:TFuncDecl)
 		Local s:String
 		For Local arg:TArgDecl = EachIn fdecl.argDecls
@@ -264,7 +280,7 @@ Type TTranslator
 		Return False
 	End Method
 
-	Method MungMethodDecl( fdecl:TFuncDecl )
+	Method MungFuncDecl( fdecl:TFuncDecl )
 
 		If fdecl.munged Return
 		
@@ -284,8 +300,8 @@ Type TTranslator
 		If fdecl.scope Then
 			fdecl.munged = fdecl.scope.munged + "_" + fdecl.ident
 			
-			If Not equalsBuiltInFunc(fdecl.classScope(), fdecl) Then
-				fdecl.munged :+ MangleMethodArgs(fdecl)
+			If Not equalsBuiltInFunc(fdecl.classScope(), fdecl) And Not fdecl.noMangle Then
+				fdecl.munged :+ MangleMethod(fdecl)
 			End If
 			
 			' fields are lowercase with underscore prefix.
@@ -316,8 +332,8 @@ Type TTranslator
 		
 		' apply mangling to methods and New (ctors)
 		' but don't apply mangling to function pointers
-		If fdecl And (fdecl.IsMethod() Or fdecl.IsCtor()) And Not (fdecl.attrs & FUNC_PTR)
-			MungMethodDecl( fdecl )
+		If fdecl And fdecl.ClassScope() And Not (fdecl.attrs & FUNC_PTR)
+			MungFuncDecl( fdecl )
 			Return
 		End If
 		

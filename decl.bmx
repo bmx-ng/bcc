@@ -78,6 +78,27 @@ Type TFuncDeclList Extends TList
 	End Method
 End Type
 
+Type TMetadata
+
+	Field metadataString:String
+
+	' key/value pairs
+	Field meta:TMap
+
+	Method InsertMeta(key:String, value:String)
+		If Not meta Then
+			meta = New TMap
+		End If
+		
+		meta.Insert(key, value)
+	End Method
+
+	Method HasMeta:Int(key:String)
+		Return meta And meta.Contains(key.ToLower())
+	End Method
+	
+End Type
+
 Type TDecl
 	Field ident$
 	Field munged$
@@ -85,7 +106,7 @@ Type TDecl
 	Field actual:TDecl
 	Field scope:TScopeDecl
 	Field attrs:Int
-	Field metadata:String
+	Field metadata:TMetadata = New TMetadata
 	
 	Field declImported:Int = False
 	Field generated:Int
@@ -1368,6 +1389,7 @@ Type TFuncDecl Extends TBlockDecl
 	Field returnTypeSubclassed:Int
 	
 	Field mangled:String
+	Field noMangle:Int
 	
 	Field equalsBuiltIn:Int = -1
 	
@@ -1403,6 +1425,7 @@ Type TFuncDecl Extends TBlockDecl
 		t.munged = munged
 		t.metadata = metadata
 		t.mangled = mangled
+		t.noMangle = noMangle
 		Return  t
 	End Method
 
@@ -1549,6 +1572,15 @@ Type TFuncDecl Extends TBlockDecl
 				If decl<>Self And EqualsArgs( decl )
 					Err "Duplicate declaration "+ToString()
 				EndIf
+				If noMangle Then
+					If decl<>Self Then
+						If decl.argDecls.Length = 0 Then
+							Err "You cannot apply NoMangle to the function, as another function with no arguments exists."
+						Else If decl.NoMangle Then
+							Err "Another function is already declared with NoMangle."
+						End If
+					End If
+				End If
 			Next
 		End If
 		

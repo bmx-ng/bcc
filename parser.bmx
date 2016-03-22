@@ -2448,14 +2448,15 @@ End Rem
 
 	'should return a specific "metadata object" ?
 	' metadata is in the form : {key key=value key="value"}
-	Method ParseMetaData:String()
-		Local metaDataString:String = ""
+	Method ParseMetaData:TMetadata()
+		Local meta:TMetadata = New TMetadata
+
 		SkipEols
 
 		Repeat
 			
-			If metaDataString Then
-				metaDataString :+ " "
+			If meta.metadataString Then
+				meta.metadataString :+ " "
 			End If
 			
 			Select _tokeType
@@ -2470,11 +2471,13 @@ End Rem
 			End Select
 			
 			'append current token to metaDataString
-			metaDataString :+ _toke
+			Local key:String = _toke
+			meta.metadataString :+ key
 
 			'read next token
 			NextToke()
 
+			Local value:String
 			' got a value
 			If CParse("=") Then
 				
@@ -2482,13 +2485,17 @@ End Rem
 					Err "Meta data must be literal constant"
 				End If
 				
-				metaDataString :+ "=" + _toke
+				value = _toke
+				meta.metadataString :+ "=" + value
 
 				'read next token
 				NextToke()
 			Else
-				metaDataString :+ "=1"	
+				value = "1"
+				meta.metadataString :+ "=1"	
 			End If
+			
+			meta.InsertMeta(key.ToLower(), value)
 			
 			'reached end of meta data declaration
 			If _toke="}" Then Exit
@@ -2498,7 +2505,7 @@ End Rem
 		NextToke()
 
 		'parse this into something
-		Return metaDataString
+		Return meta
 	End Method
 
 
@@ -2510,7 +2517,8 @@ End Rem
 		Local id$
 		Local ty:TType
 		Local meth:Int = attrs & FUNC_METHOD
-		Local meta:String
+		Local meta:TMetadata
+		Local noMangle:Int
 
 		If attrs & FUNC_METHOD
 			If _toke="new"
@@ -2615,6 +2623,14 @@ End Rem
 				'meta data for functions/methods
 				'print "meta for func/meth: "+id+ " -> "+ParseMetaData()
 				meta = ParseMetaData()
+				
+				If meta.HasMeta("nomangle") Then
+					If attrs & FUNC_METHOD Then
+						Err "Only functions can specify NoMangle"
+					Else
+						noMangle = True
+					End If
+				End If
 			Else If _tokeType=TOKE_STRINGLIT
 				' "win32", etc
 				' TODO ? something with this??
@@ -2632,6 +2648,7 @@ End Rem
 			funcDecl=New TNewDecl.CreateF( id,ty,args,attrs )
 		Else
 			funcDecl=New TFuncDecl.CreateF( id,ty,args,attrs )
+			funcDecl.noMangle = noMangle
 		End If
 		If meta Then
 			funcDecl.metadata = meta
@@ -2727,7 +2744,7 @@ End Rem
 		Local args:TClassDecl[]
 		Local superTy:TIdentType
 		Local imps:TIdentType[]
-		Local meta:String
+		Local meta:TMetadata
 
 		'If (attrs & CLASS_INTERFACE) And (attrs & DECL_EXTERN)
 		'	Err "Interfaces cannot be extern."
