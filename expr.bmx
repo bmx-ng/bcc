@@ -2213,7 +2213,15 @@ Type TIdentExpr Extends TExpr
 		Local args:TExpr[]
 		If rhs args=[rhs]
 
-		Local fdecl:TFuncDecl=scope.FindFuncDecl( IdentLower(),args, , isArg, True,,SCOPE_ALL )
+		Local fdecl:TFuncDecl
+		
+		Try
+			fdecl=scope.FindFuncDecl( IdentLower(),args, , isArg, True,True,SCOPE_ALL )
+		Catch errorMessage:String
+			If errorMessage.StartsWith("Compile Error") Then
+				Throw errorMessage
+			End If
+		End Try
 
 		If fdecl
 			If _env.ModuleScope().IsStrict() And Not fdecl.IsProperty() And Not isArg And Not fdecl.maybeFunctionPtr Err "Identifier '"+ident+"' cannot be used in this way."
