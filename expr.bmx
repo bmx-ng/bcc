@@ -2335,7 +2335,7 @@ Type TIdentExpr Extends TExpr
 		End If
 
 		' couldn't find it? try a global search
-		If Not fdecl Then
+		If Not fdecl And Not fixedScope Then
 			For Local mdecl:TModuleDecl = EachIn _appInstance.globalImports.Values()
 				Try
 					fdecl=mdecl.FindFuncDecl( IdentLower(), args,,,,True,SCOPE_ALL )
