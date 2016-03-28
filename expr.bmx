@@ -2117,17 +2117,6 @@ Type TIdentExpr Extends TExpr
 	End Method
 
 	Method IdentErr( errorDetails:String = Null )
-		If scope
-			Local close$
-			For Local decl:TDecl=EachIn scope.Decls()
-				If IdentLower()=decl.IdentLower()
-					close=decl.ident
-				EndIf
-			Next
-			If close And ident<>close Then
-				Err "Identifier '"+ident+"' not found - perhaps you meant '"+close+"'?"
-			EndIf
-		EndIf
 		If errorDetails Then
 			Err errorDetails
 		Else
