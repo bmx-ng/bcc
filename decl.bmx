@@ -1290,9 +1290,9 @@ End Rem
 				End If
 			Else
 				If throwOnNotMatched Then
-					Throw "Function "+ident+"("+t+") not found."
+					Throw "Identifier '" + ident + "' not found."
 				Else
-					Err "Function "+ident+"("+t+") not found."
+					Err "Identifier '" + ident + "' not found."
 				End If
 			End If
 		EndIf
