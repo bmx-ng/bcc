@@ -2501,16 +2501,19 @@ Type TAbsExpr Extends TBuiltinExpr
 	End Method
 
 	Method Semant:TExpr()
+
 		If exprType Return Self
 
 		expr=expr.Semant()
 
-		If TIntType(expr.exprType) Or TByteType(expr.exprType) Or TShortType(expr.exprType) Then
-			exprType=New TIntType
-		Else If TLongType(expr.exprType) Then
-			exprType=New TLongType
+		If TNumericType(expr.exprType) Then
+			If TIntType(expr.exprType) Or TByteType(expr.exprType) Or TShortType(expr.exprType) Then
+				exprType=New TIntType
+			Else
+				exprType=expr.exprType
+			End If
 		Else
-			exprType=New TDoubleType
+			Err "Subexpression for 'Abs' must be of numeric type"
 		End If
 
 		Return Self
@@ -2587,6 +2590,11 @@ Type TSgnExpr Extends TBuiltinExpr
 		End If
 		
 		expr = expr.Semant()
+		
+		If Not TNumericType(expr.exprType) Then
+			Err "Subexpression for 'Sgn' must be of numeric type"
+		End If
+		
 		exprType=expr.exprType
 		Return Self
 	End Method
