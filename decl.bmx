@@ -1025,6 +1025,7 @@ End Rem
 	Method FindFuncDecl:TFuncDecl( ident$,argExprs:TExpr[] = Null,explicit:Int=False, isArg:Int = False, isIdentExpr:Int = False, throwOnNotMatched:Int = False, maxSearchDepth:Int )
 'DebugLog "FindFuncDecl : " + ident
 'If ident = "new" Then DebugStop
+		Local foundIdentMatch:Int
 		Local funcs:TFuncDeclList
 
 		' does ident exist?
@@ -1157,6 +1158,8 @@ End Rem
 				Local exact:Int=True
 				Local possible:Int=True
 				
+				foundIdentMatch = True
+				
 				' we found a matching name - this is probably the one we mean...
 				If isArg Then
 					'match=func
@@ -1279,10 +1282,18 @@ End Rem
 				If t t:+","
 				If argExprs[i] t:+argExprs[i].exprType.ToString()
 			Next
-			If throwOnNotMatched Then
-				Throw "Unable to find overload for "+ident+"("+t+"). " + errorDetails
+			If foundIdentMatch Then
+				If throwOnNotMatched Then
+					Throw "Unable to find overload for "+ident+"("+t+"). " + errorDetails
+				Else
+					Err "Unable to find overload for "+ident+"("+t+"). " + errorDetails
+				End If
 			Else
-				Err "Unable to find overload for "+ident+"("+t+"). " + errorDetails
+				If throwOnNotMatched Then
+					Throw "Function "+ident+"("+t+") not found."
+				Else
+					Err "Function "+ident+"("+t+") not found."
+				End If
 			End If
 		EndIf
 		

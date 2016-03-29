@@ -752,7 +752,7 @@ Type TNewObjectExpr Extends TExpr
 		
 		If it Then
 			'Local parts:String[] = it.ident.ToLower().Split(".")
-			
+
 			Local i:Int = 0
 			
 			While i < parts.length And parts[i] <> classDecl.IdentLower() And parts[i] <> "self"
@@ -764,6 +764,8 @@ Type TNewObjectExpr Extends TExpr
 			Local expr:TExpr = Self
 			Local cdecl:TClassDecl = classDecl
 			Local eType:TType = objTy
+			
+			Local errorDetails:String
 			
 			While i < parts.length
 				Local id:String = parts[i]
@@ -778,6 +780,9 @@ Type TNewObjectExpr Extends TExpr
 						Throw errorMessage
 					Else
 						' couldn't find an exact match, look elsewhere
+						If errorMessage.StartsWith("Unable") Then
+							errorDetails = errorMessage
+						End If
 					End If
 				End Try
 				If fdecl Then
@@ -793,24 +798,30 @@ Type TNewObjectExpr Extends TExpr
 				End If
 				
 				' find other member decl (field, etc)
-				Local decl:TVarDecl = TVarDecl(cdecl.GetDecl(id))
-				If decl Then
-					Local tmp:TLocalDecl=New TLocalDecl.Create( "", eType, expr,, True )
-					Local varExpr:TExpr = New TMemberVarExpr.Create(New TVarExpr.Create( tmp ), decl).Semant()
-					expr = New TStmtExpr.Create( New TDeclStmt.Create( tmp ), varExpr ).Semant()
-					eType = decl.ty
-					If TObjectType(eType) Then
-						cdecl = TObjectType(expr.exprType).classdecl
+				If Not errorDetails Then
+					Local decl:TVarDecl = TVarDecl(cdecl.GetDecl(id))
+					If decl Then
+						Local tmp:TLocalDecl=New TLocalDecl.Create( "", eType, expr,, True )
+						Local varExpr:TExpr = New TMemberVarExpr.Create(New TVarExpr.Create( tmp ), decl).Semant()
+						expr = New TStmtExpr.Create( New TDeclStmt.Create( tmp ), varExpr ).Semant()
+						eType = decl.ty
+						If TObjectType(eType) Then
+							cdecl = TObjectType(expr.exprType).classdecl
+						End If
+						If TArrayType(eType) Or TStringType(eType) Then
+							cdecl = eType.GetClass()
+						End If
+						Continue
 					End If
-					If TArrayType(eType) Or TStringType(eType) Then
-						cdecl = eType.GetClass()
-					End If
-					Continue
-				End If
-				
+				End If	
+
 				' didn't match member or function??
 				' probably an error...
-				Err "Identifier '" + id + "' not found."
+				If errorDetails Then
+					Err errorDetails
+				Else
+					Err "Identifier '" + id + "' not found."
+				End If
 			Wend
 			
 			Return expr
