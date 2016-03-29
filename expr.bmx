@@ -2280,6 +2280,7 @@ Type TIdentExpr Extends TExpr
 		_Semant
 
 		Local errorDetails:String
+		Local nearestScopeError:String
 
 		'Local scope:TScopeDecl=IdentScope()
 		Local initialScope:Int = SCOPE_ALL
@@ -2306,6 +2307,9 @@ Type TIdentExpr Extends TExpr
 			Else
 				' couldn't find an exact match, look elsewhere
 				errorDetails = errorMessage
+				If errorMessage.StartsWith("Unable") Then
+					nearestScopeError = errorDetails
+				End If
 			End If
 		End Try
 
@@ -2320,7 +2324,7 @@ Type TIdentExpr Extends TExpr
 			If scope2.scope Then
 				fdecl = scope2.scope.FindFuncDecl( IdentLower(),args,,,,,SCOPE_CLASS_HEIRARCHY )
 			End If
-		Else If static And Not fdecl Then
+		Else If static And Not fdecl And Not fixedScope Then
 			If _env.classScope() Then
 				' try searching from our class scope
 				'fdecl = _env.classScope().FindFuncDecl( IdentLower(),args )
@@ -2335,6 +2339,9 @@ Type TIdentExpr Extends TExpr
 						Else
 							' couldn't find an exact match, look elsewhere
 							errorDetails = errorMessage
+							If Not nearestScopeError And errorDetails.StartsWith("Unable") Then
+								nearestScopeError = errorDetails
+							End If
 						End If
 					End Try
 				End If
@@ -2348,6 +2355,9 @@ Type TIdentExpr Extends TExpr
 					Else
 						' couldn't find an exact match, look elsewhere
 						errorDetails = errorMessage
+						If Not nearestScopeError And errorDetails.StartsWith("Unable") Then
+							nearestScopeError = errorDetails
+						End If
 					End If
 				End Try
 			End If
@@ -2364,6 +2374,9 @@ Type TIdentExpr Extends TExpr
 					Else
 						' couldn't find an exact match, look elsewhere
 						errorDetails = errorMessage
+						If Not nearestScopeError And errorDetails.StartsWith("Unable") Then
+							nearestScopeError = errorDetails
+						End If
 					End If
 				End Try
 				If fdecl Exit
@@ -2394,7 +2407,13 @@ Type TIdentExpr Extends TExpr
 			Err "Illegal number of arguments for type conversion"
 		End If
 
-		If throwError IdentErr(errorDetails)
+		If throwError Then
+			If nearestScopeError Then
+				IdentErr(nearestScopeError)
+			Else
+				IdentErr(errorDetails)
+			End If
+		End If
 	End Method
 
 	Method SemantScope:TScopeDecl()
