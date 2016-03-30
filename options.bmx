@@ -97,6 +97,10 @@ Global opt_gdbdebug:Int = False
 '    upgrade strict subclass method/function return types to match superstrict superclass.
 '    default is to auto-upgrade. Set flag if you want to throw an error - because of mismatch. (strict is Int, superstrict is Void).
 Global opt_strictupgrade:Int = True
+' overload warnings
+'    generate warnings (and accept) instead of errors for calling methods with arguments that need to be cast down.
+'    May cause issues using overloaded methods.
+Global opt_warnover:Int = False
 
 Global opt_filepath:String
 
@@ -188,6 +192,8 @@ Function ParseArgs:String[](args:String[])
 				opt_framework = args[count]
 			Case "d"
 				opt_gdbdebug=True
+			Case "w"
+				opt_warnover=True
 		End Select
 	
 		count:+ 1
@@ -214,6 +220,8 @@ Function DefaultOptions()
 	opt_arch = "x64"
 ?arm
 	opt_arch = "arm"
+?arm64
+	opt_arch = "arm64"
 ?armeabi
 	opt_arch = "armeabi"
 ?armeabiv7a

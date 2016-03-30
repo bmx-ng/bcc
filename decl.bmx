@@ -1105,13 +1105,26 @@ End Rem
 		Local matches:TList = New TList
 
 		Local noExtendString:Int = True
+		Local generateWarnings:Int = False
 
 		' double test for matches.
-		' first time through we don't allow up-casting args to String
-		'   if we get a match on the first pass, we'll take it.
-		' second iteration we allow up-casting numerics to string
+		' * first time through we don't allow up-casting args to String
+		'    if we get a match on the first pass, we'll take it.
+		' * second iteration we allow up-casting numerics to string
+		' * third iteration is valid if opt_warnover is enabled
+		'    this will allow down-casting of numerics (eg. double->float)
+		'    warnings will be generated if this produces valid results.
 		' if after all that, there's no match, then we can fail it.
-		For Local n:Int = 0 Until 2
+		For Local n:Int = 0 Until 3
+		
+			If n > 1 Then
+				If Not opt_warnover Then
+					Continue
+				Else
+					DebugStop
+					generateWarnings = True
+				End If
+			End If
 		
 			errorDetails = ""
 		
@@ -1198,7 +1211,23 @@ End Rem
 						
 						exact=False
 						
-						If Not explicit And exprTy.ExtendsType( declTy, noExtendString, widensTest ) Continue
+						If Not generateWarnings Then
+							If Not explicit And exprTy.ExtendsType( declTy, noExtendString, widensTest ) Continue
+						Else
+							If Not explicit Then
+								' fails widen test
+								If Not exprTy.ExtendsType( declTy, noExtendString, True ) Then
+									' but passes non-widen test
+									If exprTy.ExtendsType( declTy, noExtendString, False ) Then
+										' generate a warning, and accept it
+										Warn "In call to " + func.ToString()+ ". Argument #"+(i+1)+" is ~q" + exprTy.ToString()+"~q but declaration is ~q"+declTy.ToString()+"~q. "
+										Continue
+									End If
+								Else
+									Continue
+								End If
+							End If
+						End If
 	
 						' make a more helpful error message
 						errorDetails :+ "Argument #"+(i+1)+" is ~q" + exprTy.ToString()+"~q but declaration is ~q"+declTy.ToString()+"~q. "
