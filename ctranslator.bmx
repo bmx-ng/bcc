@@ -3568,7 +3568,6 @@ End Rem
 		' methods/funcs
 		'reserved = "New,Delete,ToString,ObjectCompare,SendMessage".ToLower()
 
-		
 		'For Local decl:TFuncDecl = EachIn classDecl.Decls()
 		For Local decl:TFuncDecl = EachIn fdecls
 
@@ -4277,14 +4276,11 @@ End Rem
 				Emit "-Delete()=" + Enquote("_" + classDecl.munged + "_Delete")
 			End If
 
-			'Local reserved:String = ",New,Delete,_reserved1_,_reserved2_,_reserved3_,".ToLower()
-
 			For Local decl:TDecl=EachIn classDecl.Decls()
 
 				Local fdecl:TFuncDecl=TFuncDecl( decl )
 				If fdecl
-
-					If Not equalsBuiltInFunc(classDecl, fdecl) Then
+					If Not equalsIfcBuiltInFunc(classDecl, fdecl) Then
 						EmitIfcClassFuncDecl fdecl
 					End If
 					Continue

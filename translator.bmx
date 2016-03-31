@@ -280,6 +280,25 @@ Type TTranslator
 		Return False
 	End Method
 
+	Method equalsIfcBuiltInFunc:Int(classDecl:TClassDecl, func:TFuncDecl, checked:Int = False)
+		If checked Or func.IdentLower() = "new" Or func.IdentLower() = "delete" Then
+			If classDecl.munged = "bbObjectClass" Then
+				For Local decl:TFuncDecl = EachIn classDecl.Decls()
+					If Not decl.IsSemanted() Then
+						decl.Semant
+					End If
+					If decl.IdentLower() = func.IdentLower() Then
+						Return decl.EqualsFunc(func)
+					End If
+				Next
+			End If
+			If classDecl.superClass Then
+				Return equalsIfcBuiltInFunc(classDecl.superClass, func, True)
+			End If
+		End If
+		Return False
+	End Method
+
 	Method MungFuncDecl( fdecl:TFuncDecl )
 
 		If fdecl.munged Return
