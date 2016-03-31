@@ -1121,7 +1121,6 @@ End Rem
 				If Not opt_warnover Then
 					Continue
 				Else
-					DebugStop
 					generateWarnings = True
 				End If
 			End If
@@ -2072,23 +2071,8 @@ End Rem
 
 		' interface methods
 		For Local iface:TClassDecl=EachIn implmentsAll
-			For Local func:TFuncDecl=EachIn iface._decls
-				Local matched:Int = False
-
-				For Local i:Int = 0 Until funcs.length
-					' found a match - we are overriding it
-					If func.IdentLower() = funcs[i].IdentLower() And func.EqualsArgs(funcs[i]) Then
-						matched = True
-						Exit
-					End If
-				Next
-				
-				If Not matched Then
-					funcs :+ [func]
-				End If
-			Next
+			funcs = iface.GetAllFuncDecls(funcs)
 		Next
-
 		
 		For Local func:TFuncDecl = EachIn _decls
 		
