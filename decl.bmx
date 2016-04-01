@@ -44,6 +44,12 @@ Const CLASS_INTERFACE:Int=  $001000
 Const CLASS_THROWABLE:Int=  $002000
 Const CLASS_STRUCT:Int=     $004000
 
+Const SCOPE_FUNC:Int = 0
+Const SCOPE_CLASS_LOCAL:Int = 1
+Const SCOPE_CLASS_HEIRARCHY:Int = 2
+Const SCOPE_MODULE:Int = 3
+Const SCOPE_ALL:Int = 4
+
 Global _env:TScopeDecl
 Global _envStack:TList=New TList
 
@@ -61,6 +67,36 @@ Function PopEnv()
 End Function
 
 Type TFuncDeclList Extends TList
+	Field ident:String
+	Field _identLower:String
+	
+	Method IdentLower:String()
+		If Not _identLower Then
+			_identLower = ident.ToLower()
+		End If
+		Return _identLower
+	End Method
+End Type
+
+Type TMetadata
+
+	Field metadataString:String
+
+	' key/value pairs
+	Field meta:TMap
+
+	Method InsertMeta(key:String, value:String)
+		If Not meta Then
+			meta = New TMap
+		End If
+		
+		meta.Insert(key, value)
+	End Method
+
+	Method HasMeta:Int(key:String)
+		Return meta And meta.Contains(key.ToLower())
+	End Method
+	
 End Type
 
 Type TDecl
@@ -70,7 +106,7 @@ Type TDecl
 	Field actual:TDecl
 	Field scope:TScopeDecl
 	Field attrs:Int
-	Field metadata:String
+	Field metadata:TMetadata = New TMetadata
 	
 	Field declImported:Int = False
 	Field generated:Int
@@ -667,20 +703,21 @@ Type TScopeDecl Extends TDecl
 		'Local _decls:TMap
 		Local tdecl_:Object=declsMap.ValueForKey( decl.IdentLower() )
 		
-		'If TFuncDecl( decl )
-		'	Local funcs:TFuncDeclList=TFuncDeclList( tdecl_ )
-		'	If funcs Or Not tdecl_
-		'		If Not funcs
-		'			funcs=New TFuncDeclList
-		'			declsMap.Insert ident.ToLower(),funcs
-		'		EndIf
-		'		funcs.AddLast TFuncDecl( decl )
-		'	Else
-		'		Err "Duplicate identifier '"+ident+"'."
-		'	EndIf
-		'Else
-		If Not tdecl_
-'DebugLog "Adding " + decl.ident
+		If TFuncDecl( decl )
+			Local funcs:TFuncDeclList=TFuncDeclList( tdecl_ )
+			If funcs Or Not tdecl_
+				If Not funcs
+					funcs=New TFuncDeclList
+					funcs.ident = decl.IdentLower()
+					declsMap.Insert decl.IdentLower(),funcs
+				EndIf
+
+				funcs.AddLast TFuncDecl( decl )
+				Return
+			Else
+				Err "Duplicate identifier '"+decl.ident+"'."
+			EndIf
+		Else If Not tdecl_
 			declsMap.Insert decl.IdentLower(),decl
 		Else
 			Err "Duplicate identifier '"+decl.ident+"'."
@@ -726,11 +763,88 @@ Type TScopeDecl Extends TDecl
 		
 		Local tscope:TScopeDecl=Self
 		While tscope
-			Local decl:TDecl=TDecl(tscope.GetDecl( ident ))
+			Local decl:Object=tscope.GetDecl( ident )
 			If decl Return decl
 			tscope=tscope.scope
 		Wend
 	End Method
+	
+	Method GetDeclList:Object( ident$, declList:TFuncDeclList = Null, maxSearchDepth:Int )
+
+		If Not declList Then
+			declList = New TFuncDeclList
+		End If
+
+		Local decl:Object=Object(declsMap.ValueForKey( ident ))
+
+		If Not decl Return Null
+
+		If TFuncDeclList(decl) Then
+			For Local fdecl:TFuncDecl = EachIn TFuncDeclList(decl)
+
+				If Not fdecl.IsSemanted() Then
+					fdecl.Semant
+				End If
+				
+				Local found:Int
+				For Local func:TFuncDecl = EachIn declList
+					If func.equalsFunc(fdecl) Then
+						found = True
+						Exit
+'Else
+'Print func.ToString() + "  didn't match  " + fdecl.ToString()
+					End If
+				Next
+				
+				If Not found Then
+					declList.AddLast(fdecl)
+				End If
+			Next
+			
+			Return declList
+		End If		
+		
+		Return decl
+		
+	End Method
+	
+	' returns a list of all matching named decls in scope
+	Method FindDeclList:Object(ident:String, override:Int = False, declList:TFuncDeclList = Null, maxSearchDepth:Int = SCOPE_ALL )
+	
+		If Not declList Then
+			declList = New TFuncDeclList
+		End If
+	
+		If Not override And _env<>Self Return GetDeclList( ident, declList, maxSearchDepth )
+		
+		Local tscope:TScopeDecl=Self
+		While tscope
+			Local decl:Object=tscope.GetDeclList( ident, declList, maxSearchDepth )
+			'If decl And (Not TFuncDeclList(decl) And declList.IsEmpty()) Return decl
+			If decl Then
+				If TFuncDeclList(decl) Then
+					If TFuncDeclList(decl) <> declList Then
+						For Local d:TDecl = EachIn TFuncDeclList(decl)
+							declList.AddLast(d)
+						Next
+					End If
+				Else
+					declList.AddLast(decl)
+				End If
+			End If
+			tscope=tscope.scope
+			
+			If TClassDecl(tscope) And maxSearchDepth < SCOPE_CLASS_HEIRARCHY Then
+				Exit
+			Else If TModuleDecl(tscope) And maxSearchDepth < SCOPE_ALL Then
+				Exit
+			End If
+		Wend
+		
+		Return declList
+	End Method
+
+	
 
 '	Method FindDecl:Object( ident$, static:Int = False )
 '		Local decl:Object=GetDecl( ident )
@@ -845,67 +959,27 @@ End Rem
 		Return decl
 	End Method
 	
-	Method FindFuncDecl:TFuncDecl( ident$,argExprs:TExpr[] = Null,explicit:Int=False, isArg:Int = False, isIdentExpr:Int = False, throwOnNotMatched:Int = False )
-'DebugLog "FindFuncDecl : " + ident
-'If ident = "FixPath" Then DebugStop
-		'Local funcs:TFuncDeclList=TFuncDeclList( FindDecl( ident ) )
-		Local f:TDecl = TDecl(findDecl(ident))
-		If Not f Then Return Null
-		
-		Local func:TFuncDecl = TFuncDecl(f)
-		If Not func Then
-			If TVarDecl(f) Then
-				If Not f.IsSemanted() Then
-					f.Semant()
-				End If
-				If TFunctionPtrType(TVarDecl(f).ty) Then
-					func = TFunctionPtrType(TVarDecl(f).ty).func
-					If Not func.scope Then
-						func.scope = f.scope
-					End If
-					If Not func.ident Then
-						func.ident = f.ident
-					End If
-				End If
-			End If
-		End If
-		If Not func Return Null
+	Method FindBestMatchForArgs:TFuncDecl(argExprs:TExpr[], matches:TList)
 
-		If Not argExprs
-			argExprs = New TExpr[0]
-		End If
-	
-		func.Semant()
+		Local bestMatch:TFuncDecl = Null
+		Local totals:Int[] = New Int[matches.count()]
+		Local index:Int
 		
-		Local match:TFuncDecl,isexact:Int
-		Local _err$
-		Local errorDetails:String
+		For Local func:TFuncDecl = EachIn matches
 
-		While True
-			If Not func.CheckAccess() Exit
-			
 			Local argDecls:TArgDecl[]=func.argDecls
 			
-			If argExprs.Length>argDecls.Length Exit
-			
-			Local exact:Int=True
-			Local possible:Int=True
-			
-			' we found a matching name - this is probably the one we mean...
-			If isArg Then
-				match=func
-				Exit
-			End If
-			
 			For Local i:Int=0 Until argDecls.Length
-
+	
 				If i<argExprs.Length And argExprs[i]
 				
 					Local declTy:TType=argDecls[i].ty
 					Local exprTy:TType=argExprs[i].exprType
 
 					If TFunctionPtrType(declTy) And TInvokeExpr(argExprs[i]) Then
-						If TFunctionPtrType(declTy).equalsDecl(TInvokeExpr(argExprs[i]).decl) Continue
+						If TFunctionPtrType(declTy).equalsDecl(TInvokeExpr(argExprs[i]).decl) Then
+							Continue
+						End If
 					End If
 
 					' not ideal - since the arg is configured as a Byte Ptr, we can't check that the function is of the correct type.
@@ -919,53 +993,300 @@ End Rem
 					
 					If exprTy.EqualsType( declTy ) Continue
 					
-					exact=False
+					' not an exact match. increase distance...
+					totals[index] :+ exprTy.DistanceToType(declTy)
 					
-					If Not explicit And exprTy.ExtendsType( declTy ) Continue
-
-					' make a more helpful error message
-					errorDetails :+ "Argument #"+(i+1)+" is ~q" + exprTy.ToString()+"~q but declaration is ~q"+declTy.ToString()+"~q. "
-
-				Else If Not argDecls[i].init
-
-					If (func.attrs & FUNC_PTR) Or isIdentExpr Then
-						exact=False
-						Exit
-					End If
-
-					' if this argument is missing and there isn't a default...
-					Err "Missing function parameter '" + argDecls[i].ident + "'"
-
-				Else ' for case of argdecls having default args
-					exact=False
-					If Not explicit Exit
-				EndIf
-			
-				possible=False
-				Exit
+				End If
+				
 			Next
 			
-			If Not possible Exit
+			index :+ 1
+
+		Next
+		
+		Local tot:Int = -1
+		index = 0
+		Local i:Int
+		For Local func:TFuncDecl = EachIn matches
+			If tot = -1 Or totals[i] < tot Then
+				tot = totals[i]
+				bestMatch = func
+			Else If tot = totals[i] Then
+				' a tie?
+				Err "Unable to determine overload to use: "+ bestMatch.ToString()+" or "+func.ToString()+"."
+			End If
+			i :+ 1
+		Next
+		
+		Return bestMatch
+		
+	End Method
+	
+	Method FindFuncDecl:TFuncDecl( ident$,argExprs:TExpr[] = Null,explicit:Int=False, isArg:Int = False, isIdentExpr:Int = False, throwOnNotMatched:Int = False, maxSearchDepth:Int )
+'DebugLog "FindFuncDecl : " + ident
+'If ident = "new" Then DebugStop
+		Local foundIdentMatch:Int
+		Local funcs:TFuncDeclList
+
+		' does ident exist?
+		Local f:Object = FindDeclList(ident, True,,maxSearchDepth)
+		If Not f Then Return Null
+		
+		funcs = TFuncDeclList( f )
+		Local fp:TFuncDecl
+		
+		' not a function list, test for a function ptr var
+		If Not funcs Or funcs.IsEmpty() Then
+
+			' we found a funcdecl
+			If TFuncDecl(f) Then
+				funcs = New TFuncDeclList
+				funcs.AddLast(f)
+			End If
 			
-			If exact
-				If isexact
-					Err "Unable to determine overload to use: "+match.ToString()+" or "+func.ToString()+"."
+			If TVarDecl(f) Then
+				If Not TVarDecl(f).IsSemanted() Then
+					TVarDecl(f).Semant()
+				End If
+				If TFunctionPtrType(TVarDecl(f).ty) Then
+					funcs = New TFuncDeclList
+					fp = TFunctionPtrType(TVarDecl(f).ty).func
+					If Not fp.scope Then
+						fp.scope = TVarDecl(f).scope
+					End If
+					If Not fp.ident Then
+						fp.ident = TVarDecl(f).ident
+					End If
+					funcs.AddLast fp
+				End If
+			End If
+		End If
+		' was neither... lets bug out
+		If Not funcs Return Null
+		
+'		If Not funcs Then Return Null
+		
+		For Local func:TDecl = EachIn funcs
+			func.Semant()
+		Next
+		
+		'Local f:TDecl = TDecl(findDecl(ident))
+		'If Not f Then Return Null
+		
+				
+			'Local func:TFuncDecl = TFuncDecl(f)
+'			If Not func Then
+'				If TVarDecl(f) Then
+'					If Not f.IsSemanted() Then
+'						f.Semant()
+'					End If
+'					If TFunctionPtrType(TVarDecl(f).ty) Then
+'						func = TFunctionPtrType(TVarDecl(f).ty).func
+'						If Not func.scope Then
+'							func.scope = f.scope
+'						End If
+'						If Not func.ident Then
+'							func.ident = f.ident
+'						End If
+'					End If
+'				End If
+'			End If
+'			If Not func Return Null
+	
+		If Not argExprs
+			argExprs = New TExpr[0]
+		End If
+	
+		'func.Semant()
+		
+		Local match:TFuncDecl,isexact:Int
+		Local _err$
+		Local errorDetails:String
+		Local matches:TList = New TList
+
+		Local noExtendString:Int = True
+		Local generateWarnings:Int = False
+
+		' double test for matches.
+		' * first time through we don't allow up-casting args to String
+		'    if we get a match on the first pass, we'll take it.
+		' * second iteration we allow up-casting numerics to string
+		' * third iteration is valid if opt_warnover is enabled
+		'    this will allow down-casting of numerics (eg. double->float)
+		'    warnings will be generated if this produces valid results.
+		' if after all that, there's no match, then we can fail it.
+		For Local n:Int = 0 Until 3
+		
+			If n > 1 Then
+				If Not opt_warnover Then
+					Continue
 				Else
-					_err=""
-					match=func
-					isexact=True
-				EndIf
-			Else
-				If Not isexact
-					If match 
-						_err="Unable to determine overload to use: "+match.ToString()+" or "+func.ToString()+"."
+					generateWarnings = True
+				End If
+			End If
+		
+			errorDetails = ""
+		
+			If n Then
+				noExtendString = False
+			End If
+
+			For Local iDecl:TDecl = EachIn funcs
+			
+				Local func:TFuncDecl = TFuncDecl(iDecl)
+				
+				If Not func Then
+					If TVarDecl(iDecl) Then
+'						If Not TVarDecl(iDecl).IsSemanted() Then
+'							TVarDecl(f).Semant()
+'						End If
+						If TFunctionPtrType(TVarDecl(iDecl).ty) Then
+							'funcs = New TFuncDeclList
+							fp = TFunctionPtrType(TVarDecl(iDecl).ty).func
+							If Not fp.scope Then
+								fp.scope = TVarDecl(iDecl).scope
+							End If
+							If Not fp.ident Then
+								fp.ident = TVarDecl(iDecl).ident
+							End If
+							'funcs.AddLast fp
+							func = fp
+						End If
+					End If
+					
+					If Not func Then
+						Continue
+					End If
+				End If
+				
+	
+			'While True
+				If Not func.CheckAccess() Continue
+				
+				Local argDecls:TArgDecl[]=func.argDecls
+				
+				If argExprs.Length>argDecls.Length Continue
+				
+				Local exact:Int=True
+				Local possible:Int=True
+				
+				foundIdentMatch = True
+				
+				' we found a matching name - this is probably the one we mean...
+				If isArg Then
+					'match=func
+					matches.AddLast(func)
+					Exit
+				End If
+				
+				For Local i:Int=0 Until argDecls.Length
+	
+					If i<argExprs.Length And argExprs[i]
+					
+						Local declTy:TType=argDecls[i].ty
+						Local exprTy:TType=argExprs[i].exprType
+						
+						Local widensTest:Int = True
+						
+						' for numeric constants, allow them to be auto-cast unless
+						'If TConstExpr(argExprs[i]) And TNumericType(exprTy) And Not TConstExpr(argExprs[i]).typeSpecific Then
+						'	widensTest = False
+						'End If
+	
+						If TFunctionPtrType(declTy) And TInvokeExpr(argExprs[i]) Then
+							If TFunctionPtrType(declTy).equalsDecl(TInvokeExpr(argExprs[i]).decl) Continue
+						End If
+	
+						' not ideal - since the arg is configured as a Byte Ptr, we can't check that the function is of the correct type.
+						If IsPointerType(declTy, TType.T_BYTE) And TInvokeExpr(argExprs[i]) And TInvokeExpr(argExprs[i]).invokedWithBraces = 0 Then
+							Continue
+						End If
+						
+						If TFunctionPtrType(declTy) And IsPointerType(exprTy, TType.T_BYTE) Then
+							Continue
+						End If
+						
+						If exprTy.EqualsType( declTy ) Continue
+						
+						exact=False
+						
+						If Not generateWarnings Then
+							If Not explicit And exprTy.ExtendsType( declTy, noExtendString, widensTest ) Continue
+						Else
+							If Not explicit Then
+								' fails widen test
+								If Not exprTy.ExtendsType( declTy, noExtendString, True ) Then
+									' but passes non-widen test
+									If exprTy.ExtendsType( declTy, noExtendString, False ) Then
+										' generate a warning, and accept it
+										Warn "In call to " + func.ToString()+ ". Argument #"+(i+1)+" is ~q" + exprTy.ToString()+"~q but declaration is ~q"+declTy.ToString()+"~q. "
+										Continue
+									End If
+								Else
+									Continue
+								End If
+							End If
+						End If
+	
+						' make a more helpful error message
+						errorDetails :+ "Argument #"+(i+1)+" is ~q" + exprTy.ToString()+"~q but declaration is ~q"+declTy.ToString()+"~q. "
+
+					Else If Not argDecls[i].init
+	
+						If (func.attrs & FUNC_PTR) Or isIdentExpr Then
+							exact=False
+							Exit
+						End If
+	
+						' if this argument is missing and there isn't a default...
+						errorDetails :+  "Missing function parameter '" + argDecls[i].ident + "'"
+	
+					Else ' for case of argdecls having default args
+						exact=False
+						If Not explicit Exit
+					EndIf
+				
+					possible=False
+					Exit
+				Next
+				
+				If Not possible Continue
+				
+				If exact
+					If isexact
+						Err "Unable to determine overload to use: "+match.ToString()+" or "+func.ToString()+"."
 					Else
-						match=func
+						_err=""
+						'match=func
+						matches.AddLast(func)
+						isexact=True
+						Exit
+					EndIf
+				Else
+					If Not isexact
+						'If match 
+						'	_err="Unable to determine overload to use: "+match.ToString()+" or "+func.ToString()+"."
+						'Else
+							'match=func
+							matches.AddLast(func)
+						'EndIf
 					EndIf
 				EndIf
-			EndIf
-			Exit
-		Wend
+				'Exit
+			Next
+			
+			If Not matches.IsEmpty() Then
+				Exit
+			End If
+			
+		Next
+		
+		If matches.Count() = 1 Then
+			match = TFuncDecl(matches.First())
+		Else
+			' find best match
+			match = FindBestMatchForArgs(argExprs, matches)
+		End If
 		
 		If Not isexact
 			If _err Err _err
@@ -974,9 +1295,9 @@ End Rem
 
 		' last try... maybe we are trying to use it as a function pointer? (no args)
 		If Not match Then
-			If func And Not argExprs Then
-				match = func
-				match.maybeFunctionPtr = True
+			If argExprs Then
+				'match = func
+'				match.maybeFunctionPtr = True
 			End If
 		Else If Not argExprs Then
 			' if there are no args, the actual function may have none either... so we may still be trying to use it as a function pointer
@@ -989,10 +1310,18 @@ End Rem
 				If t t:+","
 				If argExprs[i] t:+argExprs[i].exprType.ToString()
 			Next
-			If throwOnNotMatched Then
-				Throw "Unable to find overload for "+ident+"("+t+"). " + errorDetails
+			If foundIdentMatch Then
+				If throwOnNotMatched Then
+					Throw "Unable to find overload for "+ident+"("+t+"). " + errorDetails
+				Else
+					Err "Unable to find overload for "+ident+"("+t+"). " + errorDetails
+				End If
 			Else
-				Err "Unable to find overload for "+ident+"("+t+"). " + errorDetails
+				If throwOnNotMatched Then
+					Throw "Identifier '" + ident + "' not found."
+				Else
+					Err "Identifier '" + ident + "' not found."
+				End If
 			End If
 		EndIf
 		
@@ -1000,7 +1329,7 @@ End Rem
 
 		Return match
 	End Method
-	
+
 	Method FindLoop:TStmt(ident:String = Null)
 
 		If TBlockDecl(Self) And TBlockDecl(Self).extra Then
@@ -1098,6 +1427,11 @@ Type TFuncDecl Extends TBlockDecl
 	
 	Field returnTypeSubclassed:Int
 	
+	Field mangled:String
+	Field noMangle:Int
+	
+	Field equalsBuiltIn:Int = -1
+	
 	Method CreateF:TFuncDecl( ident$,ty:TType,argDecls:TArgDecl[],attrs:Int )
 		Self.ident=ident
 		Self.retTypeExpr=ty
@@ -1129,6 +1463,8 @@ Type TFuncDecl Extends TBlockDecl
 		t.noCastGen = noCastGen
 		t.munged = munged
 		t.metadata = metadata
+		t.mangled = mangled
+		t.noMangle = noMangle
 		Return  t
 	End Method
 
@@ -1220,7 +1556,11 @@ Type TFuncDecl Extends TBlockDecl
 	End Method
 
 	Method EqualsFunc:Int( decl:TFuncDecl )
-		Return (retType.EqualsType( decl.retType ) Or retType.ExtendsType( decl.retType ) Or decl.retType.EqualsType( retType )) And EqualsArgs( decl )
+		If IsCtor() Then
+			Return EqualsArgs( decl )
+		Else
+			Return (retType.EqualsType( decl.retType ) Or retType.ExtendsType( decl.retType ) Or decl.retType.EqualsType( retType )) And EqualsArgs( decl )
+		End If
 	End Method
 
 	Method OnSemant()
@@ -1271,6 +1611,15 @@ Type TFuncDecl Extends TBlockDecl
 				If decl<>Self And EqualsArgs( decl )
 					Err "Duplicate declaration "+ToString()
 				EndIf
+				If noMangle Then
+					If decl<>Self Then
+						If decl.argDecls.Length = 0 Then
+							Err "You cannot apply NoMangle to the function, as another function with no arguments exists."
+						Else If decl.NoMangle Then
+							Err "Another function is already declared with NoMangle."
+						End If
+					End If
+				End If
 			Next
 		End If
 		
@@ -1341,8 +1690,12 @@ Type TFuncDecl Extends TBlockDecl
 								If voidReturnTypeFail Then
 									errorDetails :+ "You may have Strict type overriding SuperStrict type. "
 								End If
+							Else
+								found = False
+								Continue
 							End If
-
+' TODO REMOVE
+' the following doesn't apply when supporting overloading, as we can have methods of the same name with different args length/types
 							If argDecls.Length <> decl.argDecls.Length
 								errorDetails :+ "Argument count differs. Got " + argDecls.Length +", expected " + decl.argDecls.Length + " arguments."
 							End If
@@ -1389,6 +1742,15 @@ Type TFuncDecl Extends TBlockDecl
 	End Method
 	
 End Type
+
+Type TNewDecl Extends TFuncDecl
+
+	Field chainedCtor:TNewExpr
+	
+	
+
+End Type
+
 
 'Const CLASS_INTERFACE:Int=1
 'Const CLASS_TEMPLATEARG:Int=2
@@ -1611,8 +1973,44 @@ End Rem
 	Method GetDecl2:Object( ident$ )
 		Return Super.GetDecl( ident )
 	End Method
+
+	Method GetDeclList:Object( ident$, declList:TFuncDeclList = Null, maxSearchDepth:Int )
 	
-	Method FindFuncDecl:TFuncDecl( ident$,args:TExpr[] = Null ,explicit:Int=False, isArg:Int = False, isIdentExpr:Int = False, throwOnNotMatched:Int = False )
+		If Not declList Then
+			declList = New TFuncDeclList
+		End If
+	
+		Local cdecl:TClassDecl=Self
+		While cdecl
+			Local decl:Object=cdecl.GetDeclList2( ident, declList, maxSearchDepth )
+			'If decl And (Not TFuncDeclList(decl) And declList.IsEmpty()) Return decl
+			If decl Then
+				declList.AddLast(decl)
+			End If
+
+			cdecl=cdecl.superClass
+			
+			If maxSearchDepth < SCOPE_CLASS_HEIRARCHY Then
+				Exit
+			End If
+		Wend
+
+		Return declList
+	End Method
+	
+	'needs this 'coz you can't go blah.Super.GetDecl()...
+	Method GetDeclList2:Object( ident$, declList:TFuncDeclList = Null, maxSearchDepth:Int )
+		Return Super.GetDeclList( ident, declList, maxSearchDepth )
+	End Method
+	
+	Method FindFuncDecl:TFuncDecl( ident$,args:TExpr[] = Null ,explicit:Int=False, isArg:Int = False, isIdentExpr:Int = False, throwOnNotMatched:Int = False, maxSearchDepth:Int )
+	
+		' try the super first...
+		Local funcDecl:TFuncDecl = Super.FindFuncDecl(ident, args, explicit, isArg, isIdentExpr, throwOnNotMatched, maxSearchDepth)
+		If funcDecl Then
+			Return funcDecl
+		End If
+	
 	
 		If args = Null Then
 			args = New TExpr[0]
@@ -1659,7 +2057,7 @@ End Rem
 	End Method
 	
 	Method FindFuncDecl2:TFuncDecl( ident$,args:TExpr[],explicit:Int, isIdentExpr:Int = False )
-		Return Super.FindFuncDecl( ident,args,explicit,,isIdentExpr )
+		Return Super.FindFuncDecl( ident,args,explicit,,isIdentExpr,0,0 )
 	End Method
 	
 	Method GetAllFuncDecls:TFuncDecl[](funcs:TFuncDecl[] = Null, includeSuper:Int = True)
@@ -1673,23 +2071,8 @@ End Rem
 
 		' interface methods
 		For Local iface:TClassDecl=EachIn implmentsAll
-			For Local func:TFuncDecl=EachIn iface._decls
-				Local matched:Int = False
-
-				For Local i:Int = 0 Until funcs.length
-					' found a match - we are overriding it
-					If func.IdentLower() = funcs[i].IdentLower() Then
-						matched = True
-						Exit
-					End If
-				Next
-				
-				If Not matched Then
-					funcs :+ [func]
-				End If
-			Next
+			funcs = iface.GetAllFuncDecls(funcs)
 		Next
-
 		
 		For Local func:TFuncDecl = EachIn _decls
 		
@@ -1697,7 +2080,7 @@ End Rem
 			
 			For Local i:Int = 0 Until funcs.length
 				' found a match - we are overriding it
-				If func.IdentLower() = funcs[i].IdentLower() Then
+				If func.IdentLower() = funcs[i].IdentLower() And func.EqualsArgs(funcs[i]) Then
 					matched = True
 					' set this to our own func
 					funcs[i] = func
@@ -1752,7 +2135,7 @@ End Rem
 			' dont count any that are already in the funcs list
 			For Local i:Int = 0 Until funcs.length
 				' found a match - we are overriding it
-				If func.IdentLower() = funcs[i].IdentLower() Then
+				If func.IdentLower() = funcs[i].IdentLower() And func.EqualsArgs(funcs[i]) Then
 					matched = True
 					' set this to our own func
 					'funcs[i] = func
@@ -2315,7 +2698,7 @@ Type TModuleDecl Extends TScopeDecl
 	End Method
 	
 	Method GetDecl:Object( ident$ )
-'DebugLog "GetDecl (" + ident + ") : " + filepath
+
 		Local todo:TList=New TList'<TModuleDecl>
 		Local done:TMap=New TMap'<TModuleDecl>
 		
@@ -2363,8 +2746,62 @@ Type TModuleDecl Extends TScopeDecl
 		Return Super.GetDecl( ident )
 	End Method
 
+
+	Method GetDeclList:Object( ident$, declList:TFuncDeclList = Null, maxSearchDepth:Int )
+	
+		If Not declList Then
+			declList = New TFuncDeclList
+		End If
+
+		Local todo:TList=New TList'<TModuleDecl>
+		Local done:TMap=New TMap'<TModuleDecl>
+		
+		todo.AddLast Self
+		done.Insert filepath,Self
+		
+		Local decl:Object,declmod$
+		
+		While Not todo.IsEmpty()
+	
+			Local mdecl:TModuleDecl=TModuleDecl(todo.RemoveLast())
+			Local tdecl_:Object=mdecl.GetDeclList2( ident, declList, maxSearchDepth )
+			
+			If tdecl_ And tdecl_<>decl
+				If mdecl=Self Return tdecl_
+				If decl
+					Err "Duplicate identifier '"+ident+"' found in module '"+declmod+"' and module '"+mdecl.ident+"'."
+				EndIf
+				decl=tdecl_
+				declmod=mdecl.ident
+			EndIf
+			
+			'If Not _env Exit
+			
+			Local imps:TUnorderedMap=mdecl.imported
+			'If mdecl<>_env.ModuleScope() imps=mdecl.pubImported
+
+			For Local mdecl2:TModuleDecl=EachIn imps.Values()
+				If Not done.Contains( mdecl2.filepath )
+					todo.AddLast mdecl2
+					done.Insert mdecl2.filepath,mdecl2
+				EndIf
+				
+				If ident = mdecl2.ident
+					Return mdecl2
+				End If
+			Next
+
+		Wend
+		
+		Return decl
+	End Method
+	
+	Method GetDeclList2:Object( ident$, declList:TFuncDeclList = Null, maxSearchDepth:Int )
+		Return Super.GetDeclList( ident, declList, maxSearchDepth )
+	End Method
+
 	Method OnSemant()
-		Local decl:TFuncDecl = FindFuncDecl( "__localmain" )
+		Local decl:TFuncDecl = FindFuncDecl( "__localmain", ,,,,,SCOPE_MODULE )
 		If decl Then
 			decl.Semant
 		End If
@@ -2460,7 +2897,7 @@ Type TAppDecl Extends TScopeDecl
 
 		mainModule.Semant
 
-		mainFunc=mainModule.FindFuncDecl( "__localmain" )
+		mainFunc=mainModule.FindFuncDecl( "__localmain",,,,,,SCOPE_MODULE )
 		
 		
 		' FIXME

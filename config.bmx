@@ -63,6 +63,13 @@ Function Err( err$ )
 	Throw "Compile Error: "+err + "~n" + _errInfo + "~n"
 End Function
 
+Function Warn( err$ )
+	'If DEBUGSTOP_ON_ERROR Then
+	'	DebugStop ' useful for debugging!
+	'End If
+	Print "Compile Warning: "+err + "~n" + _errInfo + "~n"
+End Function
+
 Function FormatError:String(path:String, line:Int, char:Int)
 	Return "[" + path + ";" + line + ";" + char + "]"
 End Function

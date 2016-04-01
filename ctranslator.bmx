@@ -378,7 +378,7 @@ Type TCTranslator Extends TTranslator
 'If decl.ident="ToHex" DebugStop
 
 		Local t$
-		If objParam And decl.IsMethod() And ((Not decl.IsExtern()) Or (decl.IsExtern() And TClassDecl(decl.scope) And Not TClassDecl(decl.scope).IsStruct())) Then
+		If objParam And (decl.IsMethod() Or decl.isCtor()) And ((Not decl.IsExtern()) Or (decl.IsExtern() And TClassDecl(decl.scope) And Not TClassDecl(decl.scope).IsStruct())) Then
 			t:+ objParam
 		End If
 		For Local i:Int=0 Until decl.argDecls.Length
@@ -426,7 +426,7 @@ Type TCTranslator Extends TTranslator
 										Local obj:String = Bra("struct " + scope.munged + "_obj*")
 										Local class:String = "o->clas"
 				
-										t:+ class + "->fn_" + fdecl.ident
+										t:+ class + "->f_" + fdecl.ident + MangleMethod(fdecl)
 									Else
 										t:+ fdecl.munged
 									End If
@@ -754,7 +754,7 @@ t:+"NULLNULLNULL"
 				Local scope:TScopeDecl = _env.ClassScope()
 				Local obj:String = Bra("struct " + scope.munged + "_obj*")
 				Local class:String = "o->clas"
-				Return class + "->fn_" + decl.ident
+				Return class + "->f_" + decl.ident + MangleMethod(TFuncDecl(decl))
 			Else
 				Return decl.munged
 			End If
@@ -800,6 +800,7 @@ t:+"NULLNULLNULL"
 	End Method
 
 	Method TransField$( decl:TFieldDecl,lhs:TExpr )
+
 		If lhs Then
 			Return TransFieldRef(decl, TransSubExpr( lhs ), lhs.exprType)
 		Else
@@ -814,7 +815,7 @@ t:+"NULLNULLNULL"
 	End Method
 
 	Method TransFunc$( decl:TFuncDecl,args:TExpr[],lhs:TExpr, sup:Int = False, scope:TScopeDecl = Null )
-'If decl.ident = "GetClassName" DebugStop
+'If decl.ident = "eventfilter" DebugStop
 		' for calling the super class method instead
 		Local tSuper:String
 		If sup Then
@@ -855,19 +856,20 @@ t:+"NULLNULLNULL"
 							End If
 							Err "TODO extern types not allowed methods"
 						Else
-							If cdecl.IsInterface() And reserved_methods.Find("," + decl.IdentLower() + ",") = -1 Then
+
+							If cdecl.IsInterface() And Not equalsBuiltInFunc(cdecl, decl) Then
 								Local ifc:String = Bra("(struct " + cdecl.munged + "_methods*)" + Bra("bbObjectInterface(" + TransSubExpr( lhs ) + ", " + "&" + cdecl.munged + "_ifc)"))
-								Return ifc + "->" + TransFuncPrefix(cdecl, decl) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
+								Return ifc + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, TransSubExpr( lhs ) )
 							Else
 								Local class:String = Bra(TransSubExpr( lhs )) + "->clas" + tSuper
-								Return class + "->" + TransFuncPrefix(cdecl, decl) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
+								Return class + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, TransSubExpr( lhs ) )
 							End If
 						End If
 					End If
 				Else If TNewObjectExpr(lhs) Then
 					Local cdecl:TClassDecl = TNewObjectExpr(lhs).classDecl
 					Local class:String = cdecl.munged
-					Return class + "." + TransFuncPrefix(cdecl, decl) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
+					Return class + "." + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, TransSubExpr( lhs ) )
 				Else If TCastExpr(lhs) Then
 					Local cdecl:TClassDecl = TObjectType(TCastExpr(lhs).ty).classDecl
 					Local obj:String = Bra(TransObject(cdecl))
@@ -879,12 +881,12 @@ t:+"NULLNULLNULL"
 							EmitDebugNullObjectError(TransSubExpr( lhs ))
 						End If
 
-						If cdecl.IsInterface() And reserved_methods.Find("," + decl.IdentLower() + ",") = -1 Then
+						If cdecl.IsInterface() And Not equalsBuiltInFunc(cdecl, decl) Then
 							Local ifc:String = Bra("(struct " + cdecl.munged + "_methods*)" + Bra("bbObjectInterface(" + obj + TransSubExpr( lhs ) + ", " + "&" + cdecl.munged + "_ifc)"))
-							Return ifc + "->" + TransFuncPrefix(cdecl, decl) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
+							Return ifc + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, TransSubExpr( lhs ) )
 						Else
 							Local class:String = Bra("(" + obj + TransSubExpr( lhs ) + ")->clas" + tSuper)
-							Return class + "->" + TransFuncPrefix(cdecl, decl) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
+							Return class + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, TransSubExpr( lhs ) )
 						End If
 					End If
 				Else If TMemberVarExpr(lhs) Then
@@ -905,7 +907,7 @@ t:+"NULLNULLNULL"
 
 						Local class:String = Bra("(" + obj + TransSubExpr( lhs ) + ")->clas" + tSuper)
 						'Local class:String = TransFuncClass(cdecl)
-						Return class + "->" + TransFuncPrefix(cdecl, decl) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
+						Return class + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, TransSubExpr( lhs ) )
 					End If
 				Else If TInvokeExpr(lhs) Then
 					' create a local variable of the inner invocation
@@ -918,7 +920,7 @@ t:+"NULLNULLNULL"
 
 					Local obj:String = Bra(TransObject(decl.scope))
 					Local class:String = Bra("(" + obj + lvar +")->clas" + tSuper)
-					Return class + "->" + TransFuncPrefix(decl.scope, decl)+ decl.ident+TransArgs( args,decl, lvar )
+					Return class + "->" + TransFuncPrefix(decl.scope, decl)+ FuncDeclMangleIdent(decl)+TransArgs( args,decl, lvar )
 
 					'Local obj:String = Bra("struct " + decl.scope.munged + "_obj*")
 					'Local class:String = Bra("(" + obj + TransSubExpr( lhs ) +")->clas" + tSuper)
@@ -941,7 +943,7 @@ t:+"NULLNULLNULL"
 						End If
 	
 						Local obj:String = lvar + "->clas" + tSuper
-						Return obj + "->" + TransFuncPrefix(decl.scope, decl)+ decl.ident+TransArgs( args,decl, lvar )
+						Return obj + "->" + TransFuncPrefix(decl.scope, decl)+ FuncDeclMangleIdent(decl)+TransArgs( args,decl, lvar )
 					End If
 
 				Else If TIndexExpr(lhs) Then
@@ -956,7 +958,7 @@ t:+"NULLNULLNULL"
 					'Local class:String = Bra("(" + obj + loc +")->clas" + tSuper)
 					'Local class:String = Bra("&" + decl.scope.munged)
 					Local class:String = Bra(loc + "->clas" + tSuper)
-					Return class + "->" + TransFuncPrefix(decl.scope, decl) + decl.ident+TransArgs( args,decl, loc )
+					Return class + "->" + TransFuncPrefix(decl.scope, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, loc )
 				Else
 					InternalErr
 				End If
@@ -989,7 +991,7 @@ t:+"NULLNULLNULL"
 				'Local obj:String = Bra("struct " + scope.munged + "_obj*")
 				'Local class:String = Bra("(" + obj + "o)->clas" + tSuper)
 				'Local class:String = Bra("&" + decl.scope.munged)
-				Return class + "->" + TransFuncPrefix(scope, decl) + decl.ident+TransArgs( args,decl, "o" )
+				Return class + "->" + TransFuncPrefix(scope, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, "o" )
 			Else
 				' Null test
 				If opt_debug Then
@@ -1030,13 +1032,14 @@ t:+"NULLNULLNULL"
 
 	Method TransFuncPrefix:String(decl:TScopeDecl, fdecl:TFuncDecl)
 		Local ident:String = fdecl.ident
-		If Not decl Or decl.ident = "Object" Or ident = "ToString" Or ident = "Compare" Or ident = "SendMessage" Then
+
+		If Not decl Or decl.ident = "Object" Or equalsBuiltInFunc(fdecl.ClassScope(), fdecl)
 			Return ""
 		Else
 			If fdecl.IsMethod() Then
-				Return "md_"
+				Return "m_"
 			Else
-				Return "fn_"
+				Return "f_"
 			End If
 		End If
 	End Method
@@ -1249,13 +1252,34 @@ t:+"NULLNULLNULL"
 	Method TransNewObjectExpr$( expr:TNewObjectExpr )
 		Local t$
 
-		If expr.instanceExpr Then
-			t = "bbObjectNew(" + Bra(expr.instanceExpr.Trans()) + "->clas)"
-		Else
-			If ClassHasObjectField(expr.classDecl) Then
-				t = "bbObjectNew(&" + expr.classDecl.actual.munged + ")"
+		If Not expr.ctor.argDecls Or expr.ctor.argDecls.length = 0 Then
+			If expr.instanceExpr Then
+				t = "bbObjectNew(" + Bra(expr.instanceExpr.Trans()) + "->clas)"
 			Else
-				t = "bbObjectAtomicNew(&" + expr.classDecl.actual.munged + ")"
+				If ClassHasObjectField(expr.classDecl) Then
+					t = "bbObjectNew(&" + expr.classDecl.actual.munged + ")"
+				Else
+					t = "bbObjectAtomicNew(&" + expr.classDecl.actual.munged + ")"
+				End If
+			End If
+		Else
+
+			Local ctorMunged:String
+			
+			If expr.classDecl = expr.ctor.scope Then
+				ctorMunged = expr.ctor.munged
+			Else
+				ctorMunged = expr.classDecl.actual.munged + "_" + expr.ctor.ident + MangleMethod(expr.ctor)
+			End If
+
+			If expr.instanceExpr Then
+				t = "_" + ctorMunged + "_ObjectNew" + TransArgs( expr.args,expr.ctor, Bra(expr.instanceExpr.Trans()) + "->clas" )
+			Else
+				If ClassHasObjectField(expr.classDecl) Then
+					t = "_" + ctorMunged + "_ObjectNew" + TransArgs( expr.args,expr.ctor, "&" + expr.classDecl.actual.munged )
+				Else
+					t = "_" + ctorMunged + "_ObjectNew" + TransArgs( expr.args,expr.ctor, "&" + expr.classDecl.actual.munged)
+				End If
 			End If
 		End If
 		'Local t$="(new "+expr.classDecl.actual.munged+")"
@@ -2278,11 +2302,11 @@ End Rem
 		Local pre:String
 
 		If decl.IsMethod() Then
-			id :+ "_md"
-			pre = "md_"
+			id :+ "_m"
+			pre = "m_"
 		Else
-			id :+ "_fn"
-			pre = "fn_"
+			id :+ "_f"
+			pre = "f_"
 		End If
 
 		Local bk:String = ";"
@@ -2291,7 +2315,7 @@ End Rem
 		'	pre = "extern "
 		'End If
 'DebugLog "id = " + id
-		Emit id + " " + pre + odecl.ident + ";"
+		Emit id + " " + pre + FuncDeclMangleIdent(odecl) + ";"
 
 '		If Not proto Or (proto And Not odecl.IsExtern()) Then
 Rem
@@ -2320,6 +2344,24 @@ Rem
 End Rem
 		'PopMungScope
 		EndLocalScope
+	End Method
+	
+	Method FuncDeclMangleIdent:String(fdecl:TFuncDecl)
+
+		If (Not fdecl.ClassScope()) Or equalsBuiltInFunc(fdecl.classScope(), fdecl) Then
+			Return fdecl.ident
+		End If	
+	
+		If Not fdecl.mangled Then
+			fdecl.mangled = fdecl.ident + MangleMethod(fdecl)
+		End If
+
+		Return fdecl.mangled		
+'		If fdecl.olIndex Then
+'			Return fdecl.ident + fdecl.olIndex
+'		Else
+'			Return fdecl.ident
+'		End If
 	End Method
 
 	Method EmitClassFuncProto( decl:TFuncDecl)
@@ -2377,9 +2419,9 @@ End Rem
 		Local pre:String = "typedef "
 		Local api:String
 		If decl.IsMethod() Then
-			id :+ "_md"
+			id :+ "_m"
 		Else
-			id :+ "_fn"
+			id :+ "_f"
 		End If
 		
 		If decl.attrs & DECL_API_WIN32 Then
@@ -2436,7 +2478,7 @@ End Rem
 
 	Method EmitFuncDecl( decl:TFuncDecl, proto:Int = False, classFunc:Int = False )
 		'If Not proto And decl.IsAbstract() Return
-		
+
 		Local tmpDebug:Int = opt_debug
 		If decl.isNoDebug() Then
 			opt_debug = False
@@ -2655,7 +2697,7 @@ End Rem
 
 	Method BBClassClassFuncProtoBuildList( classDecl:TClassDecl, list:TList )
 
-		Local reserved:String = ",New,Delete,ToString,Compare,SendMessage,_reserved1_,_reserved2_,_reserved3_,".ToLower()
+		'Local reserved:String = ",New,Delete,ToString,Compare,SendMessage,_reserved1_,_reserved2_,_reserved3_,".ToLower()
 
 		If classDecl.superClass Then
 			BBClassClassFuncProtoBuildList(classDecl.superClass, list)
@@ -2671,12 +2713,14 @@ End Rem
 				If Not fdecl.IsSemanted()
 					fdecl.Semant()
 				End If
-				If reserved.Find("," + fdecl.IdentLower() + ",") = -1 Then
+
+				If Not equalsBuiltInFunc(classDecl, fdecl) And Not equalsTorFunc(classDecl, fdecl) Then
 				
 					Local ignore:Int
 					Local link:TLink=list._head._succ
 					While link<>list._head
-						If fdecl.ident = TFuncDecl(link._value).ident Then
+						Local ofdecl:TFuncDecl = TFuncDecl(link._value)
+						If fdecl.ident = ofdecl.ident And fdecl.EqualsArgs(ofdecl) Then
 							If fdecl.overrides Then
 								If fdecl.returnTypeSubclassed Then
 									link._value = fdecl
@@ -2723,7 +2767,9 @@ End Rem
 			superid=classDecl.superClass.actual.munged
 		End If
 
-		Emit "void _" + classid + "_New" + Bra(TransObject(classdecl) + " o") + ";"
+		'Emit "void _" + classid + "_New" + Bra(TransObject(classdecl) + " o") + ";"
+		
+		EmitClassDeclNewListProto(classDecl)
 		
 		If classHierarchyHasFunction(classDecl, "Delete") Then
 			Emit "void _" + classid + "_Delete" + Bra(TransObject(classdecl) + " o") + ";"
@@ -2741,7 +2787,7 @@ End Rem
 			Emit "BBOBJECT _" + classid + "_SendMessage(" + TransObject(classdecl) + " o, BBOBJECT message, BBOBJECT source);"
 		End If
 
-		Local reserved:String = ",New,Delete,ToString,Compare,SendMessage,_reserved1_,_reserved2_,_reserved3_,".ToLower()
+		'Local reserved:String = ",New,Delete,ToString,Compare,SendMessage,_reserved1_,_reserved2_,_reserved3_,".ToLower()
 
 		classDecl.SemantParts()
 
@@ -2752,7 +2798,7 @@ End Rem
 			Local fdecl:TFuncDecl =TFuncDecl( decl )
 			If fdecl
 
-				If reserved.Find("," + fdecl.IdentLower() + ",") = -1 Then
+				If Not equalsBuiltInFunc(classDecl, fdecl) And Not equalsTorFunc(classDecl, fdecl) Then
 					EmitClassFuncProto( fdecl )
 					Continue
 				End If
@@ -2924,11 +2970,14 @@ End Rem
 		End If
 
 	End Method
-	
+
 	Method classHasFunction:Int(classDecl:TClassDecl, func:String)
 		Local f:String = func.ToLower()
 		For Local decl:TFuncDecl = EachIn classDecl.Decls()
-			If decl.IdentLower() = f Then
+			If Not decl.IsSemanted() Then
+				decl.Semant
+			End If
+			If decl.IdentLower() = f And equalsBuiltInFunc(classDecl.superClass, decl) Then
 				Return True
 			End If
 		Next
@@ -2978,7 +3027,7 @@ End Rem
 			Emit "{"
 			Emit "BBDEBUGDECL_CONST,"
 			Emit Enquote(decl.ident) + ","
-			Emit Enquote(TransDebugScopeType(decl.ty) + TransDebugMetaData(decl.metadata)) + ","
+			Emit Enquote(TransDebugScopeType(decl.ty) + TransDebugMetaData(decl.metadata.metadataString)) + ","
 			
 			_appInstance.mapStringConsts(decl.value)
 			
@@ -2999,7 +3048,7 @@ End Rem
 			Emit "{"
 			Emit "BBDEBUGDECL_FIELD,"
 			Emit Enquote(decl.ident) + ","
-			Emit Enquote(TransDebugScopeType(decl.ty) + TransDebugMetaData(decl.metadata)) + ","
+			Emit Enquote(TransDebugScopeType(decl.ty) + TransDebugMetaData(decl.metadata.metadataString)) + ","
 
 			Local offset:String = ".field_offset=offsetof" + Bra("struct " + classDecl.munged + "_obj," + decl.munged)
 '			If WORD_SIZE = 8 Then
@@ -3058,10 +3107,10 @@ End Rem
 				s:+ TransDebugScopeType(decl.retType)
 			End If
 
-			s:+ TransDebugMetaData(decl.metadata)
+			s:+ TransDebugMetaData(decl.metadata.metadataString)
 
 			Emit Enquote(s) + ","
-			If decl.IsMethod() Then
+			If decl.IsMethod() Or decl.IsCTor() Then 
 				Emit "&_" + decl.munged
 			Else
 				Emit "&" + decl.munged
@@ -3070,7 +3119,7 @@ End Rem
 	End Method
 
 	Method BBClassClassFuncsDebugScopeBuildList(classDecl:TClassDecl, list:TList)
-		Local reserved:String = ",New,Delete,ToString,Compare,SendMessage,_reserved1_,_reserved2_,_reserved3_,".ToLower()
+		'Local reserved:String = ",New,Delete,ToString,Compare,SendMessage,_reserved1_,_reserved2_,_reserved3_,".ToLower()
 
 		For Local decl:TDecl=EachIn classDecl.GetAllFuncDecls(Null, False)
 			Local fdecl:TFuncDecl =TFuncDecl( decl )
@@ -3081,7 +3130,8 @@ End Rem
 				If Not classDecl.IsInterface() And fdecl.IsAbstract() Then
 					Continue
 				End If
-				If reserved.Find("," + fdecl.IdentLower() + ",") = -1 Then
+
+				If Not equalsBuiltInFunc(classDecl, fdecl) Then
 				
 					Local ignore:Int
 					Local link:TLink=list._head._succ
@@ -3164,7 +3214,6 @@ End Rem
 	End Method
 
 	Method CountBBClassClassFuncsDebugScope(classDecl:TClassDecl, count:Int Var)
-		Local reserved:String = ",New,Delete,ToString,Compare,SendMessage,_reserved1_,_reserved2_,_reserved3_,".ToLower()
 
 		For Local decl:TDecl=EachIn classDecl.GetAllFuncDecls(Null, False)
 			Local fdecl:TFuncDecl =TFuncDecl( decl )
@@ -3172,7 +3221,8 @@ End Rem
 				If Not classDecl.IsInterface() And fdecl.IsAbstract() Then
 					Continue
 				End If
-				If reserved.Find("," + fdecl.IdentLower() + ",") = -1 Then
+
+				If Not equalsBuiltInFunc(classDecl, fdecl) Then
 					count :+ 1
 				End If
 			End If
@@ -3245,7 +3295,7 @@ End Rem
 		Local superid$=classDecl.superClass.actual.munged
 
 		' process nested functions for new
-		Local decl:TFuncDecl = classDecl.FindFuncDecl("new")
+		Local decl:TFuncDecl = classDecl.FindFuncDecl("new",,,,,,SCOPE_CLASS_HEIRARCHY)
 		If decl And decl.scope = classDecl Then ' only our own New method, not any from superclasses
 			decl.Semant
 			' emit nested protos
@@ -3259,10 +3309,10 @@ End Rem
 			Next
 		End If
 
-		EmitClassDeclNew(classDecl)
+		EmitClassDeclNewList(classDecl)
 		
 		' process nested functions for delete
-		decl = classDecl.FindFuncDecl("delete")
+		decl = classDecl.FindFuncDecl("delete",,,,,,SCOPE_CLASS_HEIRARCHY)
 		If decl Then
 			decl.Semant
 			' emit nested protos
@@ -3358,7 +3408,7 @@ End Rem
 		Else
 			Emit "BBDEBUGSCOPE_USERTYPE,"
 		End If
-		Emit EnQuote(classDecl.ident + TransDebugMetaData(classDecl.metadata)) + ","
+		Emit EnQuote(classDecl.ident + TransDebugMetaData(classDecl.metadata.metadataString)) + ","
 
 		Emit "{"
 		
@@ -3409,7 +3459,7 @@ End Rem
 						
 							For Local f:TFuncDecl = EachIn fdecls
 								Mungdecl f
-								If f.ident = func.ident Then
+								If f.ident = func.ident And func.EqualsFunc(f) Then
 									Emit "_" + f.munged + ","
 									Exit
 								End If
@@ -3518,10 +3568,10 @@ End Rem
 		' methods/funcs
 		'reserved = "New,Delete,ToString,ObjectCompare,SendMessage".ToLower()
 
-		
 		'For Local decl:TFuncDecl = EachIn classDecl.Decls()
 		For Local decl:TFuncDecl = EachIn fdecls
-			If reserved.Find("," + decl.IdentLower() + ",") = -1 Then
+
+			If Not equalsBuiltInFunc(classDecl, decl) And Not equalsTorFunc(classDecl, decl) Then
 
 				MungDecl decl
 
@@ -3544,68 +3594,321 @@ End Rem
 
 	End Method
 
-	Method EmitClassDeclNew( classDecl:TClassDecl )
+	Method EmitClassDeclNew( classDecl:TClassDecl, fdecl:TFuncDecl )
 		Local classid$=classDecl.munged
 		Local superid$=classDecl.superClass.actual.munged
-
-		' New
-'		If opt_issuperstrict Then
-			Emit "void _" + classid + "_New" + Bra(TransObject(classdecl) + " o") + " {"
-'		Else
-'			Emit "int _" + classid + "_New" + Bra(TransObject(classdecl) + " o") + " {"
-'		End If
-
-		If classDecl.superClass.ident = "Object" Then
-			Emit "bbObjectCtor(o);"
+'Emit "// EmitClassDeclNew for " + classDecl.ident
+		Local t:String = "void _" 
+		
+		If fdecl.argDecls.Length Then
+			If classDecl = fdecl.scope Then
+				t :+ fdecl.munged
+			Else
+				t :+ classDecl.munged + "_" + fdecl.ident + MangleMethod(fdecl)
+			End If
 		Else
-			Emit "_" + superid + "_New(o);"
+			t :+ classid + "_New"
+		End If
+		
+		'Find decl we override
+		Local odecl:TFuncDecl=fdecl
+		While odecl.overrides
+			odecl=odecl.overrides
+		Wend
+
+		Local args:String = TransObject(classdecl) + " o"
+
+		For Local i:Int=0 Until fdecl.argDecls.Length
+			Local arg:TArgDecl=fdecl.argDecls[i]
+			Local oarg:TArgDecl=odecl.argDecls[i]
+			MungDecl arg, True
+			If args args:+","
+			If Not TFunctionPtrType(oarg.ty) Then
+				If Not odecl.castTo Then
+					args:+TransType( oarg.ty, arg.munged )+" "+arg.munged
+				Else
+					args:+ oarg.castTo + " " + arg.munged
+				End If
+			Else
+				If Not odecl.castTo Then
+					args:+TransType( oarg.ty, arg.munged )
+				Else
+					args:+ oarg.castTo
+				End If
+			End If
+			If arg.ty.EqualsType( oarg.ty ) Continue
+		Next
+		
+		Emit t + Bra(args) + " {"
+		
+		Local newDecl:TNewDecl = TNewDecl(fdecl)
+		
+		' calling constructor?
+		If newDecl And newDecl.chainedCtor Then
+			mungdecl newDecl.chainedCtor.ctor
+			
+			Emit "_" + newDecl.chainedCtor.ctor.ClassScope().munged + "_" + newDecl.chainedCtor.ctor.ident + MangleMethod(newDecl.chainedCtor.ctor) + TransArgs(newDecl.chainedCtor.args, newDecl.chainedCtor.ctor, "o") + ";"
+		Else
+			If classDecl.superClass.ident = "Object" Then
+				Emit "bbObjectCtor(o);"
+			Else
+				Emit "_" + superid + "_New(o);"
+			End If
 		End If
 
 		Emit "o->clas = (BBClass*)&" + classid + ";"
 
-		' field initialisation
-		For Local decl:TFieldDecl=EachIn classDecl.Decls()
-			Local fld:String
+		' only initialise fields if we are not chaining to a local (in our class) constructor.
+		' this prevents fields being re-initialised through the call-chain.
+		If Not newDecl.chainedCtor Or (newDecl.chainedCtor And classDecl <> newDecl.chainedCtor.ctor.scope) Then
 
-			' ((int*)((char*)o + 5))[0] =
-			fld :+ TransFieldRef(decl, "o")
-
-			If decl.init Then
-				If TObjectType(decl.ty) And TObjectType(decl.ty).classdecl.IsExtern() And TObjectType(decl.ty).classdecl.IsStruct() Then
-					' skip for uninitialised extern type
-					If Not isPointerType(decl.ty) And TConstExpr(decl.init) And Not TConstExpr(decl.init).value Then
-						Continue
+			' field initialisation
+			For Local decl:TFieldDecl=EachIn classDecl.Decls()
+			
+				Local fld:String
+	
+				' ((int*)((char*)o + 5))[0] =
+				fld :+ TransFieldRef(decl, "o")
+	
+				If decl.init Then
+					If TObjectType(decl.ty) And TObjectType(decl.ty).classdecl.IsExtern() And TObjectType(decl.ty).classdecl.IsStruct() Then
+						' skip for uninitialised extern type
+						If Not isPointerType(decl.ty) And TConstExpr(decl.init) And Not TConstExpr(decl.init).value Then
+							Continue
+						End If
+					End If
+	
+					' initial value
+					fld :+ "= " + decl.init.Trans() + ";";
+				Else
+					If TNumericType(decl.ty) Or TObjectType(decl.ty) Or IsPointerType(decl.ty, 0, TType.T_POINTER) Then
+						fld :+ "= 0;"
+					Else If TFunctionPtrType(decl.ty) Then
+						fld :+ "= &brl_blitz_NullFunctionError;"
+					Else If TStringType(decl.ty) Then
+						fld :+ "= &bbEmptyString;"
+					Else If TArrayType(decl.ty) Then
+						fld :+ "= &bbEmptyArray;"
 					End If
 				End If
+	
+				Emit fld
+			Next
+		
+		End If
 
-				' initial value
-				fld :+ "= " + decl.init.Trans() + ";";
-			Else
-				If TNumericType(decl.ty) Or TObjectType(decl.ty) Or IsPointerType(decl.ty, 0, TType.T_POINTER) Then
-					fld :+ "= 0;"
-				Else If TFunctionPtrType(decl.ty) Then
-					fld :+ "= &brl_blitz_NullFunctionError;"
-				Else If TStringType(decl.ty) Then
-					fld :+ "= &bbEmptyString;"
-				Else If TArrayType(decl.ty) Then
-					fld :+ "= &bbEmptyArray;"
-				End If
-			End If
-
-			Emit fld
-		Next
-
-		Local decl:TFuncDecl = classDecl.FindFuncDecl("new")
-		If decl And decl.scope = classDecl Then ' only our own New method, not any from superclasses
-			decl.Semant
-			If decl.munged <> "bbObjectCtor" Then
-				EmitLocalDeclarations(decl)
-				EmitBlock decl
+		'Local decl:TFuncDecl = classDecl.FindFuncDecl("new",,,,,,SCOPE_CLASS_LOCAL)
+		If fdecl And (fdecl.scope = classDecl Or fdecl.argDecls.Length) Then ' only our own New method, not any from superclasses
+			fdecl.Semant
+			If fdecl.munged <> "bbObjectCtor" Then
+				EmitLocalDeclarations(fdecl)
+				EmitBlock fdecl
 			End If
 		End If
 
 		'
 		Emit "}"
+	End Method
+
+	Method EmitClassDeclNewList( classDecl:TClassDecl )
+		Local classid$=classDecl.munged
+		Local superid$=classDecl.superClass.actual.munged
+'DebugStop
+'Emit "// EmitClassDeclNewListZZZZ"
+		Local newDecls:TFuncDeclList = TFuncDeclList(classdecl.FindDeclList("new", SCOPE_CLASS_LOCAL))
+		
+		For Local fdecl:TFuncDecl = EachIn newDecls
+		
+'Emit "// EmitClassDeclNewList"
+			EmitClassDeclNew(classDecl, fdecl)
+
+			' generate "objectNew" function if required
+			If fdecl.argDecls And fdecl.argDecls.length Then
+				EmitClassDeclNewInit(classDecl, fdecl)
+			End If
+		
+		Next
+
+	End Method
+
+	Method EmitClassDeclNewListProto( classDecl:TClassDecl )
+		Local classid$=classDecl.munged
+		Local superid$=classDecl.superClass.actual.munged
+
+		Local newDecls:TFuncDeclList = TFuncDeclList(classdecl.FindDeclList("new", SCOPE_CLASS_LOCAL))
+		
+		For Local fdecl:TFuncDecl = EachIn newDecls
+		
+			EmitClassDeclNewProto(classDecl, fdecl)
+		
+			' generate "objectNew" function if required
+			If fdecl.argDecls And fdecl.argDecls.length Then
+				EmitClassDeclObjectNewProto(classDecl, fdecl)
+			End If
+		
+		Next
+
+	End Method
+	
+	Method EmitClassDeclNewInit(classDecl:TClassDecl, fdecl:TFuncDecl)
+
+		Local funcMunged:String
+		
+		If classDecl = fdecl.scope Then
+			funcMunged = fdecl.munged
+		Else
+			funcMunged = classDecl.munged + "_" + fdecl.ident + MangleMethod(fdecl)
+		End If
+
+		Local t:String = TransObject(classdecl) + " _" + funcMunged + "_ObjectNew"
+
+		'Find decl we override
+		Local odecl:TFuncDecl=fdecl
+		While odecl.overrides
+			odecl=odecl.overrides
+		Wend
+
+		Local args:String = "BBClass * clas"
+
+		For Local i:Int=0 Until fdecl.argDecls.Length
+			Local arg:TArgDecl=fdecl.argDecls[i]
+			Local oarg:TArgDecl=odecl.argDecls[i]
+			MungDecl arg, True
+			If args args:+","
+			If Not TFunctionPtrType(oarg.ty) Then
+				If Not odecl.castTo Then
+					args:+TransType( oarg.ty, arg.munged )+" "+arg.munged
+				Else
+					args:+ oarg.castTo + " " + arg.munged
+				End If
+			Else
+				If Not odecl.castTo Then
+					args:+TransType( oarg.ty, arg.munged )
+				Else
+					args:+ oarg.castTo
+				End If
+			End If
+			If arg.ty.EqualsType( oarg.ty ) Continue
+		Next
+		
+		Emit t + Bra(args) + " {"
+
+		t = TransObject(classdecl) + " o = "
+
+		If ClassHasObjectField(classDecl) Then
+			t :+ "bbObjectNewNC"
+		Else
+			t :+ "bbObjectAtomicNewNC"
+		End If
+		
+		Emit t + "(clas);"
+		
+		t = "_" + funcMunged + "(o"
+		
+		For Local i:Int=0 Until fdecl.argDecls.Length
+			Local arg:TArgDecl=fdecl.argDecls[i]
+			t :+ ", " + arg.munged
+		Next
+		
+		Emit t + ");"
+		
+		Emit "return o;"
+		
+		Emit "}"
+		
+	End Method
+
+	Method EmitClassDeclNewProto( classDecl:TClassDecl, fdecl:TFuncDecl )
+		Local classid$=classDecl.munged
+		Local superid$=classDecl.superClass.actual.munged
+'Emit "// EmitClassDeclNew for " + classDecl.ident
+		Local t:String = "void _" 
+		
+		If fdecl.argDecls.Length Then
+			If classDecl = fdecl.scope Then
+				t :+ fdecl.munged
+			Else
+				t :+ classDecl.munged + "_" + fdecl.ident + MangleMethod(fdecl)
+			End If
+		Else
+			t :+ classid + "_New"
+		End If
+		
+		'Find decl we override
+		Local odecl:TFuncDecl=fdecl
+		While odecl.overrides
+			odecl=odecl.overrides
+		Wend
+
+		Local args:String = TransObject(classdecl) + " o"
+
+		For Local i:Int=0 Until fdecl.argDecls.Length
+			Local arg:TArgDecl=fdecl.argDecls[i]
+			Local oarg:TArgDecl=odecl.argDecls[i]
+			MungDecl arg, True
+			If args args:+","
+			If Not TFunctionPtrType(oarg.ty) Then
+				If Not odecl.castTo Then
+					args:+TransType( oarg.ty, arg.munged )+" "+arg.munged
+				Else
+					args:+ oarg.castTo + " " + arg.munged
+				End If
+			Else
+				If Not odecl.castTo Then
+					args:+TransType( oarg.ty, arg.munged )
+				Else
+					args:+ oarg.castTo
+				End If
+			End If
+			If arg.ty.EqualsType( oarg.ty ) Continue
+		Next
+		
+		Emit t + Bra(args) + ";"
+	End Method
+	
+	Method EmitClassDeclObjectNewProto(classDecl:TClassDecl, fdecl:TFuncDecl)
+
+		Local t:String = TransObject(classdecl) + " _"
+		
+		If classDecl = fdecl.scope Then
+			t :+ fdecl.munged
+		Else
+			t :+ classDecl.munged + "_" + fdecl.ident + MangleMethod(fdecl)
+		End If
+		
+		t:+ "_ObjectNew"
+			
+		'Find decl we override
+		Local odecl:TFuncDecl=fdecl
+		While odecl.overrides
+			odecl=odecl.overrides
+		Wend
+
+		Local args:String = "BBClass * clas"
+
+		For Local i:Int=0 Until fdecl.argDecls.Length
+			Local arg:TArgDecl=fdecl.argDecls[i]
+			Local oarg:TArgDecl=odecl.argDecls[i]
+			MungDecl arg, True
+			If args args:+","
+			If Not TFunctionPtrType(oarg.ty) Then
+				If Not odecl.castTo Then
+					args:+TransType( oarg.ty, arg.munged )+" "+arg.munged
+				Else
+					args:+ oarg.castTo + " " + arg.munged
+				End If
+			Else
+				If Not odecl.castTo Then
+					args:+TransType( oarg.ty, arg.munged )
+				Else
+					args:+ oarg.castTo
+				End If
+			End If
+			If arg.ty.EqualsType( oarg.ty ) Continue
+		Next
+		
+		Emit t + Bra(args) + ";"
+
 	End Method
 
 	Method EmitClassDeclDelete( classDecl:TClassDecl )
@@ -3619,7 +3922,7 @@ End Rem
 '			Emit "int _" + classid + "_Delete" + Bra(TransObject(classdecl) + " o") + " {"
 '		End If
 
-		Local decl:TFuncDecl = classDecl.FindFuncDecl("delete")
+		Local decl:TFuncDecl = classDecl.FindFuncDecl("delete",,,,,,SCOPE_CLASS_HEIRARCHY)
 		If decl Then
 			decl.Semant
 			EmitLocalDeclarations(decl)
@@ -3768,7 +4071,7 @@ End Rem
 		Local func:String
 
 		' method / function
-		If funcDecl.IsMethod() Then
+		If funcDecl.IsMethod() Or funcDecl.IsCTor() Then
 			func :+ "-"
 		Else
 			func :+ "+"
@@ -3973,13 +4276,11 @@ End Rem
 				Emit "-Delete()=" + Enquote("_" + classDecl.munged + "_Delete")
 			End If
 
-			Local reserved:String = ",New,Delete,_reserved1_,_reserved2_,_reserved3_,".ToLower()
-
 			For Local decl:TDecl=EachIn classDecl.Decls()
 
 				Local fdecl:TFuncDecl=TFuncDecl( decl )
 				If fdecl
-					If reserved.Find("," + fdecl.IdentLower() + ",") = -1 Then
+					If Not equalsIfcBuiltInFunc(classDecl, fdecl) Then
 						EmitIfcClassFuncDecl fdecl
 					End If
 					Continue
@@ -4188,6 +4489,7 @@ End Rem
 '			Emit prefix + decl.munged+";"
 
 			'PushMungScope
+			funcMungs = New TMap
 			BeginLocalScope
 
 			For Local decl:TDecl=EachIn cdecl.Semanted()

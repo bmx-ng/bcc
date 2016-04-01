@@ -49,8 +49,8 @@ Type TTranslator
 	Field loopTryStack:TStack = New TStack
 
 	Field mungedScopes:TMap=New TMap'<StringSet>
-'	Field funcMungs:=New StringMap<FuncDeclList>
-'	Field mungedFuncs:=New StringMap<FuncDecl>
+	'Field funcMungs:TFuncDeclList=New TFuncDeclList
+	'Field mungedFuncs:TMap=New Map
 	Field localScopeStack:TStack = New TStack
 	Field localScope:TStack = New TStack
 	Field ind:Int
@@ -156,41 +156,182 @@ Type TTranslator
 		Next
 	End Method
 
+	Method TransManglePointer$( ty:TType )
+		Local p:String
+		
+		If ty
+
+			If ty._flags & TType.T_VAR Then
+				p:+ "v"
+			End If
+
+			If ty._flags & TType.T_PTR Then
+				p:+ "p"
+			Else If ty._flags & TType.T_PTRPTR Then
+				p:+ "pp"
+			Else If ty._flags & TType.T_PTRPTRPTR Then
+				p:+ "ppp"
+			End If
+
+		End If
+		
+		Return p
+	End Method
+
+	Method TransMangleType:String(ty:TType)
+		Local p:String = TransManglePointer(ty)
+
+		If TVoidType( ty ) Return "v"
+		If TByteType( ty ) Return p + "b"
+		If TShortType( ty ) Return p + "s"
+		If TIntType( ty ) Return p + "i"
+		If TUIntType( ty ) Return p + "u"
+		If TFloatType( ty ) Return p + "f"
+		If TDoubleType( ty ) Return p + "d"
+		If TLongType( ty ) Return p + "l"
+		If TULongType( ty ) Return p + "y"
+		If TSizeTType( ty ) Return p + "z"
+		If TStringType( ty ) Return p + "S"
+		If TArrayType( ty ) Then
+			Return p + "a" + TransMangleType(TArrayType( ty ).elemType)
+		End If
+		If TObjectType( ty ) Then
+			If Not TObjectType( ty ).classdecl.IsExtern()
+				Return p + "T" + TObjectType( ty ).classDecl.ident
+			Else
+				If TObjectType( ty ).classdecl.IsInterface() Then
+					Return p + "I" + TObjectType(ty).classDecl.ident
+				ElseIf TObjectType( ty ).classdecl.IsStruct() Then
+					Return p + "R" + TObjectType(ty).classDecl.ident
+				Else
+					Return p + "E" + TObjectType(ty).classDecl.ident
+				End If
+			End If
+		End If
+		If TFunctionPtrType( ty ) Then
+			Local func:TFuncDecl = TFunctionPtrType( ty ).func
+			Local s:String = "F" + MangleMethodArgs(func)
+'			For Local i:Int = 0 Until func.argDecls.length
+'				s :+ TransMangleType(func.argDecls[i].ty)
+'			Next
+			Return s + "_" + TransMangleType(func.retType) + "_"
+		End If
+	End Method
+
+	Method MangleMethod:String(fdecl:TFuncDecl)
+		If fdecl.IsMethod() Or fdecl.IsCtor() Then
+			Return MangleMethodArgs(fdecl)
+		Else
+			Return MangleMethodRetType(fdecl) + MangleMethodArgs(fdecl)
+		End If
+	End Method
+	
+	Method MangleMethodRetType:String(fdecl:TFuncDecl)
+		If fdecl.retType Then
+			Return "_" + TransMangleType(fdecl.retType)
+		Else
+			Return "_v"
+		End If
+	End Method
+	
+	Method MangleMethodArgs:String(fdecl:TFuncDecl)
+		Local s:String
+		For Local arg:TArgDecl = EachIn fdecl.argDecls
+			If Not s Then
+				s = "_"
+			End If
+			s :+ TransMangleType(arg.ty)
+		Next
+		Return s
+	End Method
+
+	Method equalsTorFunc:Int(classDecl:TClassDecl, func:TFuncDecl)
+		If func.IdentLower() = "new" Or func.IdentLower() = "delete" Then
+			Return True
+		End If
+		Return False
+	End Method
+
+	Method equalsBuiltInFunc:Int(classDecl:TClassDecl, func:TFuncDecl, checked:Int = False)
+		If func.equalsBuiltIn > -1 Then
+			Return func.equalsBuiltIn
+		End If
+	
+		If checked Or func.IdentLower() = "tostring" Or func.IdentLower() = "compare" Or func.IdentLower() = "sendmessage" Or func.IdentLower() = "new" Or func.IdentLower() = "delete" Then
+			If classDecl.munged = "bbObjectClass" Then
+				For Local decl:TFuncDecl = EachIn classDecl.Decls()
+					If Not decl.IsSemanted() Then
+						decl.Semant
+					End If
+					If decl.IdentLower() = func.IdentLower() Then
+						Local res:Int = decl.EqualsFunc(func)
+						If res Then
+							func.equalsBuiltIn = True
+						End If
+						Return res
+					End If
+				Next
+			End If
+			If classDecl.superClass Then
+				Return equalsBuiltInFunc(classDecl.superClass, func, True)
+			End If
+		End If
+		func.equalsBuiltIn = False
+		Return False
+	End Method
+
+	Method equalsIfcBuiltInFunc:Int(classDecl:TClassDecl, func:TFuncDecl, checked:Int = False)
+		If checked Or func.IdentLower() = "new" Or func.IdentLower() = "delete" Then
+			If classDecl.munged = "bbObjectClass" Then
+				For Local decl:TFuncDecl = EachIn classDecl.Decls()
+					If Not decl.IsSemanted() Then
+						decl.Semant
+					End If
+					If decl.IdentLower() = func.IdentLower() Then
+						Return decl.EqualsFunc(func)
+					End If
+				Next
+			End If
+			If classDecl.superClass Then
+				Return equalsIfcBuiltInFunc(classDecl.superClass, func, True)
+			End If
+		End If
+		Return False
+	End Method
+
 	Method MungFuncDecl( fdecl:TFuncDecl )
 
 		If fdecl.munged Return
 		
-		If fdecl.overrides
-			MungFuncDecl fdecl.overrides
-			fdecl.munged=fdecl.overrides.munged
-			Return
-		EndIf
-		
 		Local funcs:TFuncDeclList=TFuncDeclList(funcMungs.ValueForKey( fdecl.ident ))
 		If funcs
 			For Local tdecl:TFuncDecl=EachIn funcs
-				If fdecl.argDecls.Length=tdecl.argDecls.Length
-					Local match:Int=True
-					For Local i:Int=0 Until fdecl.argDecls.Length
-						Local ty:TType=TArgDecl( fdecl.argDecls[i].actual ).ty
-						Local ty2:TType=TArgDecl( tdecl.argDecls[i].actual ).ty
-						If ty.EqualsType( ty2 ) Continue
-						match=False
-						Exit
-					Next
-					If match
-						fdecl.munged=tdecl.munged
-						Return
-					EndIf
+				If fdecl.EqualsArgs( tdecl )
+					fdecl.munged=tdecl.munged
+					Return
 				EndIf
 			Next
 		Else
 			funcs=New TFuncDeclList
 			funcMungs.Insert fdecl.ident,funcs
 		EndIf
+
+		If fdecl.scope Then
+			fdecl.munged = fdecl.scope.munged + "_" + fdecl.ident
+			
+			If Not equalsBuiltInFunc(fdecl.classScope(), fdecl) And Not fdecl.noMangle Then
+				fdecl.munged :+ MangleMethod(fdecl)
+			End If
+			
+			' fields are lowercase with underscore prefix.
+			' a function pointer with FUNC_METHOD is a field function pointer.
+			'If TFieldDecl(fdecl) Or (TFuncDecl(decl) And (decl.attrs & FUNC_METHOD) And (decl.attrs & FUNC_PTR)) Then
+			'	munged = "_" + munged.ToLower()
+			'End If
+		Else
+			fdecl.munged="bb_"+fdecl.ident
+		End If
 		
-		fdecl.munged="bbm_"+fdecl.ident
-		If Not funcs.IsEmpty() fdecl.munged:+String(funcs.Count()+1)
 		funcs.AddLast fdecl
 	End Method
 	
@@ -208,10 +349,12 @@ Type TTranslator
 
 		Local fdecl:TFuncDecl=TFuncDecl( decl )
 		
-		'If fdecl And fdecl.IsMethod() 
-		'	MungFuncDecl( fdecl )
-		'	Return
-		'End If
+		' apply mangling to methods and New (ctors)
+		' but don't apply mangling to function pointers
+		If fdecl And fdecl.ClassScope() And Not (fdecl.attrs & FUNC_PTR)
+			MungFuncDecl( fdecl )
+			Return
+		End If
 		
 		Local id$=decl.ident,munged$
 		

@@ -901,77 +901,82 @@ Type TParser
 		Case "."
 			expr=New TScopeExpr.Create( _module )
 		Case "new"
-'DebugStop
 			NextToke
-			Local ty:TType=ParseType()
-
-			While CParse("ptr")
-				ty = TType.MapToPointerType(ty)
-			Wend
-
-			If _toke = "[" Or _toke = "[]" Then
-				Local depth:Int = 0
-				Local ln:TExpr[]
-				Local tmpTy:TType = ty.Copy()
-
-				Repeat
-					Local dims:Int = 1
-					
-					If CParse("[]") Then
-						tmpTy=New TArrayType.Create( tmpTy )
-						depth :+ 1
-						Continue
-					End If
-
-					' looking for an array with expression					
-					If Not ln Then
-						Parse "["
-					Else
-						If Not CParse("[") Then
-							Exit
-						Else
-							Err "Unexpected '[' after array size declaration"
-						End If
-					End If
-
+			
+			If _toke = "(" Then
+				' call constructor
+				expr=New TNewExpr.Create( ParseArgs(stmt) )
+			Else
+				Local ty:TType=ParseType()
+	
+				While CParse("ptr")
+					ty = TType.MapToPointerType(ty)
+				Wend
+	
+				If _toke = "[" Or _toke = "[]" Then
+					Local depth:Int = 0
+					Local ln:TExpr[]
+					Local tmpTy:TType = ty.Copy()
+	
 					Repeat
-						If CParse(",") Then
-							dims :+ 1
+						Local dims:Int = 1
+						
+						If CParse("[]") Then
+							tmpTy=New TArrayType.Create( tmpTy )
+							depth :+ 1
 							Continue
 						End If
-						If CParse("]") Exit
-						ln = ln + [ParseExpr()]
-						If CParse("]") Exit
-						Parse(",")
-						dims :+ 1
+	
+						' looking for an array with expression					
+						If Not ln Then
+							Parse "["
+						Else
+							If Not CParse("[") Then
+								Exit
+							Else
+								Err "Unexpected '[' after array size declaration"
+							End If
+						End If
+	
+						Repeat
+							If CParse(",") Then
+								dims :+ 1
+								Continue
+							End If
+							If CParse("]") Exit
+							ln = ln + [ParseExpr()]
+							If CParse("]") Exit
+							Parse(",")
+							dims :+ 1
+						Forever
+	
+						If Not ln Then
+							tmpTy=New TArrayType.Create( tmpTy, dims )
+						End If
 					Forever
-
-					If Not ln Then
-						tmpTy=New TArrayType.Create( tmpTy, dims )
+	
+					If ln Then
+						ty = tmpTy
 					End If
-				Forever
-
-				If ln Then
-					ty = tmpTy
-				End If
-
-'				Repeat
-					'If CParse( "[" )
-'					Repeat
-'						ln = ln + [ParseExpr()]
-'						If CParse("]") Exit
-'						Parse ","
-'					Forever
-					'Parse "]"
-'					ty = ParseArrayType(ty)
-'				Forever
-				'While CParse( "[]" )
-				'	ty=New TArrayType.Create( ty)
-				'Wend
-				expr=New TNewArrayExpr.Create( ty,ln )
-			Else
-				expr=New TNewObjectExpr.Create( ty,ParseArgs( stmt ) )
-			EndIf
+	
+	'				Repeat
+						'If CParse( "[" )
+	'					Repeat
+	'						ln = ln + [ParseExpr()]
+	'						If CParse("]") Exit
+	'						Parse ","
+	'					Forever
+						'Parse "]"
+	'					ty = ParseArrayType(ty)
+	'				Forever
+					'While CParse( "[]" )
+					'	ty=New TArrayType.Create( ty)
+					'Wend
+					expr=New TNewArrayExpr.Create( ty,ln )
+				Else
+					expr=New TNewObjectExpr.Create( ty,ParseArgs( stmt ) )
+				EndIf
+			End If
 		Case "null"
 			NextToke
 			expr = New TNullExpr.Create(TType.nullObjectType)
@@ -2197,7 +2202,7 @@ End Rem
 
 					expr=New TFuncCallExpr.Create( expr,ParseArgs( True ) )
 
-				Else If TFuncCallExpr( expr) Or TInvokeSuperExpr( expr ) Or TNewObjectExpr( expr )
+				Else If TFuncCallExpr( expr) Or TInvokeSuperExpr( expr ) Or TNewObjectExpr( expr ) Or TNewExpr(expr)
 
 				Else
 					Err "Expression cannot be used as a statement."
@@ -2443,14 +2448,15 @@ End Rem
 
 	'should return a specific "metadata object" ?
 	' metadata is in the form : {key key=value key="value"}
-	Method ParseMetaData:String()
-		Local metaDataString:String = ""
+	Method ParseMetaData:TMetadata()
+		Local meta:TMetadata = New TMetadata
+
 		SkipEols
 
 		Repeat
 			
-			If metaDataString Then
-				metaDataString :+ " "
+			If meta.metadataString Then
+				meta.metadataString :+ " "
 			End If
 			
 			Select _tokeType
@@ -2465,11 +2471,13 @@ End Rem
 			End Select
 			
 			'append current token to metaDataString
-			metaDataString :+ _toke
+			Local key:String = _toke
+			meta.metadataString :+ key
 
 			'read next token
 			NextToke()
 
+			Local value:String
 			' got a value
 			If CParse("=") Then
 				
@@ -2477,13 +2485,17 @@ End Rem
 					Err "Meta data must be literal constant"
 				End If
 				
-				metaDataString :+ "=" + _toke
+				value = _toke
+				meta.metadataString :+ "=" + value
 
 				'read next token
 				NextToke()
 			Else
-				metaDataString :+ "=1"	
+				value = "1"
+				meta.metadataString :+ "=1"	
 			End If
+			
+			meta.InsertMeta(key.ToLower(), value)
 			
 			'reached end of meta data declaration
 			If _toke="}" Then Exit
@@ -2493,7 +2505,7 @@ End Rem
 		NextToke()
 
 		'parse this into something
-		Return metaDataString
+		Return meta
 	End Method
 
 
@@ -2505,7 +2517,8 @@ End Rem
 		Local id$
 		Local ty:TType
 		Local meth:Int = attrs & FUNC_METHOD
-		Local meta:String
+		Local meta:TMetadata
+		Local noMangle:Int
 
 		If attrs & FUNC_METHOD
 			If _toke="new"
@@ -2513,7 +2526,7 @@ End Rem
 				If attrs & DECL_EXTERN
 					Err "Extern classes cannot have constructors"
 				EndIf
-				id=_toke
+				id="New"
 				NextToke
 				attrs:|FUNC_CTOR
 				attrs:&~FUNC_METHOD
@@ -2610,6 +2623,14 @@ End Rem
 				'meta data for functions/methods
 				'print "meta for func/meth: "+id+ " -> "+ParseMetaData()
 				meta = ParseMetaData()
+				
+				If meta.HasMeta("nomangle") Then
+					If attrs & FUNC_METHOD Then
+						Err "Only functions can specify NoMangle"
+					Else
+						noMangle = True
+					End If
+				End If
 			Else If _tokeType=TOKE_STRINGLIT
 				' "win32", etc
 				' TODO ? something with this??
@@ -2622,7 +2643,13 @@ End Rem
 			EndIf
 		Forever
 
-		Local funcDecl:TFuncDecl=New TFuncDecl.CreateF( id,ty,args,attrs )
+		Local funcDecl:TFuncDecl
+		If attrs & FUNC_CTOR Then
+			funcDecl=New TNewDecl.CreateF( id,ty,args,attrs )
+		Else
+			funcDecl=New TFuncDecl.CreateF( id,ty,args,attrs )
+			funcDecl.noMangle = noMangle
+		End If
 		If meta Then
 			funcDecl.metadata = meta
 		End If
@@ -2671,10 +2698,11 @@ End Rem
 			If CParse( "super" )
 				Parse "."
 				If _toke="new"
-					Local id$=_toke
+					Local id$="New"
 					NextToke
-					funcDecl.superCtor=New TInvokeSuperExpr.Create( id,ParseArgs( True ) )
-					funcDecl.AddStmt New TExprStmt.Create( funcDecl.superCtor )
+					'funcDecl.superCtor=New TInvokeSuperExpr.Create( id,ParseArgs( True ) )
+					'funcDecl.AddStmt New TExprStmt.Create( funcDecl.superCtor )
+					funcDecl.AddStmt New TExprStmt.Create( New TNewExpr.Create(ParseArgs(True), True))
 				Else
 					Local id$=ParseIdent()
 					funcDecl.AddStmt New TExprStmt.Create( New TInvokeSuperExpr.Create( id,ParseArgs( True ) ) )
@@ -2716,7 +2744,7 @@ End Rem
 		Local args:TClassDecl[]
 		Local superTy:TIdentType
 		Local imps:TIdentType[]
-		Local meta:String
+		Local meta:TMetadata
 
 		'If (attrs & CLASS_INTERFACE) And (attrs & DECL_EXTERN)
 		'	Err "Interfaces cannot be extern."
@@ -3433,7 +3461,7 @@ End Rem
 		End If
 
 		Local mainFunc:TFuncDecl = New TFuncDecl.CreateF("__LocalMain", New TIntType,Null,0)
-'DebugStop
+
 		'_app.InsertDecl mainFunc
 		_module.insertDecl(mainFunc)
 		'Local mainBlock:TBlockDecl = New TBlockDecl.Create( _block )
