@@ -2506,7 +2506,7 @@ Type TAbsExpr Extends TBuiltinExpr
 
 		expr=expr.Semant()
 
-		If TNumericType(expr.exprType) Then
+		If TNumericType(expr.exprType) Or TBoolType(expr.exprType) Then
 			If TIntType(expr.exprType) Or TByteType(expr.exprType) Or TShortType(expr.exprType) Then
 				exprType=New TIntType
 			Else
