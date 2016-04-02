@@ -1,3 +1,4 @@
+' Copyright (c) 2014-2016 Bruce A Henderson
 ' Copyright (c) 2014-2016 Ronny Otto
 '
 ' This software is provided 'as-is', without any express or implied
@@ -23,46 +24,40 @@ SuperStrict
 
 Import "transform.c"
 
+Import "stringbuffer_core.bmx"
+
 Extern
 	Function transform:Byte Ptr(i:Int)
 End Extern
-
-'Print TStringHelper.Sanitize("äääßßwa dhhh :D")
-'Print TStringHelper.Sanitize("c:\MyPath\contains spaces\yeah")
-'Print TStringHelper.Sanitize("has.dots.and-some-minuses", "_", ".-")
 
 Type TStringHelper
 	'this function replaces non-alphanumerical characters with
 	'the string "replaceInvalidCharsWith"
 	'certain characters (German umlauts, French accents) are replaced
 	'with their basic characters (é = e)
+
 	Function Sanitize:String(value:String, replaceInvalidCharsWith:String="_", requiresAlphaPrefix:Int = False)
-		Local result:String = ""
-		Local char:String = ""
+		Local result:TStringBuffer = New TStringBuffer
 
 		For Local i:Int = 0 Until value.length
-			char = ""
 
 			Local c:Byte Ptr = transform(value[i])
 
-			If c Then
-				char = String.FromCString( c )
-			End If
-
 			'append the char - or the replacement
-			If char <> ""
+			If c
 				If Not i Then
-					Local n:Int = char[0]
+					Local n:Int = c[0]
 					If n >= Asc("0") And n <= Asc("9") Then
-						result :+ replaceInvalidCharsWith
+						result.Append(replaceInvalidCharsWith)
 					End If
 				End If
-				result :+ char
+				result.AppendCString(c)
 			Else
-				result :+ replaceInvalidCharsWith
+				result.Append(replaceInvalidCharsWith)
 			EndIf
 		Next
 
-		Return result
+		Return result.ToString()
 	End Function
+
 End Type
