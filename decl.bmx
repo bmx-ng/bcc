@@ -2652,10 +2652,17 @@ Type TModuleDecl Extends TScopeDecl
 	Field imported:TUnorderedMap=New TUnorderedMap'<TModuleDecl>		'Maps filepath to modules
 	Field pubImported:TUnorderedMap =New TUnorderedMap'<TModuleDecl>	'Ditto for publicly imported modules
 
+	Field pmod:TModuleDecl
+
 	Field fileImports:TList=New TList'StringList
 	
 	' cache of ModuleInfo lines
 	Field modInfo:TList = New TList
+
+	Field _getDeclTreeCache:TList
+	
+	Field _getDeclCache:TMap = New TMap
+	Field _getDeclListCache:TMap = New TMap
 
 	Method ToString$()
 		Return "Module "+munged
@@ -2684,6 +2691,22 @@ Type TModuleDecl Extends TScopeDecl
 
 		Return Self
 	End Method
+
+	Method UpdateFilePath(fp:String)
+		filepath = fp
+	End Method
+	
+	Method AddImport(imp:String, obj:Object)
+		imported.Insert(imp, obj)
+		FlushCaches()
+	End Method
+	
+	Method FlushCaches()
+		_getDeclTreeCache = Null
+		If TModuleDecl(pmod) Then
+			TModuleDecl(pmod).FlushCaches()
+		End If
+	End Method
 	
 	Method IsStrict:Int()
 		Return (attrs & MODULE_STRICT)<>0
@@ -2698,46 +2721,80 @@ Type TModuleDecl Extends TScopeDecl
 	End Method
 	
 	Method GetDecl:Object( ident$ )
+		' if we previously found it, return it from the cache
+		Local decl:Object = _getDeclCache.ValueForKey(ident)
 
-		Local todo:TList=New TList'<TModuleDecl>
-		Local done:TMap=New TMap'<TModuleDecl>
+		If decl Then
+			Return decl
+		End If
 		
-		todo.AddLast Self
-		done.Insert filepath,Self
+		If _getDeclTreeCache Then
 		
-		Local decl:Object,declmod$
+			Local declmod$
 		
-		While Not todo.IsEmpty()
-	
-			Local mdecl:TModuleDecl=TModuleDecl(todo.RemoveLast())
-			Local tdecl_:Object=mdecl.GetDecl2( ident )
-			
-			If tdecl_ And tdecl_<>decl
-				If mdecl=Self Return tdecl_
-				If decl
-					Err "Duplicate identifier '"+ident+"' found in module '"+declmod+"' and module '"+mdecl.ident+"'."
-				EndIf
-				decl=tdecl_
-				declmod=mdecl.ident
-			EndIf
-			
-			'If Not _env Exit
-			
-			Local imps:TUnorderedMap=mdecl.imported
-			'If mdecl<>_env.ModuleScope() imps=mdecl.pubImported
+			For Local mdecl:TModuleDecl = EachIn _getDeclTreeCache
 
-			For Local mdecl2:TModuleDecl=EachIn imps.Values()
-				If Not done.Contains( mdecl2.filepath )
-					todo.AddLast mdecl2
-					done.Insert mdecl2.filepath,mdecl2
-				EndIf
-				
-				If ident = mdecl2.ident
-					Return mdecl2
+				If ident = mdecl.ident
+					_getDeclCache.Insert(ident, mdecl)
+					Return mdecl
 				End If
+			
+				Local tdecl_:Object=mdecl.GetDecl2( ident )
+			
+				If tdecl_ And tdecl_<>decl
+					If mdecl=Self
+						_getDeclCache.Insert(ident, tdecl_)
+						Return tdecl_
+					End If
+					If decl
+						Err "Duplicate identifier '"+ident+"' found in module '"+declmod+"' and module '"+mdecl.ident+"'."
+					EndIf
+					decl=tdecl_
+					declmod=mdecl.ident
+				EndIf
 			Next
-
-		Wend
+		
+		Else
+		
+			_getDeclTreeCache = New TList
+	
+			Local todo:TList=New TList'<TModuleDecl>
+			'Local done:TIntMap=New TIntMap'<TModuleDecl>
+			Local done:TMap = New TMap
+			
+			todo.AddLast Self
+			'done.Insert _filePathId,Self
+			done.Insert filePath,Self
+			
+			Local declmod$
+			
+			While Not todo.IsEmpty()
+		
+				Local mdecl:TModuleDecl=TModuleDecl(todo.RemoveLast())
+				
+				_getDeclTreeCache.AddLast(mdecl)
+				
+				Local imps:TUnorderedMap=mdecl.imported
+	
+				For Local mdecl2:TModuleDecl=EachIn imps.Values()
+	
+					'If Not done.Contains( mdecl2._filePathId )
+					If Not done.Contains( mdecl2.filePath )
+						todo.AddLast mdecl2
+						'done.Insert mdecl2._filePathId,mdecl2
+						done.Insert mdecl2.filePath,mdecl2
+					EndIf
+					
+				Next
+	
+			Wend
+	
+			Return GetDecl(ident)
+	
+		End If
+			
+		' cache it for next time
+		_getDeclCache.Insert(ident, decl)
 		
 		Return decl
 	End Method
@@ -2748,50 +2805,73 @@ Type TModuleDecl Extends TScopeDecl
 
 
 	Method GetDeclList:Object( ident$, declList:TFuncDeclList = Null, maxSearchDepth:Int )
-	
+
 		If Not declList Then
 			declList = New TFuncDeclList
 		End If
 
-		Local todo:TList=New TList'<TModuleDecl>
-		Local done:TMap=New TMap'<TModuleDecl>
-		
-		todo.AddLast Self
-		done.Insert filepath,Self
-		
 		Local decl:Object,declmod$
+
+		If _getDeclTreeCache Then
 		
-		While Not todo.IsEmpty()
-	
-			Local mdecl:TModuleDecl=TModuleDecl(todo.RemoveLast())
-			Local tdecl_:Object=mdecl.GetDeclList2( ident, declList, maxSearchDepth )
+'			Print "   Using Cache"
 			
-			If tdecl_ And tdecl_<>decl
-				If mdecl=Self Return tdecl_
-				If decl
-					Err "Duplicate identifier '"+ident+"' found in module '"+declmod+"' and module '"+mdecl.ident+"'."
-				EndIf
-				decl=tdecl_
-				declmod=mdecl.ident
-			EndIf
+			Local declmod$
+		
+			For Local mdecl:TModuleDecl = EachIn _getDeclTreeCache
 			
-			'If Not _env Exit
-			
-			Local imps:TUnorderedMap=mdecl.imported
-			'If mdecl<>_env.ModuleScope() imps=mdecl.pubImported
-
-			For Local mdecl2:TModuleDecl=EachIn imps.Values()
-				If Not done.Contains( mdecl2.filepath )
-					todo.AddLast mdecl2
-					done.Insert mdecl2.filepath,mdecl2
-				EndIf
-				
-				If ident = mdecl2.ident
-					Return mdecl2
+				If ident = mdecl.ident
+					'_getDeclCache.Insert(identId, mdecl)
+					Return mdecl
 				End If
+			
+				Local tdecl_:Object=mdecl.GetDeclList2( ident, declList, maxSearchDepth )
+			
+				If tdecl_ And tdecl_<>decl
+					If mdecl=Self
+						_getDeclCache.Insert(ident, tdecl_)
+						Return tdecl_
+					End If
+					If decl
+						Err "Duplicate identifier '"+ident+"' found in module '"+declmod+"' and module '"+mdecl.ident+"'."
+					EndIf
+					decl=tdecl_
+					declmod=mdecl.ident
+				EndIf
 			Next
+		
+		Else
 
-		Wend
+			_getDeclTreeCache = New TList
+	
+			Local todo:TList=New TList'<TModuleDecl>
+			Local done:TMap=New TMap'<TModuleDecl>
+			
+			todo.AddLast Self
+			done.Insert filepath,Self
+			
+			'Local decl:Object,declmod$
+			
+			While Not todo.IsEmpty()
+		
+				Local mdecl:TModuleDecl=TModuleDecl(todo.RemoveLast())
+				_getDeclTreeCache.AddLast(mdecl)
+				
+				Local imps:TUnorderedMap=mdecl.imported
+	
+				For Local mdecl2:TModuleDecl=EachIn imps.Values()
+					If Not done.Contains( mdecl2.filepath )
+						todo.AddLast mdecl2
+						done.Insert mdecl2.filepath,mdecl2
+					EndIf
+					
+				Next
+	
+			Wend
+		
+			Return GetDeclList( ident, declList, maxSearchDepth )
+		
+		End If
 		
 		Return decl
 	End Method

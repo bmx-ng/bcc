@@ -3436,7 +3436,7 @@ End Rem
 
 		_module=New TModuleDecl.Create( ident,munged,path,mattrs )
 
-		_module.imported.Insert path,_module
+		_module.AddImport path,_module
 
 		_app.InsertModule _module
 

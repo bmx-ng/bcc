@@ -55,7 +55,7 @@ Type TIParser
 			' add import to the scope (so we can find decls in it later)
 			' but don't add it if pmod is the apps' main module
 			If _appInstance.mainModule <> pmod Then
-				pmod.imported.Insert(modpath, _appInstance.globalImports.ValueForKey(modpath))
+				pmod.AddImport(modpath, _appInstance.globalImports.ValueForKey(modpath))
 			End If
 			Return False
 		Else If imp Then
@@ -64,7 +64,7 @@ Type TIParser
 				' add import to the scope (so we can find decls in it later)
 				' but don't add it if pmod is the apps' main module
 				If _appInstance.mainModule <> pmod Then
-					pmod.imported.Insert(imp, _appInstance.globalImports.ValueForKey(imp))
+					pmod.AddImport(imp, _appInstance.globalImports.ValueForKey(imp))
 				End If
 				Return False
 			End If
@@ -77,17 +77,18 @@ Type TIParser
 		Local _mod:TModuleDecl = New TModuleDecl.Create(prefix + modpath, "bb" + modpath, path, attrs)
 		Select modpath
 			Case "brl.classes", "brl.blitzkeywords"
-				_mod.filepath :+ "." + modpath
+				_mod.UpdateFilePath(_mod.filepath + "." + modpath)
 		End Select
 
 		_mod.declImported = True
 		_mod.relpath = relPath
+		_mod.pmod = pmod
 
 		If modpath = "brl.blitz" Then
 			If pmod.imported.Contains(modpath) Then
 				_mod = TModuleDecl(pmod.imported.ValueForKey(modpath))
 			Else
-				pmod.imported.Insert(modpath, _mod)
+				pmod.AddImport(modpath, _mod)
 			End If
 			
 			' import Object and String definitions
@@ -99,7 +100,7 @@ Type TIParser
 			par.ParseModuleImport(_mod, "brl.blitzkeywords", "", "", MakeKeywords())
 
 		Else
-			pmod.imported.Insert(modpath, _mod)
+			pmod.AddImport(modpath, _mod)
 		End If
 
 		_appInstance.globalImports.Insert(modpath, _mod)
@@ -111,7 +112,7 @@ Type TIParser
 			ipath = imp
 
 			' add to imports
-			pmod.imported.Insert(ipath, _mod)
+			pmod.AddImport(ipath, _mod)
 			_appInstance.globalImports.Insert(ipath, _mod)
 		Else
 			ipath = path + "/" + ModuleIdent(modpath) + FileMung() + ".i"
@@ -229,7 +230,7 @@ Type TIParser
 						' parse the imported module
 						New TIParser.ParseModuleImport( _mod, m, path )
 					Else
-						_mod.imported.Insert(m, mdecl)
+						_mod.AddImport(m, mdecl)
 					EndIf
 
 				End If
