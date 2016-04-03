@@ -348,6 +348,7 @@ Type TConstExpr Extends TExpr
 	Field ty:TType
 	Field value$
 	Field originalValue$
+	' True if the const was identified as a specific type.
 	Field typeSpecific:Int
 
 	Method Create:TConstExpr( ty:TType,value$ )
@@ -458,6 +459,71 @@ Type TConstExpr Extends TExpr
 			Return expr
 		End If
 		Return New TCastExpr.Create( ty,expr,castFlags ).Semant()
+	End Method
+	
+	Method CompatibleWithType:Int(ty:TType)
+		If Not TDecimalType(ty) Then
+			If value.Contains("e") Or value.Contains("E") Or value.Contains(".") Or value.Contains("inf") Or value.Contains("nan") Then
+				Return False
+			End If
+			
+			Local val:Long = value.ToLong()
+			
+			If val < 0 Then
+				If TByteType(ty) Or TShortType(ty) Or TUIntType(ty) Or TULongType(ty) Or TSizeTType(ty) Then
+					Return False
+				End If
+			Else
+				If TByteType(ty) Then
+					If value <> String.FromInt(Byte(Val)) Then
+						Return False
+					End If
+				End If
+
+				If TUIntType(ty) Or (TSizeTType(ty) And WORD_SIZE = 4) Then
+					If val > 4294967296:Long Then
+						Return False
+					End If
+				End If
+				
+				If TULongType(ty) Or (TSizeTType(ty) And WORD_SIZE = 8) Then
+					If value.length > 20 Then
+						Return False
+					Else If value.length = 20 Then
+						For Local i:Int = 0 Until value.length
+							Local v:Int = value[i]
+							Local n:Int = "18446744073709551616"[i]
+							If v < n Then
+								Exit 
+							Else If v > n Then
+								Return False
+							End If
+						Next
+					End If
+				End If
+			End If
+			
+			If TShortType(ty) Then
+				If value <> String.FromInt(Short(val)) Then
+					Return False
+				End If
+			End If
+
+			If TIntType(ty) Then
+				If value <> String.FromInt(Int(val)) Then
+					Return False
+				End If
+			End If
+
+			If TLongType(ty) Then
+				If value <> String.FromLong(Long(val)) Then
+					Return False
+				End If
+			End If
+			
+		End If
+		
+		Return True
 	End Method
 
 End Type

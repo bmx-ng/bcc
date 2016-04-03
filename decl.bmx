@@ -1183,22 +1183,24 @@ End Rem
 	
 					If i<argExprs.Length And argExprs[i]
 					
+						Local arg:TExpr = argExprs[i]
+					
 						Local declTy:TType=argDecls[i].ty
-						Local exprTy:TType=argExprs[i].exprType
+						Local exprTy:TType=arg.exprType
 						
 						Local widensTest:Int = True
 						
 						' for numeric constants, allow them to be auto-cast unless
-						'If TConstExpr(argExprs[i]) And TNumericType(exprTy) And Not TConstExpr(argExprs[i]).typeSpecific Then
-						'	widensTest = False
-						'End If
+						If TConstExpr(arg) And IsNumericType(exprTy) And Not TConstExpr(arg).typeSpecific And TConstExpr(arg).CompatibleWithType(declTy) Then
+							widensTest = False
+						End If
 	
-						If TFunctionPtrType(declTy) And TInvokeExpr(argExprs[i]) Then
-							If TFunctionPtrType(declTy).equalsDecl(TInvokeExpr(argExprs[i]).decl) Continue
+						If TFunctionPtrType(declTy) And TInvokeExpr(arg) Then
+							If TFunctionPtrType(declTy).equalsDecl(TInvokeExpr(arg).decl) Continue
 						End If
 	
 						' not ideal - since the arg is configured as a Byte Ptr, we can't check that the function is of the correct type.
-						If IsPointerType(declTy, TType.T_BYTE) And TInvokeExpr(argExprs[i]) And TInvokeExpr(argExprs[i]).invokedWithBraces = 0 Then
+						If IsPointerType(declTy, TType.T_BYTE) And TInvokeExpr(arg) And TInvokeExpr(arg).invokedWithBraces = 0 Then
 							Continue
 						End If
 						
