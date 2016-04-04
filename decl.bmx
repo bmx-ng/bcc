@@ -491,9 +491,13 @@ Type TLocalDecl Extends TVarDecl
 	Method OnCopy:TDecl(deep:Int = True)
 		Return New TLocalDecl.Create( ident,ty,CopyInit(),attrs, generated )
 	End Method
+
+	Method GetDeclPrefix:string()
+		return "Local "
+	End Method
 	
 	Method ToString$()
-		Return "Local "+Super.ToString()
+		Return GetDeclPrefix() + Super.ToString()
 	End Method
 
 End Type
@@ -524,6 +528,10 @@ Type TArgDecl Extends TLocalDecl
 		d.ty = d.declTy
 		d.init = d.declInit
 		Return d
+	End Method
+
+	Method GetDeclPrefix:string()
+		return ""
 	End Method
 	
 	Method ToString$()
