@@ -492,8 +492,8 @@ Type TLocalDecl Extends TVarDecl
 		Return New TLocalDecl.Create( ident,ty,CopyInit(),attrs, generated )
 	End Method
 
-	Method GetDeclPrefix:string()
-		return "Local "
+	Method GetDeclPrefix:String()
+		Return "Local "
 	End Method
 	
 	Method ToString$()
@@ -530,8 +530,8 @@ Type TArgDecl Extends TLocalDecl
 		Return d
 	End Method
 
-	Method GetDeclPrefix:string()
-		return ""
+	Method GetDeclPrefix:String()
+		Return ""
 	End Method
 	
 	Method ToString$()
@@ -1020,8 +1020,14 @@ End Rem
 				tot = totals[i]
 				bestMatch = func
 			Else If tot = totals[i] Then
-				' a tie?
-				Err "Unable to determine overload to use: "+ bestMatch.ToString()+" or "+func.ToString()+"."
+				If bestMatch.IsMethod() And Not func.IsMethod() Then
+					' 
+				Else If Not bestMatch.IsMethod() And func.IsMethod() Then
+					bestMatch = func
+				Else
+					' a tie?
+					Err "Unable to determine overload to use: "+ bestMatch.ToString()+" or "+func.ToString()+"."
+				End If
 			End If
 			i :+ 1
 		Next
