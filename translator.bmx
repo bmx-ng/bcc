@@ -647,6 +647,9 @@ End Rem
 		Local tmp:TLocalDecl=New TLocalDecl.Create( "",expr.exprType,expr, True )
 		MungDecl tmp
 		Emit TransLocalDecl( tmp,expr, True )+";"
+
+		EmitGDBDebug(_errInfo)
+		
 		Return tmp.munged
 	End Method
 
@@ -1729,6 +1732,10 @@ End Rem
 			Else If TDecl(obj) Then
 				Local decl:TDecl = TDecl(obj)
 				Local infoArray:String[] = decl.errInfo[1..decl.errInfo.length-1].Split(";")
+				Emit "#line " + infoArray[1] + " " + Enquote(infoArray[0])
+			Else If String(obj) Then
+				Local errInfo:String = String(obj)
+				Local infoArray:String[] = errInfo[1..errInfo.length-1].Split(";")
 				Emit "#line " + infoArray[1] + " " + Enquote(infoArray[0])
 			End If
 		End If
