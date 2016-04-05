@@ -955,10 +955,12 @@ t:+"NULLNULLNULL"
 						EmitDebugNullObjectError(loc)
 					End If
 
-					'Local class:String = Bra("(" + obj + loc +")->clas" + tSuper)
-					'Local class:String = Bra("&" + decl.scope.munged)
-					Local class:String = Bra(loc + "->clas" + tSuper)
-					Return class + "->" + TransFuncPrefix(decl.scope, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, loc )
+					If decl.attrs & FUNC_PTR Then
+						Return loc + "->" + decl.munged+TransArgs( args,decl, Null)
+					Else
+						Local class:String = Bra(loc + "->clas" + tSuper)
+						Return class + "->" + TransFuncPrefix(decl.scope, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, loc )
+					End If
 				Else
 					InternalErr
 				End If
