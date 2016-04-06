@@ -1029,9 +1029,15 @@ Type TParser
 				expr=New TCastExpr.Create( ty,expr,CAST_EXPLICIT )
 			Else
 				expr=ParseExpr()
-'				Parse ")"
-				expr=New TCastExpr.Create( ty,expr,CAST_EXPLICIT )
-'				expr=New TIdentExpr.Create( id )
+				
+				If TBinaryExpr(expr) Then
+					' cast lhs and apply to rhs
+					Local cexpr:TCastExpr=New TCastExpr.Create( ty,TBinaryExpr(expr).lhs,CAST_EXPLICIT )
+					TBinaryExpr(expr).lhs = cexpr 
+				Else
+					expr=New TCastExpr.Create( ty,expr,CAST_EXPLICIT )
+				End If
+
 			EndIf
 		Case "sizeof"
 			NextToke
