@@ -279,7 +279,7 @@ Type TCTranslator Extends TTranslator
 			For Local i:Int = 0 Until TArrayType( ty ).dims - 1
 				s:+ ","
 			Next
-			Return s + "]"
+			Return s + "]" + p
 		End If
 		If TObjectType( ty ) Then
 			Local t:String = ":"
