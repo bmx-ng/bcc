@@ -2221,7 +2221,12 @@ Type TIdentExpr Extends TExpr
 		If TLocalDecl( vdecl )
 			' local variable should (at least) be in the same function scope.
 			If vdecl.FuncScope() <> scope.FuncScope() Then
-				vdecl = Null
+				' or the local can be in localmain..
+				If TModuleDecl(scope) And vdecl.FuncScope() And vdecl.FuncScope().ident = "__LocalMain" Then
+					' ok
+				Else
+					vdecl = Null
+				End If
 			End If
 		End If
 		
