@@ -889,9 +889,19 @@ Type TScopeDecl Extends TDecl
 			If Not decl Then
 				' didn't find it? Maybe it is in module local scope?
 				' issue arises when a global initialises with a local variable in the module scope.
-				Local fdecl:TFuncDecl = TFuncDecl(FindDecl("__localmain", True))
+				Local fdecl:Object = FindDecl("__localmain", True)
 				If fdecl Then
-					decl = TValDecl( fdecl.FindDecl( ident ) )
+					If TFuncDecl(fdecl) Then
+						decl = TValDecl( TFuncDecl(fdecl).FindDecl( ident ) )
+					Else If TFuncDeclList(fdecl) Then
+						For Local func:TFuncDecl = EachIn TFuncDeclList(fdecl)
+							func.Semant()
+							decl = TValDecl( func.FindDecl( ident ) )
+							If decl Then
+								Exit
+							End If
+						Next
+					End If
 					
 					' a local variable from module local scope can't be seen outside of module local scope...
 					If TLocalDecl(decl) And static Then
