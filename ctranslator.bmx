@@ -1351,7 +1351,7 @@ t:+"NULLNULLNULL"
 				If TDoubleType( src) Return Bra("&"+t)
 
 				If TObjectType(src) Then
-					If TObjectType(src).classDecl.IsExtern() Then
+					If TObjectType(src).classDecl.IsExtern() Or (dst._flags & TType.T_VARPTR) Then
 						Return Bra("&" + t)
 					Else
 						If TObjectType(dst) Then
@@ -1385,7 +1385,7 @@ t:+"NULLNULLNULL"
 			End If
 
 			If TObjectType(src) Then
-				If TObjectType(src).classDecl.IsExtern() Then
+				If TObjectType(src).classDecl.IsExtern() Or (src._flags & TType.T_VARPTR) Then
 					Return Bra(t)
 				Else
 					Return Bra("(BBBYTE*)" + t) + "+" + Bra("sizeof(void*)")
