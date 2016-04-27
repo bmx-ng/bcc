@@ -1119,12 +1119,16 @@ Type TCastExpr Extends TExpr
 					op="ToFloat"
 				Else If TStringType( ty )
 					op="ToString"
-				Else If IsPointerType( ty, TType.T_BYTE )
+				Else If IsPointerType(ty, 0, TType.T_POINTER)
 					exprType = ty
 					If flags = CAST_EXPLICIT Then
 						Return Self
 					Else
-						Return expr
+						If Not TObjectType( src ).classDecl.IsExtern() Then
+							Return Self
+						Else
+							Return expr
+						End If
 					End If
 				Else
 					InternalErr
