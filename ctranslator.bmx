@@ -451,7 +451,7 @@ Type TCTranslator Extends TTranslator
 
 					' Object -> Byte Ptr
 					If IsPointerType(ty, TType.T_BYTE) And TObjectType(arg.exprType) Then
-						t:+ Bra("(BBBYTE*)" + Bra(arg.Trans())) + "+" + Bra("sizeof(void*)")
+						t:+ Bra(Bra("(BBBYTE*)" + Bra(arg.Trans())) + "+" + Bra("sizeof(void*)"))
 						Continue
 					End If
 
@@ -1357,7 +1357,7 @@ t:+"NULLNULLNULL"
 						If TObjectType(dst) Then
 							Return Bra("&" + t)
 						Else
-							Return Bra("(BBBYTE*)" + Bra("&" + t)) + "+" + Bra("sizeof(void*)")
+							Return Bra(Bra("(BBBYTE*)" + Bra("&" + t)) + "+" + Bra("sizeof(void*)"))
 						End If
 					End If
 				End If
@@ -1388,7 +1388,7 @@ t:+"NULLNULLNULL"
 				If TObjectType(src).classDecl.IsExtern() Or (src._flags & TType.T_VARPTR) Then
 					Return Bra(t)
 				Else
-					Return Bra("(BBBYTE*)" + t) + "+" + Bra("sizeof(void*)")
+					Return Bra(Bra("(BBBYTE*)" + t) + "+" + Bra("sizeof(void*)"))
 				End If
 			End If
 
