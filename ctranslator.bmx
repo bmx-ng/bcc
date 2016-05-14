@@ -1209,9 +1209,9 @@ t:+"NULLNULLNULL"
 					Return "0"
 				Else
 					If TIdentTypeExpr(expr.expr) Then
-						Return "sizeof" + Bra(expr.expr.Trans()) + "-sizeof(void*)"
+						Return Bra(Bra(TransFuncClass(TObjectType( expr.expr.exprType ).classDecl)) + "->obj_size")
 					Else
-						Return Bra(Bra(expr.expr.Trans()) + "->clas->instance_size-(sizeof(void*))")
+						Return Bra(Bra(expr.expr.Trans()) + "->clas->obj_size")
 					End If
 				End If
 			End If
@@ -2825,7 +2825,7 @@ End Rem
 		End If
 		Emit "void      (*free)( BBObject *o );"
 		Emit "BBDebugScope* debug_scope;"
-		Emit "int       instance_size;"
+		Emit "unsigned int instance_size;"
 		Emit "void      (*ctor)( BBOBJECT o );"
 		Emit "void      (*dtor)( BBOBJECT o );"
 		Emit "BBSTRING  (*ToString)( BBOBJECT x );"
@@ -2833,7 +2833,7 @@ End Rem
 		Emit "BBOBJECT  (*SendMessage)( BBOBJECT o,BBOBJECT m,BBOBJECT s );"
 		Emit "BBINTERFACETABLE itable;"
 		Emit "void*     extra;"
-		Emit "void*     reserved;"
+		Emit "unsigned int obj_size;"
 
 		EmitBBClassClassFuncProto(classDecl)
 
@@ -3491,7 +3491,6 @@ End Rem
 		' object instance size
 		Emit "sizeof" + Bra("struct " + classid + "_obj") + ","
 
-
 		' standard methods
 		Emit "_" + classid + "_New,"
 
@@ -3557,15 +3556,15 @@ End Rem
 			Emit "0,"
 			' extra pointer
 			Emit "0,"
-			' reserved
-			Emit "0"
 		Else
 			Emit "&" + classid + "_itable,"
 			' extra pointer
 			Emit "0,"
-			' reserved
-			Emit "0"
 		End If
+
+		' obj_size
+		Emit TransObjectSize(classDecl)
+
 
 		' methods/funcs
 		'reserved = "New,Delete,ToString,ObjectCompare,SendMessage".ToLower()
@@ -3596,6 +3595,25 @@ End Rem
 
 	End Method
 
+	Method TransObjectSize:String(classDecl:TClassDecl)
+		Local t:String
+		
+		Local fieldDecl:TFieldDecl
+
+		For Local decl:TFieldDecl = EachIn classDecl.Decls()
+			fieldDecl = decl
+		Next
+		
+		If fieldDecl Then
+			t = "offsetof" + Bra("struct " + classDecl.munged + "_obj," + fieldDecl.munged) + " - sizeof(void*) + sizeof" + Bra(TransType(fieldDecl.ty, ""))
+		Else
+			t = "0"
+		End If
+
+		Return t
+	End Method
+	
+	
 	Method EmitClassDeclNew( classDecl:TClassDecl, fdecl:TFuncDecl )
 		Local classid$=classDecl.munged
 		Local superid$=classDecl.superClass.actual.munged
