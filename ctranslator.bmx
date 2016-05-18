@@ -598,7 +598,14 @@ t:+"NULLNULLNULL"
 
 	Method TransLocalDecl$( decl:TLocalDecl,init:TExpr, declare:Int = False )
 		If Not declare And opt_debug Then
-			Return decl.munged+"="+init.Trans() 
+			Local ty:TType = decl.ty
+			If Not TObjectType( ty ) Or (TObjectType( ty ) And Not TObjectType( ty ).classDecl.IsStruct()) Then
+				Return decl.munged+"="+init.Trans()
+			Else If TObjectType( ty ) And TObjectType( ty ).classDecl.IsStruct() Then
+				If Not TConstExpr(init) Then
+					Return decl.munged+"="+init.Trans()
+				End If
+			End If
 		Else
 			If TFunctionPtrType(decl.ty) Then
 				If TInvokeExpr(init) And Not TInvokeExpr(init).invokedWithBraces Then
@@ -2650,7 +2657,15 @@ End Rem
 				If ldecl <> ignoreVar Then
 					If Not TArgDecl(ldecl) And Not ldecl.generated Then
 						MungDecl ldecl
-						Emit TransLocalDeclNoInit(ldecl) + ";"
+						Local ty:TType = ldecl.ty
+
+						Local t:String = TransLocalDeclNoInit(ldecl)
+						
+						If TObjectType( ty ) And TObjectType( ty ).classDecl.IsStruct() Then
+							t :+ "={}"
+						End If
+						
+						Emit t + ";"
 					End If
 				End If
 			Next
