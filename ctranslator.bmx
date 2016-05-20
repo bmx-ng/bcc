@@ -75,6 +75,7 @@ Type TCTranslator Extends TTranslator
 		If TStringType( ty ) Return "~q$~q"
 		If TInt128Type( ty ) Return "~q" + p + "j~q"
 		If TFloat128Type( ty ) Return "~q" + p + "k~q"
+		If TDouble128Type( ty ) Return "~q" + p + "m~q"
 		If TArrayType( ty ) Then
 			Local s:String = "["
 			For Local i:Int = 0 Until TArrayType( ty ).dims - 1
@@ -154,6 +155,7 @@ Type TCTranslator Extends TTranslator
 		If TSizeTType( ty ) Return p + "t"
 		If TInt128Type( ty ) Return p + "j"
 		If TFloat128Type( ty ) Return p + "k"
+		If TDouble128Type( ty ) Return p + "m"
 		If TStringType( ty ) Return "$"
 		If TArrayType( ty ) Then
 			Local s:String = "["
@@ -208,6 +210,7 @@ Type TCTranslator Extends TTranslator
 		If TSizeTType( ty ) Return "BBSIZET" + p
 		If TInt128Type( ty ) Return "BBINT128" + p
 		If TFloat128Type( ty ) Return "BBFLOAT128" + p
+		If TDouble128Type( ty ) Return "BBDOUBLE128" + p
 		If TStringType( ty ) Then
 			If ty._flags & TType.T_CHAR_PTR Then
 				Return "BBBYTE *"
@@ -274,6 +277,7 @@ Type TCTranslator Extends TTranslator
 		If TSizeTType( ty ) Return "%z" + p
 		If TInt128Type( ty ) Return "%j" + p
 		If TFloat128Type( ty ) Return "!k" + p
+		If TDouble128Type( ty ) Return "!m" + p
 		If TStringType( ty ) Then
 			If ty._flags & TType.T_CHAR_PTR Then
 				Return "$z"
@@ -341,7 +345,7 @@ Type TCTranslator Extends TTranslator
 					Return value+"f"
 				End If
 			End If
-			If TDoubleType( ty ) Or TFloat128Type(ty) Then
+			If TDoubleType( ty ) Or TFloat128Type(ty) Or TDouble128Type(ty) Then
 				If value = "nan" Or value = "1.#IND0000" Then
 					Return "bbPOSNANd"
 				Else If value="-nan" Or value = "-1.#IND0000" Then
@@ -366,6 +370,7 @@ Type TCTranslator Extends TTranslator
 			If TBoolType( ty ) Return "0"
 			If TInt128Type( ty ) Return "{}"
 			If TFloat128Type( ty ) Return "{}"
+			If TDouble128Type( ty ) Return "{}"
 			If TNumericType( ty ) Return "0" ' numeric and pointers
 			If TStringType( ty ) Return "&bbEmptyString"
 			If TArrayType( ty ) Return "&bbEmptyArray"
@@ -611,7 +616,7 @@ t:+"NULLNULLNULL"
 		If Not declare And opt_debug Then
 			Local ty:TType = decl.ty
 			If Not TObjectType( ty ) Or (TObjectType( ty ) And Not TObjectType( ty ).classDecl.IsStruct()) Then
-				If TInt128Type(ty) Or TFLoat128Type(ty) Then
+				If TInt128Type(ty) Or TFLoat128Type(ty) Or TDouble128Type(ty) Then
 					If Not TConstExpr(init) Then
 						Return decl.munged+"="+init.Trans()
 					End If
@@ -1375,6 +1380,7 @@ t:+"NULLNULLNULL"
 				If TDoubleType( src) Return Bra("&"+t)
 				If TInt128Type( src) Return Bra("&"+t)
 				If TFloat128Type( src) Return Bra("&"+t)
+				If TDouble128Type( src) Return Bra("&"+t)
 
 				If TObjectType(src) Then
 					If TObjectType(src).classDecl.IsExtern() Or (dst._flags & TType.T_VARPTR) Then
@@ -1452,6 +1458,9 @@ t:+"NULLNULLNULL"
 			Else If TFloat128Type( dst )
 				If IsPointerType(src, TType.T_FLOAT128, TType.T_POINTER & dst._flags) Return t
 				If TNumericType( src ) Return Bra("(BBFLOAT128" + p + ")"+t)
+			Else If TDouble128Type( dst )
+				If IsPointerType(src, TType.T_DOUBLE128, TType.T_POINTER & dst._flags) Return t
+				If TNumericType( src ) Return Bra("(BBDOUBLE128" + p + ")"+t)
 				
 			'Else If TIntPtrPtrType( dst )
 			'	If TBytePtrType( src) Return Bra("(BBINT**)"+t)

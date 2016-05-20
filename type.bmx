@@ -206,6 +206,7 @@ Type TType
 	Const T_ULONG:Int       =  $800
 	Const T_INT128:Int      = $1000
 	Const T_FLOAT128:Int    = $2000
+	Const T_DOUBLE128:Int   = $4000
 
 	Const T_MAX_DISTANCE:Int = $FFFF
 
@@ -262,6 +263,8 @@ Function NewType:TType(kind:Int = 0)
 			ty = New TDoubleType
 		Case TType.T_FLOAT128
 			ty = New TFloat128Type
+		Case TType.T_DOUBLE128
+			ty = New TDouble128Type
 		Case TType.T_STRING
 			ty = New TStringType
 		Case TType.T_ARRAY
@@ -323,6 +326,8 @@ Function IsType:Int(ty:TType, kind:Int)
 			Return TDoubleType(ty) <> Null
 		Case TType.T_FLOAT128
 			Return TFloat128Type(ty) <> Null
+		Case TType.T_DOUBLE128
+			Return TDouble128Type(ty) <> Null
 		Case TType.T_STRING
 			Return TStringType(ty) <> Null
 		Case TType.T_ARRAY
@@ -1095,6 +1100,49 @@ Type TFloat128Type Extends TDecimalType
 
 	Method ToString$()
 		Return "Float128" + ToStringParts()
+	End Method
+
+End Type
+
+Type TDouble128Type Extends TDecimalType
+	
+	Method EqualsType:Int( ty:TType )
+		Return TDouble128Type( ty )<>Null And (_flags = ty._flags Or ..
+			(_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR) Or (_flags & T_VAR))
+	End Method
+	
+	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
+		'If TObjectType( ty )
+		'	Local expr:TExpr=New TConstExpr.Create( Self,"" ).Semant()
+		'	Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
+		'	Return ctor And ctor.IsCtor()
+		'EndIf	
+		If _flags & T_VARPTR And (TDouble128Type(ty) <> Null Or IsPointerType(ty, 0, T_POINTER)) Return True
+		Return (widensTest And WidensToType(ty)) Or (Not widensTest And TNumericType( ty )<>Null) Or (Not noExtendString And TStringType( ty )<>Null) 'Or TDoubleVarPtrType( ty )<> Null
+	End Method
+
+	Method WidensToType:Int( ty:TType )
+		Return (IsPointerType(ty, 0, T_POINTER) And IsPointerType(Self, 0, T_POINTER)) Or (TDouble128Type(ty)<>Null And (ty._flags & T_VAR))
+	End Method
+
+	Method DistanceToType:Int(ty:TType)
+		If (IsPointerType(ty, 0, T_POINTER) And IsPointerType(Self, 0, T_POINTER)) Then
+			Return 0
+		End If
+
+		If TDouble128Type(ty)<>Null Then
+			Return 0
+		End If
+		
+		Return T_MAX_DISTANCE
+	End Method
+
+	Method OnCopy:TType()
+		Return New TDouble128Type
+	End Method
+
+	Method ToString$()
+		Return "Double128" + ToStringParts()
 	End Method
 
 End Type

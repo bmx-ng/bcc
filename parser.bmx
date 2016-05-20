@@ -558,6 +558,10 @@ Type TParser
 			If opt_arch <> "x64" Err "Intrinsic types only available on x64"
 			ty = New TFloat128Type
 		End If
+		If CParse( "double128" ) Then
+			If opt_arch <> "x64" Err "Intrinsic types only available on x64"
+			ty = New TDouble128Type
+		End If
 
 
 		While CParse("ptr")
@@ -584,6 +588,10 @@ Type TParser
 			If opt_arch <> "x64" Err "Intrinsic types only available on x64"
 			Return New TFloat128Type
 		End If
+		If CParse( "double128" ) Then
+			If opt_arch <> "x64" Err "Intrinsic types only available on x64"
+			Return New TDouble128Type
+		End If
 	End	Method
 
 	Method ParseNewType:TType()
@@ -606,6 +614,10 @@ Type TParser
 		If CParse( "float128" ) Then
 			If opt_arch <> "x64" Err "Intrinsic types only available on x64"
 			Return New TFloat128Type
+		End If
+		If CParse( "double128" ) Then
+			If opt_arch <> "x64" Err "Intrinsic types only available on x64"
+			Return New TDouble128Type
 		End If
 		Return ParseIdentType()
 	End Method
@@ -1012,7 +1024,7 @@ Type TParser
 		Case "false"
 			NextToke
 			expr=New TConstExpr.Create( New TIntType,"" )
-		Case "int","long","float","double","object","short","byte","size_t","uint","ulong","int128","float128"
+		Case "int","long","float","double","object","short","byte","size_t","uint","ulong","int128","float128","double128"
 			Local id$=_toke
 			Local ty:TType=ParseType()
 
@@ -1040,6 +1052,9 @@ Type TParser
 					Case "float128"
 						If opt_arch <> "x64" Err "Intrinsic types only available on x64"
 						ty = New TFloat128Type
+					Case "double128"
+						If opt_arch <> "x64" Err "Intrinsic types only available on x64"
+						ty = New TDouble128Type
 				End Select
 			End If
 

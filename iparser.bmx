@@ -501,7 +501,7 @@ Type TIParser
 		'If toke Parse toke
 		
 		Local id$=ParseIdent()
-		Local args:TClassDecl[]
+		Local args:String[]
 		Local superTy:TIdentType
 		Local imps:TIdentType[]
 
@@ -1258,6 +1258,8 @@ End Rem
 			
 			If CParse("k") Then
 				ty = New TFloat128Type
+			Else If CParse("m") Then
+				ty = New TDouble128Type
 			End If
 
 			If CParse("&")  And Not (attrs & DECL_FIELD) Then
@@ -1478,6 +1480,16 @@ End Rem
 		End If
 		If CParse( "float128" )
 			Local ty:TType = New TFloat128Type
+			While CParse("ptr")
+				ty = TType.MapToPointerType(ty)
+			Wend
+			While CParse( "*" )
+				ty = TType.MapToPointerType(ty)
+			Wend
+			Return ty
+		End If
+		If CParse( "double128" )
+			Local ty:TType = New TDouble128Type
 			While CParse("ptr")
 				ty = TType.MapToPointerType(ty)
 			Wend
