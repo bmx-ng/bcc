@@ -192,18 +192,20 @@ Type TType
 
 	Const T_POINTER:Int = T_PTR | T_PTRPTR | T_PTRPTRPTR
 
-	Const T_BYTE:Int        = $001
-	Const T_SHORT:Int       = $002
-	Const T_INT:Int         = $004
-	Const T_LONG:Int        = $008
-	Const T_FLOAT:Int       = $010
-	Const T_DOUBLE:Int      = $020
-	Const T_STRING:Int      = $040
-	Const T_ARRAY:Int       = $080
-	Const T_FUNCTIONPTR:Int = $100
-	Const T_SIZET:Int       = $200
-	Const T_UINT:Int        = $400
-	Const T_ULONG:Int       = $800
+	Const T_BYTE:Int        =  $001
+	Const T_SHORT:Int       =  $002
+	Const T_INT:Int         =  $004
+	Const T_LONG:Int        =  $008
+	Const T_FLOAT:Int       =  $010
+	Const T_DOUBLE:Int      =  $020
+	Const T_STRING:Int      =  $040
+	Const T_ARRAY:Int       =  $080
+	Const T_FUNCTIONPTR:Int =  $100
+	Const T_SIZET:Int       =  $200
+	Const T_UINT:Int        =  $400
+	Const T_ULONG:Int       =  $800
+	Const T_INT128:Int      = $1000
+	Const T_FLOAT128:Int    = $2000
 
 	Const T_MAX_DISTANCE:Int = $FFFF
 
@@ -248,12 +250,18 @@ Function NewType:TType(kind:Int = 0)
 			ty = New TUIntType
 		Case TType.T_LONG
 			ty = New TLongType
+		Case TType.T_ULONG
+			ty = New TULongType
 		Case TType.T_SIZET
 			ty = New TSizeTType
+		Case TType.T_INT128
+			ty = New TInt128Type
 		Case TType.T_FLOAT
 			ty = New TFloatType
 		Case TType.T_DOUBLE
 			ty = New TDoubleType
+		Case TType.T_FLOAT128
+			ty = New TFloat128Type
 		Case TType.T_STRING
 			ty = New TStringType
 		Case TType.T_ARRAY
@@ -303,12 +311,18 @@ Function IsType:Int(ty:TType, kind:Int)
 			Return TUIntType(ty) <> Null
 		Case TType.T_LONG
 			Return TLongType(ty) <> Null
+		Case TType.T_ULONG
+			Return TULongType(ty) <> Null
 		Case TType.T_SIZET
 			Return TSizeTType(ty) <> Null
+		Case TType.T_INT128
+			Return TInt128Type(ty) <> Null
 		Case TType.T_FLOAT
 			Return TFloatType(ty) <> Null
 		Case TType.T_DOUBLE
 			Return TDoubleType(ty) <> Null
+		Case TType.T_FLOAT128
+			Return TFloat128Type(ty) <> Null
 		Case TType.T_STRING
 			Return TStringType(ty) <> Null
 		Case TType.T_ARRAY
@@ -895,6 +909,56 @@ Type TULongType Extends TNumericType
 	End Method
 End Type
 
+Type TInt128Type Extends TNumericType
+	
+	Method EqualsType:Int( ty:TType )
+		Return TInt128Type( ty )<>Null And (_flags = ty._flags Or ..
+			(_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR) Or (_flags & T_VAR))
+	End Method
+	
+	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
+		'If TObjectType( ty )
+		'	Local expr:TExpr=New TConstExpr.Create( Self,"" ).Semant()
+		'	Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
+		'	Return ctor And ctor.IsCtor()
+		'EndIf
+		If _flags & T_VARPTR And (TLongType(ty) <> Null Or IsPointerType(ty, 0, T_POINTER)) Return True
+		Return (widensTest And WidensToType(ty)) Or (Not widensTest And TNumericType( ty )<>Null) Or (Not noExtendString And TStringType( ty )<>Null) 'Or TLongVarPtrType( ty )<> Null
+	End Method
+
+	Method WidensToType:Int( ty:TType )
+		Return (IsPointerType(ty, 0, T_POINTER) And IsPointerType(Self, 0, T_POINTER)) Or (TInt128Type(ty)<>Null And (ty._flags & T_VAR)) Or TFloatType(ty)<>Null Or TDoubleType(ty)<>Null
+	End Method
+
+	Method DistanceToType:Int(ty:TType)
+		If (IsPointerType(ty, 0, T_POINTER) And IsPointerType(Self, 0, T_POINTER)) Then
+			Return 0
+		End If
+
+		If TLongType(ty)<>Null Then
+			Return 0
+		End If
+
+		If TFloatType(ty)<>Null Then
+			Return 2
+		End If
+
+		If TDoubleType(ty)<>Null Then
+			Return 4
+		End If
+		
+		Return T_MAX_DISTANCE
+	End Method
+	
+	Method OnCopy:TType()
+		Return New TInt128Type
+	End Method
+
+	Method ToString$()
+		Return "Int128" + ToStringParts()
+	End Method
+End Type
+
 Type TDecimalType Extends TNumericType
 End Type
 
@@ -988,6 +1052,49 @@ Type TDoubleType Extends TDecimalType
 
 	Method ToString$()
 		Return "Double" + ToStringParts()
+	End Method
+
+End Type
+
+Type TFloat128Type Extends TDecimalType
+	
+	Method EqualsType:Int( ty:TType )
+		Return TFloat128Type( ty )<>Null And (_flags = ty._flags Or ..
+			(_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR) Or (_flags & T_VAR))
+	End Method
+	
+	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
+		'If TObjectType( ty )
+		'	Local expr:TExpr=New TConstExpr.Create( Self,"" ).Semant()
+		'	Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
+		'	Return ctor And ctor.IsCtor()
+		'EndIf	
+		If _flags & T_VARPTR And (TFloat128Type(ty) <> Null Or IsPointerType(ty, 0, T_POINTER)) Return True
+		Return (widensTest And WidensToType(ty)) Or (Not widensTest And TNumericType( ty )<>Null) Or (Not noExtendString And TStringType( ty )<>Null) 'Or TDoubleVarPtrType( ty )<> Null
+	End Method
+
+	Method WidensToType:Int( ty:TType )
+		Return (IsPointerType(ty, 0, T_POINTER) And IsPointerType(Self, 0, T_POINTER)) Or (TFloat128Type(ty)<>Null And (ty._flags & T_VAR))
+	End Method
+
+	Method DistanceToType:Int(ty:TType)
+		If (IsPointerType(ty, 0, T_POINTER) And IsPointerType(Self, 0, T_POINTER)) Then
+			Return 0
+		End If
+
+		If TFloat128Type(ty)<>Null Then
+			Return 0
+		End If
+		
+		Return T_MAX_DISTANCE
+	End Method
+
+	Method OnCopy:TType()
+		Return New TFloat128Type
+	End Method
+
+	Method ToString$()
+		Return "Float128" + ToStringParts()
 	End Method
 
 End Type

@@ -1192,6 +1192,8 @@ End Rem
 				ty = New TLongType
 			ElseIf CParse("z") Then
 				ty = New TSizetType
+			ElseIf CParse("j") Then
+				ty = New TInt128Type
 			End If
 			
 			If CParse("&") And Not (attrs & DECL_FIELD) Then
@@ -1253,6 +1255,10 @@ End Rem
 		Case "!"
 			NextToke
 			ty=New TDoubleType
+			
+			If CParse("k") Then
+				ty = New TFloat128Type
+			End If
 
 			If CParse("&")  And Not (attrs & DECL_FIELD) Then
 				attrs :| DECL_GLOBAL
@@ -1452,6 +1458,26 @@ End Rem
 		End If
 		If CParse( "size_t" )
 			Local ty:TType = New TSizeTType
+			While CParse("ptr")
+				ty = TType.MapToPointerType(ty)
+			Wend
+			While CParse( "*" )
+				ty = TType.MapToPointerType(ty)
+			Wend
+			Return ty
+		End If
+		If CParse( "int128" )
+			Local ty:TType = New TInt128Type
+			While CParse("ptr")
+				ty = TType.MapToPointerType(ty)
+			Wend
+			While CParse( "*" )
+				ty = TType.MapToPointerType(ty)
+			Wend
+			Return ty
+		End If
+		If CParse( "float128" )
+			Local ty:TType = New TFloat128Type
 			While CParse("ptr")
 				ty = TType.MapToPointerType(ty)
 			Wend

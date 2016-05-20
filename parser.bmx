@@ -550,6 +550,15 @@ Type TParser
 		If CParse( "ulong" ) ty = New TULongType
 		If CParse( "double" ) ty = New TDoubleType
 		If CParse( "size_t" ) ty = New TSizeTType
+		If CParse( "int128" ) Then
+			If opt_arch <> "x64" Err "Intrinsic types only available on x64"
+			ty = New TInt128Type
+		End If
+		If CParse( "float128" ) Then
+			If opt_arch <> "x64" Err "Intrinsic types only available on x64"
+			ty = New TFloat128Type
+		End If
+
 
 		While CParse("ptr")
 			ty = TType.MapToPointerType(ty)
@@ -567,6 +576,14 @@ Type TParser
 		If CParse( "ulong" ) Return New TULongType
 		If CParse( "double" ) Return New TDoubleType
 		If CParse( "size_t" ) Return New TSizeTType
+		If CParse( "int128" ) Then
+			If opt_arch <> "x64" Err "Intrinsic types only available on x64"
+			Return New TInt128Type
+		End If
+		If CParse( "float128" ) Then
+			If opt_arch <> "x64" Err "Intrinsic types only available on x64"
+			Return New TFloat128Type
+		End If
 	End	Method
 
 	Method ParseNewType:TType()
@@ -582,6 +599,14 @@ Type TParser
 		If CParse( "ulong" ) Return New TULongType
 		If CParse( "double" ) Return New TDoubleType
 		If CParse( "size_t" ) Return New TSizeTType
+		If CParse( "int128" ) Then
+			If opt_arch <> "x64" Err "Intrinsic types only available on x64"
+			Return New TInt128Type
+		End If
+		If CParse( "float128" ) Then
+			If opt_arch <> "x64" Err "Intrinsic types only available on x64"
+			Return New TFloat128Type
+		End If
 		Return ParseIdentType()
 	End Method
 
@@ -987,7 +1012,7 @@ Type TParser
 		Case "false"
 			NextToke
 			expr=New TConstExpr.Create( New TIntType,"" )
-		Case "int","long","float","double","object","short","byte","size_t","uint","ulong"
+		Case "int","long","float","double","object","short","byte","size_t","uint","ulong","int128","float128"
 			Local id$=_toke
 			Local ty:TType=ParseType()
 
@@ -1009,6 +1034,12 @@ Type TParser
 						ty = New TDoubleType
 					Case "size_t"
 						ty = New TSizeTType
+					Case "int128"
+						If opt_arch <> "x64" Err "Intrinsic types only available on x64"
+						ty = New TInt128Type
+					Case "float128"
+						If opt_arch <> "x64" Err "Intrinsic types only available on x64"
+						ty = New TFloat128Type
 				End Select
 			End If
 

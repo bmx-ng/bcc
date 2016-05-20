@@ -211,12 +211,14 @@ Type TExpr
 			If IsPointerType( lhs, 0, TType.T_POINTER ) Return lhs
 			If IsPointerType( rhs, 0, TType.T_POINTER ) Return rhs
 		End If
+		If TFloat128Type( lhs ) Or TFloat128Type( rhs ) Return New TFloat128Type
 		If TDoubleType( lhs ) Or TDoubleType( rhs ) Return New TDoubleType
 		If TFloatType( lhs ) Or TFloatType( rhs ) Return New TFloatType
 		If TFunctionPtrType( lhs ) Or TFunctionPtrType( rhs ) Then
 			If TFunctionPtrType( lhs ) Return lhs
 			If TFunctionPtrType( rhs ) Return rhs
 		End If
+		If TInt128Type( lhs ) Or TInt128Type( rhs ) Return New TInt128Type
 		If TULongType( lhs ) Or TULongType( rhs ) Return New TULongType
 		If TSizeTType( lhs ) Or TSizeTType( rhs ) Return New TSizeTType
 		If TLongType( lhs ) And TUIntType( rhs ) Return New TULongType
@@ -405,7 +407,7 @@ Type TConstExpr Extends TExpr
 				End If
 			EndIf
 
-		Else If TDecimalType( ty )
+		Else If TDecimalType( ty ) And Not TFloat128Type( ty )
 			If Not (value.Contains("e") Or value.Contains("E") Or value.Contains(".") Or value.Contains("inf") Or value.Contains("nan"))
 				value:+".0"
 			EndIf
@@ -470,7 +472,7 @@ Type TConstExpr Extends TExpr
 			Local val:Long = value.ToLong()
 			
 			If val < 0 Then
-				If TByteType(ty) Or TShortType(ty) Or TUIntType(ty) Or TULongType(ty) Or TSizeTType(ty) Then
+				If TByteType(ty) Or TShortType(ty) Or TUIntType(ty) Or TULongType(ty) Or TSizeTType(ty) Or TInt128Type(ty) Then
 					Return False
 				End If
 			Else
@@ -1401,6 +1403,10 @@ Type TCastExpr Extends TExpr
 			Return Long( val )
 		Else If TSizeTType( exprType )
 			Return Long( val )
+		Else If TInt128Type( exprType )
+			Return Long( val )
+		Else If TFloat128Type( exprType )
+			Return Float( val )
 		Else If TStringType( exprType )
 			Return String( val )
 		Else If TByteType( exprType )
@@ -1528,7 +1534,9 @@ Type TBinaryMathExpr Extends TBinaryExpr
 
 		Select op
 		Case "&","~~","|","shl","shr"
-			If TDoubleType(lhs.exprType) Then
+			If TFloat128Type(lhs.exprType) Then
+				exprType=New TInt128Type
+			Else If TDoubleType(lhs.exprType) Then
 				exprType=New TLongType
 			Else If TFloatType(lhs.exprType) Then
 				exprType=New TIntType
@@ -1601,7 +1609,7 @@ Type TBinaryMathExpr Extends TBinaryExpr
 			Case "~~" Return x ~ y
 			Case "|" Return x | y
 			End Select
-		Else If TLongType( exprType ) Or TSizeTType(exprType) Or TUIntType(exprType) Or TULongType(exprType)
+		Else If TLongType( exprType ) Or TSizeTType(exprType) Or TUIntType(exprType) Or TULongType(exprType) Or TInt128Type(exprType)
 			Local x:Long=Long(lhs),y:Long=Long(rhs)
 			Select op
 			Case "^" Return x^y
@@ -1626,7 +1634,7 @@ Type TBinaryMathExpr Extends TBinaryExpr
 			Case "+" Return x + y
 			Case "-" Return x - y
 			End Select
-		Else If TDoubleType( exprType )
+		Else If TDoubleType( exprType ) Or TFloat128Type(exprType)
 			Local x:Double=Double(lhs),y:Double=Double(rhs)
 			Select op
 			Case "^" Return x^y
@@ -1702,7 +1710,7 @@ Type TBinaryCompareExpr Extends TBinaryExpr
 			Case ">"  r=(lhs> rhs)
 			Case ">=", "=>" r=(lhs>=rhs)
 			End Select
-		Else If TLongType( ty ) Or TSizeTType( ty ) Or TUIntType( ty ) Or TULongType( ty )
+		Else If TLongType( ty ) Or TSizeTType( ty ) Or TUIntType( ty ) Or TULongType( ty ) Or TInt128Type(ty)
 			Local lhs:Long=Long( Self.lhs.Eval() )
 			Local rhs:Long=Long( Self.rhs.Eval() )
 			Select op
@@ -1724,7 +1732,7 @@ Type TBinaryCompareExpr Extends TBinaryExpr
 			Case ">"  r=(lhs> rhs)
 			Case ">=", "=>" r=(lhs>=rhs)
 			End Select
-		Else If TDoubleType( ty )
+		Else If TDoubleType( ty ) Or TFloat128Type(ty)
 			Local lhs:Double=Double( Self.lhs.Eval() )
 			Local rhs:Double=Double( Self.rhs.Eval() )
 			Select op
@@ -2582,6 +2590,10 @@ Type TAbsExpr Extends TBuiltinExpr
 		expr=expr.Semant()
 
 		If TNumericType(expr.exprType) Or TBoolType(expr.exprType) Then
+
+			If TInt128Type(expr.exprType) Err "'Abs' does not support Int128 type. Use specific intrinsic function instead."
+			If TFloat128Type(expr.exprType) Err "'Abs' does not support Float128 type. Use specific intrinsic function instead."
+
 			If TIntType(expr.exprType) Or TByteType(expr.exprType) Or TShortType(expr.exprType) Then
 				exprType=New TIntType
 			Else
@@ -2669,6 +2681,9 @@ Type TSgnExpr Extends TBuiltinExpr
 		If Not TNumericType(expr.exprType) Then
 			Err "Subexpression for 'Sgn' must be of numeric type"
 		End If
+
+		If TInt128Type(expr.exprType) Err "'Sgn' does not support Int128 type. Use specific intrinsic function instead."
+		If TFloat128Type(expr.exprType) Err "'Sgn' does not support Float128 type. Use specific intrinsic function instead."
 		
 		exprType=expr.exprType
 		Return Self
@@ -2700,6 +2715,9 @@ Type TMinExpr Extends TBuiltinExpr
 
 		expr=expr.Semant()
 		expr2=expr2.Semant()
+		
+		If TInt128Type(expr.exprType) Or TInt128Type(expr2.exprType) Err "'Min' does not support Int128 type. Use specific intrinsic function instead."
+		If TFloat128Type(expr.exprType) Or TFloat128Type(expr2.exprType) Err "'Min' does not support Float128 type. Use specific intrinsic function instead."
 
 		exprType=BalanceTypes(expr.exprType, expr2.exprType)
 		Return Self
@@ -2731,6 +2749,9 @@ Type TMaxExpr Extends TBuiltinExpr
 
 		expr=expr.Semant()
 		expr2=expr2.Semant()
+
+		If TInt128Type(expr.exprType) Or TInt128Type(expr2.exprType) Err "'Max' does not support Int128 type. Use specific intrinsic function instead."
+		If TFloat128Type(expr.exprType) Or TFloat128Type(expr2.exprType) Err "'Max' does not support Float128 type. Use specific intrinsic function instead."
 
 		exprType=BalanceTypes(expr.exprType, expr2.exprType)
 		Return Self

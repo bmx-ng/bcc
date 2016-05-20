@@ -73,6 +73,8 @@ Type TCTranslator Extends TTranslator
 		If TULongType( ty ) Return "~q" + p + "y~q"
 		If TSizeTType( ty ) Return "~q" + p + "z~q"
 		If TStringType( ty ) Return "~q$~q"
+		If TInt128Type( ty ) Return "~q" + p + "j~q"
+		If TFloat128Type( ty ) Return "~q" + p + "k~q"
 		If TArrayType( ty ) Then
 			Local s:String = "["
 			For Local i:Int = 0 Until TArrayType( ty ).dims - 1
@@ -150,6 +152,8 @@ Type TCTranslator Extends TTranslator
 		If TLongType( ty ) Return p + "l"
 		If TULongType( ty ) Return p + "y"
 		If TSizeTType( ty ) Return p + "t"
+		If TInt128Type( ty ) Return p + "j"
+		If TFloat128Type( ty ) Return p + "k"
 		If TStringType( ty ) Return "$"
 		If TArrayType( ty ) Then
 			Local s:String = "["
@@ -202,6 +206,8 @@ Type TCTranslator Extends TTranslator
 		If TLongType( ty ) Return "BBLONG" + p
 		If TULongType( ty ) Return "BBULONG" + p
 		If TSizeTType( ty ) Return "BBSIZET" + p
+		If TInt128Type( ty ) Return "BBINT128" + p
+		If TFloat128Type( ty ) Return "BBFLOAT128" + p
 		If TStringType( ty ) Then
 			If ty._flags & TType.T_CHAR_PTR Then
 				Return "BBBYTE *"
@@ -266,6 +272,8 @@ Type TCTranslator Extends TTranslator
 		If TLongType( ty ) Return "%%" + p
 		If TULongType( ty ) Return "||" + p
 		If TSizeTType( ty ) Return "%z" + p
+		If TInt128Type( ty ) Return "%j" + p
+		If TFloat128Type( ty ) Return "!k" + p
 		If TStringType( ty ) Then
 			If ty._flags & TType.T_CHAR_PTR Then
 				Return "$z"
@@ -313,6 +321,7 @@ Type TCTranslator Extends TTranslator
 			If TLongType( ty ) Return value+"LL"
 			If TULongType( ty ) Return value+"ULL"
 			If TSizeTType( ty ) Return value
+			If TInt128Type( ty ) Return value
 			If TFloatType( ty ) Then
 				If value = "nan" Or value = "1.#IND0000" Then
 					Return "bbPOSNANf"
@@ -332,7 +341,7 @@ Type TCTranslator Extends TTranslator
 					Return value+"f"
 				End If
 			End If
-			If TDoubleType( ty ) Then
+			If TDoubleType( ty ) Or TFloat128Type(ty) Then
 				If value = "nan" Or value = "1.#IND0000" Then
 					Return "bbPOSNANd"
 				Else If value="-nan" Or value = "-1.#IND0000" Then
@@ -355,6 +364,8 @@ Type TCTranslator Extends TTranslator
 			If TByteType( ty ) Return value
 		Else
 			If TBoolType( ty ) Return "0"
+			If TInt128Type( ty ) Return "{}"
+			If TFloat128Type( ty ) Return "{}"
 			If TNumericType( ty ) Return "0" ' numeric and pointers
 			If TStringType( ty ) Return "&bbEmptyString"
 			If TArrayType( ty ) Return "&bbEmptyArray"
@@ -600,7 +611,13 @@ t:+"NULLNULLNULL"
 		If Not declare And opt_debug Then
 			Local ty:TType = decl.ty
 			If Not TObjectType( ty ) Or (TObjectType( ty ) And Not TObjectType( ty ).classDecl.IsStruct()) Then
-				Return decl.munged+"="+init.Trans()
+				If TInt128Type(ty) Or TFLoat128Type(ty) Then
+					If Not TConstExpr(init) Then
+						Return decl.munged+"="+init.Trans()
+					End If
+				Else
+					Return decl.munged+"="+init.Trans()
+				End If
 			Else If TObjectType( ty ) And TObjectType( ty ).classDecl.IsStruct() Then
 				If Not TConstExpr(init) Then
 					Return decl.munged+"="+init.Trans()
@@ -1356,6 +1373,8 @@ t:+"NULLNULLNULL"
 				If TULongType( src) Return Bra("&"+t)
 				If TSizeTType( src) Return Bra("&"+t)
 				If TDoubleType( src) Return Bra("&"+t)
+				If TInt128Type( src) Return Bra("&"+t)
+				If TFloat128Type( src) Return Bra("&"+t)
 
 				If TObjectType(src) Then
 					If TObjectType(src).classDecl.IsExtern() Or (dst._flags & TType.T_VARPTR) Then
@@ -1427,6 +1446,12 @@ t:+"NULLNULLNULL"
 			Else If TSizeTType( dst )
 				If IsPointerType(src, TType.T_SIZET, TType.T_POINTER & dst._flags) Return t
 				If TNumericType( src ) Return Bra("(BBSIZET" + p + ")"+t)
+			Else If TInt128Type( dst )
+				If IsPointerType(src, TType.T_INT128, TType.T_POINTER & dst._flags) Return t
+				If TNumericType( src ) Return Bra("(BBINT128" + p + ")"+t)
+			Else If TFloat128Type( dst )
+				If IsPointerType(src, TType.T_FLOAT128, TType.T_POINTER & dst._flags) Return t
+				If TNumericType( src ) Return Bra("(BBFLOAT128" + p + ")"+t)
 				
 			'Else If TIntPtrPtrType( dst )
 			'	If TBytePtrType( src) Return Bra("(BBINT**)"+t)
