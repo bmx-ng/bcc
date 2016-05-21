@@ -213,6 +213,7 @@ Type TExpr
 		End If
 		If TDouble128Type( lhs ) Or TDouble128Type( rhs ) Return New TDouble128Type
 		If TFloat128Type( lhs ) Or TFloat128Type( rhs ) Return New TFloat128Type
+		If TFloat64Type( lhs ) Or TFloat64Type( rhs ) Return New TFloat64Type
 		If TDoubleType( lhs ) Or TDoubleType( rhs ) Return New TDoubleType
 		If TFloatType( lhs ) Or TFloatType( rhs ) Return New TFloatType
 		If TFunctionPtrType( lhs ) Or TFunctionPtrType( rhs ) Then
@@ -408,7 +409,7 @@ Type TConstExpr Extends TExpr
 				End If
 			EndIf
 
-		Else If TDecimalType( ty ) And Not TFloat128Type( ty ) And Not TDouble128Type( ty )
+		Else If TDecimalType( ty ) And Not TFloat128Type( ty ) And Not TDouble128Type( ty ) And Not TFloat64Type( ty )
 			If Not (value.Contains("e") Or value.Contains("E") Or value.Contains(".") Or value.Contains("inf") Or value.Contains("nan"))
 				value:+".0"
 			EndIf
@@ -1410,6 +1411,8 @@ Type TCastExpr Extends TExpr
 			Return Float( val )
 		Else If TDouble128Type( exprType )
 			Return Float( val )
+		Else If TFloat64Type( exprType )
+			Return Float( val )
 		Else If TStringType( exprType )
 			Return String( val )
 		Else If TByteType( exprType )
@@ -1541,6 +1544,8 @@ Type TBinaryMathExpr Extends TBinaryExpr
 				exprType=New TInt128Type
 			Else If TDouble128Type(lhs.exprType) Then
 				exprType=New TInt128Type
+			Else If TFloat64Type(lhs.exprType) Then
+				exprType=New TInt128Type
 			Else If TDoubleType(lhs.exprType) Then
 				exprType=New TLongType
 			Else If TFloatType(lhs.exprType) Then
@@ -1639,7 +1644,7 @@ Type TBinaryMathExpr Extends TBinaryExpr
 			Case "+" Return x + y
 			Case "-" Return x - y
 			End Select
-		Else If TDoubleType( exprType ) Or TFloat128Type(exprType) Or TDouble128Type(exprType)
+		Else If TDoubleType( exprType ) Or TFloat128Type(exprType) Or TDouble128Type(exprType) Or TFloat64Type(exprType)
 			Local x:Double=Double(lhs),y:Double=Double(rhs)
 			Select op
 			Case "^" Return x^y
@@ -1737,7 +1742,7 @@ Type TBinaryCompareExpr Extends TBinaryExpr
 			Case ">"  r=(lhs> rhs)
 			Case ">=", "=>" r=(lhs>=rhs)
 			End Select
-		Else If TDoubleType( ty ) Or TFloat128Type(ty) Or TDouble128Type(ty)
+		Else If TDoubleType( ty ) Or TFloat128Type(ty) Or TDouble128Type(ty) Or TFloat64Type(ty)
 			Local lhs:Double=Double( Self.lhs.Eval() )
 			Local rhs:Double=Double( Self.rhs.Eval() )
 			Select op
@@ -2597,6 +2602,7 @@ Type TAbsExpr Extends TBuiltinExpr
 		If TNumericType(expr.exprType) Or TBoolType(expr.exprType) Then
 
 			If TInt128Type(expr.exprType) Err "'Abs' does not support Int128 type. Use specific intrinsic function instead."
+			If TFloat64Type(expr.exprType) Err "'Abs' does not support Float64 type. Use specific intrinsic function instead."
 			If TFloat128Type(expr.exprType) Err "'Abs' does not support Float128 type. Use specific intrinsic function instead."
 			If TDouble128Type(expr.exprType) Err "'Abs' does not support Double128 type. Use specific intrinsic function instead."
 
@@ -2689,6 +2695,7 @@ Type TSgnExpr Extends TBuiltinExpr
 		End If
 
 		If TInt128Type(expr.exprType) Err "'Sgn' does not support Int128 type. Use specific intrinsic function instead."
+		If TFloat64Type(expr.exprType) Err "'Sgn' does not support Float64 type. Use specific intrinsic function instead."
 		If TFloat128Type(expr.exprType) Err "'Sgn' does not support Float128 type. Use specific intrinsic function instead."
 		If TDouble128Type(expr.exprType) Err "'Sgn' does not support Double128 type. Use specific intrinsic function instead."
 		
@@ -2724,6 +2731,7 @@ Type TMinExpr Extends TBuiltinExpr
 		expr2=expr2.Semant()
 		
 		If TInt128Type(expr.exprType) Or TInt128Type(expr2.exprType) Err "'Min' does not support Int128 type. Use specific intrinsic function instead."
+		If TFloat64Type(expr.exprType) Or TFloat64Type(expr2.exprType) Err "'Min' does not support Float64 type. Use specific intrinsic function instead."
 		If TFloat128Type(expr.exprType) Or TFloat128Type(expr2.exprType) Err "'Min' does not support Float128 type. Use specific intrinsic function instead."
 		If TDouble128Type(expr.exprType) Or TDouble128Type(expr2.exprType) Err "'Min' does not support Double128 type. Use specific intrinsic function instead."
 
@@ -2759,6 +2767,7 @@ Type TMaxExpr Extends TBuiltinExpr
 		expr2=expr2.Semant()
 
 		If TInt128Type(expr.exprType) Or TInt128Type(expr2.exprType) Err "'Max' does not support Int128 type. Use specific intrinsic function instead."
+		If TFloat64Type(expr.exprType) Or TFloat64Type(expr2.exprType) Err "'Max' does not support Float64 type. Use specific intrinsic function instead."
 		If TFloat128Type(expr.exprType) Or TFloat128Type(expr2.exprType) Err "'Max' does not support Float128 type. Use specific intrinsic function instead."
 		If TDouble128Type(expr.exprType) Or TDouble128Type(expr2.exprType) Err "'Max' does not support Double128 type. Use specific intrinsic function instead."
 

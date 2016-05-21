@@ -897,6 +897,11 @@ Type TIParser
 		If CParse(":") Then
 			' ret type
 			Local rt$=_toker._toke
+
+			If CParse("unsigned") Then
+				rt :+ " " + _toker._toke
+			End If
+
 			NextToke
 			If CParse("*") Then
 				rt:+ "*"
@@ -1260,6 +1265,8 @@ End Rem
 				ty = New TFloat128Type
 			Else If CParse("m") Then
 				ty = New TDouble128Type
+			Else If CParse("h") Then
+				ty = New TFloat64Type
 			End If
 
 			If CParse("&")  And Not (attrs & DECL_FIELD) Then
@@ -1470,6 +1477,16 @@ End Rem
 		End If
 		If CParse( "int128" )
 			Local ty:TType = New TInt128Type
+			While CParse("ptr")
+				ty = TType.MapToPointerType(ty)
+			Wend
+			While CParse( "*" )
+				ty = TType.MapToPointerType(ty)
+			Wend
+			Return ty
+		End If
+		If CParse( "float64" )
+			Local ty:TType = New TFloat64Type
 			While CParse("ptr")
 				ty = TType.MapToPointerType(ty)
 			Wend

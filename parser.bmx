@@ -562,7 +562,10 @@ Type TParser
 			If opt_arch <> "x64" Err "Intrinsic types only available on x64"
 			ty = New TDouble128Type
 		End If
-
+		If CParse( "float64" ) Then
+			If opt_arch <> "x64" Err "Intrinsic types only available on x64"
+			ty = New TFloat64Type
+		End If
 
 		While CParse("ptr")
 			ty = TType.MapToPointerType(ty)
@@ -592,6 +595,10 @@ Type TParser
 			If opt_arch <> "x64" Err "Intrinsic types only available on x64"
 			Return New TDouble128Type
 		End If
+		If CParse( "float64" ) Then
+			If opt_arch <> "x64" Err "Intrinsic types only available on x64"
+			Return New TFloat64Type
+		End If
 	End	Method
 
 	Method ParseNewType:TType()
@@ -618,6 +625,10 @@ Type TParser
 		If CParse( "double128" ) Then
 			If opt_arch <> "x64" Err "Intrinsic types only available on x64"
 			Return New TDouble128Type
+		End If
+		If CParse( "float64" ) Then
+			If opt_arch <> "x64" Err "Intrinsic types only available on x64"
+			Return New TFloat64Type
 		End If
 		Return ParseIdentType()
 	End Method
@@ -1024,7 +1035,7 @@ Type TParser
 		Case "false"
 			NextToke
 			expr=New TConstExpr.Create( New TIntType,"" )
-		Case "int","long","float","double","object","short","byte","size_t","uint","ulong","int128","float128","double128"
+		Case "int","long","float","double","object","short","byte","size_t","uint","ulong","int128","float64","float128","double128"
 			Local id$=_toke
 			Local ty:TType=ParseType()
 
@@ -1055,6 +1066,9 @@ Type TParser
 					Case "double128"
 						If opt_arch <> "x64" Err "Intrinsic types only available on x64"
 						ty = New TDouble128Type
+					Case "float64"
+						If opt_arch <> "x64" Err "Intrinsic types only available on x64"
+						ty = New TFloat64Type
 				End Select
 			End If
 
@@ -3245,6 +3259,11 @@ End Rem
 					If toker._tokeType = TOKE_EOF Exit
 	
 					Local rt$=toker._toke
+
+					If CParseToker(toker, "unsigned") Then
+						rt :+ " " + toker._toke
+					End If
+
 					NextTokeToker(toker)
 					
 					If CParseToker(toker,"*") Then
@@ -3261,7 +3280,7 @@ End Rem
 					If CParseToker(toker, "__stdcall") Then
 						dets.api = "__stdcall"
 					End If
-	
+
 					' fname
 					Local fn$=toker._toke
 					NextTokeToker(toker)

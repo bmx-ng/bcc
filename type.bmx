@@ -204,9 +204,10 @@ Type TType
 	Const T_SIZET:Int       =  $200
 	Const T_UINT:Int        =  $400
 	Const T_ULONG:Int       =  $800
-	Const T_INT128:Int      = $1000
-	Const T_FLOAT128:Int    = $2000
-	Const T_DOUBLE128:Int   = $4000
+	Const T_FLOAT64:Int     = $1000
+	Const T_INT128:Int      = $2000
+	Const T_FLOAT128:Int    = $4000
+	Const T_DOUBLE128:Int   = $8000
 
 	Const T_MAX_DISTANCE:Int = $FFFF
 
@@ -261,6 +262,8 @@ Function NewType:TType(kind:Int = 0)
 			ty = New TFloatType
 		Case TType.T_DOUBLE
 			ty = New TDoubleType
+		Case TType.T_FLOAT64
+			ty = New TFloat64Type
 		Case TType.T_FLOAT128
 			ty = New TFloat128Type
 		Case TType.T_DOUBLE128
@@ -324,6 +327,8 @@ Function IsType:Int(ty:TType, kind:Int)
 			Return TFloatType(ty) <> Null
 		Case TType.T_DOUBLE
 			Return TDoubleType(ty) <> Null
+		Case TType.T_FLOAT64
+			Return TFloat64Type(ty) <> Null
 		Case TType.T_FLOAT128
 			Return TFloat128Type(ty) <> Null
 		Case TType.T_DOUBLE128
@@ -1057,6 +1062,49 @@ Type TDoubleType Extends TDecimalType
 
 	Method ToString$()
 		Return "Double" + ToStringParts()
+	End Method
+
+End Type
+
+Type TFloat64Type Extends TDecimalType
+	
+	Method EqualsType:Int( ty:TType )
+		Return TFloat64Type( ty )<>Null And (_flags = ty._flags Or ..
+			(_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR) Or (_flags & T_VAR))
+	End Method
+	
+	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
+		'If TObjectType( ty )
+		'	Local expr:TExpr=New TConstExpr.Create( Self,"" ).Semant()
+		'	Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
+		'	Return ctor And ctor.IsCtor()
+		'EndIf	
+		If _flags & T_VARPTR And (TFloat64Type(ty) <> Null Or IsPointerType(ty, 0, T_POINTER)) Return True
+		Return (widensTest And WidensToType(ty)) Or (Not widensTest And TNumericType( ty )<>Null) Or (Not noExtendString And TStringType( ty )<>Null) 'Or TDoubleVarPtrType( ty )<> Null
+	End Method
+
+	Method WidensToType:Int( ty:TType )
+		Return (IsPointerType(ty, 0, T_POINTER) And IsPointerType(Self, 0, T_POINTER)) Or (TFloat64Type(ty)<>Null And (ty._flags & T_VAR))
+	End Method
+
+	Method DistanceToType:Int(ty:TType)
+		If (IsPointerType(ty, 0, T_POINTER) And IsPointerType(Self, 0, T_POINTER)) Then
+			Return 0
+		End If
+
+		If TFloat64Type(ty)<>Null Then
+			Return 0
+		End If
+		
+		Return T_MAX_DISTANCE
+	End Method
+
+	Method OnCopy:TType()
+		Return New TFloat64Type
+	End Method
+
+	Method ToString$()
+		Return "Float64" + ToStringParts()
 	End Method
 
 End Type
