@@ -501,7 +501,7 @@ Type TIParser
 		'If toke Parse toke
 		
 		Local id$=ParseIdent()
-		Local args:String[]
+		Local args:TClassDecl[]
 		Local superTy:TIdentType
 		Local imps:TIdentType[]
 
