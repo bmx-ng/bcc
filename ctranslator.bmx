@@ -372,10 +372,13 @@ Type TCTranslator Extends TTranslator
 			If TByteType( ty ) Return value
 		Else
 			If TBoolType( ty ) Return "0"
-			If TInt128Type( ty ) Return "{}"
-			If TFloat128Type( ty ) Return "{}"
-			If TDouble128Type( ty ) Return "{}"
-			If TFloat64Type( ty ) Return "{}"
+			If TIntrinsicType( ty) Then
+				If IsPointerType(ty, 0, TType.T_POINTER) Then
+					Return "0"
+				Else
+					Return "{}"
+				End If
+			End If
 			If TNumericType( ty ) Return "0" ' numeric and pointers
 			If TStringType( ty ) Return "&bbEmptyString"
 			If TArrayType( ty ) Return "&bbEmptyArray"
