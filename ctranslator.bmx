@@ -1424,6 +1424,10 @@ t:+"NULLNULLNULL"
 
 				Return tmp
 			End If
+			
+			If (TStringType(dst) And IsPointerType( dst, 0, TType.T_CHAR_PTR | TType.T_SHORT_PTR )) And TNullType(src) Then
+				Return "0"
+			End If
 
 			If TObjectType(src) Then
 				If TObjectType(src).classDecl.IsExtern() Or (src._flags & TType.T_VARPTR) Then
