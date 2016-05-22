@@ -919,56 +919,6 @@ Type TULongType Extends TNumericType
 	End Method
 End Type
 
-Type TInt128Type Extends TNumericType
-	
-	Method EqualsType:Int( ty:TType )
-		Return TInt128Type( ty )<>Null And (_flags = ty._flags Or ..
-			(_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR) Or (_flags & T_VAR))
-	End Method
-	
-	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
-		'If TObjectType( ty )
-		'	Local expr:TExpr=New TConstExpr.Create( Self,"" ).Semant()
-		'	Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
-		'	Return ctor And ctor.IsCtor()
-		'EndIf
-		If _flags & T_VARPTR And (TLongType(ty) <> Null Or IsPointerType(ty, 0, T_POINTER)) Return True
-		Return (widensTest And WidensToType(ty)) Or (Not widensTest And TNumericType( ty )<>Null) Or (Not noExtendString And TStringType( ty )<>Null) 'Or TLongVarPtrType( ty )<> Null
-	End Method
-
-	Method WidensToType:Int( ty:TType )
-		Return (IsPointerType(ty, 0, T_POINTER) And IsPointerType(Self, 0, T_POINTER)) Or (TInt128Type(ty)<>Null And (ty._flags & T_VAR)) Or TFloatType(ty)<>Null Or TDoubleType(ty)<>Null
-	End Method
-
-	Method DistanceToType:Int(ty:TType)
-		If (IsPointerType(ty, 0, T_POINTER) And IsPointerType(Self, 0, T_POINTER)) Then
-			Return 0
-		End If
-
-		If TLongType(ty)<>Null Then
-			Return 0
-		End If
-
-		If TFloatType(ty)<>Null Then
-			Return 2
-		End If
-
-		If TDoubleType(ty)<>Null Then
-			Return 4
-		End If
-		
-		Return T_MAX_DISTANCE
-	End Method
-	
-	Method OnCopy:TType()
-		Return New TInt128Type
-	End Method
-
-	Method ToString$()
-		Return "Int128" + ToStringParts()
-	End Method
-End Type
-
 Type TDecimalType Extends TNumericType
 End Type
 
@@ -1066,7 +1016,60 @@ Type TDoubleType Extends TDecimalType
 
 End Type
 
-Type TFloat64Type Extends TDecimalType
+Type TIntrinsicType Extends TNumericType
+End Type
+
+Type TInt128Type Extends TIntrinsicType
+	
+	Method EqualsType:Int( ty:TType )
+		Return TInt128Type( ty )<>Null And (_flags = ty._flags Or ..
+			(_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR) Or (_flags & T_VAR))
+	End Method
+	
+	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
+		'If TObjectType( ty )
+		'	Local expr:TExpr=New TConstExpr.Create( Self,"" ).Semant()
+		'	Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
+		'	Return ctor And ctor.IsCtor()
+		'EndIf
+		If _flags & T_VARPTR And (TLongType(ty) <> Null Or IsPointerType(ty, 0, T_POINTER)) Return True
+		Return (widensTest And WidensToType(ty)) Or (Not widensTest And TNumericType( ty )<>Null) Or (Not noExtendString And TStringType( ty )<>Null) 'Or TLongVarPtrType( ty )<> Null
+	End Method
+
+	Method WidensToType:Int( ty:TType )
+		Return (IsPointerType(ty, 0, T_POINTER) And IsPointerType(Self, 0, T_POINTER)) Or (TInt128Type(ty)<>Null And (ty._flags & T_VAR)) Or TFloatType(ty)<>Null Or TDoubleType(ty)<>Null
+	End Method
+
+	Method DistanceToType:Int(ty:TType)
+		If (IsPointerType(ty, 0, T_POINTER) And IsPointerType(Self, 0, T_POINTER)) Then
+			Return 0
+		End If
+
+		If TLongType(ty)<>Null Then
+			Return 0
+		End If
+
+		If TFloatType(ty)<>Null Then
+			Return 2
+		End If
+
+		If TDoubleType(ty)<>Null Then
+			Return 4
+		End If
+		
+		Return T_MAX_DISTANCE
+	End Method
+	
+	Method OnCopy:TType()
+		Return New TInt128Type
+	End Method
+
+	Method ToString$()
+		Return "Int128" + ToStringParts()
+	End Method
+End Type
+
+Type TFloat64Type Extends TIntrinsicType
 	
 	Method EqualsType:Int( ty:TType )
 		Return TFloat64Type( ty )<>Null And (_flags = ty._flags Or ..
@@ -1109,7 +1112,7 @@ Type TFloat64Type Extends TDecimalType
 
 End Type
 
-Type TFloat128Type Extends TDecimalType
+Type TFloat128Type Extends TIntrinsicType
 	
 	Method EqualsType:Int( ty:TType )
 		Return TFloat128Type( ty )<>Null And (_flags = ty._flags Or ..
@@ -1152,7 +1155,7 @@ Type TFloat128Type Extends TDecimalType
 
 End Type
 
-Type TDouble128Type Extends TDecimalType
+Type TDouble128Type Extends TIntrinsicType
 	
 	Method EqualsType:Int( ty:TType )
 		Return TDouble128Type( ty )<>Null And (_flags = ty._flags Or ..

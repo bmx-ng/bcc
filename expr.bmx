@@ -409,7 +409,7 @@ Type TConstExpr Extends TExpr
 				End If
 			EndIf
 
-		Else If TDecimalType( ty ) And Not TFloat128Type( ty ) And Not TDouble128Type( ty ) And Not TFloat64Type( ty )
+		Else If TDecimalType( ty )
 			If Not (value.Contains("e") Or value.Contains("E") Or value.Contains(".") Or value.Contains("inf") Or value.Contains("nan"))
 				value:+".0"
 			EndIf

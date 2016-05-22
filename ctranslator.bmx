@@ -621,7 +621,7 @@ t:+"NULLNULLNULL"
 		If Not declare And opt_debug Then
 			Local ty:TType = decl.ty
 			If Not TObjectType( ty ) Or (TObjectType( ty ) And Not TObjectType( ty ).classDecl.IsStruct()) Then
-				If TInt128Type(ty) Or TFLoat128Type(ty) Or TDouble128Type(ty) Or TFLoat64Type(ty) Then
+				If TIntrinsicType(ty) Then
 					If Not TConstExpr(init) Then
 						Return decl.munged+"="+init.Trans()
 					End If
@@ -3757,7 +3757,20 @@ End Rem
 					End If
 	
 					' initial value
-					fld :+ "= " + decl.init.Trans() + ";";
+					If (TConstExpr(decl.init) And Not TConstExpr(decl.init).value) And TIntrinsicType(decl.ty) Then
+						fld :+ "= "
+						If TFloat64Type(decl.ty) Then
+							fld :+ "_mm_setzero_si64();"
+						Else If TFloat128Type(decl.ty) Then
+							fld :+ "_mm_setzero_ps();"
+						Else If TDouble128Type(decl.ty) Then
+							fld :+ "_mm_setzero_pd();"
+						Else If TInt128Type(decl.ty) Then
+							fld :+ "_mm_setzero_si128();"
+						End If
+					Else
+						fld :+ "= " + decl.init.Trans() + ";"
+					End If
 				Else
 					If TNumericType(decl.ty) Or TObjectType(decl.ty) Or IsPointerType(decl.ty, 0, TType.T_POINTER) Then
 						fld :+ "= 0;"
