@@ -1151,6 +1151,22 @@ Type TCastExpr Extends TExpr
 			End If
 			
 			If TNumericType(src) And (TNumericType(ty) Or TStringType(ty)) Then
+				' intrinsics can only cast between selves
+				If (TIntrinsicType(src) And TIntrinsicType(ty)=Null) Or (TIntrinsicType(ty) And TIntrinsicType(src)=Null) Then
+					If TFloat64Type(src) Or TFloat64Type(ty) Then
+						If (TFloat64Type(src) And (TLongType(ty) Or TULongType(ty))) Or (TFloat64Type(ty) And (TLongType(src) Or TULongType(src))) Then
+							' ok
+						Else
+							Err "Unable to convert from "+src.ToString()+" to "+ty.ToString()+"."
+						End If
+					Else
+						Err "Unable to convert from "+src.ToString()+" to "+ty.ToString()+"."
+					End If
+				Else If TIntrinsicType(src) And TIntrinsicType(ty) Then
+					If (TFloat64Type(src) And TFloat64Type(ty)=Null) Or (TFloat64Type(ty) And TFloat64Type(src)=Null) Then
+						Err "Unable to convert from "+src.ToString()+" to "+ty.ToString()+"."
+					End If
+				End If
 				exprType = ty
 			End If
 			

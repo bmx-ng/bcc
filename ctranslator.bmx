@@ -1539,6 +1539,7 @@ t:+"NULLNULLNULL"
 			If TDoubleType( src ) Return Bra("(BBLONG)"+t)
 			If TStringType( src ) Return "bbStringToLong" + Bra(t)
 			If IsPointerType(src,0,TType.T_POINTER) Return Bra("(BBLONG)"+t)
+			If TFloat64Type( src ) Return Bra("(BBLONG)"+t)
 			'If TPointerType( src ) Return Bra("(BBLONG)"+t)
 		 Else If TSizeTType( dst )
 			If TBoolType( src ) Return Bra( t )
@@ -1553,6 +1554,7 @@ t:+"NULLNULLNULL"
 			If TDoubleType( src ) Return Bra("(BBSIZET)"+t)
 			If TStringType( src ) Return "bbStringToSizet" + Bra(t)
 			If IsPointerType(src,0,TType.T_POINTER) Return Bra("(BBSIZET)"+t)
+			If TFloat64Type( src ) Return Bra("(BBSIZET)"+t)
 			'If TPointerType( src ) Return Bra("(BBLONG)"+t)
 		Else If TFloatType( dst )
 			If TBoolType( src ) Return Bra( t )
@@ -1668,6 +1670,24 @@ t:+"NULLNULLNULL"
 			If TULongType( src) Return t
 			If TSizeTType( src ) Return Bra("(BBULONG)"+t)
 			If TStringType( src ) Return "bbStringToULong" + Bra(t)
+			If TFloat64Type( src ) Return Bra("(BBULONG)"+t)
+		Else If TFloat64Type( dst )
+			If TFloat64Type( src) Return t
+			If TLongType( src ) Return Bra("(BBFLOAT64)"+t)
+			If TULongType( src ) Return Bra("(BBFLOAT64)"+t)
+			If TSizeTType( src ) Return Bra("(BBFLOAT64)"+t)
+		Else If TInt128Type( dst )
+			If TInt128Type( src) Return t
+			If TFloat128Type( src ) Return Bra("(BBINT128)"+t)
+			If TDouble128Type( src ) Return Bra("(BBINT128)"+t)
+		Else If TFloat128Type( dst )
+			If TFloat128Type( src) Return t
+			If TInt128Type( src ) Return Bra("(BBFLOAT128)"+t)
+			If TDouble128Type( src ) Return Bra("(BBFLOAT128)"+t)
+		Else If TDouble128Type( dst )
+			If TDouble128Type( src) Return t
+			If TInt128Type( src ) Return Bra("(BBDOUBLE128)"+t)
+			If TFloat128Type( src ) Return Bra("(BBDOUBLE128)"+t)
 
 		Else If TArrayType( dst )
 			If TArrayType( src ) Then
