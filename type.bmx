@@ -443,8 +443,12 @@ Type TIntType Extends TNumericType
 	End Method
 	
 	Method DistanceToType:Int(ty:TType)
-		If (IsPointerType(ty, 0, T_POINTER) And IsPointerType(Self, 0, T_POINTER)) Then
-			Return 0
+		If IsPointerType(ty, 0, T_POINTER) Then
+			If IsPointerType(Self, 0, T_POINTER) Then
+				Return 0
+			Else
+				Return T_MAX_DISTANCE
+			End If
 		End If
 
 		If TIntType(ty)<>Null Then
@@ -502,8 +506,12 @@ Type TUIntType Extends TNumericType
 	End Method
 
 	Method DistanceToType:Int(ty:TType)
-		If (IsPointerType(ty, 0, T_POINTER) And IsPointerType(Self, 0, T_POINTER)) Then
-			Return 0
+		If IsPointerType(ty, 0, T_POINTER) Then
+			If IsPointerType(Self, 0, T_POINTER) Then
+				Return 0
+			Else
+				Return T_MAX_DISTANCE
+			End If
 		End If
 
 		If WORD_SIZE = 4 And TSizeTType(ty)<>Null Then
@@ -576,13 +584,17 @@ Type TSizeTType Extends TNumericType
 		If WORD_SIZE = 4 Then
 			Return (IsPointerType(ty, 0, T_POINTER) And IsPointerType(Self, 0, T_POINTER)) Or ((TSizeTType(ty)<>Null Or TUIntType(ty)<>Null) And (ty._flags & T_VAR)) Or TIntType(ty)<>Null Or TUIntType(ty)<>Null Or TLongType(ty)<>Null Or TULongType(ty)<>Null Or TFloatType(ty)<>Null Or TDoubleType(ty)<>Null
 		Else
-			Return (IsPointerType(ty, 0, T_POINTER) And IsPointerType(Self, 0, T_POINTER)) Or ((TSizeTType(ty)<>Null Or TULongType(ty)<>Null) And (ty._flags & T_VAR)) Or TLongType(ty)<>Null Or TULongType(ty)<>Null Or TFloatType(ty)<>Null Or TDoubleType(ty)<>Null
+			Return (IsPointerType(ty, 0, T_POINTER) And IsPointerType(Self, 0, T_POINTER)) Or ((TSizeTType(ty)<>Null Or TULongType(ty)<>Null) And (ty._flags & T_VAR)) Or TLongType(ty)<>Null Or TULongType(ty)<>Null Or TFloatType(ty)<>Null Or TDoubleType(ty)<>Null Or TFloat64Type(ty)<>Null
 		End If
 	End Method
 
 	Method DistanceToType:Int(ty:TType)
-		If (IsPointerType(ty, 0, T_POINTER) And IsPointerType(Self, 0, T_POINTER)) Then
-			Return 0
+		If IsPointerType(ty, 0, T_POINTER) Then
+			If IsPointerType(Self, 0, T_POINTER) Then
+				Return 0
+			Else
+				Return T_MAX_DISTANCE
+			End If
 		End If
 
 		If TSizeTType(ty)<>Null Then
@@ -630,6 +642,11 @@ Type TSizeTType Extends TNumericType
 			If TDoubleType(ty)<>Null Then
 				Return 6
 			End If
+
+			If TFloat64Type(ty)<>Null Then
+				Return 8
+			End If
+
 		End If
 	
 		Return T_MAX_DISTANCE
@@ -671,8 +688,12 @@ Type TByteType Extends TNumericType
 	End Method
 
 	Method DistanceToType:Int(ty:TType)
-		If (IsPointerType(ty, 0, T_POINTER) And IsPointerType(Self, 0, T_POINTER)) Then
-			Return 0
+		If IsPointerType(ty, 0, T_POINTER) Then
+			If IsPointerType(Self, 0, T_POINTER) Then
+				Return 0
+			Else
+				Return T_MAX_DISTANCE
+			End If
 		End If
 
 		If TByteType(ty)<>Null Then
@@ -754,8 +775,12 @@ Type TShortType Extends TNumericType
 	End Method
 
 	Method DistanceToType:Int(ty:TType)
-		If (IsPointerType(ty, 0, T_POINTER) And IsPointerType(Self, 0, T_POINTER)) Then
-			Return 0
+		If IsPointerType(ty, 0, T_POINTER) Then
+			If IsPointerType(Self, 0, T_POINTER) Then
+				Return 0
+			Else
+				Return T_MAX_DISTANCE
+			End If
 		End If
 
 		If TShortType(ty)<>Null Then
@@ -829,12 +854,16 @@ Type TLongType Extends TNumericType ' BaH Long
 	End Method
 
 	Method WidensToType:Int( ty:TType )
-		Return (IsPointerType(ty, 0, T_POINTER) And IsPointerType(Self, 0, T_POINTER)) Or (TLongType(ty)<>Null And (ty._flags & T_VAR)) Or TFloatType(ty)<>Null Or TDoubleType(ty)<>Null
+		Return (IsPointerType(ty, 0, T_POINTER) And IsPointerType(Self, 0, T_POINTER)) Or (TLongType(ty)<>Null And (ty._flags & T_VAR)) Or TFloatType(ty)<>Null Or TDoubleType(ty)<>Null Or TFloat64Type(ty)<>Null
 	End Method
 
 	Method DistanceToType:Int(ty:TType)
-		If (IsPointerType(ty, 0, T_POINTER) And IsPointerType(Self, 0, T_POINTER)) Then
-			Return 0
+		If IsPointerType(ty, 0, T_POINTER) Then
+			If IsPointerType(Self, 0, T_POINTER) Then
+				Return 0
+			Else
+				Return T_MAX_DISTANCE
+			End If
 		End If
 
 		If TLongType(ty)<>Null Then
@@ -847,6 +876,10 @@ Type TLongType Extends TNumericType ' BaH Long
 
 		If TDoubleType(ty)<>Null Then
 			Return 4
+		End If
+
+		If TFloat64Type(ty)<>Null Then
+			Return 6
 		End If
 		
 		Return T_MAX_DISTANCE
@@ -879,12 +912,16 @@ Type TULongType Extends TNumericType
 	End Method
 
 	Method WidensToType:Int( ty:TType )
-		Return (IsPointerType(ty, 0, T_POINTER) And IsPointerType(Self, 0, T_POINTER)) Or (TULongType(ty)<>Null And (ty._flags & T_VAR)) Or TDoubleType(ty)<>Null
+		Return (IsPointerType(ty, 0, T_POINTER) And IsPointerType(Self, 0, T_POINTER)) Or (TULongType(ty)<>Null And (ty._flags & T_VAR)) Or TDoubleType(ty)<>Null Or TFloat64Type(ty)<>Null
 	End Method
 
 	Method DistanceToType:Int(ty:TType)
-		If (IsPointerType(ty, 0, T_POINTER) And IsPointerType(Self, 0, T_POINTER)) Then
-			Return 0
+		If IsPointerType(ty, 0, T_POINTER) Then
+			If IsPointerType(Self, 0, T_POINTER) Then
+				Return 0
+			Else
+				Return T_MAX_DISTANCE
+			End If
 		End If
 
 		If TULongType(ty)<>Null Then
@@ -906,7 +943,11 @@ Type TULongType Extends TNumericType
 		If TDoubleType(ty)<>Null Then
 			Return 4
 		End If
-		
+
+		If TFloat64Type(ty)<>Null Then
+			Return 6
+		End If
+
 		Return T_MAX_DISTANCE
 	End Method
 
@@ -944,8 +985,12 @@ Type TFloatType Extends TDecimalType
 	End Method
 
 	Method DistanceToType:Int(ty:TType)
-		If (IsPointerType(ty, 0, T_POINTER) And IsPointerType(Self, 0, T_POINTER)) Then
-			Return 0
+		If IsPointerType(ty, 0, T_POINTER) Then
+			If IsPointerType(Self, 0, T_POINTER) Then
+				Return 0
+			Else
+				Return T_MAX_DISTANCE
+			End If
 		End If
 
 		If TFloatType(ty)<>Null Then
@@ -995,8 +1040,12 @@ Type TDoubleType Extends TDecimalType
 	End Method
 
 	Method DistanceToType:Int(ty:TType)
-		If (IsPointerType(ty, 0, T_POINTER) And IsPointerType(Self, 0, T_POINTER)) Then
-			Return 0
+		If IsPointerType(ty, 0, T_POINTER) Then
+			If IsPointerType(Self, 0, T_POINTER) Then
+				Return 0
+			Else
+				Return T_MAX_DISTANCE
+			End If
 		End If
 
 		If TDoubleType(ty)<>Null Then
@@ -1037,23 +1086,27 @@ Type TInt128Type Extends TIntrinsicType
 	End Method
 
 	Method WidensToType:Int( ty:TType )
-		Return (IsPointerType(ty, 0, T_POINTER) And IsPointerType(Self, 0, T_POINTER)) Or (TInt128Type(ty)<>Null And (ty._flags & T_VAR)) Or TFloatType(ty)<>Null Or TDoubleType(ty)<>Null
+		Return (IsPointerType(ty, 0, T_POINTER) And IsPointerType(Self, 0, T_POINTER)) Or (TInt128Type(ty)<>Null And (ty._flags & T_VAR)) Or TFloat128Type(ty)<>Null Or TDouble128Type(ty)<>Null
 	End Method
 
 	Method DistanceToType:Int(ty:TType)
-		If (IsPointerType(ty, 0, T_POINTER) And IsPointerType(Self, 0, T_POINTER)) Then
+		If IsPointerType(ty, 0, T_POINTER) Then
+			If IsPointerType(Self, 0, T_POINTER) Then
+				Return 0
+			Else
+				Return T_MAX_DISTANCE
+			End If
+		End If
+
+		If TInt128Type(ty)<>Null Then
 			Return 0
 		End If
 
-		If TLongType(ty)<>Null Then
-			Return 0
-		End If
-
-		If TFloatType(ty)<>Null Then
+		If TFloat128Type(ty)<>Null Then
 			Return 2
 		End If
 
-		If TDoubleType(ty)<>Null Then
+		If TDouble128Type(ty)<>Null Then
 			Return 4
 		End If
 		
@@ -1091,8 +1144,12 @@ Type TFloat64Type Extends TIntrinsicType
 	End Method
 
 	Method DistanceToType:Int(ty:TType)
-		If (IsPointerType(ty, 0, T_POINTER) And IsPointerType(Self, 0, T_POINTER)) Then
-			Return 0
+		If IsPointerType(ty, 0, T_POINTER) Then
+			If IsPointerType(Self, 0, T_POINTER) Then
+				Return 0
+			Else
+				Return T_MAX_DISTANCE
+			End If
 		End If
 
 		If TFloat64Type(ty)<>Null Then
@@ -1130,18 +1187,30 @@ Type TFloat128Type Extends TIntrinsicType
 	End Method
 
 	Method WidensToType:Int( ty:TType )
-		Return (IsPointerType(ty, 0, T_POINTER) And IsPointerType(Self, 0, T_POINTER)) Or (TFloat128Type(ty)<>Null And (ty._flags & T_VAR))
+		Return (IsPointerType(ty, 0, T_POINTER) And IsPointerType(Self, 0, T_POINTER)) Or (TFloat128Type(ty)<>Null And (ty._flags & T_VAR)) Or TInt128Type(ty)<>Null Or TDouble128Type(ty)<>Null
 	End Method
 
 	Method DistanceToType:Int(ty:TType)
-		If (IsPointerType(ty, 0, T_POINTER) And IsPointerType(Self, 0, T_POINTER)) Then
-			Return 0
+		If IsPointerType(ty, 0, T_POINTER) Then
+			If IsPointerType(Self, 0, T_POINTER) Then
+				Return 0
+			Else
+				Return T_MAX_DISTANCE
+			End If
 		End If
 
 		If TFloat128Type(ty)<>Null Then
 			Return 0
 		End If
+
+		If TDouble128Type(ty)<>Null Then
+			Return 2
+		End If
 		
+		If TInt128Type(ty)<>Null Then
+			Return 4
+		End If
+	
 		Return T_MAX_DISTANCE
 	End Method
 
@@ -1173,16 +1242,28 @@ Type TDouble128Type Extends TIntrinsicType
 	End Method
 
 	Method WidensToType:Int( ty:TType )
-		Return (IsPointerType(ty, 0, T_POINTER) And IsPointerType(Self, 0, T_POINTER)) Or (TDouble128Type(ty)<>Null And (ty._flags & T_VAR))
+		Return (IsPointerType(ty, 0, T_POINTER) And IsPointerType(Self, 0, T_POINTER)) Or (TDouble128Type(ty)<>Null And (ty._flags & T_VAR)) Or TInt128Type(ty)<>Null Or TFloat128Type(ty)<>Null
 	End Method
 
 	Method DistanceToType:Int(ty:TType)
-		If (IsPointerType(ty, 0, T_POINTER) And IsPointerType(Self, 0, T_POINTER)) Then
-			Return 0
+		If IsPointerType(ty, 0, T_POINTER) Then
+			If IsPointerType(Self, 0, T_POINTER) Then
+				Return 0
+			Else
+				Return T_MAX_DISTANCE
+			End If
 		End If
 
 		If TDouble128Type(ty)<>Null Then
 			Return 0
+		End If
+
+		If TFloat128Type(ty)<>Null Then
+			Return 2
+		End If
+
+		If TInt128Type(ty)<>Null Then
+			Return 4
 		End If
 		
 		Return T_MAX_DISTANCE
