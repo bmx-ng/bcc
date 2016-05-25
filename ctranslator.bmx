@@ -995,8 +995,15 @@ t:+"NULLNULLNULL"
 					If decl.attrs & FUNC_PTR Then
 						Return loc + "->" + decl.munged+TransArgs( args,decl, Null)
 					Else
-						Local class:String = Bra(loc + "->clas" + tSuper)
-						Return class + "->" + TransFuncPrefix(decl.scope, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, loc )
+						Local cdecl:TClassDecl = TClassDecl(decl.scope)
+
+						If cdecl And (cdecl.IsInterface() And Not equalsBuiltInFunc(cdecl, decl)) Then
+							Local ifc:String = Bra("(struct " + cdecl.munged + "_methods*)" + Bra("bbObjectInterface(" + obj + loc + ", " + "&" + cdecl.munged + "_ifc)"))
+							Return ifc + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, loc )
+						Else					
+							Local class:String = Bra(loc + "->clas" + tSuper)
+							Return class + "->" + TransFuncPrefix(decl.scope, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, loc )
+						End If
 					End If
 				Else
 					InternalErr
