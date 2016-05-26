@@ -1330,6 +1330,15 @@ Type TCastExpr Extends TExpr
 			Else If TNumericType(src) And (src._flags & TType.T_VARPTR) Then
 				exprType = expr.exprType
 			Else If TArrayType(src) Then
+			
+				' for functions and index access, use a new local variable
+				If Not TVarExpr(expr) And Not TMemberVarExpr(expr) Then
+					Local tmp:TLocalDecl=New TLocalDecl.Create( "", expr.exprType, expr,, True )
+					tmp.Semant()
+					Local v:TVarExpr = New TVarExpr.Create( tmp )
+					expr = New TStmtExpr.Create( New TDeclStmt.Create( tmp ), v ).Semant()
+				End If
+			
 				If TNumericType(TArrayType(src).elemType) Then
 					exprType = TNumericType(TArrayType(src).elemType).ToPointer()
 					Return Self
