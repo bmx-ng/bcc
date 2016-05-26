@@ -1391,11 +1391,11 @@ Type TCastExpr Extends TExpr
 		Local val$=expr.Eval()
 		If Not val Return val
 		If TBoolType( exprType )
-			If TIntType( expr.exprType )
-				If Int( val ) Return "1"
+			If TIntegralType(expr.exprType)
+				If Long( val ) Return "1"
 				Return ""
-			Else If TFloatType( expr.exprType )
-				If Float( val ) Return "1"
+			Else If TDecimalType( expr.exprType )
+				If Double( val ) Return "1"
 				Return ""
 			Else If TStringType( expr.exprType )
 				If val.Length Return "1"

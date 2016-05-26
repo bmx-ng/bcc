@@ -421,7 +421,10 @@ Type TNumericType Extends TType
 	
 End Type
 
-Type TIntType Extends TNumericType
+Type TIntegralType Extends TNumericType
+End Type
+
+Type TIntType Extends TIntegralType
 	
 	Method EqualsType:Int( ty:TType )
 		Return TIntType( ty )<>Null And (_flags = ty._flags Or ..
@@ -484,7 +487,7 @@ Type TIntType Extends TNumericType
 
 End Type
 
-Type TUIntType Extends TNumericType
+Type TUIntType Extends TIntegralType
 	
 	Method EqualsType:Int( ty:TType )
 		Return TUIntType( ty )<>Null And (_flags = ty._flags Or ..
@@ -563,7 +566,7 @@ Type TUIntType Extends TNumericType
 
 End Type
 
-Type TSizeTType Extends TNumericType
+Type TSizeTType Extends TIntegralType
 	
 	Method EqualsType:Int( ty:TType )
 		Return TSizeTType( ty )<>Null And (_flags = ty._flags Or ..
@@ -666,7 +669,7 @@ Type TSizeTType Extends TNumericType
 
 End Type
 
-Type TByteType Extends TNumericType
+Type TByteType Extends TIntegralType
 	
 	Method EqualsType:Int( ty:TType )
 		Return TByteType( ty )<>Null And (_flags = ty._flags Or ..
@@ -753,7 +756,7 @@ Type TByteType Extends TNumericType
 
 End Type
 
-Type TShortType Extends TNumericType
+Type TShortType Extends TIntegralType
 
 	Method EqualsType:Int( ty:TType )
 		Return TShortType( ty )<>Null And (_flags = ty._flags Or ..
@@ -836,7 +839,7 @@ Type TShortType Extends TNumericType
 
 End Type
 
-Type TLongType Extends TNumericType ' BaH Long
+Type TLongType Extends TIntegralType ' BaH Long
 	
 	Method EqualsType:Int( ty:TType )
 		Return TLongType( ty )<>Null And (_flags = ty._flags Or ..
@@ -894,7 +897,7 @@ Type TLongType Extends TNumericType ' BaH Long
 	End Method
 End Type
 
-Type TULongType Extends TNumericType
+Type TULongType Extends TIntegralType
 	
 	Method EqualsType:Int( ty:TType )
 		Return TULongType( ty )<>Null And (_flags = ty._flags Or ..
