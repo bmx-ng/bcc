@@ -191,6 +191,10 @@ Type TTranslator
 		If TLongType( ty ) Return p + "l"
 		If TULongType( ty ) Return p + "y"
 		If TSizeTType( ty ) Return p + "z"
+		If TFloat64Type( ty ) Return p + "h"
+		If TFloat128Type( ty ) Return p + "k"
+		If TInt128Type( ty ) Return p + "j"
+		If TDouble128Type( ty ) Return p + "m"
 		If TStringType( ty ) Return p + "S"
 		If TArrayType( ty ) Then
 			Return p + "a" + TransMangleType(TArrayType( ty ).elemType)
@@ -216,6 +220,8 @@ Type TTranslator
 '			Next
 			Return s + "_" + TransMangleType(func.retType) + "_"
 		End If
+		
+		Err "Unsupported type for name mangling : " + ty.ToString()
 	End Method
 
 	Method MangleMethod:String(fdecl:TFuncDecl)
