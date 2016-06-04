@@ -927,25 +927,32 @@ t:+"NULLNULLNULL"
 						End If
 					End If
 				Else If TMemberVarExpr(lhs) Then
-					Local cdecl:TClassDecl = TObjectType(TMemberVarExpr(lhs).decl.ty).classDecl
-					Local obj:String = Bra(TransObject(cdecl))
+					If TObjectType(TMemberVarExpr(lhs).decl.ty) Then
+						Local cdecl:TClassDecl = TObjectType(TMemberVarExpr(lhs).decl.ty).classDecl
+						Local obj:String = Bra(TransObject(cdecl))
 					
-					If decl.scope.IsExtern()
-						If TClassDecl(decl.scope) And Not TClassDecl(decl.scope).IsStruct() Then
-							Return Bra(TransSubExpr( lhs )) + "->vtbl->" + decl.munged + Bra(TransArgs( args,decl, TransSubExpr( lhs ) ))
+					
+						If decl.scope.IsExtern()
+							If TClassDecl(decl.scope) And Not TClassDecl(decl.scope).IsStruct() Then
+								Return Bra(TransSubExpr( lhs )) + "->vtbl->" + decl.munged + Bra(TransArgs( args,decl, TransSubExpr( lhs ) ))
+							Else
+								Return decl.munged + Bra(TransArgs( args,decl, TransSubExpr( lhs ) ))
+							End If
 						Else
-							Return decl.munged + Bra(TransArgs( args,decl, TransSubExpr( lhs ) ))
+							' Null test
+							If opt_debug Then
+								EmitDebugNullObjectError(TransSubExpr( lhs ))
+							End If
+	
+							Local class:String = Bra("(" + obj + TransSubExpr( lhs ) + ")->clas" + tSuper)
+							'Local class:String = TransFuncClass(cdecl)
+							Return class + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, TransSubExpr( lhs ) )
 						End If
-					Else
-						' Null test
-						If opt_debug Then
-							EmitDebugNullObjectError(TransSubExpr( lhs ))
-						End If
-
-						Local class:String = Bra("(" + obj + TransSubExpr( lhs ) + ")->clas" + tSuper)
-						'Local class:String = TransFuncClass(cdecl)
-						Return class + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, TransSubExpr( lhs ) )
+						
+					Else If TArrayType(TMemberVarExpr(lhs).decl.ty) Then
+						Return decl.munged+TransArgs( args,decl, TransSubExpr( lhs ) )
 					End If
+
 				Else If TInvokeExpr(lhs) Then
 					' create a local variable of the inner invocation
 					Local lvar:String = CreateLocal(lhs)
