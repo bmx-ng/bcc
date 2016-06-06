@@ -245,7 +245,7 @@ Type TCTranslator Extends TTranslator
 
 				args :+ TransType(arg.ty, "")
 			Next
-			Return retType + Bra(api + "* " + ident) + Bra(args)
+			Return retType + Bra(api + p +"* " + ident) + Bra(args)
 		End If
 
 		If TExternObjectType( ty ) Return "struct " + TExternObjectType( ty ).classDecl.munged + p
@@ -430,6 +430,11 @@ Type TCTranslator Extends TTranslator
 						t:+ "&"
 					End If
 				Else If TFunctionPtrType(ty) Or IsPointerType(ty, TType.T_BYTE) Then
+
+					If TFunctionPtrType(ty) And (ty._flags & TType.T_VAR) Then
+						t:+ "&"
+					End If
+
 					If TInvokeExpr(arg) And Not TInvokeExpr(arg).decl.IsMethod() Then
 						If IsPointerType(ty, TType.T_BYTE) Then
 							t:+ TInvokeExpr(arg).Trans()

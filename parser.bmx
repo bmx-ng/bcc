@@ -2634,11 +2634,6 @@ End Rem
 
 				Local ty:TType=ParseDeclType()
 
-				' var argument?
-				If CParse("var") Then
-					ty = TType.MapToVarType(ty)
-				End If
-
 				Local init:TExpr
 				' function pointer ?
 				If _toke = "(" Then
@@ -2657,7 +2652,14 @@ End Rem
 					TFunctionPtrType(ty).func.ident = argId
 
 				End If
-				If CParse( "=" ) init=ParseExpr()
+				
+				' var argument?
+				If CParse("var") Then
+					ty = TType.MapToVarType(ty)
+				Else If CParse( "=" )
+					init=ParseExpr()
+				End If
+				
 				Local arg:TArgDecl=New TArgDecl.Create( argId,ty,init )
 				If args.Length=nargs args=args + New TArgDecl[10]
 				args[nargs]=arg
@@ -2807,7 +2809,7 @@ End Rem
 		If toke Parse toke
 
 		Local id$=ParseIdent()
-		Local args:TClassDecl[]
+		Local args:TStack = New TStack
 		Local superTy:TIdentType
 		Local imps:TIdentType[]
 		Local meta:TMetadata
@@ -2815,33 +2817,34 @@ End Rem
 		'If (attrs & CLASS_INTERFACE) And (attrs & DECL_EXTERN)
 		'	Err "Interfaces cannot be extern."
 		'EndIf
-Rem
+
 		If CParse( "<" )
 
 			If attrs & DECL_EXTERN
 				Err "Extern classes cannot be generic."
 			EndIf
 
-			If attrs & CLASS_INTERFACE
-				Err "Interfaces cannot be generic."
-			EndIf
+			'If attrs & CLASS_INTERFACE
+			'	Err "Interfaces cannot be generic."
+			'EndIf
 
-			If attrs & CLASS_TEMPLATEARG
-				Err "Class parameters cannot be generic."
-			EndIf
+			'If attrs & CLASS_TEMPLATEARG
+			'	Err "Class parameters cannot be generic."
+			'EndIf
 
 			Local nargs:Int
 			Repeat
-				Local decl:TClassDecl=ParseClassDecl( "",CLASS_TEMPLATEARG )
-				If args.Length=nargs args=args + New TClassDecl[10]
-				args[nargs]=decl
-				nargs:+1
+				'Local decl:TClassDecl=ParseClassDecl( "",CLASS_TEMPLATEARG )
+				'If args.Length=nargs args=args + New TClassDecl[10]
+				'args[nargs]=decl
+				'nargs:+1
+				args.Push ParseIdent()
 			Until Not CParse(",")
-			args=args[..nargs]
+			'args=args[..nargs]
 
 			Parse ">"
 		EndIf
-End Rem
+
 		If CParse( "extends" )
 			'If attrs & CLASS_TEMPLATEARG
 			'	Err "Extends cannot be used with class parameters."
@@ -2957,7 +2960,7 @@ End Rem
 		End If
 
 
-		Local classDecl:TClassDecl=New TClassDecl.Create( id,args,superTy,imps,attrs )
+		Local classDecl:TClassDecl=New TClassDecl.Create( id,String[](args.ToArray()),superTy,imps,attrs )
 		
 		If meta Then
 			classDecl.metadata = meta
