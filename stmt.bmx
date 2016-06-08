@@ -192,6 +192,9 @@ Type TReturnStmt Extends TStmt
 	Method OnSemant()
 		Local fdecl:TFuncDecl=_env.FuncScope()
 		If expr
+			If TIdentExpr(expr) Then
+				TIdentExpr(expr).isRhs = True
+			End If
 			If fdecl.IsCtor() Err "Constructors may not return a value."
 			If TVoidType( fdecl.retType ) Then
 				Local errorText:String = "Function can not return a value."

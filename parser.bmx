@@ -2575,7 +2575,7 @@ End Rem
 	End Method
 
 
-	Method ParseFuncDecl:TFuncDecl( toke$,attrs:Int )
+	Method ParseFuncDecl:TFuncDecl( toke$,attrs:Int, returnType:TType = Null )
 		SetErr
 
 		If toke Parse toke
@@ -2586,42 +2586,43 @@ End Rem
 		Local meta:TMetadata
 		Local noMangle:Int
 
-		If attrs & FUNC_METHOD
-			If _toke="new"
-'DebugStop
-				If attrs & DECL_EXTERN
-					Err "Extern classes cannot have constructors"
+		If Not returnType Then
+			If attrs & FUNC_METHOD
+				If _toke="new"
+					If attrs & DECL_EXTERN
+						Err "Extern classes cannot have constructors"
+					EndIf
+					id="New"
+					NextToke
+					attrs:|FUNC_CTOR
+					attrs:&~FUNC_METHOD
+				Else
+					id=ParseIdent()
+					ty=ParseDeclType()
+					If ty._flags & (TType.T_CHAR_PTR | TType.T_SHORT_PTR) Then
+						DoErr "Illegal function return type"
+					End If
+	
+					' Delete() return type should always be Void
+					If id.ToLower() = "delete" Then
+						attrs:|FUNC_DTOR
+						If TIntType(ty) Then
+							ty = New TVoidType
+						End If
+					End If
 				EndIf
-				id="New"
-				NextToke
-				attrs:|FUNC_CTOR
-				attrs:&~FUNC_METHOD
 			Else
-				id=ParseIdent()
-				ty=ParseDeclType()
-				If ty._flags & (TType.T_CHAR_PTR | TType.T_SHORT_PTR) Then
-					DoErr "Illegal function return type"
-				End If
-
-				' Delete() return type should always be Void
-				If id.ToLower() = "delete" Then
-					attrs:|FUNC_DTOR
-					If TIntType(ty) Then
-						ty = New TVoidType
+				If Not (attrs & FUNC_PTR) Then
+					id=ParseIdent()
+					ty=ParseDeclType()
+					' can only return "$z" and "$w" from an extern function.
+					If ty._flags & (TType.T_CHAR_PTR | TType.T_SHORT_PTR) And Not (attrs & DECL_EXTERN) Then
+						DoErr "Illegal function return type"
 					End If
 				End If
 			EndIf
-		Else
-			If Not (attrs & FUNC_PTR) Then
-				id=ParseIdent()
-				ty=ParseDeclType()
-				' can only return "$z" and "$w" from an extern function.
-				If ty._flags & (TType.T_CHAR_PTR | TType.T_SHORT_PTR) And Not (attrs & DECL_EXTERN) Then
-					DoErr "Illegal function return type"
-				End If
-			End If
-		EndIf
-
+		End If
+		
 		Local args:TArgDecl[]
 
 		Parse "("
@@ -2671,6 +2672,20 @@ End Rem
 			args=args[..nargs]
 		EndIf
 		Parse ")"
+		
+		If returnType Then
+			Return New TFuncDecl.CreateF(Null,returnType,args,0)
+		End If
+		
+		Local fdecl:TFuncDecl
+		' wait.. so everything until now was a function pointer return type, and we still have to process the function declaration...
+		If _toke = "(" Then
+			Local retTy:TType = New TFunctionPtrType
+			TFunctionPtrType(retTy).func = New TFuncDecl.CreateF("",ty,args,attrs )
+			TFunctionPtrType(retTy).func.attrs :| FUNC_PTR
+			fdecl = ParseFuncDecl("", attrs, retTy)
+			ty = retTy
+		End If
 
 		Repeat
 			If CParse( "final" )
@@ -2715,7 +2730,12 @@ End Rem
 		If attrs & FUNC_CTOR Then
 			funcDecl=New TNewDecl.CreateF( id,ty,args,attrs )
 		Else
-			funcDecl=New TFuncDecl.CreateF( id,ty,args,attrs )
+			If fdecl Then
+				funcDecl = fdecl
+				funcDecl.ident = id
+			Else
+				funcDecl=New TFuncDecl.CreateF( id,ty,args,attrs )
+			End If
 			funcDecl.noMangle = noMangle
 		End If
 		If meta Then

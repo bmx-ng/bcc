@@ -194,7 +194,7 @@ Type TCTranslator Extends TTranslator
 
 	End Method
 
-	Method TransType$( ty:TType, ident:String)
+	Method TransType$( ty:TType, ident:String, fpReturnTypeFunctionArgs:String = Null)
 		Local p:String = TransSPointer(ty, True)
 		
 		If TVoidType( ty ) Or Not ty Then
@@ -245,7 +245,11 @@ Type TCTranslator Extends TTranslator
 
 				args :+ TransType(arg.ty, "")
 			Next
-			Return retType + Bra(api + p +"* " + ident) + Bra(args)
+			Local ret:String = ""
+			If fpReturnTypeFunctionArgs Then
+				ret = Bra(fpReturnTypeFunctionArgs)
+			End If
+			Return retType + Bra(api + p +"* " + ident + ret) + Bra(args)
 		End If
 
 		If TExternObjectType( ty ) Return "struct " + TExternObjectType( ty ).classDecl.munged + p
@@ -2683,7 +2687,7 @@ End Rem
 				End If
 			Else
 				If Not odecl.castTo Then
-					Emit pre + TransType( decl.retType, id )+" "+Bra( args ) + bk
+					Emit pre + TransType( decl.retType, id, args )+ bk
 				Else
 					If Not odecl.noCastGen Then
 						Emit pre + odecl.castTo +" "+Bra( args ) + bk

@@ -1607,6 +1607,17 @@ Type TFuncDecl Extends TBlockDecl
 				End If
 			End If
 		Else
+			' pass the scope into the function ptr
+			If TFunctionPtrType(retTypeExpr) Then
+				If Not TFunctionPtrType(retTypeExpr).func.scope Then
+					If scope Then
+						TFunctionPtrType(retTypeExpr).func.scope = scope
+					Else
+						TFunctionPtrType(retTypeExpr).func.scope = _env
+					End If
+				End If
+			End If
+		
 			retType=retTypeExpr.Semant()
 			
 			' for Strict code, a void return type becomes Int
@@ -1845,7 +1856,7 @@ Type TClassDecl Extends TScopeDecl
 	Method ToTypeString:String()
 		Return ident
 	End Method
-Rem	
+Rem
 	Method GenClassInstance:TClassDecl( instArgs:TClassDecl[] )
 		If Not IsSemanted() InternalErr
 		
@@ -1904,7 +1915,6 @@ Rem
 		Return inst
 	End Method
 End Rem
-
 	Method GenClassInstance:TClassDecl( instArgs:TType[] )
 
 		If instanceof InternalErr

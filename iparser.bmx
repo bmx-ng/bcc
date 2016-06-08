@@ -722,7 +722,7 @@ Type TIParser
 		Return str
 	End Method
 
-	Method ParseFuncDecl:TFuncDecl( toke$,attrs:Int )
+	Method ParseFuncDecl:TFuncDecl( toke$,attrs:Int, returnType:TType = Null )
 		SetErr
 
 		'If toke Parse toke
@@ -730,31 +730,26 @@ Type TIParser
 		Local id$
 		Local ty:TType
 		Local meth:Int = attrs & FUNC_METHOD
-		
-		If attrs & FUNC_METHOD
-			If _toker._toke.tolower() = "new"
-'DebugStop
-				If attrs & DECL_EXTERN
-					Err "Extern classes cannot have constructors"
+
+		If Not returnType Then		
+			If attrs & FUNC_METHOD
+				If _toker._toke.tolower() = "new"
+					If attrs & DECL_EXTERN
+						Err "Extern classes cannot have constructors"
+					EndIf
+					id=_toker._toke
+					NextToke
+					attrs:|FUNC_CTOR
+					attrs:&~FUNC_METHOD
+					ty=ParseDeclType(attrs, True)
+				Else
+					id=ParseIdent()
+					ty=ParseDeclType(attrs, True)
 				EndIf
-				id=_toker._toke
-				NextToke
-				attrs:|FUNC_CTOR
-				attrs:&~FUNC_METHOD
-				ty=ParseDeclType(attrs, True)
 			Else
 				id=ParseIdent()
 				ty=ParseDeclType(attrs, True)
 			EndIf
-		Else
-			id=ParseIdent()
-			ty=ParseDeclType(attrs, True)
-		EndIf
-
-		If attrs & FUNC_METHOD
-'DebugLog "Found Method :  " + id
-		Else
-'DebugLog "Found Function :  " + id
 		End If
 		
 		Local args:TArgDecl[]
@@ -833,6 +828,20 @@ Type TIParser
 			args=args[..nargs]
 		EndIf
 		Parse ")"
+		
+		If returnType Then
+			Return New TFuncDecl.CreateF(Null, returnType, args, 0)
+		End If
+
+		Local fdecl:TFuncDecl
+		' wait.. so everything until now was a function pointer return type, and we still have to process the function declaration...
+		If _toke = "(" Then
+			Local retTy:TType = New TFunctionPtrType
+			TFunctionPtrType(retTy).func = New TFuncDecl.CreateF("",ty,args,attrs )
+			TFunctionPtrType(retTy).func.attrs :| FUNC_PTR
+			fdecl = ParseFuncDecl("", attrs, retTy)
+			ty = retTy
+		End If
 
 		Repeat		
 			If CParse( "F" )
@@ -860,7 +869,12 @@ Type TIParser
 		If attrs & FUNC_CTOR Then
 			funcDecl = New TNewDecl.CreateF( id,ty,args,attrs )
 		Else
-			funcDecl = New TFuncDecl.CreateF( id,ty,args,attrs )
+			If fdecl Then
+				funcDecl = fdecl
+				funcDecl.ident = id
+			Else
+				funcDecl = New TFuncDecl.CreateF( id,ty,args,attrs )
+			End If
 		End If
 		
 		funcDecl.retType = ty
