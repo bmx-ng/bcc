@@ -773,7 +773,8 @@ Type TParser
 			ty=ParseType()
 
 			If CParse("ptr") Then
-				If TStringType(ty) = Null And TObjectType(ty) = Null And TArrayType(ty) = Null And TIdentType(ty) = Null Then
+			
+				If TStringType(ty) = Null And (TObjectType(ty) = Null Or (TObjectType(ty) <> Null And TObjectType(ty).classDecl.IsExtern())) And TArrayType(ty) = Null Then
 					ty = TType.MapToPointerType(ty)
 	
 					While CParse("ptr")
