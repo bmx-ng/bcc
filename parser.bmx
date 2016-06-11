@@ -773,12 +773,15 @@ Type TParser
 			ty=ParseType()
 
 			If CParse("ptr") Then
-
-				ty = TType.MapToPointerType(ty)
-
-				While CParse("ptr")
+				If TStringType(ty) = Null And TObjectType(ty) = Null And TArrayType(ty) = Null And TIdentType(ty) = Null Then
 					ty = TType.MapToPointerType(ty)
-				Wend
+	
+					While CParse("ptr")
+						ty = TType.MapToPointerType(ty)
+					Wend
+				Else
+					ty = Null
+				End If
 
 				If Not ty DoErr "Invalid Pointer type."
 			End If
@@ -3690,7 +3693,9 @@ Function Eval$( toker:TToker,_type:TType )
 		src:+toker.Toke()
 		toker.NextToke()
 	Wend
+
 	Local t:String=EvalS( src,_type )
+
 	Return t
 End Function
 

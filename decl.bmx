@@ -1805,7 +1805,7 @@ Type TClassDecl Extends TScopeDecl
 
 	Field lastOffset:Int
 
-	Field args:TClassDecl[]
+	Field args:String[]
 	Field superTy:TIdentType
 	Field impltys:TIdentType[]
 
@@ -1822,7 +1822,7 @@ Type TClassDecl Extends TScopeDecl
 
 	'Global nullObjectClass:TClassDecl=New TNullDecl.Create( "{NULL}",Null,Null,Null,DECL_ABSTRACT|DECL_EXTERN )
 	
-	Method Create:TClassDecl( ident$,args:TClassDecl[],superTy:TIdentType,impls:TIdentType[],attrs:Int )
+	Method Create:TClassDecl( ident$,args:String[],superTy:TIdentType,impls:TIdentType[],attrs:Int )
 		Self.ident=ident
 		Self.args=args
 		Self.superTy=superTy
