@@ -2479,10 +2479,8 @@ End Rem
 						While cdecl And Not found
 							For Local decl2:TFuncDecl=EachIn cdecl.SemantedMethods( decl.ident )
 								If decl.EqualsFunc( decl2 )
-									If decl2.munged And Not iface.IsExtern()
-										Err "Extern methods cannot be used to implement interface methods."
-									EndIf
 									found=True
+									Exit
 								EndIf
 							Next
 						
