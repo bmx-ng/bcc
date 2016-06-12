@@ -774,15 +774,16 @@ Type TParser
 
 			If CParse("ptr") Then
 			
-				If TStringType(ty) = Null And (TObjectType(ty) = Null Or (TObjectType(ty) <> Null And TObjectType(ty).classDecl.IsExtern())) And TArrayType(ty) = Null Then
+				' FIXME #200
+				'If TStringType(ty) = Null And (TObjectType(ty) = Null Or (TObjectType(ty) <> Null And TObjectType(ty).classDecl.IsExtern())) And TArrayType(ty) = Null Then
 					ty = TType.MapToPointerType(ty)
 	
 					While CParse("ptr")
 						ty = TType.MapToPointerType(ty)
 					Wend
-				Else
-					ty = Null
-				End If
+				'Else
+				'	ty = Null
+				'End If
 
 				If Not ty DoErr "Invalid Pointer type."
 			End If

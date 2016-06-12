@@ -1569,9 +1569,10 @@ Type TIdentType Extends TType
 		End If
 
 		If (_flags & T_POINTER) And TObjectType(ty) Then
-			If Not TObjectType(ty).classDecl.IsExtern() Then
-				Err "Invalid Pointer type."
-			End If
+			' FIXME #200
+			'If Not TObjectType(ty).classDecl.IsExtern() Then
+			'	Err "Invalid Pointer type."
+			'End If
 			ty = New TObjectType.Create(TObjectType(ty).classDecl)
 			ty._flags :| (_flags & T_POINTER)
 		End If
