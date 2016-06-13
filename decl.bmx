@@ -840,6 +840,27 @@ Type TScopeDecl Extends TDecl
 					declList.AddLast(decl)
 				End If
 			End If
+
+			' if scope is an interface, also check implemented/extended interfaces?
+			If TClassDecl(tscope) And TClassDecl(tscope).IsInterface() Then
+				If TClassDecl(tscope).implments Then
+					For Local idecl:TScopeDecl = EachIn TClassDecl(tscope).implments
+						Local decl:Object=idecl.GetDeclList( ident, declList, maxSearchDepth )
+						If decl Then
+							If TFuncDeclList(decl) Then
+								If TFuncDeclList(decl) <> declList Then
+									For Local d:TDecl = EachIn TFuncDeclList(decl)
+										declList.AddLast(d)
+									Next
+								End If
+							Else
+								declList.AddLast(decl)
+							End If
+						End If
+					Next
+				End If 
+			End If
+			
 			tscope=tscope.scope
 			
 			If TClassDecl(tscope) And maxSearchDepth < SCOPE_CLASS_HEIRARCHY Then
