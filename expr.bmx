@@ -186,14 +186,6 @@ Type TExpr
 	End Method
 
 	Method BalanceTypes:TType( lhs:TType,rhs:TType )
-'DebugStop
-		'If lhs._flags & TType.T_VAR Then
-		'	lhs = TType.MapVarPointerToPrim(lhs)
-		'End If
-
-		'If rhs._flags & TType.T_VAR Then
-		'	rhs = TType.MapVarPointerToPrim(rhs)
-		'End If
 
 		If TStringType( lhs ) Or TStringType( rhs ) Then
 			If TObjectType(lhs) Or TObjectType(rhs) Then
@@ -1178,13 +1170,6 @@ Type TCastExpr Extends TExpr
 			If TFunctionPtrType(src) And IsPointerType(ty, 0, TType.T_POINTER) Then
 				exprType = ty
 			End If
-			
-			If TArrayType(ty) And TArrayType(src) Then
-				If TArrayType(ty).dims = TArrayType(src).dims Then
-					exprType = ty
-					Return Self
-				End If
-			End If
 
 		Else If TBoolType( ty )
 
@@ -1220,6 +1205,36 @@ Type TCastExpr Extends TExpr
 			EndIf
 
 		EndIf
+
+
+		If TArrayType(ty) And TArrayType(src) Then
+			If TArrayType(ty).dims = TArrayType(src).dims Then
+				If TArrayExpr(expr) Then
+					Local last:TType
+					For Local e:TExpr = EachIn TArrayExpr(expr).exprs
+						If TNullType(e.exprType) Then
+							Err "Auto array element has no type"
+						End If
+						
+						If last <> Null And Not last.EqualsType(e.exprType) Then
+							Err "Auto array elements must have identical types"
+						End If
+						If Not TArrayType(ty).elemType.EqualsType(e.exprType) Then
+							If (TObjectType(TArrayType(ty).elemType) = Null And TStringType(TArrayType(ty).elemType) = Null) Or (TObjectType(e.exprType) = Null And TStringType(e.exprType) = Null) Then
+								Err "Unable to convert from "+src.ToString()+" to "+ty.ToString()+"."
+							Else If TStringType(e.exprType) = Null And Not TObjectType(e.exprType).ExtendsType(TObjectType(TArrayType(ty).elemType)) Then
+								Err "Unable to convert from "+src.ToString()+" to "+ty.ToString()+"."
+							End If
+						End If
+						
+						last = e.exprType
+					Next
+				End If
+				
+				exprType = ty
+				Return Self
+			End If
+		End If
 
 		'If TStringType(src) And TStringVarPtrType(ty) Then
 		'	exprType = ty
@@ -2053,7 +2068,24 @@ Type TArrayExpr Extends TExpr
 			Next
 		End If
 
+		Local last:TType
 		For Local i:Int=0 Until exprs.Length
+		
+			' don't cast null types
+			If TNullType(exprs[i].exprType) <> Null Then
+				Err "Auto array element has no type"
+			End If
+
+			Local ety:TType = exprs[i].exprType
+			If TBoolType(ety) Then
+				ety = New TIntType
+			End If
+			
+			If last <> Null And Not last.EqualsType(ety) Then
+				Err "Auto array elements must have identical types"
+			End If
+			last = ety
+			
 			exprs[i]=exprs[i].Cast( ty )
 		Next
 
