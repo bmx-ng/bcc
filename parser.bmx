@@ -2343,7 +2343,6 @@ End Rem
 				ty=New TArrayType.Create( ty, ln.length )
 			Else If _toke = "(" Then
 	 			' function pointer?
-
 				Local fdecl:TFuncDecl = ParseFuncDecl("", FUNC_PTR)
 				If toke = "field" Then
 					fdecl.attrs :| FUNC_METHOD
@@ -2361,7 +2360,7 @@ End Rem
 				TFunctionPtrType(ty).func.ident = ""
 
 				' an initialised array of function pointers?
-				If CParse( "[" )
+				If Not IsArrayDef() And CParse( "[" )
 					Local ln:TExpr[]
 					Repeat
 						If CParse(",") Then

@@ -630,6 +630,7 @@ t:+"NULLNULLNULL"
 	'***** Utility *****
 
 	Method TransLocalDecl$( decl:TLocalDecl,init:TExpr, declare:Int = False )
+
 		If Not declare And opt_debug Then
 			Local ty:TType = decl.ty
 			If Not TObjectType( ty ) Or (TObjectType( ty ) And Not TObjectType( ty ).classDecl.IsStruct()) Then
@@ -2687,6 +2688,11 @@ End Rem
 				End If
 			Else
 				If Not odecl.castTo Then
+					If Not args Then
+						' for function pointer return type, we need to generate () regardless of whether there are
+						' args or not.
+						args = " "
+					End If
 					Emit pre + TransType( decl.retType, id, args )+ bk
 				Else
 					If Not odecl.noCastGen Then
