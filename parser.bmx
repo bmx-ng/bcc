@@ -2274,7 +2274,9 @@ End Rem
 					expr=New TFuncCallExpr.Create( expr,ParseArgs( True ) )
 
 				Else If TFuncCallExpr( expr) Or TInvokeSuperExpr( expr ) Or TNewObjectExpr( expr ) Or TNewExpr(expr)
-
+				
+				Else If TIndexExpr(expr)
+					expr = New TFuncCallExpr.Create( expr, ParseArgs( True ) )
 				Else
 					Err "Expression cannot be used as a statement."
 				EndIf

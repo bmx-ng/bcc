@@ -2033,6 +2033,9 @@ Type TArrayExpr Extends TExpr
 	Method Semant:TExpr()
 		If exprType Return Self
 
+		If TIdentExpr(exprs[0]) Then
+			TIdentExpr(exprs[0]).isRhs = True
+		End If
 		exprs[0]=exprs[0].Semant()
 		Local ty:TType=exprs[0].exprType
 		' convert from varptr to ptr if required
@@ -2047,6 +2050,9 @@ Type TArrayExpr Extends TExpr
 			TFunctionPtrType(ty).func = TInvokeExpr(exprs[0]).decl
 
 			For Local i:Int=1 Until exprs.Length
+				If TIdentExpr(exprs[1]) Then
+					TIdentExpr(exprs[1]).isRhs = True
+				End If
 				exprs[i]=exprs[i].Semant()
 				
 				If TInvokeExpr(exprs[i]) And Not TInvokeExpr(exprs[i]).invokedWithBraces
