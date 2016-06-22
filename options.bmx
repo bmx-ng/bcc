@@ -101,6 +101,9 @@ Global opt_strictupgrade:Int = True
 '    generate warnings (and accept) instead of errors for calling methods with arguments that need to be cast down.
 '    May cause issues using overloaded methods.
 Global opt_warnover:Int = False
+' musl libc support
+'    
+Global opt_musl:Int = False
 
 Global opt_filepath:String
 
@@ -194,6 +197,8 @@ Function ParseArgs:String[](args:String[])
 				opt_gdbdebug=True
 			Case "w"
 				opt_warnover=True
+			Case "musl"
+				opt_musl=True
 		End Select
 	
 		count:+ 1
