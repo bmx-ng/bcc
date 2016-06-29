@@ -266,6 +266,9 @@ Type TIParser
 						Else If CParse("A")
 							class.attrs :| DECL_ABSTRACT
 
+						Else If CParse("S")
+							class.attrs :| CLASS_STRUCT
+
 						Else If CParse("AF")
 							class.attrs :| DECL_ABSTRACT | DECL_FINAL
 

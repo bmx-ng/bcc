@@ -2910,6 +2910,10 @@ End Rem
 
 		If CParse( "implements" )
 
+			If attrs & CLASS_STRUCT
+				Err "Implements cannot be used with Structs"
+			EndIf
+
 			'If attrs & DECL_EXTERN
 			'	Err "Implements cannot be used with external classes."
 			'EndIf
@@ -3063,7 +3067,7 @@ End Rem
 				EndIf
 				classDecl.InsertDecls ParseDecls( _toke,decl_attrs )
 			Case "method"
-				If attrs & CLASS_STRUCT Then
+				If (attrs & CLASS_STRUCT) And (attrs & DECL_EXTERN) Then
 					Err "Structs can only contain fields."
 				EndIf
 				Local decl:TFuncDecl=ParseFuncDecl( _toke,method_attrs )
@@ -3074,7 +3078,11 @@ End Rem
 					Err "Interfaces can only contain constants and methods."
 				EndIf
 				If attrs & CLASS_STRUCT Then
-					Err "Structs can only contain fields."
+					If (attrs & DECL_EXTERN) Then
+						Err "Structs can only contain fields."
+					Else
+						Err "Structs can only contain fields and methods."
+					End If
 				EndIf
 				If attrs & DECL_EXTERN Then
 					Err "Extern Types can only contain methods."
@@ -3428,6 +3436,8 @@ End Rem
 					gdecl.attrs :| DECL_INITONLY
 					_block.AddStmt New TDeclStmt.Create( gdecl )
 				Next
+			Case "struct"
+				_module.InsertDecl ParseClassDecl( _toke,attrs | CLASS_STRUCT )
 			Case "type"
 				_module.InsertDecl ParseClassDecl( _toke,attrs )
 			Case "interface"

@@ -87,15 +87,19 @@ Type TCTranslator Extends TTranslator
 			Return Enquote(s.Replace("~q", ""))
 		End If
 		If TObjectType( ty ) Then
-			If Not TObjectType( ty ).classdecl.IsExtern()
-				Return "~q:" + TObjectType(ty).classDecl.ident + "~q"
+			If TObjectType( ty ).classdecl.IsStruct()
+				Return "~q" + p + "@" + TObjectType(ty).classDecl.ident + "~q"
 			Else
-				If TObjectType( ty ).classdecl.IsInterface() Then
-					Return "~q" + p + "*#" + TObjectType(ty).classDecl.ident + "~q"
-				ElseIf TObjectType( ty ).classdecl.IsStruct()
-					Return "~q" + p + "@" + TObjectType(ty).classDecl.ident + "~q"
+				If Not TObjectType( ty ).classdecl.IsExtern()
+					Return "~q:" + TObjectType(ty).classDecl.ident + "~q"
 				Else
-					Return "~q" + p + "#" + TObjectType(ty).classDecl.ident + "~q"
+					If TObjectType( ty ).classdecl.IsInterface() Then
+						Return "~q" + p + "*#" + TObjectType(ty).classDecl.ident + "~q"
+				'	ElseIf TObjectType( ty ).classdecl.IsStruct()
+'						Return "~q" + p + "@" + TObjectType(ty).classDecl.ident + "~q"
+					Else
+						Return "~q" + p + "#" + TObjectType(ty).classDecl.ident + "~q"
+					End If
 				End If
 			End If
 		End If
@@ -168,13 +172,13 @@ Type TCTranslator Extends TTranslator
 			Return s + TransDebugScopeType(TArrayType( ty ).elemType)
 		End If
 		If TObjectType( ty ) Then
-			If Not TObjectType( ty ).classdecl.IsExtern()
+			If TObjectType( ty ).classdecl.IsStruct() Then
+					Return p + "@" + TObjectType(ty).classDecl.ident
+			Else If Not TObjectType( ty ).classdecl.IsExtern()
 				Return ":" + TObjectType( ty ).classDecl.ident
 			Else
 				If TObjectType( ty ).classdecl.IsInterface() Then
 					Return p + "*#" + TObjectType(ty).classDecl.ident
-				ElseIf TObjectType( ty ).classdecl.IsStruct() Then
-					Return p + "@" + TObjectType(ty).classDecl.ident
 				Else
 					Return p + "#" + TObjectType(ty).classDecl.ident
 				End If
@@ -387,7 +391,7 @@ Type TCTranslator Extends TTranslator
 			If TStringType( ty ) Return "&bbEmptyString"
 			If TArrayType( ty ) Return "&bbEmptyArray"
 			If TObjectType( ty ) Then
-				If TObjectType( ty ).classDecl.IsExtern() Then
+				If TObjectType( ty ).classDecl.IsExtern() Or TObjectType( ty ).classDecl.IsStruct() Then
 					If TObjectType( ty ).classDecl.IsInterface() Or IsPointerType(ty) Or (Not TObjectType( ty ).classDecl.IsStruct()) Then
 						Return "0"
 					Else
@@ -403,7 +407,7 @@ Type TCTranslator Extends TTranslator
 	End Method
 	
 	Method TransArgs$( args:TExpr[],decl:TFuncDecl, objParam:String = Null )
-'If decl.ident="ToHex" DebugStop
+'If decl.ident="AddS" DebugStop
 
 		Local t$
 		If objParam And (decl.IsMethod() Or decl.isCtor()) And ((Not decl.IsExtern()) Or (decl.IsExtern() And TClassDecl(decl.scope) And Not TClassDecl(decl.scope).IsStruct())) Then
@@ -666,7 +670,11 @@ t:+"NULLNULLNULL"
 							Return TransType( ty, decl.munged )+" "+decl.munged+"="+init.Trans()
 						End If
 					Else
-						Return TransType( ty, decl.munged )+" volatile "+decl.munged+"="+init.Trans()
+						If TObjectType(ty).classdecl.IsStruct() Then
+							Return TransType( ty, decl.munged )+" "+decl.munged + "= " + init.Trans()
+						Else
+							Return TransType( ty, decl.munged )+" volatile "+decl.munged+"="+init.Trans()
+						End If
 					End If
 				Else
 					Return TransType( ty, decl.munged )+" "+decl.munged+"="+init.Trans()
@@ -687,7 +695,11 @@ t:+"NULLNULLNULL"
 						Return TransType( decl.ty, decl.munged )+" "+decl.munged
 					End If
 				Else
-					Return TransType( decl.ty, decl.munged )+" volatile "+decl.munged + "=" + TransValue(decl.ty, "")
+					If Not TObjectType(decl.ty).classdecl.IsStruct() Then
+						Return TransType( decl.ty, decl.munged )+" volatile "+decl.munged + "=" + TransValue(decl.ty, "")
+					Else
+						Return TransType( decl.ty, decl.munged )+" "+decl.munged + "=" + TransValue(decl.ty, "")
+					End If
 				End If
 			Else
 				Return TransType( decl.ty, decl.munged )+" "+decl.munged + "=" + TransValue(decl.ty, "")
@@ -908,15 +920,29 @@ t:+"NULLNULLNULL"
 								Local ifc:String = Bra("(struct " + cdecl.munged + "_methods*)" + Bra("bbObjectInterface(" + TransSubExpr( lhs ) + ", " + "&" + cdecl.munged + "_ifc)"))
 								Return ifc + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, TransSubExpr( lhs ) )
 							Else
-								Local class:String = Bra(TransSubExpr( lhs )) + "->clas" + tSuper
-								Return class + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, TransSubExpr( lhs ) )
+								If cdecl.IsStruct() Then
+									If Not isPointerType(lhs.exprType) Then
+										Return "_" + decl.munged+TransArgs( args,decl, "&" + TransSubExpr( lhs ) )
+									Else
+										Return "_" + decl.munged+TransArgs( args,decl, TransSubExpr( lhs ) )
+									End If
+								Else
+									Local class:String = Bra(TransSubExpr( lhs )) + "->clas" + tSuper
+									Return class + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, TransSubExpr( lhs ) )
+								End If
 							End If
 						End If
 					End If
 				Else If TNewObjectExpr(lhs) Then
 					Local cdecl:TClassDecl = TNewObjectExpr(lhs).classDecl
-					Local class:String = cdecl.munged
-					Return class + "." + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, TransSubExpr( lhs ) )
+					If cdecl.IsStruct() Then
+						' create a local variable of the inner invocation
+						Local lvar:String = CreateLocal(lhs)
+						Return "_" + decl.munged+TransArgs( args,decl, "&" + lvar )
+					Else
+						Local class:String = cdecl.munged
+						Return class + "." + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, TransSubExpr( lhs ) )
+					End If
 				Else If TCastExpr(lhs) Then
 					Local cdecl:TClassDecl = TObjectType(TCastExpr(lhs).ty).classDecl
 					Local obj:String = Bra(TransObject(cdecl))
@@ -949,14 +975,26 @@ t:+"NULLNULLNULL"
 								Return decl.munged + Bra(TransArgs( args,decl, TransSubExpr( lhs ) ))
 							End If
 						Else
-							' Null test
-							If opt_debug Then
-								EmitDebugNullObjectError(TransSubExpr( lhs ))
-							End If
+							If cdecl.IsStruct() Then
+							
+								' baaaaaaaaaaaaaaaaa
+								If Not isPointerType(lhs.exprType) Then
+									Return "_" + decl.munged+TransArgs( args,decl, "&" + TransSubExpr( lhs ) )
+								Else
+									Return "_" + decl.munged+TransArgs( args,decl, TransSubExpr( lhs ) )
+								End If
+							
+							Else
+						
+								' Null test
+								If opt_debug Then
+									EmitDebugNullObjectError(TransSubExpr( lhs ))
+								End If
 	
-							Local class:String = Bra("(" + obj + TransSubExpr( lhs ) + ")->clas" + tSuper)
-							'Local class:String = TransFuncClass(cdecl)
-							Return class + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, TransSubExpr( lhs ) )
+								Local class:String = Bra("(" + obj + TransSubExpr( lhs ) + ")->clas" + tSuper)
+								'Local class:String = TransFuncClass(cdecl)
+								Return class + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, TransSubExpr( lhs ) )
+							End If
 						End If
 						
 					Else If TArrayType(TMemberVarExpr(lhs).decl.ty) Then
@@ -967,15 +1005,24 @@ t:+"NULLNULLNULL"
 					' create a local variable of the inner invocation
 					Local lvar:String = CreateLocal(lhs)
 
-					' Null test
-					If opt_debug Then
-						EmitDebugNullObjectError(lvar)
+					If TClassDecl(decl.scope) And TClassDecl(decl.scope).IsStruct() Then
+						If Not isPointerType(lhs.exprType) Then
+							Return "_" + decl.munged+TransArgs( args,decl, "&" + lvar )
+						Else
+							Return "_" + decl.munged+TransArgs( args,decl, lvar )
+						End If
+					Else
+
+						' Null test
+						If opt_debug Then
+							EmitDebugNullObjectError(lvar)
+						End If
+	
+						Local obj:String = Bra(TransObject(decl.scope))
+						Local class:String = Bra("(" + obj + lvar +")->clas" + tSuper)
+						Return class + "->" + TransFuncPrefix(decl.scope, decl)+ FuncDeclMangleIdent(decl)+TransArgs( args,decl, lvar )
+
 					End If
-
-					Local obj:String = Bra(TransObject(decl.scope))
-					Local class:String = Bra("(" + obj + lvar +")->clas" + tSuper)
-					Return class + "->" + TransFuncPrefix(decl.scope, decl)+ FuncDeclMangleIdent(decl)+TransArgs( args,decl, lvar )
-
 					'Local obj:String = Bra("struct " + decl.scope.munged + "_obj*")
 					'Local class:String = Bra("(" + obj + TransSubExpr( lhs ) +")->clas" + tSuper)
 					'Local class:String = Bra("&" + decl.scope.munged)
@@ -991,13 +1038,21 @@ t:+"NULLNULLNULL"
 						
 						Return "// TODO"
 					Else
-						' Null test
-						If opt_debug Then
-							EmitDebugNullObjectError(lvar)
+						If TClassDecl(decl.scope) And TClassDecl(decl.scope).IsStruct() Then
+							If Not isPointerType(lhs.exprType) Then
+								Return "_" + decl.munged+TransArgs( args,decl, "&" + lvar )
+							Else
+								Return "_" + decl.munged+TransArgs( args,decl, lvar )
+							End If
+						Else
+							' Null test
+							If opt_debug Then
+								EmitDebugNullObjectError(lvar)
+							End If
+		
+							Local obj:String = lvar + "->clas" + tSuper
+							Return obj + "->" + TransFuncPrefix(decl.scope, decl)+ FuncDeclMangleIdent(decl)+TransArgs( args,decl, lvar )
 						End If
-	
-						Local obj:String = lvar + "->clas" + tSuper
-						Return obj + "->" + TransFuncPrefix(decl.scope, decl)+ FuncDeclMangleIdent(decl)+TransArgs( args,decl, lvar )
 					End If
 
 				Else If TIndexExpr(lhs) Then
@@ -1041,18 +1096,20 @@ t:+"NULLNULLNULL"
 			' ((brl_standardio_TCStandardIO_obj*)o->clas)->md_Read(o, xxx, xxx)
 		If decl.IsMethod() Then
 			If  Not (decl.attrs & FUNC_PTR) Then
-			
+
 				Local class:String
 				
 				If Not scope Then
 					scope = decl.scope
 
-					Local obj:String = Bra(TransObject(scope))
-					class = "(" + obj + "o)->clas" + tSuper
+					If TClassDecl(scope) And Not TClassDecl(scope).IsStruct() Then
+						Local obj:String = Bra(TransObject(scope))
+						class = "(" + obj + "o)->clas" + tSuper
 
-					' Null test
-					If opt_debug Then
-						EmitDebugNullObjectError("o")
+						' Null test
+						If opt_debug Then
+							EmitDebugNullObjectError("o")
+						End If
 					End If
 				Else
 
@@ -1063,7 +1120,11 @@ t:+"NULLNULLNULL"
 				'Local obj:String = Bra("struct " + scope.munged + "_obj*")
 				'Local class:String = Bra("(" + obj + "o)->clas" + tSuper)
 				'Local class:String = Bra("&" + decl.scope.munged)
-				Return class + "->" + TransFuncPrefix(scope, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, "o" )
+				If TClassDecl(scope).IsStruct() Then
+					Return "_" + decl.munged+TransArgs( args,decl, "o" )
+				Else
+					Return class + "->" + TransFuncPrefix(scope, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, "o" )
+				End If
 			Else
 				' Null test
 				If opt_debug Then
@@ -1078,18 +1139,30 @@ t:+"NULLNULLNULL"
 		Return TransStatic( decl )+TransArgs( args,decl )
 	End Method
 
-	Method TransObject:String(decl:TScopeDecl)
+	Method TransObject:String(decl:TScopeDecl, this:Int = False)
 		If decl.ident = "Object"
 			Return "BBOBJECT"
 		Else
-			If decl.IsExtern() Then
-				If Not TClassDecl(decl).IsStruct() Then
+			If TClassDecl(decl) And TClassDecl(decl).IsStruct() Then
+				Local t:String = "struct "
+				If decl.IsExtern() Then
+					t :+ decl.ident
+				Else
+					t :+ decl.munged
+				End If
+				
+				If this Then
+					Return t + "*"
+				Else
+					Return t
+				End If
+
+			Else
+				If decl.IsExtern() Then
 					Return "struct " + decl.ident + "*"
 				Else
-					Return "struct " + decl.ident
+					Return "struct " + decl.munged + "_obj*"
 				End If
-			Else
-				Return "struct " + decl.munged + "_obj*"
 			End If
 		End If
 	End Method
@@ -1324,7 +1397,7 @@ t:+"NULLNULLNULL"
 	Method TransNewObjectExpr$( expr:TNewObjectExpr )
 		Local t$
 
-		If Not expr.ctor.argDecls Or expr.ctor.argDecls.length = 0 Then
+		If Not expr.classDecl.IsStruct() And (Not expr.ctor.argDecls Or expr.ctor.argDecls.length = 0) Then
 			If expr.instanceExpr Then
 				t = "bbObjectNew(" + Bra(expr.instanceExpr.Trans()) + "->clas)"
 			Else
@@ -1350,7 +1423,11 @@ t:+"NULLNULLNULL"
 				If ClassHasObjectField(expr.classDecl) Then
 					t = "_" + ctorMunged + "_ObjectNew" + TransArgs( expr.args,expr.ctor, "&" + expr.classDecl.actual.munged )
 				Else
-					t = "_" + ctorMunged + "_ObjectNew" + TransArgs( expr.args,expr.ctor, "&" + expr.classDecl.actual.munged)
+					If expr.classDecl.IsStruct() Then
+						t = "_" + ctorMunged + "_ObjectNew" + TransArgs( expr.args,expr.ctor)
+					Else
+						t = "_" + ctorMunged + "_ObjectNew" + TransArgs( expr.args,expr.ctor, "&" + expr.classDecl.actual.munged)
+					End If
 				End If
 			End If
 		End If
@@ -1362,7 +1439,7 @@ t:+"NULLNULLNULL"
 	Method TransNewArrayExpr$( expr:TNewArrayExpr )
 
 		If expr.expr.length = 1 Then
-			If TObjectType(expr.ty) And TObjectType(expr.ty).classdecl.IsExtern() And TObjectType(expr.ty).classdecl.IsStruct() And Not IsPointerType(expr.ty) Then
+			If TObjectType(expr.ty) And TObjectType(expr.ty).classdecl.IsStruct() And Not IsPointerType(expr.ty) Then
 				Return "bbArrayNew1DStruct" + Bra(TransArrayType(expr.ty) + ", " + expr.expr[0].Trans() + ", sizeof" + Bra(TransObject(TObjectType(expr.ty).classdecl)))
 			Else
 				Return "bbArrayNew1D" + Bra(TransArrayType(expr.ty) + ", " + expr.expr[0].Trans())
@@ -2351,7 +2428,7 @@ t:+"NULLNULLNULL"
 			If Not decl.IsSemanted() Then
 				decl.Semant()
 			End If
-			If TStringType(decl.ty) Or TArrayType(decl.ty) Or TObjectType(decl.ty) Then
+			If TStringType(decl.ty) Or TArrayType(decl.ty) Or (TObjectType(decl.ty) And Not TObjectType(decl.ty).classDecl.IsStruct()) Then
 				Return True
 			End If
 		Next
@@ -2460,7 +2537,7 @@ End Rem
 	
 	Method FuncDeclMangleIdent:String(fdecl:TFuncDecl)
 
-		If (Not fdecl.ClassScope()) Or equalsBuiltInFunc(fdecl.classScope(), fdecl) Then
+		If (Not fdecl.ClassScope()) Or (equalsBuiltInFunc(fdecl.classScope(), fdecl)) Then
 			Return fdecl.ident
 		End If	
 	
@@ -2476,7 +2553,7 @@ End Rem
 '		End If
 	End Method
 
-	Method EmitClassFuncProto( decl:TFuncDecl)
+	Method EmitClassFuncProto( decl:TFuncDecl, isStruct:Int = False)
 		'PushMungScope
 		BeginLocalScope
 
@@ -2496,7 +2573,7 @@ End Rem
 
 		' pass object for method
 		If decl.IsMethod() Then
-			args :+ TransObject(decl.scope)
+			args :+ TransObject(decl.scope, True)
 		End If
 
 		Local argCasts:TStack =New TStack
@@ -2547,8 +2624,10 @@ End Rem
 '		If Not proto Or (proto And Not odecl.IsExtern()) Then
 			If Not TFunctionPtrType(decl.retType) Then
 				If Not odecl.castTo Then
-					If Not decl.overrides Or decl.returnTypeSubclassed Then
-						Emit pre + TransType( decl.retType, "" )+" "+ Bra(api + "*" + id)+Bra( args ) + bk
+					If Not isStruct Then
+						If Not decl.overrides Or decl.returnTypeSubclassed Then
+							Emit pre + TransType( decl.retType, "" )+" "+ Bra(api + "*" + id)+Bra( args ) + bk
+						End If
 					End If
 					If decl.IsMethod() Then
 						Emit TransType(decl.retType, "") + " _" + decl.munged +Bra( args ) + bk
@@ -2557,8 +2636,10 @@ End Rem
 					End If
 				Else
 					If Not odecl.noCastGen Then
-						If Not decl.overrides Or decl.returnTypeSubclassed Then
-							Emit pre + odecl.castTo +" "+Bra(api + "*" + id)+Bra( args ) + bk
+						If Not isStruct Then
+							If Not decl.overrides Or decl.returnTypeSubclassed Then
+								Emit pre + odecl.castTo +" "+Bra(api + "*" + id)+Bra( args ) + bk
+							End If
 						End If
 						If decl.IsMethod() Then
 							Emit odecl.castTo + " _" + decl.munged +Bra( args ) + bk
@@ -2627,7 +2708,7 @@ End Rem
 
 		' pass object for method
 		If decl.IsMethod() Then
-			args :+ TransObject(decl.scope) + " o"
+			args :+ TransObject(decl.scope, True) + " o"
 		End If
 
 		Local argCasts:TStack =New TStack
@@ -2769,9 +2850,9 @@ End Rem
 
 						Local t:String = TransLocalDeclNoInit(ldecl)
 						
-						If TObjectType( ty ) And TObjectType( ty ).classDecl.IsStruct() Then
-							t :+ "={}"
-						End If
+'						If TObjectType( ty ) And TObjectType( ty ).classDecl.IsStruct() Then
+'							t :+ "={}"
+'						End If
 						
 						Emit t + ";"
 					End If
@@ -3063,36 +3144,67 @@ End Rem
 
 	Method EmitExternClassProto( classDecl:TClassDecl )
 
-		If classDecl.IsStruct() Then
-
-			Emit "struct " + classDecl.ident + " {"
-
-			BeginLocalScope
-			EmitClassFieldsProto(classDecl)
-			EndLocalScope
-
-			Emit "};"
-
+		Emit "typedef struct " + classDecl.ident + " " + classDecl.ident + ";"
+		
+		' vtable
+		Emit "struct " + classDecl.ident  + "Vtbl {"
+		
+		' methods
+		If classDecl.IsInterface() Then
+			EmitExternClassFuncProto(classDecl)
 		Else
-			Emit "typedef struct " + classDecl.ident + " " + classDecl.ident + ";"
-			
-			' vtable
-			Emit "struct " + classDecl.ident  + "Vtbl {"
-			
-			' methods
-			If classDecl.IsInterface() Then
-				EmitExternClassFuncProto(classDecl)
-			Else
-				EmitExternClassTypeFuncProto(classDecl)
-			End If
-
-			Emit "};"
-			
-			Emit "struct " + classDecl.ident + " {"
-			Emit "struct " + classDecl.ident + "Vtbl* vtbl;"
-			Emit "};"
-
+			EmitExternClassTypeFuncProto(classDecl)
 		End If
+
+		Emit "};"
+		
+		Emit "struct " + classDecl.ident + " {"
+		Emit "struct " + classDecl.ident + "Vtbl* vtbl;"
+		Emit "};"
+
+	End Method
+
+	Field emittedStructs:TList = New TList
+
+	Method EmitStructClassProto( classDecl:TClassDecl )
+	
+		If emittedStructs.Contains(classDecl) Return
+		
+		emittedStructs.AddLast(classDecl)
+		
+		' emit any dependent structs first
+		For Local decl:TFieldDecl = EachIn classDecl.Decls()
+			decl.Semant()
+			
+			If TObjectType(decl.ty) And TObjectType(decl.ty).classDecl.IsStruct() Then
+				If Not emittedStructs.Contains(TObjectType(decl.ty).classDecl) Then
+					EmitStructClassProto(TObjectType(decl.ty).classDecl)
+				End If
+			End If
+		Next
+
+		If classDecl.IsExtern()
+			Emit "struct " + classDecl.ident + " {"
+		Else
+			EmitClassDeclNewListProto( classDecl )
+
+
+			For Local fdecl:TFuncDecl=EachIn classDecl.Decls()
+	
+				If fdecl.IdentLower() <> "new" Then
+					EmitClassFuncProto( fdecl, True )
+				End If
+
+			Next
+		
+			Emit "struct " + classDecl.munged + " {"
+		End If
+
+		BeginLocalScope
+		EmitClassFieldsProto(classDecl)
+		EndLocalScope
+
+		Emit "};"
 
 	End Method
 
@@ -3175,7 +3287,13 @@ End Rem
 			Emit Enquote(decl.ident) + ","
 			Emit Enquote(TransDebugScopeType(decl.ty) + TransDebugMetaData(decl.metadata.metadataString)) + ","
 
-			Local offset:String = ".field_offset=offsetof" + Bra("struct " + classDecl.munged + "_obj," + decl.munged)
+			Local offset:String = ".field_offset=offsetof"
+			
+			If classDecl.IsStruct() Then
+				offset :+ Bra("struct " + classDecl.munged + "," + decl.munged)
+			Else
+				offset :+ Bra("struct " + classDecl.munged + "_obj," + decl.munged)
+			End If
 '			If WORD_SIZE = 8 Then
 '				Emit Bra("BBLONG") + offset
 '			Else
@@ -3296,8 +3414,13 @@ End Rem
 
 	Method EmitClassFuncsDebugScope(classDecl:TClassDecl)
 
+		If classDecl.IsExtern() Return
+
 		Local classid$=classDecl.munged
-		Local superid$=classDecl.superClass.actual.munged
+		Local superid$
+		If classDecl.superClass Then
+			superid = classDecl.superClass.actual.munged
+		End If
 
 		Local ret:String = "()i"
 		If opt_issuperstrict Then
@@ -3372,7 +3495,7 @@ End Rem
 		Local count:Int = 2 ' "New" counts as first one
 		
 		' but we don't use "New" for interfaces...
-		If classDecl.IsInterface() Then
+		If classDecl.IsInterface() Or (classDecl.IsExtern() And classDecl.IsStruct()) Then
 			count :- 1
 		End If
 
@@ -3412,107 +3535,114 @@ End Rem
 		'	Return
 		'EndIf
 
-		If classDecl.IsExtern() Then
+		If classDecl.IsExtern() And Not classDecl.IsStruct() Then
 			Return
 		EndIf
 
 		Local classid$=classDecl.munged
-		Local superid$=classDecl.superClass.actual.munged
+		Local superid$
+		If classDecl.superClass Then
+			superid = classDecl.superClass.actual.munged
+		End If
 
-		' process nested functions for new
-		Local decl:TFuncDecl = classDecl.FindFuncDecl("new",,,,,,SCOPE_CLASS_HEIRARCHY)
-		If decl And decl.scope = classDecl Then ' only our own New method, not any from superclasses
-			decl.Semant
-			' emit nested protos
-			For Local fdecl:TFuncDecl = EachIn decl._decls
-				EmitFuncDecl(fdecl, True, False)
-			Next
+
+		If Not classDecl.IsExtern() Then
+			' process nested functions for new
+			Local decl:TFuncDecl = classDecl.FindFuncDecl("new",,,,,,SCOPE_CLASS_HEIRARCHY)
+			If decl And decl.scope = classDecl Then ' only our own New method, not any from superclasses
+				decl.Semant
+				' emit nested protos
+				For Local fdecl:TFuncDecl = EachIn decl._decls
+					EmitFuncDecl(fdecl, True, False)
+				Next
+				
+				' emit nested bodies
+				For Local fdecl:TFuncDecl = EachIn decl._decls
+					EmitFuncDecl(fdecl, False, False)
+				Next
+			End If
+	
+			EmitClassDeclNewList(classDecl)
 			
-			' emit nested bodies
-			For Local fdecl:TFuncDecl = EachIn decl._decls
-				EmitFuncDecl(fdecl, False, False)
+			' process nested functions for delete
+			decl = classDecl.FindFuncDecl("delete",,,,,,SCOPE_CLASS_HEIRARCHY)
+			If decl Then
+				decl.Semant
+				' emit nested protos
+				For Local fdecl:TFuncDecl = EachIn decl._decls
+					EmitFuncDecl(fdecl, True, False)
+				Next
+				
+				' emit nested bodies
+				For Local fdecl:TFuncDecl = EachIn decl._decls
+					EmitFuncDecl(fdecl, False, False)
+				Next
+			End If
+	
+			If classHierarchyHasFunction(classDecl, "Delete") Then
+				EmitClassDeclDelete(classDecl)
+			End If
+	
+			Rem
+			'fields ctor
+			Emit classid+"::"+classid+"(){"
+			For Local decl:TDecl=EachIn classDecl.Semanted()
+				Local fdecl:TFieldDecl=TFieldDecl( decl )
+				If Not fdecl Continue
+				Emit TransField(fdecl,Null)+"="+fdecl.init.Trans()+";"
 			Next
-		End If
-
-		EmitClassDeclNewList(classDecl)
-		
-		' process nested functions for delete
-		decl = classDecl.FindFuncDecl("delete",,,,,,SCOPE_CLASS_HEIRARCHY)
-		If decl Then
-			decl.Semant
-			' emit nested protos
-			For Local fdecl:TFuncDecl = EachIn decl._decls
-				EmitFuncDecl(fdecl, True, False)
+			Emit "}"
+			End Rem
+			Local reserved:String = ",New,Delete,".ToLower()
+	
+			'methods
+			For Local decl:TDecl=EachIn classDecl.Decls()
+	
+				Local fdecl:TFuncDecl=TFuncDecl( decl )
+				If fdecl
+					If reserved.Find("," + fdecl.IdentLower() + ",") = -1 Then
+						EmitGDBDebug(fdecl)
+						EmitFuncDecl fdecl, , True
+						Continue
+					End If
+				EndIf
+	
+			'Local gdecl:TGlobalDecl=TGlobalDecl( decl )
+			'If gdecl
+			'		Emit TransRefType( gdecl.ty )+" "+classid+"::"+gdecl.munged+";"
+			'		Continue
+			'	EndIf
 			Next
-			
-			' emit nested bodies
-			For Local fdecl:TFuncDecl = EachIn decl._decls
-				EmitFuncDecl(fdecl, False, False)
+			Rem
+			'gc_mark
+			Emit "void "+classid+"::mark(){"
+			If classDecl.superClass
+				Emit classDecl.superClass.actual.munged+"::mark();"
+			EndIf
+			For Local decl:TDecl=EachIn classDecl.Semanted()
+				Local fdecl:TFieldDecl=TFieldDecl( decl )
+				If fdecl EmitMark TransField(fdecl,Null),fdecl.ty,True
 			Next
-		End If
-
-		If classHierarchyHasFunction(classDecl, "Delete") Then
-			EmitClassDeclDelete(classDecl)
-		End If
-
-		Rem
-		'fields ctor
-		Emit classid+"::"+classid+"(){"
-		For Local decl:TDecl=EachIn classDecl.Semanted()
-			Local fdecl:TFieldDecl=TFieldDecl( decl )
-			If Not fdecl Continue
-			Emit TransField(fdecl,Null)+"="+fdecl.init.Trans()+";"
-		Next
-		Emit "}"
-		End Rem
-		Local reserved:String = ",New,Delete,".ToLower()
-
-		'methods
-		For Local decl:TDecl=EachIn classDecl.Decls()
-
-			Local fdecl:TFuncDecl=TFuncDecl( decl )
-			If fdecl
-				If reserved.Find("," + fdecl.IdentLower() + ",") = -1 Then
-					EmitGDBDebug(fdecl)
-					EmitFuncDecl fdecl, , True
+			Emit "}"
+			End Rem
+	
+			For Local decl:TDecl=EachIn classDecl.Semanted()
+				Local gdecl:TGlobalDecl =TGlobalDecl( decl )
+				If gdecl
+					If TFunctionPtrType(gdecl.ty) Then
+						Emit TransRefType( gdecl.ty, gdecl.munged ) + ";"
+					Else
+						Emit TransRefType( gdecl.ty, "" )+" "+gdecl.munged+";"
+					End If
 					Continue
-				End If
-			EndIf
+				EndIf
+			Next
+	
+			reserved = ",New,Delete,ToString,Compare,SendMessage,_reserved1_,_reserved2_,_reserved3_,".ToLower()
 
-		'Local gdecl:TGlobalDecl=TGlobalDecl( decl )
-		'If gdecl
-		'		Emit TransRefType( gdecl.ty )+" "+classid+"::"+gdecl.munged+";"
-		'		Continue
-		'	EndIf
-		Next
-		Rem
-		'gc_mark
-		Emit "void "+classid+"::mark(){"
-		If classDecl.superClass
-			Emit classDecl.superClass.actual.munged+"::mark();"
-		EndIf
-		For Local decl:TDecl=EachIn classDecl.Semanted()
-			Local fdecl:TFieldDecl=TFieldDecl( decl )
-			If fdecl EmitMark TransField(fdecl,Null),fdecl.ty,True
-		Next
-		Emit "}"
-		End Rem
+		End If
 
-		For Local decl:TDecl=EachIn classDecl.Semanted()
-			Local gdecl:TGlobalDecl =TGlobalDecl( decl )
-			If gdecl
-				If TFunctionPtrType(gdecl.ty) Then
-					Emit TransRefType( gdecl.ty, gdecl.munged ) + ";"
-				Else
-					Emit TransRefType( gdecl.ty, "" )+" "+gdecl.munged+";"
-				End If
-				Continue
-			EndIf
-		Next
-
-
-		reserved = ",New,Delete,ToString,Compare,SendMessage,_reserved1_,_reserved2_,_reserved3_,".ToLower()
-
+			
 		'Emit "struct _" + classid + "_DebugScope{"
 		'Emit "int kind;"
 		'Emit "const char *name;"
@@ -3530,6 +3660,8 @@ End Rem
 		
 		If classDecl.IsInterface() Then
 			Emit "BBDEBUGSCOPE_USERINTERFACE,"
+		Else If classDecl.IsStruct() Then
+			Emit "BBDEBUGSCOPE_USERSTRUCT,"
 		Else
 			Emit "BBDEBUGSCOPE_USERTYPE,"
 		End If
@@ -3558,163 +3690,166 @@ End Rem
 		Local implementedInterfaces:TMap = classDecl.GetInterfaces()
 		Local ifcCount:Int
 
-		' interface class implementation
-		If Not classDecl.IsInterface()
-			If Not implementedInterfaces.IsEmpty() Then
-				Emit "struct " + classid + "_vdef {"
-				For Local ifc:TClassDecl = EachIn implementedInterfaces.Values()
-					Emit "struct " + ifc.munged + "_methods interface_" + ifc.ident + ";"
-					ifcCount :+ 1
-				Next
-				Emit "};~n"
-			
-				Emit "static struct BBInterfaceOffsets " + classid + "_ifc_offsets[] = {"
-				For Local ifc:TClassDecl = EachIn implementedInterfaces.Values()
-					Emit "{&" + ifc.munged + "_ifc, offsetof(struct " + classid + "_vdef, interface_" + ifc.ident + ")},"
-				Next
-				Emit "};~n"
-	
-				Emit "struct " + classid + "_vdef " + classid + "_ifc_vtable = {"
-				For Local ifc:TClassDecl = EachIn implementedInterfaces.Values()
-					Emit ".interface_" + ifc.ident + "={"
-					
-					For Local func:TFuncDecl = EachIn ifc.GetImplementedFuncs()
-					
-						If func.IsMethod() Then
-						
-							For Local f:TFuncDecl = EachIn fdecls
-								Mungdecl f
-								If f.ident = func.ident And func.EqualsFunc(f) Then
-									Emit "_" + f.munged + ","
-									Exit
-								End If
-							Next
-					
-						End If
+		If Not classDecl.IsStruct() Then
+
+			' interface class implementation
+			If Not classDecl.IsInterface()
+				If Not implementedInterfaces.IsEmpty() Then
+					Emit "struct " + classid + "_vdef {"
+					For Local ifc:TClassDecl = EachIn implementedInterfaces.Values()
+						Emit "struct " + ifc.munged + "_methods interface_" + ifc.ident + ";"
+						ifcCount :+ 1
 					Next
-					Emit "},"
-				Next
-				Emit "};~n"
+					Emit "};~n"
 				
-				Emit "struct BBInterfaceTable " + classid + "_itable = {"
-				Emit classid + "_ifc_offsets,"
-				Emit "&" + classid + "_ifc_vtable,"
-				Emit ifcCount
-				Emit "};~n"
-			End If
-		End If
+					Emit "static struct BBInterfaceOffsets " + classid + "_ifc_offsets[] = {"
+					For Local ifc:TClassDecl = EachIn implementedInterfaces.Values()
+						Emit "{&" + ifc.munged + "_ifc, offsetof(struct " + classid + "_vdef, interface_" + ifc.ident + ")},"
+					Next
+					Emit "};~n"
 		
-		Emit "struct BBClass_" + classid + " " + classid + "={"
-
-		' super class reference
-		Emit "&" + classDecl.superClass.munged + ","
-		Emit "bbObjectFree,"
-		' debugscope
-		Emit "&" + classid + "_scope,"
-		' object instance size
-		Emit "sizeof" + Bra("struct " + classid + "_obj") + ","
-
-		' standard methods
-		Emit "_" + classid + "_New,"
-
-		If Not classHierarchyHasFunction(classDecl, "Delete") Then
-			Emit "bbObjectDtor,"
-		Else
-			Emit "_" + classid + "_Delete,"
-		End If
-
-		If classHierarchyHasFunction(classDecl, "ToString") Then
-			Emit "_" + classidForFunction(classDecl, "ToString") + "_ToString,"
-		Else
-			Emit "bbObjectToString,"
-		End If
-
-		If classHierarchyHasFunction(classDecl, "Compare") Then
-			Emit "_" + classidForFunction(classDecl, "Compare") + "_Compare,"
-		Else
-			Emit "bbObjectCompare,"
-		End If
-
-		If classHierarchyHasFunction(classDecl, "SendMessage") Then
-			Emit "_" + classidForFunction(classDecl, "SendMessage") + "_SendMessage,"
-		Else
-			Emit "bbObjectSendMessage,"
-		End If
-
-		'Emit "public:"
-
-		'fields
-		'For Local decl:TDecl=EachIn classDecl.Semanted()
-		'	Local fdecl:TFieldDecl =TFieldDecl( decl )
-		'	If fdecl
-		'		Emit TransRefType( fdecl.ty )+" "+fdecl.munged+";"
-		'		Continue
-		'	EndIf
-		'Next
-
-		'fields ctor
-		'Emit classid+"();"
-
-		'methods
-		'For Local decl:TDecl=EachIn classDecl.Semanted()
-		'
-		'	Local fdecl:TFuncDecl =TFuncDecl( decl )
-		'	If fdecl
-		'		EmitFuncProto fdecl
-		'		Continue
-		'	EndIf
-		'
-		'	Local gdecl:TGlobalDecl =TGlobalDecl( decl )
-		'	If gdecl
-		'		Emit "static "+TransRefType( gdecl.ty )+" "+gdecl.munged+";"
-		'		Continue
-		'	EndIf
-		'Next
-
-		'gc mark
-		'Emit "void mark();"
-
-		If classDecl.IsInterface() Or implementedInterfaces.IsEmpty() Then
-			' itable
-			Emit "0,"
-			' extra pointer
-			Emit "0,"
-		Else
-			Emit "&" + classid + "_itable,"
-			' extra pointer
-			Emit "0,"
-		End If
-
-		' obj_size
-		Emit TransObjectSize(classDecl)
-
-
-		' methods/funcs
-		'reserved = "New,Delete,ToString,ObjectCompare,SendMessage".ToLower()
-
-		'For Local decl:TFuncDecl = EachIn classDecl.Decls()
-		For Local decl:TFuncDecl = EachIn fdecls
-
-			If Not equalsBuiltInFunc(classDecl, decl) And Not equalsTorFunc(classDecl, decl) Then
-
-				MungDecl decl
-
-				If decl.IsMethod() Then
-					Emit ",_" + decl.munged
-				Else
-					Emit "," + decl.munged
+					Emit "struct " + classid + "_vdef " + classid + "_ifc_vtable = {"
+					For Local ifc:TClassDecl = EachIn implementedInterfaces.Values()
+						Emit ".interface_" + ifc.ident + "={"
+						
+						For Local func:TFuncDecl = EachIn ifc.GetImplementedFuncs()
+						
+							If func.IsMethod() Then
+							
+								For Local f:TFuncDecl = EachIn fdecls
+									Mungdecl f
+									If f.ident = func.ident And func.EqualsFunc(f) Then
+										Emit "_" + f.munged + ","
+										Exit
+									End If
+								Next
+						
+							End If
+						Next
+						Emit "},"
+					Next
+					Emit "};~n"
+					
+					Emit "struct BBInterfaceTable " + classid + "_itable = {"
+					Emit classid + "_ifc_offsets,"
+					Emit "&" + classid + "_ifc_vtable,"
+					Emit ifcCount
+					Emit "};~n"
 				End If
 			End If
-		Next
-
-		Emit "};~n"
-
-		If classDecl.IsInterface()  Then
-			Emit "const struct BBInterface " + classid + "_ifc = { &" + classid + ", (const char *) ~q" + classDecl.ident + "~q };"
-		Else
 			
-		End If
+			Emit "struct BBClass_" + classid + " " + classid + "={"
+	
+			' super class reference
+			Emit "&" + classDecl.superClass.munged + ","
+			Emit "bbObjectFree,"
+			' debugscope
+			Emit "&" + classid + "_scope,"
+			' object instance size
+			Emit "sizeof" + Bra("struct " + classid + "_obj") + ","
+	
+			' standard methods
+			Emit "_" + classid + "_New,"
+	
+			If Not classHierarchyHasFunction(classDecl, "Delete") Then
+				Emit "bbObjectDtor,"
+			Else
+				Emit "_" + classid + "_Delete,"
+			End If
+	
+			If classHierarchyHasFunction(classDecl, "ToString") Then
+				Emit "_" + classidForFunction(classDecl, "ToString") + "_ToString,"
+			Else
+				Emit "bbObjectToString,"
+			End If
+	
+			If classHierarchyHasFunction(classDecl, "Compare") Then
+				Emit "_" + classidForFunction(classDecl, "Compare") + "_Compare,"
+			Else
+				Emit "bbObjectCompare,"
+			End If
+	
+			If classHierarchyHasFunction(classDecl, "SendMessage") Then
+				Emit "_" + classidForFunction(classDecl, "SendMessage") + "_SendMessage,"
+			Else
+				Emit "bbObjectSendMessage,"
+			End If
+	
+			'Emit "public:"
+	
+			'fields
+			'For Local decl:TDecl=EachIn classDecl.Semanted()
+			'	Local fdecl:TFieldDecl =TFieldDecl( decl )
+			'	If fdecl
+			'		Emit TransRefType( fdecl.ty )+" "+fdecl.munged+";"
+			'		Continue
+			'	EndIf
+			'Next
+	
+			'fields ctor
+			'Emit classid+"();"
+	
+			'methods
+			'For Local decl:TDecl=EachIn classDecl.Semanted()
+			'
+			'	Local fdecl:TFuncDecl =TFuncDecl( decl )
+			'	If fdecl
+			'		EmitFuncProto fdecl
+			'		Continue
+			'	EndIf
+			'
+			'	Local gdecl:TGlobalDecl =TGlobalDecl( decl )
+			'	If gdecl
+			'		Emit "static "+TransRefType( gdecl.ty )+" "+gdecl.munged+";"
+			'		Continue
+			'	EndIf
+			'Next
+	
+			'gc mark
+			'Emit "void mark();"
+	
+			If classDecl.IsInterface() Or implementedInterfaces.IsEmpty() Then
+				' itable
+				Emit "0,"
+				' extra pointer
+				Emit "0,"
+			Else
+				Emit "&" + classid + "_itable,"
+				' extra pointer
+				Emit "0,"
+			End If
+	
+			' obj_size
+			Emit TransObjectSize(classDecl)
+	
+	
+			' methods/funcs
+			'reserved = "New,Delete,ToString,ObjectCompare,SendMessage".ToLower()
+	
+			'For Local decl:TFuncDecl = EachIn classDecl.Decls()
+			For Local decl:TFuncDecl = EachIn fdecls
+	
+				If Not equalsBuiltInFunc(classDecl, decl) And Not equalsTorFunc(classDecl, decl) Then
+	
+					MungDecl decl
+	
+					If decl.IsMethod() Then
+						Emit ",_" + decl.munged
+					Else
+						Emit "," + decl.munged
+					End If
+				End If
+			Next
+	
+			Emit "};~n"
+	
+			If classDecl.IsInterface()  Then
+				Emit "const struct BBInterface " + classid + "_ifc = { &" + classid + ", (const char *) ~q" + classDecl.ident + "~q };"
+			Else
+				
+			End If
 
+		End If
 
 	End Method
 
@@ -3740,7 +3875,7 @@ End Rem
 	Method EmitClassDeclNew( classDecl:TClassDecl, fdecl:TFuncDecl )
 		Local classid$=classDecl.munged
 		Local superid$=classDecl.superClass.actual.munged
-'Emit "// EmitClassDeclNew for " + classDecl.ident
+
 		Local t:String = "void _" 
 		
 		If fdecl.argDecls.Length Then
@@ -3759,7 +3894,7 @@ End Rem
 			odecl=odecl.overrides
 		Wend
 
-		Local args:String = TransObject(classdecl) + " o"
+		Local args:String = TransObject(classdecl, True) + " o"
 
 		For Local i:Int=0 Until fdecl.argDecls.Length
 			Local arg:TArgDecl=fdecl.argDecls[i]
@@ -3786,20 +3921,22 @@ End Rem
 		
 		Local newDecl:TNewDecl = TNewDecl(fdecl)
 		
-		' calling constructor?
-		If newDecl And newDecl.chainedCtor Then
-			mungdecl newDecl.chainedCtor.ctor
-			
-			Emit "_" + newDecl.chainedCtor.ctor.ClassScope().munged + "_" + newDecl.chainedCtor.ctor.ident + MangleMethod(newDecl.chainedCtor.ctor) + TransArgs(newDecl.chainedCtor.args, newDecl.chainedCtor.ctor, "o") + ";"
-		Else
-			If classDecl.superClass.ident = "Object" Then
-				Emit "bbObjectCtor(o);"
+		If Not classDecl.IsStruct() Then
+			' calling constructor?
+			If newDecl And newDecl.chainedCtor Then
+				mungdecl newDecl.chainedCtor.ctor
+				
+				Emit "_" + newDecl.chainedCtor.ctor.ClassScope().munged + "_" + newDecl.chainedCtor.ctor.ident + MangleMethod(newDecl.chainedCtor.ctor) + TransArgs(newDecl.chainedCtor.args, newDecl.chainedCtor.ctor, "o") + ";"
 			Else
-				Emit "_" + superid + "_New(o);"
+				If classDecl.superClass.ident = "Object" Then
+					Emit "bbObjectCtor(o);"
+				Else
+					Emit "_" + superid + "_New(o);"
+				End If
 			End If
+	
+			Emit "o->clas = (BBClass*)&" + classid + ";"
 		End If
-
-		Emit "o->clas = (BBClass*)&" + classid + ";"
 
 		' only initialise fields if we are not chaining to a local (in our class) constructor.
 		' this prevents fields being re-initialised through the call-chain.
@@ -3834,7 +3971,11 @@ End Rem
 							fld :+ "_mm_setzero_si128();"
 						End If
 					Else
-						fld :+ "= " + decl.init.Trans() + ";"
+						If TObjectType(decl.ty) And TObjectType(decl.ty).classdecl.IsStruct() And Not isPointerType(decl.ty) And (TConstExpr(decl.init) And Not TConstExpr(decl.init).value) Then
+							fld = "memset(&" + fld + ", 0, sizeof" + Bra(TransType(decl.ty, "")) + ");"
+						Else
+							fld :+ "= " + decl.init.Trans() + ";"
+						End If
 					End If
 				Else
 					If TNumericType(decl.ty) Or TObjectType(decl.ty) Or IsPointerType(decl.ty, 0, TType.T_POINTER) Then
@@ -3869,17 +4010,15 @@ End Rem
 	Method EmitClassDeclNewList( classDecl:TClassDecl )
 		Local classid$=classDecl.munged
 		Local superid$=classDecl.superClass.actual.munged
-'DebugStop
-'Emit "// EmitClassDeclNewListZZZZ"
+
 		Local newDecls:TFuncDeclList = TFuncDeclList(classdecl.FindDeclList("new", SCOPE_CLASS_LOCAL))
 		
 		For Local fdecl:TFuncDecl = EachIn newDecls
 		
-'Emit "// EmitClassDeclNewList"
 			EmitClassDeclNew(classDecl, fdecl)
 
 			' generate "objectNew" function if required
-			If fdecl.argDecls And fdecl.argDecls.length Then
+			If (fdecl.argDecls And fdecl.argDecls.length) Or classDecl.IsStruct() Then
 				EmitClassDeclNewInit(classDecl, fdecl)
 			End If
 		
@@ -3889,7 +4028,7 @@ End Rem
 
 	Method EmitClassDeclNewListProto( classDecl:TClassDecl )
 		Local classid$=classDecl.munged
-		Local superid$=classDecl.superClass.actual.munged
+		'Local superid$=classDecl.superClass.actual.munged
 
 		Local newDecls:TFuncDeclList = TFuncDeclList(classdecl.FindDeclList("new", SCOPE_CLASS_LOCAL))
 		
@@ -3898,7 +4037,7 @@ End Rem
 			EmitClassDeclNewProto(classDecl, fdecl)
 		
 			' generate "objectNew" function if required
-			If fdecl.argDecls And fdecl.argDecls.length Then
+			If (fdecl.argDecls And fdecl.argDecls.length) Or classDecl.IsStruct() Then
 				EmitClassDeclObjectNewProto(classDecl, fdecl)
 			End If
 		
@@ -3924,7 +4063,11 @@ End Rem
 			odecl=odecl.overrides
 		Wend
 
-		Local args:String = "BBClass * clas"
+		Local args:String
+		
+		If Not classDecl.IsStruct() Then
+			args = "BBClass * clas"
+		End If
 
 		For Local i:Int=0 Until fdecl.argDecls.Length
 			Local arg:TArgDecl=fdecl.argDecls[i]
@@ -3949,17 +4092,28 @@ End Rem
 		
 		Emit t + Bra(args) + " {"
 
-		t = TransObject(classdecl) + " o = "
+		t = TransObject(classdecl) + " o"
 
-		If ClassHasObjectField(classDecl) Then
-			t :+ "bbObjectNewNC"
+		If classDecl.IsStruct() Then
+			Emit t + ";"
 		Else
-			t :+ "bbObjectAtomicNewNC"
+			t :+ " = "
+			If ClassHasObjectField(classDecl) Then
+				t :+ "bbObjectNewNC"
+			Else
+				t :+ "bbObjectAtomicNewNC"
+			End If
+		
+			Emit t + "(clas);"
 		End If
 		
-		Emit t + "(clas);"
+		t = "_" + funcMunged
 		
-		t = "_" + funcMunged + "(o"
+		If classDecl.IsStruct() Then
+			t :+ "(&o"
+		Else
+			t :+ "(o"
+		End If
 		
 		For Local i:Int=0 Until fdecl.argDecls.Length
 			Local arg:TArgDecl=fdecl.argDecls[i]
@@ -3976,8 +4130,11 @@ End Rem
 
 	Method EmitClassDeclNewProto( classDecl:TClassDecl, fdecl:TFuncDecl )
 		Local classid$=classDecl.munged
-		Local superid$=classDecl.superClass.actual.munged
-'Emit "// EmitClassDeclNew for " + classDecl.ident
+		Local superid$
+		If classDecl.superClass Then
+			superid = classDecl.superClass.actual.munged
+		End If
+
 		Local t:String = "void _" 
 		
 		If fdecl.argDecls.Length Then
@@ -3996,7 +4153,7 @@ End Rem
 			odecl=odecl.overrides
 		Wend
 
-		Local args:String = TransObject(classdecl) + " o"
+		Local args:String = TransObject(classdecl, True) + " o"
 
 		For Local i:Int=0 Until fdecl.argDecls.Length
 			Local arg:TArgDecl=fdecl.argDecls[i]
@@ -4040,7 +4197,10 @@ End Rem
 			odecl=odecl.overrides
 		Wend
 
-		Local args:String = "BBClass * clas"
+		Local args:String
+		If Not classDecl.IsStruct() Then
+			args = "BBClass * clas"
+		End If
 
 		For Local i:Int=0 Until fdecl.argDecls.Length
 			Local arg:TArgDecl=fdecl.argDecls[i]
@@ -4119,10 +4279,10 @@ End Rem
 
 	Method TransFieldRef:String(decl:TFieldDecl, variable:String, exprType:TType = Null)
 		Local s:String = variable
-
+'DebugStop
 		Local ind:String = "->"
-		If decl.scope And TClassDecl(decl.scope) And decl.scope.IsExtern() And TClassDecl(decl.scope).IsStruct() Then
-			If exprType And Not IsPointerType(exprType) Then
+		If decl.scope And TClassDecl(decl.scope) And TClassDecl(decl.scope).IsStruct() Then
+			If exprType And Not IsPointerType(exprType) And variable <> "o" Then
 				ind = "."
 			End If
 		End If
@@ -4133,7 +4293,7 @@ End Rem
 		
 		' Null test
 		If opt_debug
-			If TClassDecl(decl.scope) And decl.scope.IsExtern() And TClassDecl(decl.scope).IsStruct() Then
+			If TClassDecl(decl.scope) And TClassDecl(decl.scope).IsStruct() Then
 				'
 			Else
 				EmitDebugNullObjectError(variable)
@@ -4456,6 +4616,8 @@ End Rem
 
 			If classDecl.attrs & CLASS_INTERFACE Then
 				flags :+ "I"
+			Else If classDecl.IsStruct() Then
+				flags :+ "S"
 			End If
 
 			Emit "}" + flags + "=" + Enquote(classDecl.munged), False
@@ -4660,11 +4822,28 @@ End Rem
 
 		' forward declarations
 		For Local decl:TClassDecl=EachIn app.Semanted()
-			If decl.declImported Or decl.IsExtern() Continue
-			Emit "struct " + decl.munged + "_obj;"
+			If decl.declImported Or (decl.IsExtern() And Not decl.IsStruct()) Continue
+			If Not decl.IsStruct()
+				Emit "struct " + decl.munged + "_obj;"
+			Else
+				Emit "struct " + decl.munged + ";"
+			End If
 			If decl.IsInterface() Then
 				Emit "extern const struct BBInterface " + decl.munged + "_ifc;"
 			End If
+		Next
+
+		'prototypes/header! - structs first
+		For Local decl:TDecl=EachIn app.Semanted()
+
+			If decl.declImported Continue
+
+			Local cdecl:TClassDecl=TClassDecl( decl )
+			If cdecl
+				If cdecl.IsStruct() Then
+					EmitStructClassProto cdecl
+				End If
+			EndIf
 		Next
 
 		'prototypes/header!
@@ -4705,12 +4884,16 @@ End If
 
 			Local cdecl:TClassDecl=TClassDecl( decl )
 			If cdecl
-				If Not cdecl.IsExtern()
-					EmitClassProto cdecl
-				Else
-					EmitExternClassProto cdecl
+				If Not cdecl.IsStruct() Then
+					If Not cdecl.IsExtern()
+						EmitClassProto cdecl
+					Else
+						EmitExternClassProto cdecl
+					End If
+				'Else
+				'	EmitStructClassProto cdecl
 				End If
-				Continue
+				'Continue
 			EndIf
 		Next
 
@@ -4955,7 +5138,11 @@ End If
 			Local cdecl:TClassDecl=TClassDecl( decl )
 			If cdecl And Not cdecl.IsExtern()
 				If Not cdecl.IsInterface() Then
-					Emit "bbObjectRegisterType(&" + cdecl.munged + ");"
+					If Not cdecl.IsStruct() Then
+						Emit "bbObjectRegisterType(&" + cdecl.munged + ");"
+					Else
+						Emit "bbObjectRegisterStruct(&" + cdecl.munged + "_scope);"
+					End If
 				Else
 					Emit "bbObjectRegisterInterface(&" + cdecl.munged + "_ifc);"
 				End If

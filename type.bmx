@@ -1401,6 +1401,7 @@ Type TObjectType Extends TType
 	End Method
 	
 	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
+		If classDecl.IsStruct() Return False
 		Local objty:TObjectType=TObjectType( ty )
 		If objty Return classDecl.ExtendsClass( objty.classDecl )
 		If IsPointerType( ty, T_BYTE ) Return True

@@ -225,7 +225,7 @@ Type TTranslator
 	End Method
 
 	Method MangleMethod:String(fdecl:TFuncDecl)
-		If fdecl.IsMethod() Or fdecl.IsCtor() Then
+		If (fdecl.IsMethod() And Not fdecl.ClassScope().IsStruct())Or fdecl.IsCtor() Then
 			Return MangleMethodArgs(fdecl)
 		Else
 			Return MangleMethodRetType(fdecl) + MangleMethodArgs(fdecl)
@@ -921,19 +921,26 @@ End Rem
 
 			Else
 				
-				Local s:String = stmt.expr.Trans()
-				
-				' we have some temp variables that need to be freed before we can return
-				' put the results into a new variable, and return that.
-				If customVarStack.Count() > 0 Then
-					If Not TFunctionPtrType( stmt.expr.exprType ) Then
-						Emit TransType(stmt.expr.exprType, "rt_") + " rt_ = " + s + ";"
-					Else
-						Emit TransType(stmt.expr.exprType, "rt_") + " = " + s + ";"
-					End If
-					t:+ " rt_"
+				If TSelfExpr(stmt.expr) And TObjectType(TSelfExpr(stmt.expr).exprType).classDecl And TObjectType(TSelfExpr(stmt.expr).exprType).classDecl.IsStruct() Then
+					t :+ Bra("*" + stmt.expr.Trans())
+				Else If TObjectType(stmt.expr.exprType) And TObjectType(stmt.expr.exprType).classDecl.IsStruct() And TConstExpr(stmt.expr) And Not TConstExpr(stmt.expr).value Then
+					Local lvar:String = CreateLocal(stmt.expr)
+					t :+ " " + lvar
 				Else
-					t:+" " + s
+					Local s:String = stmt.expr.Trans()
+					
+					' we have some temp variables that need to be freed before we can return
+					' put the results into a new variable, and return that.
+					If customVarStack.Count() > 0 Then
+						If Not TFunctionPtrType( stmt.expr.exprType ) Then
+							Emit TransType(stmt.expr.exprType, "rt_") + " rt_ = " + s + ";"
+						Else
+							Emit TransType(stmt.expr.exprType, "rt_") + " = " + s + ";"
+						End If
+						t:+ " rt_"
+					Else
+						t:+" " + s
+					End If
 				End If
 			End If
 			
