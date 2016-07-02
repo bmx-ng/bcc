@@ -38,6 +38,7 @@ Const TOKE_STRINGLITEX:Int=7
 Const TOKE_SYMBOL:Int=8
 Const TOKE_LINECOMMENT:Int=9
 Const TOKE_LONGLIT:Int=10
+Const TOKE_NATIVE:Int=11
 
 '***** Tokenizer *****
 Type TToker
@@ -57,7 +58,7 @@ Type TToker
 	"interface;endinterface;implements;"+ ..
 	"size_t;uint;ulong;struct;endstruct;"
 
-	Global _symbols$[]=[ "..","[]",":*",":/",":+",":-",":|",":&",":~~",":shr",":shl",":sar",":mod" ]
+	Global _symbols$[]=[ "..","[]",":*",":/",":+",":-",":|",":&",":~~",":shr",":shl",":sar",":mod"]
 	Global _symbols_map$[]=[ "..","[]","*=","/=","+=","-=","|=","&=","^=",">>=", "<<=",">>=","%=" ]
 	'Global _symbols$[]=[ "..","[]",":=",":*",":/",":+",":-",":|",":&",":~~" ]
 	'Global _symbols_map$[]=[ "..","[]",":=","*=","/=","+=","-=","|=","&=","~~=" ]
@@ -204,20 +205,33 @@ Type TToker
 			Wend
 			If _tokePos<_source.Length _tokePos:+1 Else _tokeType=TOKE_STRINGLITEX
 		Else If str="'"
-			_tokeType=TOKE_LINECOMMENT
-			
-			SkipToEOL()
-
-			' completely ignore line comments
-			If TSTR()="~n" Then
-				start = _tokePos
-				If _tokePos<_source.Length
+			If TSTR()="!" Then
+		
+				_tokeType=TOKE_NATIVE
+				
+				While TSTR() 
+					If TSTR()="~n" Then
+						_tokePos:-1
+						Exit
+					End If
 					_tokePos:+1
+				Wend
+		
+			Else
+				_tokeType=TOKE_LINECOMMENT
+				
+				SkipToEOL()
+	
+				' completely ignore line comments
+				If TSTR()="~n" Then
+					start = _tokePos
+					If _tokePos<_source.Length
+						_tokePos:+1
+					End If
+					_line:+1
+					_tokeType=TOKE_SYMBOL
 				End If
-				_line:+1
-				_tokeType=TOKE_SYMBOL
 			End If
-
 		Else If str="." And TSTR()="." Then
 			Local pos:Int = _tokePos
 			Local isValidTilEOL:Int = True
@@ -239,7 +253,6 @@ Type TToker
 				_line:+1
 				_tokeType=TOKE_SPACE
 			End If
-			
 		Else
 
 			_tokeType=TOKE_SYMBOL

@@ -2392,6 +2392,10 @@ t:+"NULLNULLNULL"
 		Next
 	End Method
 
+	Method TransNativeStmt$( stmt:TNativeStmt)
+		Emit stmt.raw
+	End Method
+
 	Method TransFullName:String(decl:TDecl)
 		Local s:String
 		

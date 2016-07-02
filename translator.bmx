@@ -1581,6 +1581,8 @@ End Rem
 	Method TransRestoreDataStmt$( stmt:TRestoreDataStmt ) Abstract
 
 	Method TransReadDataStmt$( stmt:TReadDataStmt ) Abstract
+	
+	Method TransNativeStmt$( stmt:TNativeStmt) Abstract
 
 	'module
 	Method TransApp( app:TAppDecl ) Abstract

@@ -2239,50 +2239,55 @@ End Rem
 			Case "restoredata"
 				ParseRestoreDataStmt()
 			Default
-				Local expr:TExpr=ParsePrimaryExpr( True )
-
-				Select _toke.ToLower()
-				'"=","*=","/=","+=","-=","&=","|=","~~=","Mod","Shl","Shr"
-				Case "=",":*",":/",":+",":-",":&",":|",":~~","mod","shl","shr", ":shl", ":shr", "sar", ":sar", ":mod"
-	'DebugLog _toke
-					' remap symbols...
-					For Local i:Int = 0 Until TToker._symbols.length
-						Local sym$= TToker._symbols[i]
-						If _toke.ToLower() = sym
-							_toke = TToker._symbols_map[i]
-							Exit
-						EndIf
-					Next
-
-
-					If TIdentExpr( expr ) Or TIndexExpr( expr )
-						Local op$=_toke
-						NextToke
-						If Not op.EndsWith( "=" ) And Not op.StartsWith("=")
-							Parse "="
-							op:+"="
-						EndIf
-						_block.AddStmt New TAssignStmt.Create( op,expr,ParseExpr() )
-					Else
-						Err "Assignment operator '"+_toke+"' cannot be used this way."
-					EndIf
-					Return
-				End Select
-
-				If TIdentExpr( expr )
-
-					expr=New TFuncCallExpr.Create( expr,ParseArgs( True ) )
-
-				Else If TFuncCallExpr( expr) Or TInvokeSuperExpr( expr ) Or TNewObjectExpr( expr ) Or TNewExpr(expr)
-				
-				Else If TIndexExpr(expr)
-					expr = New TFuncCallExpr.Create( expr, ParseArgs( True ) )
+				If _toke.StartsWith("'!") Then
+					If _tokeType = TOKE_NATIVE Then
+						ParseNativeStmt()
+					End If
 				Else
-					Err "Expression cannot be used as a statement."
-				EndIf
+					Local expr:TExpr=ParsePrimaryExpr( True )
+	
+					Select _toke.ToLower()
+					'"=","*=","/=","+=","-=","&=","|=","~~=","Mod","Shl","Shr"
+					Case "=",":*",":/",":+",":-",":&",":|",":~~","mod","shl","shr", ":shl", ":shr", "sar", ":sar", ":mod"
 
-				_block.AddStmt New TExprStmt.Create( expr )
-
+						' remap symbols...
+						For Local i:Int = 0 Until TToker._symbols.length
+							Local sym$= TToker._symbols[i]
+							If _toke.ToLower() = sym
+								_toke = TToker._symbols_map[i]
+								Exit
+							EndIf
+						Next
+	
+	
+						If TIdentExpr( expr ) Or TIndexExpr( expr )
+							Local op$=_toke
+							NextToke
+							If Not op.EndsWith( "=" ) And Not op.StartsWith("=")
+								Parse "="
+								op:+"="
+							EndIf
+							_block.AddStmt New TAssignStmt.Create( op,expr,ParseExpr() )
+						Else
+							Err "Assignment operator '"+_toke+"' cannot be used this way."
+						EndIf
+						Return
+					End Select
+	
+					If TIdentExpr( expr )
+	
+						expr=New TFuncCallExpr.Create( expr,ParseArgs( True ) )
+	
+					Else If TFuncCallExpr( expr) Or TInvokeSuperExpr( expr ) Or TNewObjectExpr( expr ) Or TNewExpr(expr)
+					
+					Else If TIndexExpr(expr)
+						expr = New TFuncCallExpr.Create( expr, ParseArgs( True ) )
+					Else
+						Err "Expression cannot be used as a statement."
+					EndIf
+	
+					_block.AddStmt New TExprStmt.Create( expr )
+				End If
 		End Select
 	End Method
 
@@ -3097,6 +3102,15 @@ End Rem
 		If toke Parse toke
 
 		Return classDecl
+	End Method
+	
+	Method ParseNativeStmt()
+		If Not _toke.StartsWith("'!") Then
+			Err "Syntax error - expecting !'"
+		End If
+		Local raw:String = _toke[2..]
+		_block.AddStmt New TNativeStmt.Create( raw )
+		NextToke
 	End Method
 
 	Method ParseModuleDecl:String( toke$,attrs:Int )

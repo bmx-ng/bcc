@@ -691,3 +691,22 @@ Type TRestoreDataStmt Extends TStmt
 	
 End Type
 
+Type TNativeStmt Extends TStmt
+	Field raw:String
+	
+	Method Create:TNativeStmt( raw:String )
+		Self.raw = raw
+		Return Self
+	End Method
+
+	Method OnCopy:TStmt( scope:TScopeDecl )
+		Return New TNativeStmt.Create( raw )
+	End Method
+		
+	Method OnSemant()
+	End Method
+
+	Method Trans$()
+		Return _trans.TransNativeStmt( Self )
+	End Method
+End Type
