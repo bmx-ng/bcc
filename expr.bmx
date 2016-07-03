@@ -2950,6 +2950,21 @@ Type TFuncCallExpr Extends TExpr
 		End If
 	End Method
 
+	Method SemantFunc:TExpr( args:TExpr[] , throwError:Int = True, funcCall:Int = False )
+		' we are only likely to be called if a function returns and invokes a function pointer.
+
+		Local ex:TExpr = Semant()
+		
+		If TFunctionPtrType(ex.exprType) Then
+			exprType = TFunctionPtrType(ex.exprType).func.retType
+		End If
+		
+		Self.args = SemantArgs(args)
+		expr = ex
+		
+		Return Self
+	End Method
+
 	Method Trans$()
 		Return _trans.TransFuncCallExpr( Self )
 	End Method

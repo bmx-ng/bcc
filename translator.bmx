@@ -889,6 +889,14 @@ End Rem
 			expr.args=expr.CastArgs( expr.args,TFuncDecl(decl) )
 			Return expr.expr.Trans() + TransArgs(expr.args, TFuncDecl(decl))
 		End If
+
+		' hmmm, complicated - a function returning and invoking a function pointer...		
+		If TInvokeExpr(expr.expr) And TFunctionPtrType(TInvokeExpr(expr.expr).exprType) Then
+			Local decl:TDecl = TFunctionPtrType(TInvokeExpr(expr.expr).exprType).func.actual
+			decl.Semant()
+			expr.args=expr.CastArgs( expr.args,TFuncDecl(decl) )
+			Return expr.expr.Trans() + TransArgs(expr.args, TFuncDecl(decl))
+		End If
 		
 		InternalErr
 	End Method
