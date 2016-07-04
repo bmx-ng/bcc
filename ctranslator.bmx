@@ -198,7 +198,7 @@ Type TCTranslator Extends TTranslator
 
 	End Method
 
-	Method TransType$( ty:TType, ident:String, fpReturnTypeFunctionArgs:String = Null)
+	Method TransType$( ty:TType, ident:String, fpReturnTypeFunctionArgs:String = Null, fpReturnTypeClassFunc:Int = False)
 		Local p:String = TransSPointer(ty, True)
 		
 		If TVoidType( ty ) Or Not ty Then
@@ -253,7 +253,12 @@ Type TCTranslator Extends TTranslator
 			If fpReturnTypeFunctionArgs Then
 				ret = Bra(fpReturnTypeFunctionArgs)
 			End If
-			Return retType + Bra(api + p +"* " + ident + ret) + Bra(args)
+			If fpReturnTypeClassFunc Then
+				' typedef for function pointer return type
+				Return ident + "x" + Bra(api + p +"* " + ident) + Bra(args)
+			Else
+				Return retType + Bra(api + p +"* " + ident + ret) + Bra(args)
+			End If
 		End If
 
 		If TExternObjectType( ty ) Return "struct " + TExternObjectType( ty ).classDecl.munged + p
@@ -2654,7 +2659,15 @@ End Rem
 				End If
 			Else
 				If Not odecl.castTo Then
-					Emit pre + TransType( odecl.retType, id )+" "+Bra( args ) + bk
+					If Not args Then
+						' for function pointer return type, we need to generate () regardless of whether there are
+						' args or not.
+						args = " "
+					End If
+					' emit function ptr typedef
+					Emit pre + TransType( decl.retType, id + "x") + bk
+					' emit actual typedef (with return type of above typedef)
+					Emit pre + TransType( decl.retType, id, args, True ) + bk
 				Else
 					If Not odecl.noCastGen Then
 						Emit pre + odecl.castTo +" "+Bra( args ) + bk

@@ -717,7 +717,7 @@ End Rem
 	
 	Method EmitLocalDeclarations(decl:TScopeDecl, v:TValDecl = Null) Abstract
 	
-	Method TransType$( ty:TType, ident:String, fpReturnTypeFunctionArgs:String = Null) Abstract
+	Method TransType$( ty:TType, ident:String, fpReturnTypeFunctionArgs:String = Null, fpReturnTypeClassFunc:Int = False) Abstract
 	
 	Method BeginLocalScope()
 		mungStack.Push mungScope
