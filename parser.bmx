@@ -1311,6 +1311,11 @@ Type TParser
 			Case TOKE_LONGLIT
 				expr=New TConstExpr.Create( New TLongType,_toke )
 				NextToke
+				
+				Local ty:TType = ParseConstNumberType()
+				If ty Then
+					TConstExpr(expr).UpdateType(ty)
+				End If
 			Case TOKE_FLOATLIT
 				expr=New TConstExpr.Create( New TFloatType,_toke )
 				NextToke

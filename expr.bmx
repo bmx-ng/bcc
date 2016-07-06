@@ -348,7 +348,6 @@ Type TConstExpr Extends TExpr
 	Field typeSpecific:Int
 
 	Method Create:TConstExpr( ty:TType,value$ )
-
 		originalValue = value
 		
 		If TNumericType( ty ) And IsPointerType(ty, 0, TType.T_POINTER) Then
@@ -397,7 +396,10 @@ Type TConstExpr Extends TExpr
 				Else If TByteType( ty ) Then
 					value = String.FromLong(Byte(value.ToLong()))
 				Else
-					value = String.FromLong(value.ToLong())
+					' for long values on the limit, don't do the conversion as it will break the value 
+					If value.length < 19 And value <> "9223372036854775808" And value <> "-9223372036854775808"
+						value = String.FromLong(value.ToLong())
+					End If
 				End If
 			EndIf
 
