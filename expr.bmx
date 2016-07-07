@@ -396,9 +396,27 @@ Type TConstExpr Extends TExpr
 				Else If TByteType( ty ) Then
 					value = String.FromLong(Byte(value.ToLong()))
 				Else
-					' for long values on the limit, don't do the conversion as it will break the value 
-					If value.length < 19 And value <> "9223372036854775808" And value <> "-9223372036854775808"
-						value = String.FromLong(value.ToLong())
+					Local v:String = value.Trim()
+					Local n:Int
+					Local s:Int
+					If v Then
+						If v[0] = Asc("+") Then
+							s = 1
+							n = 1
+						Else If v[0] = Asc("-") Then
+							n = 1
+						End If
+						
+						Local i:Int = n
+						While i < value.Length
+							If Not IsDigit(v[i]) Then
+								Exit
+							End If
+							i :+ 1
+						Wend
+						value = v[s..i]
+					Else
+						value = "0"
 					End If
 				End If
 			EndIf
