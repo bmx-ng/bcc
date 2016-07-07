@@ -2220,11 +2220,28 @@ t:+"NULLNULLNULL"
 			If TLocalDecl(decl) Then
 				count :+ 1
 			End If
+			If TConstDecl(decl) Then
+				count :+ 1
+			End If
+			If TGlobalDecl(decl) Then
+				count :+ 1
+			End If
 		Next
 		
 		' a method also includes "Self" reference back to parent Type
 		If TFuncDecl(block) And TFuncDecl(block).IsMethod() Then
 			count :+ 1
+		End If
+		
+		If _app.mainFunc = block Then
+			For Local decl:TDecl = EachIn _app.mainModule.Decls()
+				If TConstDecl(decl) Then
+					count :+ 1
+				End If
+				If TGlobalDecl(decl) Then
+					count :+ 1
+				End If
+			Next
 		End If
 		
 		If Not count Then
@@ -2258,6 +2275,16 @@ t:+"NULLNULLNULL"
 				Emit "},"
 			End If
 			
+			' block consts and globals
+			' consts
+			For Local cdecl:TConstDecl = EachIn block.Decls()
+				EmitConstDebugScope(cdecl)
+			Next
+			' globals
+			For Local gdecl:TGlobalDecl = EachIn block.Decls()
+				EmitGlobalDebugScope(gdecl)
+			Next
+			
 			' iterate through decls and add as appropriate
 			For Local decl:TDecl = EachIn block.Decls()
 				Local ldecl:TLocalDecl = TLocalDecl(decl)
@@ -2277,6 +2304,17 @@ t:+"NULLNULLNULL"
 				End If
 			Next
 
+			' add module consts and globals
+			If _app.mainFunc = block Then
+				' consts
+				For Local cdecl:TConstDecl = EachIn _app.mainModule.Decls()
+					EmitConstDebugScope(cdecl)
+				Next
+				' globals
+				For Local gdecl:TGlobalDecl = EachIn _app.mainModule.Decls()
+					EmitGlobalDebugScope(gdecl)
+				Next
+			End If
 			
 			Emit "BBDEBUGDECL_END "
 			Emit "}"
@@ -3278,16 +3316,22 @@ End Rem
 	Method EmitClassConstsDebugScope(classDecl:TClassDecl)
 	
 		For Local decl:TConstDecl = EachIn classDecl.Decls()
-			Emit "{"
-			Emit "BBDEBUGDECL_CONST,"
-			Emit Enquote(decl.ident) + ","
-			Emit Enquote(TransDebugScopeType(decl.ty) + TransDebugMetaData(decl.metadata.metadataString)) + ","
-			
-			_appInstance.mapStringConsts(decl.value)
-			
-			Emit ".const_value=&" + TStringConst(_appInstance.stringConsts.ValueForKey(decl.value)).id
-			Emit "},"
+			EmitConstDebugScope(decl)
 		Next
+
+	End Method
+
+	Method EmitConstDebugScope(decl:TConstDecl)
+	
+		Emit "{"
+		Emit "BBDEBUGDECL_CONST,"
+		Emit Enquote(decl.ident) + ","
+		Emit Enquote(TransDebugScopeType(decl.ty) + TransDebugMetaData(decl.metadata.metadataString)) + ","
+		
+		_appInstance.mapStringConsts(decl.value)
+		
+		Emit ".const_value=&" + TStringConst(_appInstance.stringConsts.ValueForKey(decl.value)).id
+		Emit "},"
 
 	End Method
 
@@ -3469,13 +3513,17 @@ End Rem
 	
 	Method EmitClassGlobalDebugScope( classDecl:TClassDecl )
 		For Local decl:TGlobalDecl = EachIn classDecl.Decls()
-			Emit "{"
-			Emit "BBDEBUGDECL_GLOBAL,"
-			Emit Enquote(decl.ident) + ","
-			Emit Enquote(TransDebugScopeType(decl.ty)) + ","
-			Emit "&" + decl.munged
-			Emit "},"
+			EmitGlobalDebugScope(decl)
 		Next
+	End Method
+
+	Method EmitGlobalDebugScope( decl:TGlobalDecl )
+		Emit "{"
+		Emit "BBDEBUGDECL_GLOBAL,"
+		Emit Enquote(decl.ident) + ","
+		Emit Enquote(TransDebugScopeType(decl.ty)) + ","
+		Emit "&" + decl.munged
+		Emit "},"
 	End Method
 
 	Method CountBBClassClassFuncsDebugScope(classDecl:TClassDecl, count:Int Var)
