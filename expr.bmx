@@ -1898,7 +1898,7 @@ Type TIndexExpr Extends TExpr
 
 		' for functions and index access, use a new local variable
 		If Not TVarExpr(expr) And Not TMemberVarExpr(expr) Then
-			Local tmp:TLocalDecl=New TLocalDecl.Create( "", expr.exprType, expr,, True )
+			Local tmp:TLocalDecl=New TLocalDecl.Create( "", TType.MapVarPointerToPointerType(expr.exprType.Copy()), expr,, True )
 			tmp.Semant()
 			Local v:TVarExpr = New TVarExpr.Create( tmp )
 			expr = New TStmtExpr.Create( New TDeclStmt.Create( tmp ), v ).Semant()
