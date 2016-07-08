@@ -396,25 +396,35 @@ Type TConstExpr Extends TExpr
 				Else If TByteType( ty ) Then
 					value = String.FromLong(Byte(value.ToLong()))
 				Else
+					Local buf:Byte[64]
+					Local b:Int
 					Local v:String = value.Trim()
-					Local n:Int
-					Local s:Int
+					Local leading0:Int = True
 					If v Then
+						Local i:Int
 						If v[0] = Asc("+") Then
-							s = 1
-							n = 1
+							i = 1
 						Else If v[0] = Asc("-") Then
-							n = 1
+							i = 1
+							buf[b] = Asc("-")
+							b:+ 1
 						End If
 						
-						Local i:Int = n
 						While i < value.Length
 							If Not IsDigit(v[i]) Then
 								Exit
 							End If
+							If leading0 And v[i] = Asc("0") Then
+								i :+ 1
+								Continue
+							End If
+							leading0 = False
+							buf[b] = v[i]
+							
+							b :+ 1
 							i :+ 1
 						Wend
-						value = v[s..i]
+						value = String.FromBytes(buf, b)
 					Else
 						value = "0"
 					End If
