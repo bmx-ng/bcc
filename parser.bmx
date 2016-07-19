@@ -541,30 +541,42 @@ Type TParser
 		If CParse( "object" ) Return New TIdentType.Create( "brl.classes.object" )
 
 		Local ty:TType
-		If CParse( "short" ) ty = New TShortType
-		If CParse( "byte" ) ty = New TByteType
-		If CParse( "int" ) ty = New TIntType
-		If CParse( "uint" ) ty = New TUIntType
-		If CParse( "float" ) ty = New TFloatType
-		If CParse( "long" ) ty = New TLongType
-		If CParse( "ulong" ) ty = New TULongType
-		If CParse( "double" ) ty = New TDoubleType
-		If CParse( "size_t" ) ty = New TSizeTType
-		If CParse( "int128" ) Then
+		If CParse( "short" )
+			ty = New TShortType
+		Else If CParse( "byte" )
+			ty = New TByteType
+		Else If CParse( "int" )
+			ty = New TIntType
+		Else If CParse( "uint" )
+			ty = New TUIntType
+		Else If CParse( "float" )
+			ty = New TFloatType
+		Else If CParse( "long" )
+			ty = New TLongType
+		Else If CParse( "ulong" )
+			ty = New TULongType
+		Else If CParse( "double" )
+			ty = New TDoubleType
+		Else If CParse( "size_t" )
+			ty = New TSizeTType
+		Else If CParse( "int128" ) Then
 			If opt_arch <> "x64" Err "Intrinsic types only available on x64"
 			ty = New TInt128Type
-		End If
-		If CParse( "float128" ) Then
+		Else If CParse( "float128" ) Then
 			If opt_arch <> "x64" Err "Intrinsic types only available on x64"
 			ty = New TFloat128Type
-		End If
-		If CParse( "double128" ) Then
+		Else If CParse( "double128" ) Then
 			If opt_arch <> "x64" Err "Intrinsic types only available on x64"
 			ty = New TDouble128Type
-		End If
-		If CParse( "float64" ) Then
+		Else If CParse( "float64" ) Then
 			If opt_arch <> "x64" Err "Intrinsic types only available on x64"
 			ty = New TFloat64Type
+		Else If CParse( "wparam" ) Then
+			If opt_platform <> "win32" Err "WParam types only available on Win32"
+			ty = New TWParamType
+		Else If CParse( "lparam" ) Then
+			If opt_platform <> "win32" Err "LParam types only available on Win32"
+			ty = New TLParamType
 		End If
 
 		While CParse("ptr")
@@ -599,6 +611,14 @@ Type TParser
 			If opt_arch <> "x64" Err "Intrinsic types only available on x64"
 			Return New TFloat64Type
 		End If
+		If CParse( "wparam" ) Then
+			If opt_platform <> "win32" Err "WParam types only available on Win32"
+			Return New TWParamType
+		End If
+		If CParse( "lparam" ) Then
+			If opt_platform <> "win32" Err "LParam types only available on Win32"
+			Return New TLParamType
+		End If
 	End	Method
 
 	Method ParseNewType:TType()
@@ -629,6 +649,14 @@ Type TParser
 		If CParse( "float64" ) Then
 			If opt_arch <> "x64" Err "Intrinsic types only available on x64"
 			Return New TFloat64Type
+		End If
+		If CParse( "wparam" ) Then
+			If opt_platform <> "win32" Err "WParam types only available on Win32"
+			Return New TWParamType
+		End If
+		If CParse( "lparam" ) Then
+			If opt_platform <> "win32" Err "LParam types only available on Win32"
+			Return New TLParamType
 		End If
 		Return ParseIdentType()
 	End Method
@@ -1040,7 +1068,7 @@ Type TParser
 		Case "false"
 			NextToke
 			expr=New TConstExpr.Create( New TIntType,"" )
-		Case "int","long","float","double","object","short","byte","size_t","uint","ulong","int128","float64","float128","double128"
+		Case "int","long","float","double","object","short","byte","size_t","uint","ulong","int128","float64","float128","double128","lparam","wparam"
 			Local id$=_toke
 			Local ty:TType=ParseType()
 
@@ -1074,6 +1102,12 @@ Type TParser
 					Case "float64"
 						If opt_arch <> "x64" Err "Intrinsic types only available on x64"
 						ty = New TFloat64Type
+					Case "wparam"
+						If opt_platform <> "win32" Err "WParam types only available on Win32"
+						ty = New TWParamType
+					Case "lparam"
+						If opt_platform <> "win32" Err "LParam types only available on Win32"
+						ty = New TLParamType
 				End Select
 			End If
 

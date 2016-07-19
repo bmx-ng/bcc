@@ -215,8 +215,10 @@ Type TExpr
 		If TInt128Type( lhs ) Or TInt128Type( rhs ) Return New TInt128Type
 		If TULongType( lhs ) Or TULongType( rhs ) Return New TULongType
 		If TSizeTType( lhs ) Or TSizeTType( rhs ) Return New TSizeTType
+		If TWParamType( lhs ) Or TWParamType( rhs ) Return New TWParamType
 		If TLongType( lhs ) And TUIntType( rhs ) Return New TULongType
 		If TUIntType( lhs ) And TLongType( rhs ) Return New TULongType
+		If TLParamType( lhs ) Or TLParamType( rhs ) Return New TLParamType
 		If TLongType( lhs ) Or TLongType( rhs ) Return New TLongType
 		If TUIntType( lhs ) Or TUIntType( rhs ) Return New TUIntType
 		If TIntType( lhs ) Or TIntType( rhs ) Return New TIntType
@@ -360,7 +362,7 @@ Type TConstExpr Extends TExpr
 			Return Self
 		End If
 		
-		If TIntType( ty ) Or TShortType( ty ) Or TByteType( ty ) Or TLongType( ty ) Or TUIntType( ty ) Or TULongType( ty )
+		If TIntType( ty ) Or TShortType( ty ) Or TByteType( ty ) Or TLongType( ty ) Or TUIntType( ty ) Or TULongType( ty ) Or TWParamType(ty) Or TLParamType(ty)
 			Local radix:Int
 			If value.StartsWith( "%" )
 				radix=1
@@ -496,7 +498,7 @@ Type TConstExpr Extends TExpr
 			Local val:Long = value.ToLong()
 			
 			If val < 0 Then
-				If TByteType(ty) Or TShortType(ty) Or TUIntType(ty) Or TULongType(ty) Or TSizeTType(ty) Or TInt128Type(ty) Then
+				If TByteType(ty) Or TShortType(ty) Or TUIntType(ty) Or TULongType(ty) Or TSizeTType(ty) Or TInt128Type(ty) Or TWParamType(ty) Then
 					Return False
 				End If
 			Else
@@ -506,13 +508,13 @@ Type TConstExpr Extends TExpr
 					End If
 				End If
 
-				If TUIntType(ty) Or (TSizeTType(ty) And WORD_SIZE = 4) Then
+				If TUIntType(ty) Or ((TSizeTType(ty) Or TWParamType(ty)) And WORD_SIZE = 4) Then
 					If val > 4294967296:Long Then
 						Return False
 					End If
 				End If
 				
-				If TULongType(ty) Or (TSizeTType(ty) And WORD_SIZE = 8) Then
+				If TULongType(ty) Or ((TSizeTType(ty) Or TWParamType(ty)) And WORD_SIZE = 8) Then
 					If value.length > 20 Then
 						Return False
 					Else If value.length = 20 Then
@@ -535,13 +537,13 @@ Type TConstExpr Extends TExpr
 				End If
 			End If
 
-			If TIntType(ty) Then
+			If TIntType(ty) Or (TLParamType(ty) And WORD_SIZE = 4) Then
 				If value <> String.FromInt(Int(val)) Then
 					Return False
 				End If
 			End If
 
-			If TLongType(ty) Then
+			If TLongType(ty) Or (TLParamType(ty) And WORD_SIZE = 8) Then
 				If value <> String.FromLong(Long(val)) Then
 					Return False
 				End If
@@ -1491,6 +1493,10 @@ Type TCastExpr Extends TExpr
 			Return String( val )
 		Else If TByteType( exprType )
 			Return Byte( val )
+		Else If TWParamType( exprType )
+			Return Long( val )
+		Else If TLParamType( exprType )
+			Return Long( val )
 		Else If TObjectType( exprType )
 			If TStringType( expr.exprType )
 				Return val
@@ -1632,6 +1638,10 @@ Type TBinaryMathExpr Extends TBinaryExpr
 				exprType=New TULongType
 			Else If TSizeTType(lhs.exprType) Then
 				exprType=New TSizeTType
+			Else If TWParamType(lhs.exprType) Then
+				exprType=New TWParamType
+			Else If TLParamType(lhs.exprType) Then
+				exprType=New TLParamType
 			Else
 				exprType=New TIntType
 			End If
@@ -1693,7 +1703,7 @@ Type TBinaryMathExpr Extends TBinaryExpr
 			Case "~~" Return x ~ y
 			Case "|" Return x | y
 			End Select
-		Else If TLongType( exprType ) Or TSizeTType(exprType) Or TUIntType(exprType) Or TULongType(exprType) Or TInt128Type(exprType)
+		Else If TLongType( exprType ) Or TSizeTType(exprType) Or TUIntType(exprType) Or TULongType(exprType) Or TInt128Type(exprType) Or TWParamType(exprType) Or TLParamType(exprType) 
 			Local x:Long=Long(lhs),y:Long=Long(rhs)
 			Select op
 			Case "^" Return x^y
@@ -1794,7 +1804,7 @@ Type TBinaryCompareExpr Extends TBinaryExpr
 			Case ">"  r=(lhs> rhs)
 			Case ">=", "=>" r=(lhs>=rhs)
 			End Select
-		Else If TLongType( ty ) Or TSizeTType( ty ) Or TUIntType( ty ) Or TULongType( ty ) Or TInt128Type(ty)
+		Else If TLongType( ty ) Or TSizeTType( ty ) Or TUIntType( ty ) Or TULongType( ty ) Or TInt128Type(ty) Or TWParamType(ty) Or TLParamType(ty)
 			Local lhs:Long=Long( Self.lhs.Eval() )
 			Local rhs:Long=Long( Self.rhs.Eval() )
 			Select op

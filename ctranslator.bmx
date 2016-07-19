@@ -72,6 +72,8 @@ Type TCTranslator Extends TTranslator
 		If TLongType( ty ) Return "~q" + p + "l~q"
 		If TULongType( ty ) Return "~q" + p + "y~q"
 		If TSizeTType( ty ) Return "~q" + p + "z~q"
+		If TWParamType( ty ) Return "~q" + p + "w~q"
+		If TLParamType( ty ) Return "~q" + p + "x~q"
 		If TStringType( ty ) Return "~q$~q"
 		If TInt128Type( ty ) Return "~q" + p + "j~q"
 		If TFloat128Type( ty ) Return "~q" + p + "k~q"
@@ -118,6 +120,8 @@ Type TCTranslator Extends TTranslator
 		If TULongType( ty ) Return "~qy~q"
 		If TSizeTType( ty ) Return "~qz~q"
 		If TStringType( ty ) Return "~q$~q"
+		If TWParamType( ty ) Return "~qw~q"
+		If TLParamType( ty ) Return "~qx~q"
 	End Method
 
 	Method TransDefDataConversion$(ty:TType)
@@ -143,6 +147,8 @@ Type TCTranslator Extends TTranslator
 		If TLongType( ty ) Return "l"
 		If TULongType( ty ) Return "y"
 		If TSizeTType( ty ) Return "z"
+		If TWParamType( ty ) Return "w"
+		If TLParamType( ty ) Return "x"
 		If TStringType( ty ) Return "t"
 	End Method
 	
@@ -158,6 +164,8 @@ Type TCTranslator Extends TTranslator
 		If TLongType( ty ) Return p + "l"
 		If TULongType( ty ) Return p + "y"
 		If TSizeTType( ty ) Return p + "t"
+		If TWParamType( ty ) Return p + "w"
+		If TLParamType( ty ) Return p + "x"
 		If TInt128Type( ty ) Return p + "j"
 		If TFloat128Type( ty ) Return p + "k"
 		If TDouble128Type( ty ) Return p + "m"
@@ -214,6 +222,8 @@ Type TCTranslator Extends TTranslator
 		If TLongType( ty ) Return "BBLONG" + p
 		If TULongType( ty ) Return "BBULONG" + p
 		If TSizeTType( ty ) Return "BBSIZET" + p
+		If TWParamType( ty ) Return "WPARAM" + p
+		If TLParamType( ty ) Return "LPARAM" + p
 		If TInt128Type( ty ) Return "BBINT128" + p
 		If TFloat128Type( ty ) Return "BBFLOAT128" + p
 		If TDouble128Type( ty ) Return "BBDOUBLE128" + p
@@ -291,6 +301,8 @@ Type TCTranslator Extends TTranslator
 		If TLongType( ty ) Return "%%" + p
 		If TULongType( ty ) Return "||" + p
 		If TSizeTType( ty ) Return "%z" + p
+		If TWParamType( ty ) Return "%w" + p
+		If TLParamType( ty ) Return "%x" + p
 		If TInt128Type( ty ) Return "%j" + p
 		If TFloat128Type( ty ) Return "!k" + p
 		If TDouble128Type( ty ) Return "!m" + p
@@ -342,6 +354,8 @@ Type TCTranslator Extends TTranslator
 			If TLongType( ty ) Return value+"LL"
 			If TULongType( ty ) Return value+"ULL"
 			If TSizeTType( ty ) Return value
+			If TWParamType( ty ) Return value
+			If TLParamType( ty ) Return value
 			If TInt128Type( ty ) Return value
 			If TFloatType( ty ) Then
 				If value = "nan" Or value = "1.#IND0000" Then
@@ -639,7 +653,6 @@ t:+"NULLNULLNULL"
 	'***** Utility *****
 
 	Method TransLocalDecl$( decl:TLocalDecl,init:TExpr, declare:Int = False )
-
 		If Not declare And opt_debug Then
 			Local ty:TType = decl.ty
 			If Not TObjectType( ty ) Or (TObjectType( ty ) And Not TObjectType( ty ).classDecl.IsStruct()) Then
@@ -1505,6 +1518,8 @@ t:+"NULLNULLNULL"
 				If TFloat128Type( src) Return Bra("&"+t)
 				If TDouble128Type( src) Return Bra("&"+t)
 				If TFloat64Type( src) Return Bra("&"+t)
+				If TWParamType( src) Return Bra("&"+t)
+				If TLParamType( src) Return Bra("&"+t)
 
 				If TObjectType(src) Then
 					If TObjectType(src).classDecl.IsExtern() Or (dst._flags & TType.T_VARPTR) Then
@@ -1580,6 +1595,12 @@ t:+"NULLNULLNULL"
 			Else If TSizeTType( dst )
 				If IsPointerType(src, TType.T_SIZET, TType.T_POINTER & dst._flags) Return t
 				If TNumericType( src ) Return Bra("(BBSIZET" + p + ")"+t)
+			Else If TWParamType( dst )
+				If IsPointerType(src, TType.T_WPARAM, TType.T_POINTER & dst._flags) Return t
+				If TNumericType( src ) Return Bra("(WPARAM" + p + ")"+t)
+			Else If TLParamType( dst )
+				If IsPointerType(src, TType.T_LPARAM, TType.T_POINTER & dst._flags) Return t
+				If TNumericType( src ) Return Bra("(LPARAM" + p + ")"+t)
 			Else If TInt128Type( dst )
 				If IsPointerType(src, TType.T_INT128, TType.T_POINTER & dst._flags) Return t
 				If TNumericType( src ) Return Bra("(BBINT128" + p + ")"+t)
@@ -1618,6 +1639,8 @@ t:+"NULLNULLNULL"
 			If TLongType( src ) Return Bra( t+"!=0" )
 			If TULongType( src ) Return Bra( t+"!=0" )
 			If TSizeTType( src ) Return Bra( t+"!=0" )
+			If TWParamType( src ) Return Bra( t+"!=0" )
+			If TLParamType( src ) Return Bra( t+"!=0" )
 			If TDoubleType( src ) Return Bra( t+"!=0.0f" )
 			If TArrayType( src ) Return Bra( t+"!= &bbEmptyArray" )
 			If TStringType( src ) Return Bra( t+"!= &bbEmptyString" )
@@ -1644,6 +1667,8 @@ t:+"NULLNULLNULL"
 			If TLongType( src ) Return Bra("(BBINT)"+t)
 			If TULongType( src ) Return Bra("(BBINT)"+t)
 			If TSizeTType( src ) Return Bra("(BBINT)"+t)
+			If TWParamType( src ) Return Bra("(BBINT)"+t)
+			If TLParamType( src ) Return Bra("(BBINT)"+t)
 			If TStringType( src ) Return "bbStringToInt" + Bra(t)
 			'If TIntVarPtrType( src ) Return Bra("*" + t)
 			If IsPointerType(src,0,TType.T_POINTER) Return Bra("(BBINT)"+t)
@@ -1657,6 +1682,8 @@ t:+"NULLNULLNULL"
 			If TLongType( src ) Return t
 			If TULongType( src ) Return Bra("(BBLONG)"+t)
 			If TSizeTType( src ) Return Bra("(BBLONG)"+t)
+			If TWParamType( src ) Return Bra("(BBLONG)"+t)
+			If TLParamType( src ) Return Bra("(BBLONG)"+t)
 			If TFloatType( src ) Return Bra("(BBLONG)"+t)
 			If TDoubleType( src ) Return Bra("(BBLONG)"+t)
 			If TStringType( src ) Return "bbStringToLong" + Bra(t)
@@ -1672,6 +1699,8 @@ t:+"NULLNULLNULL"
 			If TLongType( src) Return Bra("(BBSIZET)"+t)
 			If TULongType( src) Return Bra("(BBSIZET)"+t)
 			If TSizeTType( src ) Return t
+			If TWParamType( src ) Return Bra("(BBSIZET)"+t)
+			If TLParamType( src ) Return Bra("(BBSIZET)"+t)
 			If TFloatType( src ) Return Bra("(BBSIZET)"+t)
 			If TDoubleType( src ) Return Bra("(BBSIZET)"+t)
 			If TStringType( src ) Return "bbStringToSizet" + Bra(t)
@@ -1689,6 +1718,8 @@ t:+"NULLNULLNULL"
 			If TLongType( src ) Return Bra("(BBFLOAT)"+t)
 			If TULongType( src ) Return Bra("(BBFLOAT)"+t)
 			If TSizeTType( src ) Return Bra("(BBFLOAT)"+t)
+			If TWParamType( src ) Return Bra("(BBFLOAT)"+t)
+			If TLParamType( src ) Return Bra("(BBFLOAT)"+t)
 			If TStringType( src ) Return "bbStringToFloat" + Bra(t)
 			'If TFloatVarPtrType( src ) Return Bra("*" + t)
 			'If TPointerType( src ) Return Bra("(BBFLOAT)"+t)
@@ -1703,6 +1734,8 @@ t:+"NULLNULLNULL"
 			If TLongType( src ) Return Bra("(BBDOUBLE)"+t)
 			If TULongType( src ) Return Bra("(BBDOUBLE)"+t)
 			If TSizeTType( src ) Return Bra("(BBDOUBLE)"+t)
+			If TWParamType( src ) Return Bra("(BBDOUBLE)"+t)
+			If TLParamType( src ) Return Bra("(BBDOUBLE)"+t)
 			If TStringType( src ) Return "bbStringToDouble" + Bra(t)
 			'If TDoubleVarPtrType( src ) Return Bra("*" + t)
 			'If TPointerType( src ) Return Bra("(BBDOUBLE)"+t)
@@ -1716,6 +1749,8 @@ t:+"NULLNULLNULL"
 			If TLongType( src ) Return "bbStringFromLong"+Bra( t )
 			If TULongType( src ) Return "bbStringFromULong"+Bra( t )
 			If TSizeTType( src ) Return "bbStringFromSizet"+Bra( t )
+			If TWParamType( src ) Return "bbStringFromWParam"+Bra( t )
+			If TLParamType( src ) Return "bbStringFromLParam"+Bra( t )
 			If TFloatType( src ) Return "bbStringFromFloat"+Bra( t )
 			If TDoubleType( src ) Return "bbStringFromDouble"+Bra( t )
 			If TStringType( src ) Then
@@ -1753,6 +1788,8 @@ t:+"NULLNULLNULL"
 			If TLongType( src ) Return Bra("(BBBYTE)"+t)
 			If TULongType( src ) Return Bra("(BBBYTE)"+t)
 			If TSizeTType( src ) Return Bra("(BBBYTE)"+t)
+			If TWParamType( src ) Return Bra("(BBBYTE)"+t)
+			If TLParamType( src ) Return Bra("(BBBYTE)"+t)
 			If TStringType( src ) Return "bbStringToInt" + Bra(t)
 			'If TByteVarPtrType( src ) Return Bra("*" + t)
 		Else If TShortType( dst )
@@ -1766,6 +1803,8 @@ t:+"NULLNULLNULL"
 			If TLongType( src ) Return Bra("(BBSHORT)"+t)
 			If TULongType( src ) Return Bra("(BBSHORT)"+t)
 			If TSizeTType( src ) Return Bra("(BBSHORT)"+t)
+			If TWParamType( src ) Return Bra("(BBSHORT)"+t)
+			If TLParamType( src ) Return Bra("(BBSHORT)"+t)
 			If TStringType( src ) Return "bbStringToInt" + Bra(t)
 			'If TShortVarPtrType( src ) Return Bra("*" + t)
 		Else If TUIntType( dst )
@@ -1779,6 +1818,8 @@ t:+"NULLNULLNULL"
 			If TLongType( src ) Return Bra("(BBUINT)"+t)
 			If TULongType( src ) Return Bra("(BBUINT)"+t)
 			If TSizeTType( src ) Return Bra("(BBUINT)"+t)
+			If TWParamType( src ) Return Bra("(BBUINT)"+t)
+			If TLParamType( src ) Return Bra("(BBUINT)"+t)
 			If TStringType( src ) Return "bbStringToUInt" + Bra(t)
 		Else If TULongType( dst )
 			If TBoolType( src ) Return Bra( t )
@@ -1791,6 +1832,8 @@ t:+"NULLNULLNULL"
 			If TLongType( src ) Return Bra("(BBULONG)"+t)
 			If TULongType( src) Return t
 			If TSizeTType( src ) Return Bra("(BBULONG)"+t)
+			If TWParamType( src ) Return Bra("(BBULONG)"+t)
+			If TLParamType( src ) Return Bra("(BBULONG)"+t)
 			If TStringType( src ) Return "bbStringToULong" + Bra(t)
 			If TFloat64Type( src ) Return Bra("(BBULONG)"+t)
 		Else If TFloat64Type( dst )
@@ -1810,6 +1853,36 @@ t:+"NULLNULLNULL"
 			If TDouble128Type( src) Return t
 			If TInt128Type( src ) Return Bra("(BBDOUBLE128)"+t)
 			If TFloat128Type( src ) Return Bra("(BBDOUBLE128)"+t)
+		 Else If TWParamType( dst )
+			If TBoolType( src ) Return Bra( t )
+			If TByteType( src) Return Bra("(WPARAM)"+t)
+			If TShortType( src) Return Bra("(WPARAM)"+t)
+			If TIntType( src) Return Bra("(WPARAM)"+t)
+			If TUIntType( src) Return Bra("(WPARAM)"+t)
+			If TLongType( src) Return Bra("(WPARAM)"+t)
+			If TULongType( src) Return Bra("(WPARAM)"+t)
+			If TSizeTType( src ) Return Bra("(WPARAM)"+t)
+			If TWParamType( src ) Return t
+			If TLParamType( src ) Return Bra("(WPARAM)"+t)
+			If TFloatType( src ) Return Bra("(WPARAM)"+t)
+			If TDoubleType( src ) Return Bra("(WPARAM)"+t)
+			If TStringType( src ) Return "bbStringToWParam" + Bra(t)
+			If IsPointerType(src,0,TType.T_POINTER) Return Bra("(WPARAM)"+t)
+		 Else If TLParamType( dst )
+			If TBoolType( src ) Return Bra( t )
+			If TByteType( src) Return Bra("(LPARAM)"+t)
+			If TShortType( src) Return Bra("(LPARAM)"+t)
+			If TIntType( src) Return Bra("(LPARAM)"+t)
+			If TUIntType( src) Return Bra("(LPARAM)"+t)
+			If TLongType( src) Return Bra("(LPARAM)"+t)
+			If TULongType( src) Return Bra("(LPARAM)"+t)
+			If TSizeTType( src ) Return Bra("(LPARAM)"+t)
+			If TWParamType( src ) Return Bra("(LPARAM)"+t)
+			If TLParamType( src ) Return t
+			If TFloatType( src ) Return Bra("(LPARAM)"+t)
+			If TDoubleType( src ) Return Bra("(LPARAM)"+t)
+			If TStringType( src ) Return "bbStringToLParam" + Bra(t)
+			If IsPointerType(src,0,TType.T_POINTER) Return Bra("(LPARAM)"+t)
 
 		Else If TArrayType( dst )
 			If TArrayType( src ) Then

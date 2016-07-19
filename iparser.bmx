@@ -1216,6 +1216,10 @@ End Rem
 				ty = New TSizetType
 			ElseIf CParse("j") Then
 				ty = New TInt128Type
+			ElseIf CParse("w") Then
+				ty = New TWParamType
+			ElseIf CParse("x") Then
+				ty = New TLParamType
 			End If
 			
 			If CParse("&") And Not (attrs & DECL_FIELD) Then
@@ -1524,6 +1528,26 @@ End Rem
 		End If
 		If CParse( "double128" )
 			Local ty:TType = New TDouble128Type
+			While CParse("ptr")
+				ty = TType.MapToPointerType(ty)
+			Wend
+			While CParse( "*" )
+				ty = TType.MapToPointerType(ty)
+			Wend
+			Return ty
+		End If
+		If CParse( "wparam" )
+			Local ty:TType = New TWParamType
+			While CParse("ptr")
+				ty = TType.MapToPointerType(ty)
+			Wend
+			While CParse( "*" )
+				ty = TType.MapToPointerType(ty)
+			Wend
+			Return ty
+		End If
+		If CParse( "lparam" )
+			Local ty:TType = New TLParamType
 			While CParse("ptr")
 				ty = TType.MapToPointerType(ty)
 			Wend

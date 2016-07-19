@@ -196,6 +196,8 @@ Type TTranslator
 		If TInt128Type( ty ) Return p + "j"
 		If TDouble128Type( ty ) Return p + "m"
 		If TStringType( ty ) Return p + "S"
+		If TWParamType( ty ) Return p + "W"
+		If TLParamType( ty ) Return p + "L"
 		If TArrayType( ty ) Then
 			Return p + "a" + TransMangleType(TArrayType( ty ).elemType)
 		End If
