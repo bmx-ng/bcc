@@ -93,7 +93,11 @@ Type TIParser
 			
 			' import Object and String definitions
 			Local par:TIParser = New TIParser
-			par.ParseModuleImport(_mod, "brl.classes", modulepath("brl.blitz"), modulepath("brl.blitz") + "\blitz_classes.i")
+			If FileType(modulepath("brl.blitz") + "\blitz_classes." + opt_platform + ".i") Then
+				par.ParseModuleImport(_mod, "brl.classes", modulepath("brl.blitz"), modulepath("brl.blitz") + "\blitz_classes." + opt_platform + ".i")
+			Else
+				par.ParseModuleImport(_mod, "brl.classes", modulepath("brl.blitz"), modulepath("brl.blitz") + "\blitz_classes.i")
+			End If
 	
 			' set up built-in keywords
 			par = New TIParser
