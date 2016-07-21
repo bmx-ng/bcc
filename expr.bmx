@@ -426,7 +426,12 @@ Type TConstExpr Extends TExpr
 							b :+ 1
 							i :+ 1
 						Wend
-						value = String.FromBytes(buf, b)
+						
+						If leading0 Then
+							value = "0"
+						Else
+							value = String.FromBytes(buf, b)
+						End If
 					Else
 						value = "0"
 					End If
