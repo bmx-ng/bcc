@@ -1369,10 +1369,26 @@ t:+"NULLNULLNULL"
 				If TObjectType( expr.expr.exprType ).classDecl.ident = "Object" Then
 					Return "0"
 				Else
-					If TIdentTypeExpr(expr.expr) Then
-						Return Bra(Bra(TransFuncClass(TObjectType( expr.expr.exprType ).classDecl)) + "->obj_size")
+					Local cdecl:TClassDecl = TObjectType( expr.expr.exprType ).classDecl
+					
+					If cdecl.IsStruct() Then
+						If TIdentTypeExpr(expr.expr) Then
+							If cdecl.IsExtern() Then
+								Return "sizeof" + Bra("struct " + cdecl.ident)
+							Else
+								Return "sizeof" + Bra("struct " + cdecl.munged)
+							End If
+						Else
+							Return "sizeof" + Bra(expr.expr.Trans())
+						End If
 					Else
-						Return Bra(Bra(expr.expr.Trans()) + "->clas->obj_size")
+					
+						If TIdentTypeExpr(expr.expr) Then
+							Return Bra(Bra(TransFuncClass(cdecl)) + "->obj_size")
+						Else
+							Return Bra(Bra(expr.expr.Trans()) + "->clas->obj_size")
+						End If
+						
 					End If
 				End If
 			End If
