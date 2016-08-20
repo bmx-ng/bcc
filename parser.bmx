@@ -1800,6 +1800,28 @@ End Rem
 				If varty._flags & (TType.T_CHAR_PTR | TType.T_SHORT_PTR) Then
 					DoErr "Illegal variable type"
 				End If
+
+				If _toke = "(" Then
+
+					Local fdecl:TFuncDecl = ParseFuncDecl("", FUNC_PTR | DECL_ARG)
+
+					If Not varty Then
+						varty = New TFunctionPtrType
+						TFunctionPtrType(varty).func = fdecl
+					Else
+						fdecl.retType = varty
+						varty = New TFunctionPtrType
+						TFunctionPtrType(varty).func = fdecl
+					End If
+
+					TFunctionPtrType(varty).func.ident = varid
+
+					' function pointer array ?
+					While IsArrayDef()
+						varty = ParseArrayType(varty)
+					Wend
+				End If
+				
 				Parse( "=" )
 			'EndIf
 		Else
@@ -2702,6 +2724,10 @@ End Rem
 
 					TFunctionPtrType(ty).func.ident = argId
 
+					' function pointer array ?
+					While IsArrayDef()
+						ty = ParseArrayType(ty)
+					Wend
 				End If
 				
 				' var argument?
@@ -2724,7 +2750,7 @@ End Rem
 		Parse ")"
 		
 		If returnType Then
-			Return New TFuncDecl.CreateF(Null,returnType,args,0)
+			Return New TFuncDecl.CreateF(Null,returnType,args,attrs)
 		End If
 		
 		Local fdecl:TFuncDecl
