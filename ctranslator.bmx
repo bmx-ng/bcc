@@ -1548,6 +1548,8 @@ t:+"NULLNULLNULL"
 						End If
 					End If
 				End If
+				
+				If TFunctionPtrType(src) Return Bra("&"+t)
 				'If TPointerType( src) Return Bra("&"+t)
 			Else
 				Return Bra(TransValue(TConstExpr(expr.expr).ty, TConstExpr(expr.expr).value))
