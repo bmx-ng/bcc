@@ -311,7 +311,7 @@ Type TValDecl Extends TDecl
 	End Method
 	
 	Method OnSemant()
-
+	
 		If declTy
 			' ensure to set the scope for a function pointer array before semanting
 			If TArrayType(declTy) And TFunctionPtrType(TArrayType(declTy).elemType) Then
@@ -1210,20 +1210,23 @@ End Rem
 				
 				Local argDecls:TArgDecl[]=func.argDecls
 				
-				If argExprs.Length>argDecls.Length Continue
-				
 				Local exact:Int=True
 				Local possible:Int=True
 				
 				foundIdentMatch = True
-				
+
 				' we found a matching name - this is probably the one we mean...
 				If isArg Then
 					'match=func
 					matches.AddLast(func)
 					Exit
 				End If
-				
+
+				If argExprs.Length>argDecls.Length
+					exact = False
+					Continue
+				End If
+										
 				For Local i:Int=0 Until argDecls.Length
 	
 					If i<argExprs.Length And argExprs[i]
