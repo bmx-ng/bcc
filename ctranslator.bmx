@@ -333,7 +333,12 @@ Type TCTranslator Extends TTranslator
 					t = "?"
 				End If
 			End If
-			Return t + TObjectType(ty).classDecl.ident + p
+			Local cdecl:TClassDecl = TObjectType(ty).classDecl
+			' find first type in hierarchy that isn't private
+			While cdecl.IsPrivate() And cdecl.superClass <> Null
+				cdecl = cdecl.superClass
+			Wend
+			Return t + cdecl.ident + p
 		End If
 		If TFunctionPtrType( ty ) Return TransIfcType(TFunctionPtrType(ty).func.retType, TFunctionPtrType(ty).func.ModuleScope().IsSuperStrict()) + TransIfcArgs(TFunctionPtrType(ty).func)
 		If TExternObjectType( ty ) Return ":" + TExternObjectType(ty).classDecl.ident + p
@@ -1003,15 +1008,18 @@ t:+"NULLNULLNULL"
 								End If
 							
 							Else
-						
-								' Null test
-								If opt_debug Then
-									EmitDebugNullObjectError(TransSubExpr( lhs ))
+								If decl.attrs & FUNC_PTR Then
+									Return "(" + obj + TransSubExpr( lhs ) + ")->" + decl.munged+TransArgs( args,decl, Null)
+								Else
+									' Null test
+									If opt_debug Then
+										EmitDebugNullObjectError(TransSubExpr( lhs ))
+									End If
+		
+									Local class:String = Bra("(" + obj + TransSubExpr( lhs ) + ")->clas" + tSuper)
+									'Local class:String = TransFuncClass(cdecl)
+									Return class + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, TransSubExpr( lhs ) )
 								End If
-	
-								Local class:String = Bra("(" + obj + TransSubExpr( lhs ) + ")->clas" + tSuper)
-								'Local class:String = TransFuncClass(cdecl)
-								Return class + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, TransSubExpr( lhs ) )
 							End If
 						End If
 						
