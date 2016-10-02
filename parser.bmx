@@ -1441,14 +1441,29 @@ Type TParser
 		Return ParsePrimaryExpr( False )
 	End Method
 
-	Method ParseMulDivExpr:TExpr()
+	Method ParsePowExpr:TExpr()
 		Local expr:TExpr=ParseUnaryExpr()
 		Repeat
 			Local op$=_toke
 			Select op
-			Case "^","*","/","mod","shl","shr", "sar"
+			Case "^"
 				NextToke
 				Local rhs:TExpr=ParseUnaryExpr()
+				expr=New TBinaryMathExpr.Create( op,expr,rhs )
+			Default
+				Return expr
+			End Select
+		Forever
+	End Method
+
+	Method ParseMulDivExpr:TExpr()
+		Local expr:TExpr=ParsePowExpr()
+		Repeat
+			Local op$=_toke
+			Select op
+			Case "*","/","mod","shl","shr", "sar"
+				NextToke
+				Local rhs:TExpr=ParsePowExpr()
 				expr=New TBinaryMathExpr.Create( op,expr,rhs )
 			Default
 				Return expr
