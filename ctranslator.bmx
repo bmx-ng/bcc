@@ -5169,6 +5169,20 @@ End If
 		End If
 	End Method
 
+	Method TransGlobalInit(decl:TGlobalDecl)
+		If TFunctionPtrType(decl.ty) Then
+			If TInvokeExpr(decl.init) And Not TInvokeExpr(decl.init).invokedWithBraces Then
+				Emit TransGlobal( decl )+"="+TInvokeExpr(decl.init).decl.munged + ";"
+			Else
+				Emit TransGlobal( decl )+"="+decl.init.Trans()+";"
+			End If
+		Else
+			If Not decl.funcGlobal Then
+				Emit TransGlobal( decl )+"="+decl.init.Trans()+";"
+			End If
+		End If
+	End Method
+
 	Method TransSource(app:TAppDecl)
 
 		SetOutput("pre_source")
@@ -5329,17 +5343,31 @@ End If
 			' TODO : what about OnDebugStop etc, who have no init ?
 			If decl.init And Not (decl.attrs & DECL_INITONLY) Then
 
-				If TFunctionPtrType(decl.ty) Then
-					If TInvokeExpr(decl.init) And Not TInvokeExpr(decl.init).invokedWithBraces Then
-						Emit TransGlobal( decl )+"="+TInvokeExpr(decl.init).decl.munged + ";"
-					Else
-						Emit TransGlobal( decl )+"="+decl.init.Trans()+";"
+				If decl.scope And TClassDecl(decl.scope) Then
+
+					' class global inits need to be generated in the correct order.
+					' only generate global inits if the parent class hasn't already been processed,
+					' otherwise, we will skip this global as it should already have been generated.
+					If Not TClassDecl(decl.scope).globInit Then
+					
+						TClassDecl(decl.scope).globInit = True
+					
+						For Local gdecl:TGlobalDecl = EachIn decl.scope._decls
+						
+							If gdecl.declImported Continue
+							
+							gdecl.Semant
+							
+							If gdecl.init And Not (gdecl.attrs & DECL_INITONLY) Then
+								TransGlobalInit(gdecl)
+							End If
+						Next
 					End If
+					
 				Else
-					If Not decl.funcGlobal Then
-						Emit TransGlobal( decl )+"="+decl.init.Trans()+";"
-					End If
+					TransGlobalInit(decl)
 				End If
+
 			End If
 		Next
 

@@ -1843,6 +1843,7 @@ Type TClassDecl Extends TScopeDecl
 	Field instArgs:TType[]
 
 	Field objectType:TObjectType '"canned" objectType
+	Field globInit:Int
 
 	'Global nullObjectClass:TClassDecl=New TNullDecl.Create( "{NULL}",Null,Null,Null,DECL_ABSTRACT|DECL_EXTERN )
 	
