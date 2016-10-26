@@ -2327,22 +2327,22 @@ End Rem
 					Case "=",":*",":/",":+",":-",":&",":|",":~~","mod","shl","shr", ":shl", ":shr", "sar", ":sar", ":mod"
 
 						' remap symbols...
-						For Local i:Int = 0 Until TToker._symbols.length
-							Local sym$= TToker._symbols[i]
-							If _toke.ToLower() = sym
-								_toke = TToker._symbols_map[i]
-								Exit
-							EndIf
-						Next
+						'For Local i:Int = 0 Until TToker._symbols.length
+						'	Local sym$= TToker._symbols[i]
+						'	If _toke.ToLower() = sym
+						'		_toke = TToker._symbols_map[i]
+						'		Exit
+						'	EndIf
+						'Next
 	
 	
 						If TIdentExpr( expr ) Or TIndexExpr( expr )
-							Local op$=_toke
+							Local op$=_toke.ToLower()
 							NextToke
-							If Not op.EndsWith( "=" ) And Not op.StartsWith("=")
-								Parse "="
-								op:+"="
-							EndIf
+						'	If Not op.EndsWith( "=" ) And Not op.StartsWith("=")
+						'		Parse "="
+						'		op:+"="
+						'	EndIf
 							_block.AddStmt New TAssignStmt.Create( op,expr,ParseExpr() )
 						Else
 							Err "Assignment operator '"+_toke+"' cannot be used this way."
@@ -2683,6 +2683,35 @@ End Rem
 					NextToke
 					attrs:|FUNC_CTOR
 					attrs:&~FUNC_METHOD
+				Else If _toke="operator" Then
+					attrs:|FUNC_OPERATOR
+					NextToke
+					
+					Local t:String = _toke.ToLower()
+					NextToke
+					
+					Select t
+						Case "*","/","+","-","&","|","~~"
+							id = t
+						Case ":*",":/",":+",":-",":&",":|",":~~"
+							id = t
+						Case "<",">"',"="',"<=",">=","=","<>"
+							If CParse("=") Then
+								t :+ "="
+							Else If t = "<" And CParse(">") Then
+								t :+ ">"
+							End If
+							id = t
+						Case "="
+							id = t
+						Case "mod", "shl", "shr"
+							id = t
+						Case ":mod", ":shl", ":shr"
+							id = t
+						Default
+							DoErr "Operator must be one of: * / + - & | ~~ :* :/ :+ :- :& :| :~~ < > <= >= = <> mod shl shr :mod :shl :shr"
+					End Select
+					ty=ParseDeclType()
 				Else
 					id=ParseIdent()
 					ty=ParseDeclType()

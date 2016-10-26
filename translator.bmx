@@ -325,7 +325,13 @@ Type TTranslator
 		EndIf
 
 		If fdecl.scope Then
-			fdecl.munged = fdecl.scope.munged + "_" + fdecl.ident
+			Local id:String = fdecl.ident
+
+			If fdecl.attrs & FUNC_OPERATOR Then
+				id = MungSymbol(id)
+			End If
+			
+			fdecl.munged = fdecl.scope.munged + "_" + id
 			
 			If Not equalsBuiltInFunc(fdecl.classScope(), fdecl) And Not fdecl.noMangle Then
 				fdecl.munged :+ MangleMethod(fdecl)
@@ -341,6 +347,58 @@ Type TTranslator
 		End If
 		
 		funcs.AddLast fdecl
+	End Method
+	
+	Method MungSymbol:String(sym:String)
+		Select sym
+			Case "*"
+				Return "_mul"
+			Case "/"
+				Return "_div"
+			Case "+"
+				Return "_add"
+			Case "-"
+				Return "_sub"
+			Case "&"
+				Return "_and"
+			Case "|"
+				Return "_or"
+			Case "~~"
+				Return "_xor"
+			Case ":*"
+				Return "_muleq"
+			Case ":/"
+				Return "_diveq"
+			Case ":+"
+				Return "_addeq"
+			Case ":-"
+				Return "_subeq"
+			Case ":&"
+				Return "_andeq"
+			Case ":|"
+				Return "_oreq"
+			Case ":~~"
+				Return "_xoreq"
+			Case "<"
+				Return "_lt"
+			Case "<="
+				Return "_le"
+			Case ">"
+				Return "_gt"
+			Case ">="
+				Return "_ge"
+			Case "="
+				Return "_eq"
+			Case "<>"
+				Return "_ne"
+			Case "mod"
+				Return "_mod"
+			Case "shl"
+				Return "_shl"
+			Case "shr"
+				Return "_shr"
+		End Select
+		Return "?? unknown symbol ?? : " + sym
 	End Method
 	
 	Method MungDecl( decl:TDecl, addIfNotInScope:Int = False )
@@ -570,6 +628,7 @@ End Rem
 	
 	Method TransBinaryOp$( op$,rhs$ )
 'DebugLog "TransBinaryOp '" + op + "' : '" + rhs + "'"
+op = mapSymbol(op)
 		Select op
 		Case "+","-"
 			If rhs.StartsWith( op ) Return op+" "
@@ -595,11 +654,12 @@ End Rem
 	End Method
 	
 	Method TransAssignOp$( op$ )
+op = mapSymbol(op)
 		Select op
-		Case "mod=" Return "%="
-		Case "shl=" Return "<<="
-		Case "shr=" Return ">>="
-		Case "sar=" Return ">>="
+		Case ":mod" Return "%="
+		Case ":shl" Return "<<="
+		Case ":shr" Return ">>="
+		Case ":sar" Return ">>="
 		End Select
 		Return op
 	End Method

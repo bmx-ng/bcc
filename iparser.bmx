@@ -750,7 +750,11 @@ Type TIParser
 					attrs:&~FUNC_METHOD
 					ty=ParseDeclType(attrs, True)
 				Else
-					id=ParseIdent()
+					If _toker._tokeType = TOKE_STRINGLIT Then
+						id = ParseStringLit()
+					Else
+						id=ParseIdent()
+					End If
 					ty=ParseDeclType(attrs, True)
 				EndIf
 			Else
@@ -861,6 +865,18 @@ Type TIParser
 				attrs:|DECL_ABSTRACT | DECL_API_WIN32
 			Else If CParse( "W" )
 				attrs:|DECL_API_WIN32
+			Else If CParse( "O" )
+				attrs:|FUNC_OPERATOR
+			Else If CParse( "OW" )
+				attrs:|FUNC_OPERATOR| DECL_API_WIN32
+			Else If CParse( "FO" )
+				attrs:|DECL_FINAL|FUNC_OPERATOR
+			Else If CParse( "FOW" )
+				attrs:|DECL_FINAL|FUNC_OPERATOR| DECL_API_WIN32
+			Else If CParse( "AO" )
+				attrs:|DECL_ABSTRACT|FUNC_OPERATOR
+			Else If CParse( "AOW" )
+				attrs:|DECL_ABSTRACT|FUNC_OPERATOR| DECL_API_WIN32
 			'Else If CParse( "property" )
 			'	If attrs & FUNC_METHOD
 			'		attrs:|FUNC_PROPERTY

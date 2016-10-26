@@ -1458,6 +1458,7 @@ Const FUNC_PTR:Int=      $0100
 Const FUNC_BUILTIN:Int = $0080
 Const FUNC_INIT:Int =    $0200
 Const FUNC_NESTED:Int =  $0400
+Const FUNC_OPERATOR:Int= $0800
 
 'Fix! A func is NOT a block/scope!
 '
