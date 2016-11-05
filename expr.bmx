@@ -865,7 +865,7 @@ Type TNewObjectExpr Extends TExpr
 			Local eType:TType = objTy
 			
 			Local errorDetails:String
-			
+
 			While i < parts.length
 				Local id:String = parts[i]
 				i :+ 1
@@ -1622,6 +1622,20 @@ Type TBinaryMathExpr Extends TBinaryExpr
 
 		lhs=lhs.Semant()
 		rhs=rhs.Semant()
+		
+		
+		' operator overload?
+		If TObjectType(lhs.exprType) Then
+			Local args:TExpr[] = [rhs]
+			Try
+				Local decl:TFuncDecl = TFuncDecl(TObjectType(lhs.exprType).classDecl.FindFuncDecl(op, args,,,,True,SCOPE_CLASS_HEIRARCHY))
+				If decl Then
+					Return New TInvokeMemberExpr.Create( lhs, decl, args ).Semant()
+				End If
+			Catch error:String
+				Err "Operator " + op + " cannot be used with Objects."
+			End Try
+		End If
 
 		Select op
 		Case "&","~~","|","shl","shr"
@@ -1776,6 +1790,20 @@ Type TBinaryCompareExpr Extends TBinaryExpr
 
 		lhs=lhs.Semant()
 		rhs=rhs.Semant()
+
+		' operator overload?
+		If TObjectType(lhs.exprType) Then
+			Local args:TExpr[] = [rhs]
+			Try
+				Local decl:TFuncDecl = TFuncDecl(TObjectType(lhs.exprType).classDecl.FindFuncDecl(op, args,,,,True,SCOPE_CLASS_HEIRARCHY))
+				If decl Then
+					Return New TInvokeMemberExpr.Create( lhs, decl, args ).Semant()
+				End If
+			Catch error:String
+				' no overload, continue...
+			End Try
+		End If
+
 
 		ty=BalanceTypes( lhs.exprType,rhs.exprType )
 

@@ -124,22 +124,49 @@ Type TAssignStmt Extends TStmt
 						rhs=rhs.Cast( lhs.exprType )
 						splitOp = False
 						
-					Case "*=","/=","+=","-="
+					Case ":*",":/",":+",":-"
 					
 						If TNumericType( lhs.exprType ) And lhs.exprType.EqualsType( rhs.exprType ) Then
 							splitOp = False
 						End If
+						
+						If TObjectType(lhs.exprType) Then
+							Local args:TExpr[] = [rhs]
+							Try
+								Local decl:TFuncDecl = TFuncDecl(TObjectType(lhs.exprType).classDecl.FindFuncDecl(op, args,,,,True,SCOPE_CLASS_HEIRARCHY))
+								If decl Then
+									lhs = New TInvokeMemberExpr.Create( lhs, decl, args ).Semant()
+									rhs = Null
+									Return
+								End If
+							Catch error:String
+								Err "Operator " + op + " cannot be used with Objects."
+							End Try
+						End If
 					
-					Case "&=","|=","^=","<<=",">>=","%="
+					Case ":&",":|",":^",":shl",":shr",":mod"
 					
-						If TIntType( lhs.exprType ) And lhs.exprType.EqualsType( rhs.exprType ) Then
+						If (TIntType( lhs.exprType ) And lhs.exprType.EqualsType( rhs.exprType ))  Or TObjectType(lhs.exprType) Then
 							splitOp = False
 						End If
-				
+
+						If TObjectType(lhs.exprType) Then
+							Local args:TExpr[] = [rhs]
+							Try
+								Local decl:TFuncDecl = TFuncDecl(TObjectType(lhs.exprType).classDecl.FindFuncDecl(op, args,,,,,SCOPE_CLASS_HEIRARCHY))
+								If decl Then
+									lhs = New TInvokeMemberExpr.Create( lhs, decl, args ).Semant()
+									rhs = Null
+									Return
+								End If
+							Catch error:String
+								Err "Operator " + op + " cannot be used with Objects."
+							End Try
+						End If
 				End Select
 				
 				If splitOp Then
-					rhs = New TBinaryMathExpr.Create(op[..op.length - 1], lhs, rhs).Semant().Cast(lhs.exprType)
+					rhs = New TBinaryMathExpr.Create(op[1..], lhs, rhs).Semant().Cast(lhs.exprType)
 					op = "="
 				End If
 				

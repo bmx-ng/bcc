@@ -2444,7 +2444,7 @@ t:+"NULLNULLNULL"
 			rhs = "0"
 		End If
 
-		If stmt.op = "%=" Then
+		If stmt.op = ":%" Then
 			If TDecimalType(stmt.lhs.exprType) Or TDecimalType(stmt.rhs.exprType) Then
 				Return lhs + "=fmod" + Bra(lhs + "," + rhs)
 			End If
@@ -2454,7 +2454,7 @@ t:+"NULLNULLNULL"
 '			s:+ "{"
 '			s:+ "BBSTRING tmp=" + lhs + ";~n"
 
-			If stmt.op = "+=" Then
+			If stmt.op = ":+" Then
 				s :+ lhs+"=bbStringConcat("+lhs+","+rhs+")"
 			Else If rhs = "&bbNullObject" Then
 				s :+ lhs+TransAssignOp( stmt.op )+"&bbEmptyString"
@@ -2474,7 +2474,7 @@ t:+"NULLNULLNULL"
 
 			s :+ lhs+TransAssignOp( stmt.op )+rhs
 		Else If TArrayType(stmt.lhs.exprType) Then
-			If stmt.op = "+=" Then
+			If stmt.op = ":+" Then
 				s :+ lhs+"=bbArrayConcat("+ TransArrayType(TArrayType(stmt.lhs.exprType).elemType) + "," + lhs+","+rhs+")"
 			Else If rhs = "&bbNullObject" Then
 				s :+ lhs+TransAssignOp( stmt.op )+"&bbEmptyArray"
@@ -2688,7 +2688,13 @@ End Rem
 		End If	
 	
 		If Not fdecl.mangled Then
-			fdecl.mangled = fdecl.ident + MangleMethod(fdecl)
+			Local id:String = fdecl.ident
+
+			If fdecl.attrs & FUNC_OPERATOR Then
+				id = MungSymbol(id)
+			End If
+
+			fdecl.mangled = id + MangleMethod(fdecl)
 		End If
 
 		Return fdecl.mangled		
@@ -4557,7 +4563,11 @@ End Rem
 			func :+ "+"
 		End If
 
-		func :+ funcDecl.ident
+		If funcDecl.attrs & FUNC_OPERATOR Then
+			func :+ BmxEnquote(funcDecl.ident)
+		Else
+			func :+ funcDecl.ident
+		End If
 
 		func :+ TransIfcType(funcDecl.retType, funcDecl.ModuleScope().IsSuperStrict())
 
@@ -4568,6 +4578,10 @@ End Rem
 			func :+ "F"
 		Else If funcDecl.attrs & DECL_ABSTRACT Then
 			func :+ "A"
+		End If
+		
+		If funcDecl.attrs & FUNC_OPERATOR Then
+			func :+ "O"
 		End If
 
 		func :+ "="

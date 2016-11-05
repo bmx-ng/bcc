@@ -47,6 +47,9 @@ Global OBJECT_BASE_OFFSET:Int = 8
 ' 4 bytes on 32-bit, 8 bytes on 64-bit
 Global POINTER_SIZE:Int = 4
 
+Global _symbols$[]=[ "..","[]",":*",":/",":+",":-",":|",":&",":~~",":shr",":shl",":sar",":mod"]
+Global _symbols_map$[]=[ "..","[]","*=","/=","+=","-=","|=","&=","^=",">>=", "<<=",">>=","%=" ]
+
 Function PushErr( errInfo$ )
 	_errStack.AddLast _errInfo
 	_errInfo=errInfo
@@ -113,6 +116,16 @@ Function IsStandardFunc:Int(func:String)
 	
 	Return funcs.Find(func) > 0
 End Function
+
+Function mapSymbol:String(sym:String)
+	For Local i:Int = 0 Until _symbols.length
+		If sym = _symbols[i] Then
+			Return _symbols_map[i]
+		End If
+	Next
+	Return sym
+End Function
+
 
 'enquote depending on ENV_LANG
 '
