@@ -1055,6 +1055,9 @@ End Rem
 					' 
 				Else If Not bestMatch.IsMethod() And func.IsMethod() Then
 					bestMatch = func
+				Else If (bestMatch.scope <> func.scope) And (TClassDecl(bestMatch.scope).ExtendsClass(TClassDecl(func.scope))) Then
+					' match is in different level of class hierarchy
+					Exit
 				Else
 					' a tie?
 					Err "Unable to determine overload to use: "+ bestMatch.ToString()+" or "+func.ToString()+"."
