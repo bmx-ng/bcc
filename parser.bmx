@@ -2519,6 +2519,13 @@ End Rem
 
 		EndIf
 
+		' apply any function ptr metadata to decl
+		If TFunctionPtrType(ty) Then
+			If TFunctionPtrType(ty).func And TFunctionPtrType(ty).func.metadata Then
+				decl.metadata = TFunctionPtrType(ty).func.metadata
+			End If
+		End If
+
 		'meta data for variables
 		If CParse( "{" ) Then
 			'print "meta for variable: "+id+ " -> "+ParseMetaData()
