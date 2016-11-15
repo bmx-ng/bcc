@@ -1157,7 +1157,10 @@ t:+"NULLNULLNULL"
 					EmitDebugNullObjectError("o")
 				End If
 				
-				Local obj:String = Bra(TransObject(decl.scope))
+				Local obj:String
+				If TClassDecl(scope) And Not TClassDecl(scope).IsStruct() Then
+					obj = Bra(TransObject(decl.scope))
+				End If
 				Return Bra(obj + "o") + "->" + decl.munged+TransArgs( args,decl )
 			End If
 		End If
