@@ -142,7 +142,7 @@ Type TToker
 			_tokeType=TOKE_IDENT
 			While _tokePos<_source.Length
 				Local char:Int=_source[_tokePos]
-				If char<>Asc("_") And Not IsAlpha( char ) And Not IsDigit( char ) Exit
+				If char<>Asc("_") And Not IsAlphaNumeric( char ) Exit
 				_tokePos:+1
 			Wend
 			_toke=_source[start.._tokePos]
@@ -194,26 +194,31 @@ Type TToker
 			Wend
 		Else If str="~q"
 			_tokeType=TOKE_STRINGLIT
-			While TSTR() And TSTR()<>"~q"
+			local _tstr:string = TSTR()
+			While _tstr And _tstr<>"~q"
 				' Strings can't cross line boundries
-				If TSTR()="~n" Then
+				If _tstr="~n" Then
 					_tokePos:-1
 					Exit
 				End If
 				_tokePos:+1
+
+				_tstr = TSTR()
 			Wend
 			If _tokePos<_source.Length _tokePos:+1 Else _tokeType=TOKE_STRINGLITEX
 		Else If str="'"
 			If TSTR()="!" Then
 		
 				_tokeType=TOKE_NATIVE
-				
-				While TSTR() 
-					If TSTR()="~n" Then
+				local _tstr:string = TSTR()
+				While _tstr
+					If _tstr="~n" Then
 						_tokePos:-1
 						Exit
 					End If
 					_tokePos:+1
+
+					_tstr = TSTR()
 				Wend
 		
 			Else
@@ -235,11 +240,14 @@ Type TToker
 			Local pos:Int = _tokePos
 			Local isValidTilEOL:Int = True
 			_tokePos:+1
-			While TSTR() And TSTR()<>"~n"
+			Local _tstr:string = TSTR()
+			While _tstr And _tstr<>"~n"
 				If Not IsSpace(TCHR()) Then
 					isValidTilEOL = False
 				End If
 				_tokePos:+1
+
+				_tstr = TSTR()
 			Wend
 			
 			If Not isValidTilEOL Or _preprocess Then
@@ -255,9 +263,9 @@ Type TToker
 		Else
 
 			_tokeType=TOKE_SYMBOL
-			For Local i:Int = 0 Until _symbols.length
+			For Local i:Int = 0 Until _symbols_keys.length
 
-				Local sym$=_symbols[i]
+				Local sym$=_symbols_keys[i]
 				If char<>sym[0] Continue
 
 				'do not try to read beyond source length
@@ -269,7 +277,7 @@ Type TToker
 					If IsAlpha(sym[sym.length-1]) Then
 						' not at the end of the file?
 						If _source.Length >= _tokePos+sym.length Then
-							If IsAlpha(TCHR(sym.length-1)) Or IsDigit(TCHR(sym.length-1)) Then
+							If IsAlphaNumeric(TCHR(sym.length-1)) Then
 								Exit
 							End If
 						End If
@@ -352,8 +360,10 @@ Type TToker
 	End Method
 	
 	Method SkipToEOL()
-		While TSTR() And TSTR()<>"~n"
+		local _tstr:string = TSTR()
+		While _tstr And _tstr<>"~n"
 			_tokePos:+1
+			_tstr = TSTR()
 		Wend
 	End Method
 
