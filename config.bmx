@@ -47,8 +47,20 @@ Global OBJECT_BASE_OFFSET:Int = 8
 ' 4 bytes on 32-bit, 8 bytes on 64-bit
 Global POINTER_SIZE:Int = 4
 
-Global _symbols$[]=[ "..","[]",":*",":/",":+",":-",":|",":&",":~~",":shr",":shl",":sar",":mod"]
-Global _symbols_map$[]=[ "..","[]","*=","/=","+=","-=","|=","&=","^=",">>=", "<<=",">>=","%=" ]
+Global _symbols_keys$[]=[ "..","[]",":*",":/",":+",":-",":|",":&",":~~",":shr",":shl",":sar",":mod"]
+Global _symbols_values$[]=[ "..","[]","*=","/=","+=","-=","|=","&=","^=",">>=", "<<=",">>=","%=" ]
+Global _symbols_map:TMap = new TMap
+For local i:int = 0 until _symbols_keys.length
+	_symbols_map.Insert(_symbols_keys[i], _symbols_values[i])
+Next
+
+Global _standardFuncs:String = ";isalnum;isalpha;isascii;isblank;iscntrl;isdigit;isgraph;islower;isprint;ispunct;isspace;isupper;isxdigit;" + ..
+                              "strlen;_wgetenv;_wputenv;"
+Global _standardFuncsMap:TMap = new TMap
+For local f:string = EachIn _standardFuncs.Split(";")
+	if f then _standardFuncsMap.Insert(f, "OK")
+Next
+
 
 Function PushErr( errInfo$ )
 	_errStack.AddLast _errInfo
@@ -84,24 +96,40 @@ Function InternalErr()
 	Throw "Internal Error.~n" + _errInfo + "~n"
 End Function
 
+Global ASC_SPACE:int = Asc(" ")
+Global ASC_NOBREAKSPACE:int = $A0 'NO-BREAK SPACE (U+00A0)
+Global ASC_0:int = Asc("0")
+Global ASC_1:int = Asc("1")
+Global ASC_9:int = Asc("9")
+Global ASC_UC_A:int = Asc("A")
+Global ASC_UC_F:int = Asc("F")
+Global ASC_UC_Z:int = Asc("Z")
+Global ASC_LC_A:int = Asc("a")
+Global ASC_LC_F:int = Asc("f")
+Global ASC_LC_Z:int = Asc("z")
+
 Function IsSpace:Int( ch:Int )
-	Return ch<=Asc(" ") Or ch=$A0 ' NO-BREAK SPACE (U+00A0)
+	Return ch<=ASC_SPACE Or ch=ASC_NOBREAKSPACE ' NO-BREAK SPACE (U+00A0)
 End Function
 
 Function IsDigit:Int( ch:Int )
-	Return ch>=Asc("0") And ch<=Asc("9")
+	Return ch>=ASC_0 And ch<=ASC_9
 End Function
 
 Function IsAlpha:Int( ch:Int )
-	Return (ch>=Asc("A") And ch<=Asc("Z")) Or (ch>=Asc("a") And ch<=Asc("z"))
+	Return (ch>=ASC_UC_A And ch<=ASC_UC_Z) Or (ch>=ASC_LC_A And ch<=ASC_LC_Z)
+End Function
+
+Function IsAlphaNumeric:Int( ch:Int )
+	Return (ch>=ASC_0 And ch<=ASC_9) Or (ch>=ASC_UC_A And ch<=ASC_UC_Z) Or (ch>=ASC_LC_A And ch<=ASC_LC_Z)
 End Function
 
 Function IsBinDigit:Int( ch:Int )
-	Return ch=Asc("0") Or ch=Asc("1")
+	Return ch=ASC_0 Or ch=ASC_1
 End Function
 
 Function IsHexDigit:Int( ch:Int )
-	Return IsDigit(ch) Or (ch>=Asc("A") And ch<=Asc("F")) Or (ch>=Asc("a") And ch<=Asc("f"))
+	Return IsDigit(ch) Or (ch>=ASC_UC_A And ch<=ASC_UC_F) Or (ch>=ASC_LC_A And ch<=ASC_LC_F)
 End Function
 
 Function Todo() 
@@ -109,20 +137,12 @@ Function Todo()
 End Function
 
 Function IsStandardFunc:Int(func:String)
-	func = func.ToLower()
-	
-	Global funcs:String = ";isalnum;isalpha;isascii;isblank;iscntrl;isdigit;isgraph;islower;isprint;ispunct;isspace;isupper;isxdigit;" + ..
-		"strlen;_wgetenv;_wputenv;"
-	
-	Return funcs.Find(func) > 0
+	Return _standardFuncsMap.Contains( func.ToLower() )
 End Function
 
 Function mapSymbol:String(sym:String)
-	For Local i:Int = 0 Until _symbols.length
-		If sym = _symbols[i] Then
-			Return _symbols_map[i]
-		End If
-	Next
+	local res:string = string(_symbols_map.ValueForKey(sym))
+	if res then return res
 	Return sym
 End Function
 
