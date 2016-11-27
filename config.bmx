@@ -96,6 +96,10 @@ Function IsAlpha:Int( ch:Int )
 	Return (ch>=Asc("A") And ch<=Asc("Z")) Or (ch>=Asc("a") And ch<=Asc("z"))
 End Function
 
+Function IsAlphaNumeric:Int( ch:Int )
+	Return (ch>=Asc("0") And ch<=Asc("9")) Or (ch>=Asc("A") And ch<=Asc("Z")) Or (ch>=Asc("a") And ch<=Asc("z"))
+End Function
+
 Function IsBinDigit:Int( ch:Int )
 	Return ch=Asc("0") Or ch=Asc("1")
 End Function
