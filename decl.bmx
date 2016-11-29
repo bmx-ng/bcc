@@ -478,18 +478,20 @@ End Type
 Type TLocalDecl Extends TVarDecl
 
 	Field done:Int
+	Field volatile:Int = True
 
-	Method Create:TLocalDecl( ident$,ty:TType,init:TExpr,attrs:Int=0, generated:Int = False )
+	Method Create:TLocalDecl( ident$,ty:TType,init:TExpr,attrs:Int=0, generated:Int = False, volatile:Int = True )
 		Self.ident=ident
 		Self.declTy=ty
 		Self.declInit=init
 		Self.attrs=attrs
 		Self.generated=generated
+		Self.volatile=volatile
 		Return Self
 	End Method
 	
 	Method OnCopy:TDecl(deep:Int = True)
-		Return New TLocalDecl.Create( ident,ty,CopyInit(),attrs, generated )
+		Return New TLocalDecl.Create( ident,ty,CopyInit(),attrs, generated, volatile )
 	End Method
 
 	Method GetDeclPrefix:String()
@@ -506,12 +508,13 @@ Type TArgDecl Extends TLocalDecl
 
 	Field castTo:String
 	
-	Method Create:TArgDecl( ident$,ty:TType,init:TExpr,attrs:Int=0, generated:Int = False )
+	Method Create:TArgDecl( ident$,ty:TType,init:TExpr,attrs:Int=0, generated:Int = False, volatile:Int = True )
 		Self.ident=ident
 		Self.declTy=ty
 		Self.declInit=init
 		Self.attrs=attrs
 		Self.generated=generated
+		Self.volatile=volatile
 		Return Self
 	End Method
 	
@@ -524,7 +527,7 @@ Type TArgDecl Extends TLocalDecl
 	End Method
 	
 	Method OnCopy:TDecl(deep:Int = True)
-		Local d:TArgDecl = New TArgDecl.Create( ident,ty,CopyInit(),attrs,generated )
+		Local d:TArgDecl = New TArgDecl.Create( ident,ty,CopyInit(),attrs,generated,volatile )
 		d.ty = d.declTy
 		d.init = d.declInit
 		Return d

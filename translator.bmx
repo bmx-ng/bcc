@@ -58,8 +58,6 @@ Type TTranslator
 	
 	Field processingReturnStatement:Int
 
-	Field _inBinary:Int
-
 	Method PushVarScope()
 		varStack.Push customVarStack
 		customVarStack = New TStack
@@ -711,10 +709,10 @@ op = mapSymbol(op)
 		Return CreateLocal( expr )
 	End Method
 	
-	Method CreateLocal$( expr:TExpr )
-		Local tmp:TLocalDecl=New TLocalDecl.Create( "",expr.exprType,expr, True )
+	Method CreateLocal$( expr:TExpr, init:Int = True, vol:Int = True )
+		Local tmp:TLocalDecl=New TLocalDecl.Create( "",expr.exprType,expr, True, , vol )
 		MungDecl tmp
-		Emit TransLocalDecl( tmp,expr, True )+";"
+		Emit TransLocalDecl( tmp,expr, True, init )+";"
 
 		EmitGDBDebug(_errInfo)
 		
@@ -723,7 +721,7 @@ op = mapSymbol(op)
 
 	'***** Utility *****
 
-	Method TransLocalDecl$( decl:TLocalDecl,init:TExpr, declare:Int = False ) Abstract
+	Method TransLocalDecl$( decl:TLocalDecl,init:TExpr, declare:Int = False, outputInit:Int = True ) Abstract
 
 	Method TransGlobalDecl$( gdecl:TGlobalDecl ) Abstract
 	
@@ -1424,9 +1422,7 @@ End Rem
 				Emit "}"
 			EndIf
 		Else If stmt.elseBlock.stmts.First()
-			_inBinary :+ 1
 			Emit "if"+Bra( stmt.expr.Trans() )+"{"
-			_inBinary :- 1
 			EmitLocalDeclarations(stmt.thenBlock)
 			FreeVarsIfRequired(False)
 			PushVarScope
@@ -1450,10 +1446,8 @@ End Rem
 '					Emit "if"+Bra( stmt.expr.Trans() )+"{"
 '				End If
 '			Else
-			_inBinary :+ 1
 				Emit "if"+Bra( stmt.expr.Trans() )+"{"
 				FreeVarsIfRequired(False)
-			_inBinary :- 1
 '			End If
 			EmitLocalDeclarations(stmt.thenBlock)
 			PushVarScope
@@ -1495,9 +1489,7 @@ End Rem
 	Method TransWhileStmt$( stmt:TWhileStmt )
 		Local nbroken:Int=broken
 
-		_inBinary :+ 1
 		Emit "while"+Bra( stmt.expr.Trans() )+"{"
-		_inBinary :- 1
 		
 		Local check:TTryBreakCheck = New TTryBreakCheck
 		check.stmt = stmt
