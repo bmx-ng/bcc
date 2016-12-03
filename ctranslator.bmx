@@ -1508,7 +1508,7 @@ t:+"NULLNULLNULL"
 			If expr.instanceExpr Then
 				t = "_" + ctorMunged + "_ObjectNew" + TransArgs( expr.args,expr.ctor, Bra(expr.instanceExpr.Trans()) + "->clas" )
 			Else
-				If ClassHasObjectField(expr.classDecl) Then
+				If ClassHasObjectField(expr.classDecl) And Not expr.classDecl.IsStruct() Then
 					t = "_" + ctorMunged + "_ObjectNew" + TransArgs( expr.args,expr.ctor, "&" + expr.classDecl.actual.munged )
 				Else
 					If expr.classDecl.IsStruct() Then
@@ -2467,8 +2467,7 @@ t:+"NULLNULLNULL"
 	End Method
 	
 	Method TransDebugNullObjectError:String(variable:String, cdecl:TClassDecl)
-	
-		If cdecl.ident = "String" Or cdecl.ident = "___Array" Then
+		If cdecl.IsStruct() Or cdecl.ident = "String" Or cdecl.ident = "___Array" Then
 			'Return cdecl.munged + "NullObjectTest(" + variable + ")"
 			Return variable
 		Else
