@@ -46,6 +46,7 @@ Type TForEachinStmt Extends TLoopStmt
 		Self.varlocal=varlocal
 		Self.expr=expr
 		Self.block=block
+		block.extra = Self
 		Self.loopLabel=loopLabel
 		Self.varExpr = varExpr
 		Return Self
@@ -151,7 +152,7 @@ Type TForEachinStmt Extends TLoopStmt
 
 			EndIf
 
-			Local whileStmt:TWhileStmt=New TWhileStmt.Create( cmpExpr,block,Null, True )
+			Local whileStmt:TWhileStmt=New TWhileStmt.Create( cmpExpr,block,loopLabel, True )
 
 			block=New TBlockDecl.Create( block.scope, True )
 			block.AddStmt New TDeclStmt.Create( exprTmp, True )
@@ -243,7 +244,7 @@ Type TForEachinStmt Extends TLoopStmt
 				block.stmts.AddFirst New TAssignStmt.Create( "=",varExpr,New TCastExpr.Create( varty, nextObjExpr,CAST_EXPLICIT ))
 			EndIf
 
-			Local whileStmt:TWhileStmt=New TWhileStmt.Create( hasNextExpr,block,Null, True )
+			Local whileStmt:TWhileStmt=New TWhileStmt.Create( hasNextExpr,block, loopLabel, True )
 
 			block=New TBlockDecl.Create( block.scope, True )
 			If tmpDecl Then
@@ -2369,6 +2370,7 @@ End Rem
 
 	Method ParseDecl:TDecl( toke$,attrs:Int )
 		SetErr
+
 		Local id$=ParseIdent()
 		Local ty:TType
 		Local init:TExpr
