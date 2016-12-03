@@ -1047,7 +1047,6 @@ t:+"NULLNULLNULL"
 									End If
 		
 									Local class:String = Bra("(" + obj + lvarInit + ")->clas" + tSuper)
-									'Local class:String = TransFuncClass(cdecl)
 									Return class + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, lvar )
 								End If
 							End If
@@ -1104,14 +1103,19 @@ t:+"NULLNULLNULL"
 								Return "_" + decl.munged+TransArgs( args,decl, lvar )
 							End If
 						Else
+							Local cdecl:TClassDecl = TClassDecl(decl.scope)
 							' Null test
 							If opt_debug Then
-								Local cdecl:TClassDecl = TClassDecl(decl.scope)
 								lvarInit = TransDebugNullObjectError(lvarInit, cdecl)
 							End If
-		
-							Local obj:String = lvarInit + "->clas" + tSuper
-							Return obj + "->" + TransFuncPrefix(decl.scope, decl)+ FuncDeclMangleIdent(decl)+TransArgs( args,decl, lvar )
+							If cdecl.IsInterface() And Not equalsBuiltInFunc(cdecl, decl) Then
+								Local obj:String = Bra(TransObject(cdecl))
+								Local ifc:String = Bra("(struct " + cdecl.munged + "_methods*)" + Bra("bbObjectInterface(" + obj + lvarInit + ", " + "&" + cdecl.munged + "_ifc)"))
+								Return ifc + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, lvar )
+							Else
+								Local obj:String = lvarInit + "->clas" + tSuper
+								Return obj + "->" + TransFuncPrefix(decl.scope, decl)+ FuncDeclMangleIdent(decl)+TransArgs( args,decl, lvar )
+							End If
 						End If
 					End If
 
