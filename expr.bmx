@@ -1633,7 +1633,11 @@ Type TBinaryMathExpr Extends TBinaryExpr
 					Return New TInvokeMemberExpr.Create( lhs, decl, args ).Semant()
 				End If
 			Catch error:String
-				Err "Operator " + op + " cannot be used with Objects."
+				If error.StartsWith("Compile Error") Then
+					Throw error
+				Else
+					Err "Operator " + op + " cannot be used with Objects."
+				End If
 			End Try
 		End If
 
