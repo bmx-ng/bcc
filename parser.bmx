@@ -3128,10 +3128,10 @@ End Rem
 
 		Local decl_attrs:Int=(attrs & DECL_EXTERN) | (attrs & DECL_NODEBUG) | (attrs & DECL_API_WIN32)
 
-		Local method_attrs:Int=decl_attrs|FUNC_METHOD | (attrs & DECL_NODEBUG)
-		If attrs & CLASS_INTERFACE method_attrs:|DECL_ABSTRACT
-		
 		Repeat
+			Local method_attrs:Int=decl_attrs|FUNC_METHOD | (attrs & DECL_NODEBUG)
+			If attrs & CLASS_INTERFACE method_attrs:|DECL_ABSTRACT
+		
 			SkipEols
 			Select _toke
 			Case "end"
@@ -3168,11 +3168,23 @@ End Rem
 				NextToke
 				Exit
 			Case "private"
+				If attrs & CLASS_INTERFACE Then
+					Err "Private cannot be used with interfaces."
+				End If
 				NextToke
 				decl_attrs=decl_attrs | DECL_PRIVATE
+				decl_attrs:& ~DECL_PROTECTED
+			Case "protected"
+				If attrs & CLASS_INTERFACE Then
+					Err "Protected cannot be used with interfaces."
+				End If
+				NextToke
+				decl_attrs=decl_attrs | DECL_PROTECTED
+				decl_attrs:& ~DECL_PRIVATE
 			Case "public"
 				NextToke
-				decl_attrs=decl_attrs & ~DECL_PRIVATE
+				decl_attrs:& ~DECL_PRIVATE
+				decl_attrs:& ~DECL_PROTECTED
 			Case "const","global","field"
 				If attrs & DECL_EXTERN Then
 					If (attrs & CLASS_INTERFACE) Then

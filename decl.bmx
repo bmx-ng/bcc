@@ -36,6 +36,7 @@ Const DECL_ARG:Int=         $800000
 Const DECL_INITONLY:Int=   $1000000
 
 Const DECL_NODEBUG:Int=    $2000000
+Const DECL_PROTECTED:Int=  $4000000
 
 Const DECL_API_WIN32:Int= $10000000
 Const DECL_API_OS:Int=DECL_API_WIN32
@@ -142,6 +143,10 @@ Type TDecl
 	Method IsPrivate:Int()
 		Return (attrs & DECL_PRIVATE)<>0
 	End Method
+
+	Method IsProtected:Int()
+		Return (attrs & DECL_PROTECTED)<>0
+	End Method
 	
 	Method IsAbstract:Int()
 		Return (attrs & DECL_ABSTRACT)<>0
@@ -188,7 +193,11 @@ Type TDecl
 	
 	Method AssertAccess()
 		If Not CheckAccess()
-			Err ToString() +" is private."
+			If IsPrivate() Then
+				Err ToString() +" is private."
+			Else
+				Err ToString() +" is protected."
+			End If
 		EndIf
 	End Method
 
@@ -576,6 +585,20 @@ Type TGlobalDecl Extends TVarDecl
 		Return inst
 	End Method
 
+	Method CheckAccess:Int()
+		Local cd:TClassDecl = ClassScope()
+		If cd Then
+			If IsPrivate() And cd<>_env.ClassScope() Return False
+			If IsProtected() Then
+				Local ec:TClassDecl = _env.ClassScope()
+				If Not ec Return False
+				If Not ec.ExtendsClass(cd) Return False
+			End If
+			Return True
+		End If
+		Return Super.CheckAccess()
+	End Method
+
 End Type
 
 Type TFieldDecl Extends TVarDecl
@@ -608,7 +631,17 @@ Type TFieldDecl Extends TVarDecl
 		inst.declInit=declInit
 		Return inst
 	End Method
-	
+
+	Method CheckAccess:Int()
+		If IsPrivate() And ClassScope()<>_env.ClassScope() Return False
+		If IsProtected() And ClassScope() Then
+			Local ec:TClassDecl = _env.ClassScope()
+			If Not ec Return False
+			If Not ec.ExtendsClass(ClassScope()) Return False
+		End If
+		Return True
+	End Method
+
 End Type
 
 Type TAliasDecl Extends TDecl
@@ -1808,7 +1841,21 @@ Type TFuncDecl Extends TBlockDecl
 		
 		Super.OnSemant()
 	End Method
-	
+
+	Method CheckAccess:Int()
+		Local cd:TClassDecl = ClassScope()
+		If cd Then
+			If IsPrivate() And cd<>_env.ClassScope() Return False
+			If IsProtected() Then
+				Local ec:TClassDecl = _env.ClassScope()
+				If Not ec Return False
+				If Not ec.ExtendsClass(cd) Return False
+			End If
+			Return True
+		End If
+		Return Super.CheckAccess()
+	End Method
+
 End Type
 
 Type TNewDecl Extends TFuncDecl

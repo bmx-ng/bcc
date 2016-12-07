@@ -43,7 +43,7 @@ Const TOKE_NATIVE:Int=11
 '***** Tokenizer *****
 Type TToker
 
-	Const __keywords$="strict,superstrict,public,private,short,int,float,double,long,string,object,ptr,var,varptr," + ..
+	Const __keywords$="strict,superstrict,public,private,protected,short,int,float,double,long,string,object,ptr,var,varptr," + ..
 		"mod,continue,exit,include,import,module,extern,framework,new,self,super,eachin,true,false," + ..
 		"null,not,extends,abstract,select,case,default,const,local,global,field,method,function,type," + ..
 		"and,or,shl,shr,sar,end,if,then,else,elseif,endif,while,wend,repeat,until,forever,for,to,step," + ..

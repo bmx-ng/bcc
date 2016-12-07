@@ -3744,6 +3744,7 @@ End Rem
 
 	Method EmitClassDecl( classDecl:TClassDecl )
 
+		PushEnv classDecl
 		'If classDecl.IsTemplateInst()
 		'	Return
 		'EndIf
@@ -4063,6 +4064,8 @@ End Rem
 			End If
 			
 		End If
+		
+		PopEnv
 
 	End Method
 
@@ -4626,6 +4629,13 @@ End Rem
 		If funcDecl.attrs & FUNC_OPERATOR Then
 			func :+ "O"
 		End If
+		
+		If funcDecl.attrs & DECL_PRIVATE Then
+			func :+ "P"
+		Else If funcDecl.attrs & DECL_PROTECTED Then
+			func :+ "R"
+		End If
+
 
 		func :+ "="
 
@@ -4752,6 +4762,12 @@ End Rem
 		Local f:String = "." + fieldDecl.ident + TransIfcType(fieldDecl.ty, fieldDecl.ModuleScope().IsSuperStrict())
 
 		f :+ "&"
+		
+		If fieldDecl.IsPrivate() Then
+			f :+ "`"
+		Else If fieldDecl.IsProtected() Then
+			f :+ "``"
+		End If
 
 		Emit f
 	End Method
@@ -4841,7 +4857,7 @@ End Rem
 			Else If classDecl.IsStruct() Then
 				flags :+ "S"
 			End If
-
+			
 			Emit "}" + flags + "=" + Enquote(classDecl.munged), False
 		Else
 			For Local decl:TDecl=EachIn classDecl.Decls()
@@ -4883,6 +4899,12 @@ End Rem
 		g:+ TransIfcType(globalDecl.ty, globalDecl.ModuleScope().IsSuperStrict())
 
 		g:+ "&"
+
+		If globalDecl.IsPrivate() Then
+			g :+ "`"
+		Else If globalDecl.IsProtected() Then
+			g :+ "``"
+		End If
 
 		g :+ "="
 
