@@ -209,7 +209,7 @@ Type TToker
 			If _tokePos<_source.Length _tokePos:+1 Else _tokeType=TOKE_STRINGLITEX
 		Else If str="'"
 			Local _tstr:String = TSTR()
-			If _tstr="!" Then
+			If _tstr="!" And opt_native Then
 		
 				_tokeType=TOKE_NATIVE
 				
