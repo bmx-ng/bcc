@@ -148,6 +148,10 @@ Type TDecl
 		Return (attrs & DECL_PROTECTED)<>0
 	End Method
 	
+	Method IsPublic:Int()
+		Return Not (IsPrivate() Or IsProtected())
+	End Method
+	
 	Method IsAbstract:Int()
 		Return (attrs & DECL_ABSTRACT)<>0
 	End Method
@@ -1778,6 +1782,28 @@ Type TFuncDecl Extends TBlockDecl
 						End If
 
 						If EqualsFunc( decl ) And Not voidReturnTypeFail
+
+							' check we aren't attempting to assign weaker access modifiers
+							If (IsProtected() And decl.IsPublic()) Or (IsPrivate() And (decl.IsProtected() Or decl.IsPublic())) Then
+							
+								Local p:String
+								If IsProtected() Then
+									p = "Protected"
+								Else
+									p = "Private"
+								End If
+								
+								Local dp:String
+								If decl.IsPublic() Then
+									dp = "Public"
+								Else
+									dp = "Protected"
+								End If
+							
+								Err ToString() + " clashes with " + decl.ToString() + ". Attempt to assign weaker access privileges ('" + p + "'), was '" + dp + "'."
+							
+							End If
+						
 
 							If Not retType.EqualsType( decl.retType ) And retType.ExtendsType( decl.retType ) Then
 								returnTypeSubclassed = True
