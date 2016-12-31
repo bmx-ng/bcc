@@ -2494,9 +2494,19 @@ End Rem
 		End Select
 
 		If decl.IsExtern()
-'DebugStop
+			Local cdets:TCastDets
+
 			If CParse( "=" )
-				decl.munged=ParseStringLit()
+				Local munged:String = ParseStringLit()
+				
+				If munged.Find("(") > 0 Then
+					cdets = ParseExternCast(munged, True)
+					If cdets Then
+						decl.munged = cdets.name
+					End If
+				Else
+					decl.munged = munged
+				End If
 			Else
 				decl.munged=decl.ident
 			EndIf
@@ -2504,7 +2514,10 @@ End Rem
 				If TFunctionPtrType(ty) Then
 					TFunctionPtrType(ty).func.munged = decl.munged
 					
-					Local cdets:TCastDets = TCastDets(_externCasts.ValueForKey(TFunctionPtrType(ty).func.munged))
+					If Not cdets Then
+						cdets = TCastDets(_externCasts.ValueForKey(TFunctionPtrType(ty).func.munged))
+					End If
+					
 					If cdets Then
 						TFunctionPtrType(ty).func.castTo = cdets.retType
 						If cdets.noGen Then
@@ -2877,9 +2890,20 @@ End Rem
 			' a normal function pointer definition *probably* can't be defined with a munged name?
 			' If there is an equals here, one can assume it is for an initialisation...
 			'If (Not (attrs & FUNC_PTR)) Or (attrs & FUNC_PTR And Not (attrs & DECL_ARG)) Then
+			Local cdets:TCastDets
+			
 			If Not (attrs & FUNC_PTR) Then
 				If CParse( "=" )
-					funcDecl.munged=ParseStringLit()
+					Local munged:String = ParseStringLit()
+					
+					If munged.Find("(") > 0 Then
+						cdets = ParseExternCast(munged, True)
+						If cdets Then
+							funcDecl.munged = cdets.name
+						End If
+					Else
+						funcDecl.munged = munged
+					End If
 				End If
 
 				'Array $resize hack!
@@ -2890,7 +2914,10 @@ End Rem
 
 			If funcDecl.munged Then
 				' look up extern cast list
-				Local cdets:TCastDets = TCastDets(_externCasts.ValueForKey(funcDecl.munged))
+				If Not cdets Then
+					cdets = TCastDets(_externCasts.ValueForKey(funcDecl.munged))
+				End If
+				
 				If cdets Then
 					funcDecl.castTo = cdets.retType
 					If cdets.noGen Then
@@ -3429,128 +3456,141 @@ End Rem
 
 
 			If FileType(ePath) = FILETYPE_FILE Then
-	
-				Local toker:TToker=New TToker.Create( ePath,LoadText( ePath ) )
-				toker.NextToke
-	
-				While True
-	
-					SkipEolsToker(toker)
-	
-					If toker._tokeType = TOKE_EOF Exit
-	
-					Local rt$=toker._toke
+			
+				Print "Warning: .x cast definition files are deprecated. You should now place the details in the extern function's alias string. (" + path + ")"
 
-					If CParseToker(toker, "unsigned") Then
-						rt :+ " " + toker._toke
-					End If
+				ParseExternCast(LoadText( ePath ), False, ePath)
 
-					NextTokeToker(toker)
-					
-					If CParseToker(toker,"*") Then
-						rt:+ "*"
-	
-						If CParseToker(toker,"*") Then
-							rt:+ "*"
-						End If
-					End If
-	
-	
-					Local dets:TCastDets = New TCastDets
-					
-					If CParseToker(toker, "__stdcall") Then
-						dets.api = "__stdcall"
-					End If
-
-					' fname
-					Local fn$=toker._toke
-					NextTokeToker(toker)
-	
-					dets.name = fn
-					dets.retType = rt
-	
-					_externCasts.Insert(fn, dets)
-	
-					' args
-					ParseToker(toker, "(")
-	
-					If CParseToker(toker, ")") Then
-	
-						' don't generate header extern
-						If CParseToker(toker, "!") Then
-							dets.noGen = True
-						End If
-	
-						Continue
-					End If
-	
-					Local i:Int = 0
-					Repeat
-						Local at$=toker._toke
-	
-						If CParseToker(toker, "const") Then
-							at :+ " " + toker._toke
-						End If
-	
-						If CParseToker(toker, "unsigned") Then
-							at :+ " " + toker._toke
-						End If
-
-						If CParseToker(toker, "struct") Then
-							at :+ " " + toker._toke
-						End If
-	
-						NextTokeToker(toker)
-						If CParseToker(toker, "*") Then
-							at:+ "*"
-	
-							If CParseToker(toker, "*") Then
-								at:+ "*"
-							End If
-						End If
-	
-						' function pointer
-						If CParseToker(toker, "(") Then
-	
-							ParseToker(toker, "*")
-							ParseToker(toker, ")")
-							at :+ "(*)"
-	
-							ParseToker(toker, "(")
-							at :+ "("
-	
-							While Not CParseToker(toker, ")")
-								NextTokeToker(toker)
-								at :+ toker._toke
-							Wend
-	
-							at :+ ")"
-						End If
-	
-	
-						dets.args :+ [at]
-	
-						If toker._toke=")" Exit
-						ParseToker(toker, ",")
-	
-						i:+ 1
-					Forever
-	
-					NextTokeToker(toker)
-	
-					' don't generate header extern
-					If CParseToker(toker, "!") Then
-						dets.noGen = True
-					End If
-	
-				Wend
-				
 			End If
 			
 		Next
 
 	End Method
 
+	Method ParseExternCast:TCastDets(txt:String, single:Int = False, path:String = "")
+		Local toker:TToker = New TToker.Create(path, txt)
+		toker.NextToke
+
+		Local dets:TCastDets
+			
+		While True
+
+			dets = New TCastDets
+
+			SkipEolsToker(toker)
+
+			If toker._tokeType = TOKE_EOF Exit
+
+			Local rt$=toker._toke
+
+			If CParseToker(toker, "unsigned") Then
+				rt :+ " " + toker._toke
+			End If
+
+			NextTokeToker(toker)
+			
+			If CParseToker(toker,"*") Then
+				rt:+ "*"
+
+				If CParseToker(toker,"*") Then
+					rt:+ "*"
+				End If
+			End If
+
+
+			If CParseToker(toker, "__stdcall") Then
+				dets.api = "__stdcall"
+			End If
+
+			' fname
+			Local fn$=toker._toke
+			NextTokeToker(toker)
+
+			dets.name = fn
+			dets.retType = rt
+
+			' add to global map (may be referenced by function ptr defs)
+			_externCasts.Insert(fn, dets)
+
+			' args
+			ParseToker(toker, "(")
+
+			If CParseToker(toker, ")") Then
+
+				' don't generate header extern
+				If CParseToker(toker, "!") Then
+					dets.noGen = True
+				End If
+
+				Continue
+			End If
+
+			Local i:Int = 0
+			Repeat
+				Local at$=toker._toke
+
+				If CParseToker(toker, "const") Then
+					at :+ " " + toker._toke
+				End If
+
+				If CParseToker(toker, "unsigned") Then
+					at :+ " " + toker._toke
+				End If
+
+				If CParseToker(toker, "struct") Then
+					at :+ " " + toker._toke
+				End If
+
+				NextTokeToker(toker)
+				If CParseToker(toker, "*") Then
+					at:+ "*"
+
+					If CParseToker(toker, "*") Then
+						at:+ "*"
+					End If
+				End If
+
+				' function pointer
+				If CParseToker(toker, "(") Then
+
+					ParseToker(toker, "*")
+					ParseToker(toker, ")")
+					at :+ "(*)"
+
+					ParseToker(toker, "(")
+					at :+ "("
+
+					While Not CParseToker(toker, ")")
+						NextTokeToker(toker)
+						at :+ toker._toke
+					Wend
+
+					at :+ ")"
+				End If
+
+
+				dets.args :+ [at]
+
+				If toker._toke=")" Exit
+				ParseToker(toker, ",")
+
+				i:+ 1
+			Forever
+
+			NextTokeToker(toker)
+
+			' don't generate header extern
+			If CParseToker(toker, "!") Then
+				dets.noGen = True
+			End If
+			
+			If single Then
+				Exit
+			End If
+		Wend
+		
+		Return dets
+	End Method
 
 	Method ParseCurrentFile:Int(path:String, attrs:Int)
 
