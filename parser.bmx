@@ -3475,13 +3475,17 @@ End Rem
 			
 		While True
 
-			dets = New TCastDets
-
 			SkipEolsToker(toker)
 
 			If toker._tokeType = TOKE_EOF Exit
 
+			dets = New TCastDets
+
 			Local rt$=toker._toke
+
+			If CParseToker(toker, "const") Then
+				rt :+ " " + toker._toke
+			End If
 
 			If CParseToker(toker, "unsigned") Then
 				rt :+ " " + toker._toke
@@ -3544,6 +3548,10 @@ End Rem
 				NextTokeToker(toker)
 				If CParseToker(toker, "*") Then
 					at:+ "*"
+
+					If CParseToker(toker, "const") Then
+						at :+ " const"
+					End If
 
 					If CParseToker(toker, "*") Then
 						at:+ "*"
