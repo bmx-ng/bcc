@@ -454,7 +454,7 @@ Type TCTranslator Extends TTranslator
 						t:+ "&"
 					End If
 				Else If TArrayType(ty) And (ty._flags & TType.T_VAR) Then
-					If TVarExpr(arg) And TArrayType(TVarExpr(arg).exprType) And Not (arg.exprType._flags & TType.T_VAR) Then
+					If (TVarExpr(arg) And TArrayType(TVarExpr(arg).exprType) Or (TMemberVarExpr(arg) And TArrayType(TMemberVarExpr(arg).exprType))) And Not (arg.exprType._flags & TType.T_VAR) Then
 						t:+ "&"
 					End If
 				Else If TObjectType(ty) And (ty._flags & TType.T_VAR) Then
