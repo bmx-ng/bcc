@@ -806,16 +806,21 @@ Type TNewObjectExpr Extends TExpr
 		args=SemantArgs( args )
 
 		Local objTy:TObjectType=TObjectType( ty )
-		If Not objTy
+		Local clsTy:TClassType=TClassType( ty )
+		If Not objTy And Not clsTy
 			Err "Expression is not a class."
 		EndIf
 		
 		' 
-		If objTy.instance Then
+		If clsTy And clsTy.instance Then
 			instanceExpr = New TSelfExpr.Semant()
 		End If
 
-		classDecl=objTy.classDecl
+		If objTy Then
+			classDecl=objTy.classDecl
+		Else
+			classDecl=clsTy.classDecl
+		End If
 
 		If Not instanceExpr Then
 			If classDecl.IsInterface() Err "Cannot create instance of an interface."
@@ -862,7 +867,7 @@ Type TNewObjectExpr Extends TExpr
 
 			Local expr:TExpr = Self
 			Local cdecl:TClassDecl = classDecl
-			Local eType:TType = objTy
+			Local eType:TType = ty
 			
 			Local errorDetails:String
 
@@ -1066,7 +1071,15 @@ Type TSelfExpr Extends TExpr
 		If Not scope Then
 			Err "'Self' can only be used within methods."
 		End If
-		exprType=New TObjectType.Create( scope )
+		
+		Local funcScope:TFuncDecl = _env.FuncScope()
+		If funcScope.IsAnyMethod() Then
+			exprType=New TObjectType.Create( scope )
+			TObjectType(exprType).instance = True
+		Else
+			exprType=New TClassType.Create( scope )
+		End If
+
 		Return Self
 	End Method
 

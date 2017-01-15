@@ -1633,6 +1633,10 @@ Type TFuncDecl Extends TBlockDecl
 		Return (attrs & FUNC_METHOD)<>0
 	End Method
 	
+	Method IsAnyMethod:Int()
+		Return IsMethod() Or IsCtor() Or IsDtor() 
+	End Method
+	
 	Method IsStatic:Int()
 		Return (attrs & (FUNC_METHOD|FUNC_CTOR))=0
 	End Method

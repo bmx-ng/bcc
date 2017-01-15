@@ -1466,6 +1466,33 @@ Type TObjectType Extends TType
 
 End Type
 
+Type TClassType Extends TType
+
+	Field classDecl:TClassDecl
+	Field instance:Int
+	
+	Method Create:TClassType( classDecl:TClassDecl )
+		Self.classDecl=classDecl
+		Return Self
+	End Method
+
+	Method GetClass:TClassDecl()
+		Return classDecl
+	End Method
+
+	Method OnCopy:TType()
+		Local ty:TClassType = New TClassType
+		ty.classDecl = classDecl
+		ty.instance = instance
+		Return ty
+	End Method
+
+	Method ToString:String()
+		Return "Type"
+	End Method
+	
+End Type
+
 Type TIdentType Extends TType
 	Field ident$
 	Field args:TType[]
@@ -1531,12 +1558,12 @@ Type TIdentType Extends TType
 				Local scope:TClassDecl = _env.ClassScope()
 				If scope Then
 					tyid = scope.ident
-					ty = New TObjectType.Create(scope)
+					ty = New TClassType.Create(scope)
 					
 					' test for method scope - self is already an instance
 					Local funcScope:TFuncDecl = _env.FuncScope()
-					If funcScope.IsMethod() Then
-						TObjectType(ty).instance = True
+					If funcScope.IsAnyMethod() Then
+						TClassType(ty).instance = True
 					End If
 				Else
 					Err "'Self' can only be used within methods."
@@ -1566,12 +1593,12 @@ Type TIdentType Extends TType
 				Local scope:TClassDecl = _env.ClassScope()
 				If scope Then
 					tyid = scope.ident
-					ty = New TObjectType.Create(scope)
+					ty = New TClassType.Create(scope)
 					
 					' test for method scope - self is already an instance
 					Local funcScope:TFuncDecl = _env.FuncScope()
-					If funcScope.IsMethod() Then
-						TObjectType(ty).instance = True
+					If funcScope.IsAnyMethod() Then
+						TClassType(ty).instance = True
 					End If
 				Else
 					Err "'Self' can only be used within methods."
