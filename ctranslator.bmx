@@ -1026,7 +1026,7 @@ t:+"NULLNULLNULL"
 							End If
 						Else
 							If cdecl.IsStruct() Then
-							
+
 								' baaaaaaaaaaaaaaaaa
 								If Not isPointerType(lhs.exprType) Then
 									Return "_" + decl.munged+TransArgs( args,decl, "&" + TransSubExpr( lhs ) )
@@ -1057,17 +1057,20 @@ t:+"NULLNULLNULL"
 					End If
 
 				Else If TInvokeExpr(lhs) Then
-					' create a local variable of the inner invocation
-					Local lvar:String = CreateLocal(lhs, False, False)
-					Local lvarInit:String = Bra(lvar + " = " + lhs.Trans())
 
 					If TClassDecl(decl.scope) And TClassDecl(decl.scope).IsStruct() Then
+						' create a local variable of the inner invocation
+						Local lvar:String = CreateLocal(lhs, True)
+
 						If Not isPointerType(lhs.exprType) Then
-							Return "_" + decl.munged+TransArgs( args,decl, "&" + Bra(lhs.Trans()) )
+							Return "_" + decl.munged+TransArgs( args,decl, "&" + lvar )
 						Else
-							Return "_" + decl.munged+TransArgs( args,decl, lhs.Trans() )
+							Return "_" + decl.munged+TransArgs( args,decl, lvar)
 						End If
 					Else
+						' create a local variable of the inner invocation
+						Local lvar:String = CreateLocal(lhs, False, False)
+						Local lvarInit:String = Bra(lvar + " = " + lhs.Trans())
 
 						' Null test
 						If opt_debug Then
@@ -1086,8 +1089,16 @@ t:+"NULLNULLNULL"
 					'Return class + "->" + TransFuncPrefix(decl.scope, decl.ident) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
 				Else If TInvokeMemberExpr(lhs)
 					' create a local variable of the inner invocation
-					Local lvar:String = CreateLocal(lhs, False, False)
-					Local lvarInit:String = Bra(lvar + " = " + lhs.Trans())
+					
+					Local lvar:String
+					Local lvarInit:String
+					
+					If Not decl.scope.IsExtern() And TClassDecl(decl.scope) And TClassDecl(decl.scope).IsStruct() Then
+						lvar = CreateLocal(lhs, True)
+					Else
+						lvar = CreateLocal(lhs, False, False)
+						lvarInit = Bra(lvar + " = " + lhs.Trans())
+					End If
 
 					If decl.scope.IsExtern()
 						If TClassDecl(decl.scope) And Not TClassDecl(decl.scope).IsStruct() Then
