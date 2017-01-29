@@ -1733,6 +1733,11 @@ End Type
 Type TFunctionPtrType Extends TType
 
 	Field func:TFuncDecl
+	
+	Method Create:TFunctionPtrType(func:TFuncDecl)
+		Self.func = func
+		Return Self
+	End Method
 
 	Method EqualsType:Int( ty:TType )
 ' TODO : compare function decl

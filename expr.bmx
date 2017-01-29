@@ -686,6 +686,9 @@ Type TInvokeExpr Extends TExpr
 
 		If ((isArg Or isRhs) And Not invokedWithBraces) And (args = Null Or args.length = 0) Then
 			' nothing to do here, as we are probably a function pointer. i.e. no braces and no 
+			' and our expression type is a function ptr...
+			exprType = New TFunctionPtrType.Create(decl)
+			
 		Else
 			args=CastArgs( args,decl )
 		End If
@@ -1634,8 +1637,12 @@ Type TBinaryMathExpr Extends TBinaryExpr
 		If exprType Return Self
 
 		lhs=lhs.Semant()
+
+		If TIdentExpr(rhs) Then
+			TIdentExpr(rhs).isRhs = True
+		End If
+
 		rhs=rhs.Semant()
-		
 		
 		' operator overload?
 		If TObjectType(lhs.exprType) Then
