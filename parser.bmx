@@ -2542,10 +2542,10 @@ End Rem
 		End If
 
 		'meta data for variables
-		If CParse( "{" ) Then
-			'print "meta for variable: "+id+ " -> "+ParseMetaData()
-			decl.metadata = ParseMetaData()
-		EndIf
+		Local meta:TMetaData = ParseMetaData()
+		If meta Then
+			decl.metadata = meta
+		End If
 
 		Return decl
 	End Method
@@ -2624,6 +2624,10 @@ End Rem
 	'should return a specific "metadata object" ?
 	' metadata is in the form : {key key=value key="value"}
 	Method ParseMetaData:TMetadata()
+		If Not CParse( "{" ) Then
+			Return Null
+		End If
+
 		Local meta:TMetadata = New TMetadata
 
 		SkipEols
@@ -2684,7 +2688,7 @@ End Rem
 	End Method
 
 
-	Method ParseFuncDecl:TFuncDecl( toke$,attrs:Int, returnType:TType = Null )
+	Method ParseFuncDecl:TFuncDecl( toke$,attrs:Int, returnType:TType = Null, parent:TScopeDecl = Null )
 		SetErr
 
 		If toke Parse toke
@@ -2694,6 +2698,8 @@ End Rem
 		Local meth:Int = attrs & FUNC_METHOD
 		Local meta:TMetadata
 		Local noMangle:Int
+
+		Local classDecl:TClassDecl = TClassDecl(parent)
 
 		If Not returnType Then
 			If attrs & FUNC_METHOD
@@ -2829,44 +2835,54 @@ End Rem
 			ty = retTy
 		End If
 
-		Repeat
-			If CParse( "final" )
-				attrs:|DECL_FINAL
-			Else If CParse( "abstract" )
-				attrs:|DECL_ABSTRACT
-			Else If CParse( "property" )
-				If attrs & FUNC_METHOD
-					attrs:|FUNC_PROPERTY
-				Else
-					Err "Only methods can be properties."
-				EndIf
-			Else If CParse( "nodebug" )
-				' TODO : NoDebug
-				attrs :| DECL_NODEBUG
-			Else If CParse( "{" ) 'meta data
-				' TODO : do something with the metadata
-				'meta data for functions/methods
-				'print "meta for func/meth: "+id+ " -> "+ParseMetaData()
-				meta = ParseMetaData()
-				
-				If meta.HasMeta("nomangle") Then
-					If attrs & FUNC_METHOD Then
-						Err "Only functions can specify NoMangle"
-					Else
-						noMangle = True
-					End If
-				End If
-			Else If _tokeType=TOKE_STRINGLIT
-				' "win32", etc
-				' TODO ? something with this??
-				Local api:String = ParseStringLit().ToLower()
-				If api = "win32" Then
-					attrs :| DECL_API_WIN32
-				End If
+		If CParse( "nodebug" ) Then
+			attrs :| DECL_NODEBUG
+		End If
+			
+		If CParse( "final" )
+			If Not classDecl Then
+				Err "Final cannot be used with global functions"
+			End If
+			attrs:|DECL_FINAL
+		Else If CParse( "abstract" )
+			If Not classDecl Then
+				Err "Abstract cannot be used with global functions"
+			End If
+			
+			If classDecl And classDecl.attrs & DECL_FINAL Then
+				Err "Abstract methods cannot appear in final types"
+			End If
+			
+			attrs:|DECL_ABSTRACT
+		End If
+			
+		If CParse( "nodebug" ) Then
+			attrs :| DECL_NODEBUG
+		End If
+
+
+		'meta data for functions/methods
+		meta = ParseMetaData()
+		
+		If meta And meta.HasMeta("nomangle") Then
+			If attrs & FUNC_METHOD Then
+				Err "Only functions can specify NoMangle"
 			Else
-				Exit
-			EndIf
-		Forever
+				noMangle = True
+			End If
+		End If
+				
+		If _tokeType=TOKE_STRINGLIT
+			' "win32", etc
+			' TODO ? something with this??
+			Local api:String = ParseStringLit().ToLower()
+			If api = "win32" Then
+				attrs :| DECL_API_WIN32
+			End If
+		'Else
+		'	Exit
+		EndIf
+		'Forever
 
 		Local funcDecl:TFuncDecl
 		If attrs & FUNC_CTOR Then
@@ -3131,18 +3147,15 @@ End Rem
 		Forever
 
 		'check for metadata
-		If CParse( "{" )
-			If attrs & CLASS_STRUCT
-				Err "Structs cannot store metadata."
-			EndIf
-
-			meta = ParseMetaData()
-		End If
-
+		meta = ParseMetaData()
 
 		Local classDecl:TClassDecl=New TClassDecl.Create( id,String[](args.ToArray()),superTy,imps,attrs )
 		
 		If meta Then
+			If attrs & CLASS_STRUCT
+				Err "Structs cannot store metadata."
+			EndIf
+
 			classDecl.metadata = meta
 		End If
 
@@ -3232,7 +3245,7 @@ End Rem
 				If (attrs & CLASS_STRUCT) And (attrs & DECL_EXTERN) Then
 					Err "Structs can only contain fields."
 				EndIf
-				Local decl:TFuncDecl=ParseFuncDecl( _toke,method_attrs )
+				Local decl:TFuncDecl=ParseFuncDecl( _toke,method_attrs,,classDecl )
 				If decl.IsCtor() decl.retTypeExpr=New TObjectType.Create( classDecl )
 				classDecl.InsertDecl decl
 			Case "function"
@@ -3249,7 +3262,7 @@ End Rem
 				If attrs & DECL_EXTERN Then
 					Err "Extern Types can only contain methods."
 				End If
-				Local decl:TFuncDecl=ParseFuncDecl( _toke,decl_attrs )
+				Local decl:TFuncDecl=ParseFuncDecl( _toke,decl_attrs,,classDecl )
 				classDecl.InsertDecl decl
 			Default
 				Err "Syntax error - expecting class member declaration, not '" + _toke + "'"
