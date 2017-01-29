@@ -417,6 +417,10 @@ Type TValDecl Extends TDecl
 					
 					
 				Else
+					If TArrayExpr(declInit) And TArrayType(ty) And TNumericType(TArrayType(ty).elemType) Then
+						TArrayExpr(declInit).toType = TArrayType(ty).elemType
+					End If
+				
 					init=declInit.Copy().SemantAndCast(ty)
 				End If
 			End If

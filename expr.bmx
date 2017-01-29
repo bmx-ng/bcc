@@ -171,6 +171,13 @@ Type TExpr
 					End If
 				End If
 
+				' re-test auto array for compatible consts.
+				If TArrayExpr(args[i]) And TArrayType(funcDecl.argDecls[i].ty) And TNumericType(TArrayType(funcDecl.argDecls[i].ty).elemType) Then
+					TArrayExpr(args[i]).toType = TArrayType(funcDecl.argDecls[i].ty).elemType
+					args[i].exprType = Null
+					args[i].Semant()
+				End If
+					
 				args[i]=args[i].Cast( funcDecl.argDecls[i].ty )
 			Else If funcDecl.argDecls[i].init
 				If i = args.length Then
@@ -2123,6 +2130,8 @@ End Type
 
 Type TArrayExpr Extends TExpr
 	Field exprs:TExpr[]
+	
+	Field toType:TType
 
 	Method Create:TArrayExpr( exprs:TExpr[] )
 		Self.exprs=exprs
@@ -2130,7 +2139,9 @@ Type TArrayExpr Extends TExpr
 	End Method
 
 	Method Copy:TExpr()
-		Return New TArrayExpr.Create( CopyArgs(exprs) )
+		Local expr:TArrayExpr = New TArrayExpr.Create( CopyArgs(exprs) )
+		expr.toType = toType
+		Return expr
 	End Method
 
 	Method Semant:TExpr()
@@ -2177,28 +2188,42 @@ Type TArrayExpr Extends TExpr
 			Next
 		End If
 
+		Local comp:Int = True
 		Local last:TType
 		For Local i:Int=0 Until exprs.Length
-		
+
+			Local expr:TExpr = exprs[i]
+
 			' don't cast null types
-			If TNullType(exprs[i].exprType) <> Null Then
+			If TNullType(expr.exprType) <> Null Then
 				Err "Auto array element has no type"
 			End If
 
-			Local ety:TType = exprs[i].exprType
+			Local ety:TType = expr.exprType
 			If TBoolType(ety) Then
 				ety = New TIntType
 			End If
 			
 			If last <> Null And Not last.EqualsType(ety) Then
-				Err "Auto array elements must have identical types"
+				If (Not TConstExpr(expr) And Not IsNumericType(ety)) Or (TConstExpr(expr) And IsNumericType(ety) And Not TConstExpr(expr).CompatibleWithType(ty)) Then
+					Err "Auto array elements must have identical types : Index " + i
+				End If
 			End If
+			
+			If toType And TConstExpr(expr) And Not TConstExpr(expr).CompatibleWithType(toType) Then
+				comp = False
+			End If
+		
 			last = ety
 			
-			exprs[i]=exprs[i].Cast( ty )
+			exprs[i]=expr.Cast( ty )
 		Next
 
-		exprType=New TArrayType.Create( ty )
+		If comp And toType Then
+			exprType=New TArrayType.Create( toType )
+		Else
+			exprType=New TArrayType.Create( ty )
+		End If
 		Return Self
 	End Method
 
