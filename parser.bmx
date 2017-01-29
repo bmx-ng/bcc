@@ -2879,10 +2879,11 @@ End Rem
 			If api = "win32" Then
 				attrs :| DECL_API_WIN32
 			End If
-		'Else
-		'	Exit
 		EndIf
-		'Forever
+		
+		If CParse( "nodebug" ) Then
+			attrs :| DECL_NODEBUG
+		End If
 
 		Local funcDecl:TFuncDecl
 		If attrs & FUNC_CTOR Then
