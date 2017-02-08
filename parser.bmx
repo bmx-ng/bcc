@@ -829,10 +829,16 @@ Type TParser
 			Wend
 		End Select
 		
-		' array ?
-		While IsArrayDef()
-			ty = ParseArrayType(ty)
-		Wend
+		' array or function pointer?
+		Repeat
+			If (_toke = "[" Or _toke = "[]") And IsArrayDef()
+				ty = ParseArrayType(ty)
+			Else If _toke = "(" Then
+				ty = New TFunctionPtrType.Create(New TFuncDecl.CreateF("", ty, ParseFuncParamDecl(), FUNC_PTR))
+			Else
+				Exit
+			End If
+		Forever
 		
 		Return ty
 	End Method
@@ -1816,27 +1822,6 @@ End Rem
 				If varty._flags & (TType.T_CHAR_PTR | TType.T_SHORT_PTR) Then
 					DoErr "Illegal variable type"
 				End If
-
-				If _toke = "(" Then
-
-					Local fdecl:TFuncDecl = ParseFuncDecl("", FUNC_PTR | DECL_ARG)
-
-					If Not varty Then
-						varty = New TFunctionPtrType
-						TFunctionPtrType(varty).func = fdecl
-					Else
-						fdecl.retType = varty
-						varty = New TFunctionPtrType
-						TFunctionPtrType(varty).func = fdecl
-					End If
-
-					TFunctionPtrType(varty).func.ident = varid
-
-					' function pointer array ?
-					While IsArrayDef()
-						varty = ParseArrayType(varty)
-					Wend
-				End If
 				
 				Parse( "=" )
 			'EndIf
@@ -2374,40 +2359,25 @@ End Rem
 		Local id$=ParseIdent()
 		Local ty:TType
 		Local init:TExpr
-
+		
+		
 		If attrs & DECL_EXTERN
 			ty=ParseDeclType()
-
-'			If CParse("(") Then
-			If _toke = "(" Then
-
-				' function pointer?
-				Local decl:TFuncDecl = ParseFuncDecl("", attrs | FUNC_PTR)
-
-				If Not ty Then
-					ty = New TFunctionPtrType
-					TFunctionPtrType(ty).func = decl
-				Else
-					decl.retType = ty
-					ty = New TFunctionPtrType
-					TFunctionPtrType(ty).func = decl
-				End If
-
-				TFunctionPtrType(ty).func.ident = id
-
-			Else If toke = "const" Then
+			
+			If toke = "const" Then
 				If CParse("=") Then
 					init=ParseExpr()
 				End If
 			End If
 		Else If CParse( ":=" )
 			init=ParseExpr()
+			ty = init.exprType
 		Else
 			ty=ParseDeclType()
 
 			If CParse( "=" )
 				init=ParseExpr()
-			Else If CParse( "[" )
+			Else If CParse( "[" ) ' an initialised array?
 				Local ln:TExpr[]
 				Repeat
 					If CParse(",") Then
@@ -2426,63 +2396,13 @@ End Rem
 				'Wend
 				init=New TNewArrayExpr.Create( ty,ln)
 				ty=New TArrayType.Create( ty, ln.length )
-			Else If _toke = "(" Then
-	 			' function pointer?
-				Local fdecl:TFuncDecl = ParseFuncDecl("", FUNC_PTR)
-				If toke = "field" Then
-					fdecl.attrs :| FUNC_METHOD
-				End If
-
-				If Not ty Then
-					ty = New TFunctionPtrType
-					TFunctionPtrType(ty).func = fdecl
-				Else
-					fdecl.retType = ty
-					ty = New TFunctionPtrType
-					TFunctionPtrType(ty).func = fdecl
-				End If
-
-				TFunctionPtrType(ty).func.ident = ""
-
-				' an initialised array of function pointers?
-				If Not IsArrayDef() And CParse( "[" )
-					Local ln:TExpr[]
-					Repeat
-						If CParse(",") Then
-							ln = ln + [New TNullExpr]
-							Continue
-						End If
-						If CParse("]") Exit
-						ln = ln + [ParseExpr()]
-						If CParse("]") Exit
-						Parse(",")
-					Forever
-					'Parse "]"
-					ty = ParseArrayType(ty)
-					'While CParse( "[]" )
-					'	ty=New TArrayType.Create(ty)
-					'Wend
-					init=New TNewArrayExpr.Create( ty,ln)
-					ty=New TArrayType.Create( ty, ln.length )
-				Else
-					While IsArrayDef()
-						ty = ParseArrayType(ty)
-					Wend
-
-					' check for function pointer init
-					If CParse("=") Then
-						init=ParseExpr()
-					Else
-						init=New TConstExpr.Create( ty,"" )
-					End If
-				End If
-
 			Else If toke<>"const"
 				init=New TConstExpr.Create( ty,"" )
 			Else
 				Err "Constants must be initialized."
 			EndIf
 		EndIf
+		
 
 		Local decl:TValDecl
 
@@ -2686,9 +2606,9 @@ End Rem
 		'parse this into something
 		Return meta
 	End Method
-
-
-	Method ParseFuncDecl:TFuncDecl( toke$,attrs:Int, returnType:TType = Null, parent:TScopeDecl = Null )
+	
+	
+	Method ParseFuncDecl:TFuncDecl( toke$, attrs:Int, parent:TScopeDecl = Null )
 		SetErr
 
 		If toke Parse toke
@@ -2701,140 +2621,85 @@ End Rem
 
 		Local classDecl:TClassDecl = TClassDecl(parent)
 
-		If Not returnType Then
-			If attrs & FUNC_METHOD
-				If _toke="new"
-					If attrs & DECL_EXTERN
-						Err "Extern classes cannot have constructors"
-					EndIf
-					id="New"
-					NextToke
-					attrs:|FUNC_CTOR
-					attrs:&~FUNC_METHOD
-				Else If _toke="operator" Then
-					attrs:|FUNC_OPERATOR
-					NextToke
-					
-					Local t:String = _toke.ToLower()
-					NextToke
-					
-					Select t
-						Case "*","/","+","-","&","|","~~"
-							id = t
-						Case ":*",":/",":+",":-",":&",":|",":~~"
-							id = t
-						Case "<",">"',"="',"<=",">=","=","<>"
-							If CParse("=") Then
-								t :+ "="
-							Else If t = "<" And CParse(">") Then
-								t :+ ">"
-							End If
-							id = t
-						Case "="
-							id = t
-						Case "mod", "shl", "shr"
-							id = t
-						Case ":mod", ":shl", ":shr"
-							id = t
-						Default
-							DoErr "Operator must be one of: * / + - & | ~~ :* :/ :+ :- :& :| :~~ < > <= >= = <> mod shl shr :mod :shl :shr"
-					End Select
-					ty=ParseDeclType()
-				Else
-					id=ParseIdent()
-					ty=ParseDeclType()
-					If ty._flags & (TType.T_CHAR_PTR | TType.T_SHORT_PTR) Then
-						DoErr "Illegal function return type"
-					End If
-	
-					' Delete() return type should always be Void
-					If id.ToLower() = "delete" Then
-						attrs:|FUNC_DTOR
-						If TIntType(ty) Then
-							ty = New TVoidType
-						End If
-					End If
+		If attrs & FUNC_METHOD
+			If _toke="new"
+				If attrs & DECL_EXTERN
+					Err "Extern classes cannot have constructors"
 				EndIf
+				id="New"
+				NextToke
+				attrs:|FUNC_CTOR
+				attrs:&~FUNC_METHOD
+				ty=ParseDeclType()
+			Else If _toke="operator" Then
+				attrs:|FUNC_OPERATOR
+				NextToke
+				
+				Local t:String = _toke.ToLower()
+				NextToke
+				
+				Select t
+					Case "*","/","+","-","&","|","~~"
+						id = t
+					Case ":*",":/",":+",":-",":&",":|",":~~"
+						id = t
+					Case "<",">"',"="',"<=",">=","=","<>"
+						If CParse("=") Then
+							t :+ "="
+						Else If t = "<" And CParse(">") Then
+							t :+ ">"
+						End If
+						id = t
+					Case "="
+						id = t
+					Case "mod", "shl", "shr"
+						id = t
+					Case ":mod", ":shl", ":shr"
+						id = t
+					Default
+						DoErr "Operator must be one of: * / + - & | ~~ :* :/ :+ :- :& :| :~~ < > <= >= = <> mod shl shr :mod :shl :shr"
+				End Select
+				ty=ParseDeclType()
 			Else
-				If Not (attrs & FUNC_PTR) Then
-					id=ParseIdent()
-					ty=ParseDeclType()
-					' can only return "$z" and "$w" from an extern function.
-					If ty._flags & (TType.T_CHAR_PTR | TType.T_SHORT_PTR) And Not (attrs & DECL_EXTERN) Then
-						DoErr "Illegal function return type"
+				id=ParseIdent()
+				ty=ParseDeclType()
+				If ty._flags & (TType.T_CHAR_PTR | TType.T_SHORT_PTR) Then
+					DoErr "Illegal function return type"
+				End If
+
+				' Delete() return type should always be Void
+				If id.ToLower() = "delete" Then
+					attrs:|FUNC_DTOR
+					If TIntType(ty) Then
+						ty = New TVoidType
 					End If
 				End If
+				' TODO: make sure Delete cannot be declared with parameters?
 			EndIf
-		End If
-		
-		Local args:TArgDecl[]
-
-		Parse "("
-		SkipEols
-		If _toke<>")"
-			Local nargs:Int
-			Repeat
-
-				Local argId$=ParseIdent()
-
-				Local ty:TType=ParseDeclType()
-
-				Local init:TExpr
-				' function pointer ?
-				If _toke = "(" Then
-
-					Local fdecl:TFuncDecl = ParseFuncDecl("", FUNC_PTR | DECL_ARG)
-
-					If Not ty Then
-						ty = New TFunctionPtrType
-						TFunctionPtrType(ty).func = fdecl
-					Else
-						fdecl.retType = ty
-						ty = New TFunctionPtrType
-						TFunctionPtrType(ty).func = fdecl
-					End If
-
-					TFunctionPtrType(ty).func.ident = argId
-
-					' function pointer array ?
-					While IsArrayDef()
-						ty = ParseArrayType(ty)
-					Wend
+		Else
+			'If Not (attrs & FUNC_PTR) Then
+				id=ParseIdent()
+				ty=ParseDeclType()
+				' can only return "$z" and "$w" from an extern function.
+				If ty._flags & (TType.T_CHAR_PTR | TType.T_SHORT_PTR) And Not (attrs & DECL_EXTERN) Then
+					DoErr "Illegal function return type"
 				End If
-				
-				' var argument?
-				If CParse("var") Then
-					ty = TType.MapToVarType(ty)
-				Else If CParse( "=" )
-					init=ParseExpr()
-				End If
-				
-				Local arg:TArgDecl=New TArgDecl.Create( argId,ty,init )
-				If args.Length=nargs args=args + New TArgDecl[10]
-				args[nargs]=arg
-				nargs:+1
-				If _toke=")" Exit
-
-				Parse ","
-			Forever
-			args=args[..nargs]
+			'End If
 		EndIf
-		Parse ")"
 		
-		If returnType Then
-			Return New TFuncDecl.CreateF(Null,returnType,args,attrs)
+		' every branch in that nested If block up there contains the line "ty=ParseDeclType()";
+		' this already consumed all sets of parentheses and brackets belonging to this function declaration
+		' so we will now extract our actual return type and args from the result
+		Local args:TArgDecl[]
+		If Not TFunctionPtrType(ty) Then
+			DoErr "Expecting function type"
+		Else
+			Local fdecl:TFuncDecl = TFunctionPtrType(ty).func
+			ty = fdecl.retTypeExpr
+			args = fdecl.argDecls
 		End If
 		
-		Local fdecl:TFuncDecl
-		' wait.. so everything until now was a function pointer return type, and we still have to process the function declaration...
-		If _toke = "(" Then
-			Local retTy:TType = New TFunctionPtrType
-			TFunctionPtrType(retTy).func = New TFuncDecl.CreateF("",ty,args,attrs )
-			TFunctionPtrType(retTy).func.attrs :| FUNC_PTR
-			fdecl = ParseFuncDecl("", attrs, retTy)
-			ty = retTy
-		End If
-
+		
 		If CParse( "nodebug" ) Then
 			attrs :| DECL_NODEBUG
 		End If
@@ -2889,12 +2754,12 @@ End Rem
 		If attrs & FUNC_CTOR Then
 			funcDecl=New TNewDecl.CreateF( id,ty,args,attrs )
 		Else
-			If fdecl Then
-				funcDecl = fdecl
-				funcDecl.ident = id
-			Else
+			'If fdecl Then
+			'	funcDecl = fdecl
+			'	funcDecl.ident = id
+			'Else
 				funcDecl=New TFuncDecl.CreateF( id,ty,args,attrs )
-			End If
+			'End If
 			funcDecl.noMangle = noMangle
 		End If
 		If meta Then
@@ -2995,6 +2860,43 @@ End Rem
 
 		Return funcDecl
 	End Method
+	
+	
+	Method ParseFuncParamDecl:TArgDecl[]()
+		Local args:TArgDecl[]
+		Parse "("
+		SkipEols
+		If _toke<>")"
+			Local nargs:Int
+			Repeat
+				
+				Local argId$=ParseIdent()
+
+				Local ty:TType=ParseDeclType()
+
+				Local init:TExpr
+				
+				' var argument?
+				If CParse("var") Then
+					ty = TType.MapToVarType(ty)
+				Else If CParse( "=" )
+					init=ParseExpr()
+				End If
+				
+				Local arg:TArgDecl=New TArgDecl.Create( argId,ty,init )
+				If args.Length=nargs args=args + New TArgDecl[10]
+				args[nargs]=arg
+				nargs:+1
+				If _toke=")" Exit
+
+				Parse ","
+			Forever
+			args=args[..nargs]
+		EndIf
+		Parse ")"
+		Return args
+	End Method
+	
 
 	Method ParseClassDecl:TClassDecl( toke$,attrs:Int )
 		SetErr
@@ -3246,7 +3148,7 @@ End Rem
 				If (attrs & CLASS_STRUCT) And (attrs & DECL_EXTERN) Then
 					Err "Structs can only contain fields."
 				EndIf
-				Local decl:TFuncDecl=ParseFuncDecl( _toke,method_attrs,,classDecl )
+				Local decl:TFuncDecl=ParseFuncDecl( _toke,method_attrs,classDecl )
 				If decl.IsCtor() decl.retTypeExpr=New TObjectType.Create( classDecl )
 				classDecl.InsertDecl decl
 			Case "function"
@@ -3263,7 +3165,7 @@ End Rem
 				If attrs & DECL_EXTERN Then
 					Err "Extern Types can only contain methods."
 				End If
-				Local decl:TFuncDecl=ParseFuncDecl( _toke,decl_attrs,,classDecl )
+				Local decl:TFuncDecl=ParseFuncDecl( _toke,decl_attrs,classDecl )
 				classDecl.InsertDecl decl
 			Default
 				Err "Syntax error - expecting class member declaration, not '" + _toke + "'"
@@ -3277,7 +3179,7 @@ End Rem
 	
 	Method ParseNativeStmt()
 		If Not _toke.StartsWith("'!") Then
-			Err "Syntax error - expecting !'"
+			Err "Syntax error - expecting '!"
 		End If
 		Local raw:String = _toke[2..]
 		_block.AddStmt New TNativeStmt.Create( raw )

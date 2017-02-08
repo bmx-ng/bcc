@@ -245,7 +245,6 @@ Type TCTranslator Extends TTranslator
 
 			TFunctionPtrType(ty).func.Semant
 
-			Local retType:String = TransType(TFunctionPtrType(ty).func.retType, "")
 			Local api:String
 			If TFunctionPtrType(ty).func.attrs & DECL_API_WIN32 Then
 				api = " __stdcall "
@@ -263,11 +262,24 @@ Type TCTranslator Extends TTranslator
 			If fpReturnTypeFunctionArgs Then
 				ret = Bra(fpReturnTypeFunctionArgs)
 			End If
+			
 			If fpReturnTypeClassFunc Then
 				' typedef for function pointer return type
 				Return ident + "x" + Bra(api + p +"* " + ident) + Bra(args)
 			Else
-				Return retType + Bra(api + p +"* " + ident + ret) + Bra(args)
+				' if a function F returns another function (let's call it G),
+				' then C syntax requires the declaration of F to be nested into that of the type of G
+				' e.g. "Function F:RetG(ArgG)(ArgF)" in BlitzMax becomes "RetG(* F(ArgF) )(ArgG)" in C
+				' solution: use "* F(ArgF)" as an ident to generate a declaration for G
+				'           the result will be the declaration for F
+				Local callable:String = Bra(api + p +"* " + ident + ret)
+				If TFunctionPtrType(TFunctionPtrType(ty).func.retType) Then
+					If Not args Then args = " " ' make sure the parentheses aren't ommited even if the parameter list is empty
+					Return TransType(TFunctionPtrType(ty).func.retType, callable, args)
+				Else
+					Local retTypeStr:String = TransType(TFunctionPtrType(ty).func.retType, "")
+					Return retTypeStr + callable + Bra(args)
+				End If
 			End If
 		End If
 
@@ -660,7 +672,11 @@ t:+"NULLNULLNULL"
 	Method TransLocalDecl$( decl:TLocalDecl,init:TExpr, declare:Int = False, outputInit:Int = True )
 		Local initTrans:String
 		If outputInit Then
-			initTrans = "=" + init.Trans()
+			If TInvokeExpr(init) And Not TInvokeExpr(init).invokedWithBraces Then
+				initTrans = "=" + TInvokeExpr(init).decl.munged
+			Else
+				initTrans = "=" + init.Trans()
+			End If
 		End If
 	
 		If Not declare And opt_debug Then
@@ -4200,6 +4216,8 @@ End Rem
 					Else
 						If TObjectType(decl.ty) And TObjectType(decl.ty).classdecl.IsStruct() And Not isPointerType(decl.ty) And (TConstExpr(decl.init) And Not TConstExpr(decl.init).value) Then
 							fld = "memset(&" + fld + ", 0, sizeof" + Bra(TransType(decl.ty, "")) + ");"
+						Else If TInvokeExpr(decl.init) And Not TInvokeExpr(decl.init).invokedWithBraces Then
+							fld :+ "= " + TInvokeExpr(decl.init).decl.munged + ";"
 						Else
 							fld :+ "= " + decl.init.Trans() + ";"
 						End If

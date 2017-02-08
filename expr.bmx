@@ -691,8 +691,12 @@ Type TInvokeExpr Extends TExpr
 		'	exprType=decl.retType
 		'End If
 
-		If ((isArg Or isRhs) And Not invokedWithBraces) And (args = Null Or args.length = 0) Then
-			' nothing to do here, as we are probably a function pointer. i.e. no braces and no 
+		'If ((isArg Or isRhs) And Not invokedWithBraces) And (args = Null Or args.length = 0) Then
+
+		' if the call was a statement (even one written without parentheses), then invokedWithBraces is true
+		' so no complicated checks are needed here; if invokedWithBraces is false, this is definitely not a call
+		If Not invokedWithBraces Then
+			' nothing to do here, as we are a function pointer. i.e. no braces
 			' and our expression type is a function ptr...
 			exprType = New TFunctionPtrType.Create(decl)
 			
@@ -1323,9 +1327,11 @@ Type TCastExpr Extends TExpr
 				End If
 			Else
 				' return type should be function ptr?
-				' TODO
-				exprType = ty
-				Return expr
+				Local retType:TType = expr.exprType
+				If TFunctionPtrType(retType) And TFunctionPtrType(ty).func.EqualsFunc(TFunctionPtrType(retType).func) Then
+					exprType = retType
+					Return expr
+				End If
 			End If
 		End If
 
