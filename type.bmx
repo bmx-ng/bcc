@@ -1740,8 +1740,14 @@ Type TFunctionPtrType Extends TType
 	End Method
 
 	Method EqualsType:Int( ty:TType )
-' TODO : compare function decl
-		Return TFunctionPtrType( ty )<>Null
+		If Not TFunctionPtrType(ty) Then Return False
+		Local tyfunc:TFuncDecl = TFunctionPtrType(ty).func
+		If Not func.retType.EqualsType(tyfunc.retType) Then Return False
+		If Not (func.argDecls.Length = tyfunc.argDecls.Length) Then Return False
+		For Local a:Int = 0 Until func.argDecls.Length
+			If Not func.argDecls[a].ty.EqualsType(tyfunc.argDecls[a].ty) Then Return False
+		Next
+		Return True
 	End Method
 	
 	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )

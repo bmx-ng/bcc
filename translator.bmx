@@ -886,12 +886,16 @@ End Rem
 		If Not decl.munged Then
 			MungDecl decl
 		End If
-
-		If (decl.attrs & FUNC_PTR) And (decl.attrs & FUNC_INIT) And Not expr.InvokedWithBraces Return decl.munged
 		
-		If ((decl.attrs & FUNC_PTR) Or (expr.decl.attrs & FUNC_PTR)) And Not expr.InvokedWithBraces Return decl.munged
+		'If (decl.attrs & FUNC_PTR) And (decl.attrs & FUNC_INIT) And Not expr.InvokedWithBraces Return decl.munged
 		
-		If Not expr.InvokedWithBraces And expr.IsRhs Return decl.munged
+		'If ((decl.attrs & FUNC_PTR) Or (expr.decl.attrs & FUNC_PTR)) And Not expr.InvokedWithBraces Return decl.munged
+		
+		'If Not expr.InvokedWithBraces And expr.IsRhs Return decl.munged
+		
+		' if the call was a statement (even one written without parentheses), then invokedWithBraces is true
+		' so no complicated checks are needed here; if invokedWithBraces is false, this is definitely not a call
+		If Not expr.InvokedWithBraces Then Return decl.munged
 		
 		If decl.munged.StartsWith( "$" ) Return TransIntrinsicExpr( decl,Null,expr.args )
 		
