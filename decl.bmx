@@ -378,41 +378,47 @@ Type TValDecl Extends TDecl
 			If declInit Then
 				If TFunctionPtrType(ty) Then
 					
-					' the default munged function value as defined in the interface
+					Local expr:TExpr
+					
 					If TInvokeExpr(declInit) Then
-						init = declInit.Copy()
+						expr = declInit.Copy()
 					Else If TConstExpr(declInit) Then
-						init = declInit.Copy().Semant()
+						expr = declInit.Copy().Semant()
+					Else If TFuncCallExpr(declInit) Then
+						expr=declInit.Copy().Semant()
+					Else If TNullExpr(declInit) Then
+						expr = declInit
 					Else
-						Local expr:TExpr
-						
-						If TFuncCallExpr(declInit) Then
-							expr=declInit.Copy().Semant()
-						Else If TNullExpr(declInit) Then
-							expr = declInit
-						Else
-							Local argExpr:TExpr[] = New TExpr[0]
+						' declInit can only be an expression, never a statement
+						' this means that any function call in there is required to have parentheses, and will
+						' thus appear in the form of a TFuncCallExpr
+						' as such, trying SemantFunc in the Else branch seems pointless and will in fact wrongly
+						' interpret function pointers (as TIdentExpr, TIndexExpr, possibly others?) as calls
+						Rem
+						Local argExpr:TExpr[] = New TExpr[0]
 
-							For Local arg:TArgDecl = EachIn TFunctionPtrType(ty).func.argDecls
-								Local ldecl:TLocalDecl = New TLocalDecl.Create(arg.ident, arg.declTy, Null, 0)
-								ldecl.Semant()
-								Local aexp:TVarExpr = New TVarExpr.Create(ldecl)
-								'Local aexp:TIdentTypeExpr = New TIdentTypeExpr.Create(arg.declTy)
-								aexp.Semant()
-								argExpr :+ [aexp]
-							Next
+						For Local arg:TArgDecl = EachIn TFunctionPtrType(ty).func.argDecls
+							Local ldecl:TLocalDecl = New TLocalDecl.Create(arg.ident, arg.declTy, Null, 0)
+							ldecl.Semant()
+							Local aexp:TVarExpr = New TVarExpr.Create(ldecl)
+							'Local aexp:TIdentTypeExpr = New TIdentTypeExpr.Create(arg.declTy)
+							aexp.Semant()
+							argExpr :+ [aexp]
+						Next
 
-							expr=declInit.Copy().SemantFunc(argExpr, False, False)
-							If Not expr Then
-								expr = declInit.Copy().Semant()
-							End If
+						expr=declInit.Copy().SemantFunc(argExpr, False, False)
+						If Not expr Then
+							expr = declInit.Copy().Semant()
 						End If
+						End Rem
 						
-						If expr.exprType.EqualsType( ty ) Then
-							init = expr
-						Else
-							init = New TCastExpr.Create( ty,expr,CAST_EXPLICIT ).Semant()
-						End If
+						expr = declInit.Copy().Semant()
+					End If
+					
+					If expr.exprType.EqualsType( ty ) Then
+						init = expr
+					Else
+						init = New TCastExpr.Create( ty,expr,CAST_EXPLICIT ).Semant()
 					End If
 					
 					
@@ -1684,12 +1690,16 @@ Type TFuncDecl Extends TBlockDecl
 			End If
 		Else
 			' pass the scope into the function ptr
-			If TFunctionPtrType(retTypeExpr) Then
-				If Not TFunctionPtrType(retTypeExpr).func.scope Then
+			Local retTypeExpr_:TType = retTypeExpr
+			While TArrayType(retTypeExpr_) ' look into array types, since the element type might be function ptr
+				retTypeExpr_ = TArrayType(retTypeExpr_).elemType
+			Wend
+			If TFunctionPtrType(retTypeExpr_) Then
+				If Not TFunctionPtrType(retTypeExpr_).func.scope Then
 					If scope Then
-						TFunctionPtrType(retTypeExpr).func.scope = scope
+						TFunctionPtrType(retTypeExpr_).func.scope = scope
 					Else
-						TFunctionPtrType(retTypeExpr).func.scope = _env
+						TFunctionPtrType(retTypeExpr_).func.scope = _env
 					End If
 				End If
 			End If
