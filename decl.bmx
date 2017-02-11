@@ -140,6 +140,10 @@ Type TDecl
 		Return (attrs & DECL_EXTERN)<>0
 	End Method
 	
+	Method IsFinal:Int()
+		Return (attrs & DECL_FINAL)<>0
+	End Method
+
 	Method IsPrivate:Int()
 		Return (attrs & DECL_PRIVATE)<>0
 	End Method
@@ -1859,6 +1863,7 @@ Type TFuncDecl Extends TBlockDecl
 				Next
 				If found
 					If Not overrides Err "Overriding method does not match any overridden method. (Detail: " + errorDetails+")"
+					If overrides.IsFinal() Err "Final methods cannot be overridden."
 					' for overrides, make the ident match that of the superclass
 					ident = overrides.ident
 					
@@ -2090,10 +2095,6 @@ End Rem
 
 	Method IsInterface:Int()
 		Return (attrs & CLASS_INTERFACE)<>0
-	End Method
-
-	Method IsFinal:Int()
-		Return (attrs & DECL_FINAL)<>0
 	End Method
 
 	Method IsThrowable:Int()
