@@ -958,7 +958,9 @@ t:+"NULLNULLNULL"
 
 					If decl.attrs & FUNC_PTR Then
 						'Return "(" + obj + TransSubExpr( lhs ) + ")->" + decl.munged+TransArgs( args,decl, Null)
-						Return TransSubExpr( lhs ) + "->" + decl.munged+TransArgs( args,decl, Null)
+					Local op:String
+						If cdecl.IsStruct() Then op = "." Else op = "->"
+						Return TransSubExpr( lhs ) + op + decl.munged+TransArgs( args,decl, Null)
 					Else
 						'Local lvar:String = CreateLocal(lhs, False)
 						'Local lvarInit:String = Bra(lvar + " = " + lhs.Trans())
@@ -1161,7 +1163,9 @@ t:+"NULLNULLNULL"
 					End If
 
 					If decl.attrs & FUNC_PTR Then
-						Return lhs.Trans() + "->" + decl.munged+TransArgs( args,decl, Null)
+						Local op:String
+						If cdecl.IsStruct() Then op = "." Else op = "->"
+						Return lhs.Trans() + op + decl.munged+TransArgs( args,decl, Null)
 					Else
 						If decl.scope.IsExtern()
 							'Local cdecl:TClassDecl = TClassDecl(decl.scope)
@@ -4527,7 +4531,8 @@ End Rem
 'DebugStop
 		Local ind:String = "->"
 		If decl.scope And TClassDecl(decl.scope) And TClassDecl(decl.scope).IsStruct() Then
-			If exprType And Not IsPointerType(exprType) And variable <> "o" Then
+			Local exprIsStruct:Int = TObjectType(exprType) And TObjectType(exprType).classDecl.attrs & CLASS_STRUCT
+			If exprType And (exprIsStruct Or Not IsPointerType(exprType)) And variable <> "o" Then
 				ind = "."
 			End If
 		End If
