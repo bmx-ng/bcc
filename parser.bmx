@@ -2553,7 +2553,9 @@ End Rem
 		SkipEols
 
 		Repeat
-			
+			'reached end of meta data declaration
+			If _toke="}" Then Exit
+
 			If meta.metadataString Then
 				meta.metadataString :+ " "
 			End If
@@ -2595,9 +2597,6 @@ End Rem
 			End If
 			
 			meta.InsertMeta(key.ToLower(), value)
-			
-			'reached end of meta data declaration
-			If _toke="}" Then Exit
 		Forever
 
 		'continue to next token
