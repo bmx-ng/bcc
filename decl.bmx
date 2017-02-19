@@ -1285,7 +1285,7 @@ End Rem
 					exact = False
 					Continue
 				End If
-										
+
 				For Local i:Int=0 Until argDecls.Length
 	
 					If i<argExprs.Length And argExprs[i]
@@ -1661,15 +1661,15 @@ Type TFuncDecl Extends TBlockDecl
 		Return (attrs & FUNC_PROPERTY)<>0
 	End Method
 	
-	Method EqualsArgs:Int( decl:TFuncDecl )
+	Method EqualsArgs:Int( decl:TFuncDecl ) ' careful, this is not commutative!
 		If argDecls.Length<>decl.argDecls.Length Return False
 		For Local i:Int=0 Until argDecls.Length
-			If Not argDecls[i].ty.EqualsType( decl.argDecls[i].ty ) And Not argDecls[i].ty.ExtendsType( decl.argDecls[i].ty ) Return False
+			If Not decl.argDecls[i].ty.EqualsType( argDecls[i].ty ) Return False
 		Next
 		Return True
 	End Method
 
-	Method EqualsFunc:Int( decl:TFuncDecl )
+	Method EqualsFunc:Int( decl:TFuncDecl ) ' careful, this is not commutative!
 		If IsCtor() Then
 			Return EqualsArgs( decl )
 		Else
