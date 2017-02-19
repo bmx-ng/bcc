@@ -844,7 +844,7 @@ Type TScopeDecl Extends TDecl
 		If TFuncDeclList(decl) Then
 			For Local fdecl:TFuncDecl = EachIn TFuncDeclList(decl)
 
-				If Not fdecl.IsSemanted() Then
+				If Not fdecl.IsSemanted() And Not fdecl.IsSemanting() Then
 					fdecl.Semant
 				End If
 				
@@ -1169,7 +1169,9 @@ End Rem
 '		If Not funcs Then Return Null
 		
 		For Local func:TDecl = EachIn funcs
-			func.Semant()
+			If Not func.IsSemanting() Then
+				func.Semant()
+			End If
 		Next
 		
 		'Local f:TDecl = TDecl(findDecl(ident))
@@ -1662,7 +1664,7 @@ Type TFuncDecl Extends TBlockDecl
 	Method EqualsArgs:Int( decl:TFuncDecl )
 		If argDecls.Length<>decl.argDecls.Length Return False
 		For Local i:Int=0 Until argDecls.Length
-			If Not argDecls[i].ty.EqualsType( decl.argDecls[i].ty ) Return False
+			If Not argDecls[i].ty.EqualsType( decl.argDecls[i].ty ) And Not argDecls[i].ty.ExtendsType( decl.argDecls[i].ty ) Return False
 		Next
 		Return True
 	End Method

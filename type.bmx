@@ -1741,20 +1741,28 @@ Type TFunctionPtrType Extends TType
 
 	Method EqualsType:Int( ty:TType )
 		If Not TFunctionPtrType(ty) Then Return False
+		' declared function pointer
 		Local tyfunc:TFuncDecl = TFunctionPtrType(ty).func
 		If Not tyfunc.retType.EqualsType(func.retType) Then Return False
 		If Not (tyfunc.argDecls.Length = func.argDecls.Length) Then Return False
 		For Local a:Int = 0 Until func.argDecls.Length
-			If Not tyfunc.argDecls[a].ty.EqualsType(func.argDecls[a].ty) Then Return False
+			' does our arg equal declared arg?
+			If Not func.argDecls[a].ty.EqualsType(tyfunc.argDecls[a].ty) Then Return False
 		Next
 		Return True
 	End Method
 	
 	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
-		If TObjectType( ty )
-			Local expr:TExpr=New TConstExpr.Create( Self,"" ).Semant()
-			Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True,,,,SCOPE_CLASS_HEIRARCHY )
-			Return ctor And ctor.IsCtor()
+		If TFunctionPtrType( ty )
+			' declared function pointer
+			Local tyfunc:TFuncDecl = TFunctionPtrType(ty).func
+			If Not tyfunc.retType.EqualsType(func.retType) Then Return False
+			If Not (tyfunc.argDecls.Length = func.argDecls.Length) Then Return False
+			For Local a:Int = 0 Until func.argDecls.Length
+				' does our arg extend declared arg?
+				If Not func.argDecls[a].ty.ExtendsType(tyfunc.argDecls[a].ty) Then Return False
+			Next
+			Return True
 		EndIf
 		Return IsPointerType( ty, 0, T_POINTER )<>Null
 	End Method

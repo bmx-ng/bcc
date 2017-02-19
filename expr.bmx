@@ -177,7 +177,6 @@ Type TExpr
 					args[i].exprType = Null
 					args[i].Semant()
 				End If
-					
 				args[i]=args[i].Cast( funcDecl.argDecls[i].ty )
 			Else If funcDecl.argDecls[i].init
 				If i = args.length Then
@@ -1319,9 +1318,9 @@ Type TCastExpr Extends TExpr
 			If Not TInvokeExpr(expr).invokedWithBraces Then
 				src = New TFunctionPtrType
 				TFunctionPtrType(src).func = TInvokeExpr(expr).decl
-			
+
 				' signatures should match
-				If TFunctionPtrType(ty).func.EqualsFunc(TInvokeExpr(expr).decl) Then
+				If TInvokeExpr(expr).decl.equalsFunc(TFunctionPtrType(ty).func)  Then
 					exprType = ty
 					Return expr
 				End If
