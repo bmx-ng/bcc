@@ -1664,7 +1664,7 @@ Type TFuncDecl Extends TBlockDecl
 	Method EqualsArgs:Int( decl:TFuncDecl ) ' careful, this is not commutative!
 		If argDecls.Length<>decl.argDecls.Length Return False
 		For Local i:Int=0 Until argDecls.Length
-			If Not decl.argDecls[i].ty.EqualsType( argDecls[i].ty ) Return False
+			If Not decl.argDecls[i].ty.EqualsType( argDecls[i].ty ) And Not decl.argDecls[i].ty.ExtendsType( argDecls[i].ty ) Return False
 		Next
 		Return True
 	End Method
