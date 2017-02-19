@@ -1994,11 +1994,13 @@ Type TIndexExpr Extends TExpr
 			expr = New TStmtExpr.Create( New TDeclStmt.Create( tmp ), v ).Semant()
 		End If
 
-		If Not(TNumericType(expr.exprType) And IsPointerType( expr.exprType, 0 , TType.T_POINTER | TType.T_VARPTR)) Then
-			For Local i:Int = 0 Until index.length
+		For Local i:Int = 0 Until index.length
+			If Not(TNumericType(expr.exprType) And IsPointerType( expr.exprType, 0 , TType.T_POINTER | TType.T_VARPTR)) Then
 				index[i]=index[i].SemantAndCast( New TUIntType, True )
-			Next
-		End If
+			Else
+				index[i]=index[i].Semant()
+			End If
+		Next
 
 		If TStringType( expr.exprType )
 			exprType=New TIntType
