@@ -865,7 +865,11 @@ Type TNewObjectExpr Extends TExpr
 
 		classDecl.attrs:|CLASS_INSTANCED
 
-		exprType=ty
+		If TClassType(ty) Then
+			exprType=New TObjectType.Create(TClassType(ty).classDecl)
+		Else
+			exprType=ty
+		End If
 		
 		If it Then
 			'Local parts:String[] = it.ident.ToLower().Split(".")
