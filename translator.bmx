@@ -877,6 +877,8 @@ End Rem
 		
 		If TFieldDecl( decl ) Return TransField( TFieldDecl( decl ),expr.expr )
 
+		If TGlobalDecl( decl ) Return TransGlobal( TGlobalDecl( decl ) )
+
 		InternalErr
 	End Method
 	

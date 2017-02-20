@@ -1010,8 +1010,13 @@ t:+"NULLNULLNULL"
 						Local lvar:String = CreateLocal(lhs)
 						Return "_" + decl.munged+TransArgs( args,decl, "&" + lvar )
 					Else
-						Local class:String = cdecl.munged
-						Return class + "." + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, TransSubExpr( lhs ) )
+						If decl.IsMethod() Then
+							Local class:String = cdecl.munged
+							Return class + "." + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, TransSubExpr( lhs ) )
+						Else
+							Local class:String = Bra(Bra("struct " + cdecl.munged + "_obj*") + Bra(TransSubExpr( lhs ))) + "->clas" + tSuper
+							Return class + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl )
+						End If
 					End If
 				Else If TCastExpr(lhs) Then
 					' create a local variable of the inner invocation
@@ -1523,6 +1528,7 @@ t:+"NULLNULLNULL"
 	End Method
 
 	Method TransNewObjectExpr$( expr:TNewObjectExpr )
+
 		Local t$
 
 		If Not expr.classDecl.IsStruct() And (Not expr.ctor.argDecls Or expr.ctor.argDecls.length = 0) Then
@@ -4946,7 +4952,6 @@ End Rem
 	End Method
 
 	Method EmitIfcGlobalDecl(globalDecl:TGlobalDecl)
-
 		globalDecl.Semant
 
 		Local g:String = globalDecl.ident
