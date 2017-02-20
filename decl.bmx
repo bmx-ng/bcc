@@ -38,8 +38,9 @@ Const DECL_INITONLY:Int=   $1000000
 Const DECL_NODEBUG:Int=    $2000000
 Const DECL_PROTECTED:Int=  $4000000
 
-Const DECL_API_WIN32:Int= $10000000
-Const DECL_API_OS:Int=DECL_API_WIN32
+Const DECL_API_CDECL:Int=   $00000000
+Const DECL_API_STDCALL:Int= $10000000
+Const DECL_API_DEFAULT:Int= DECL_API_CDECL
 
 Const CLASS_INTERFACE:Int=  $001000
 Const CLASS_THROWABLE:Int=  $002000
@@ -50,6 +51,10 @@ Const SCOPE_CLASS_LOCAL:Int = 1
 Const SCOPE_CLASS_HEIRARCHY:Int = 2
 Const SCOPE_MODULE:Int = 3
 Const SCOPE_ALL:Int = 4
+
+'Const CALL_CONV_CDECL:Int = 0
+'Const CALL_CONV_STDCALL:Int = 1
+'Const CALL_CONV_DEFAULT:Int = CALL_CONV_CDECL
 
 Global _env:TScopeDecl
 Global _envStack:TList=New TList
@@ -330,13 +335,20 @@ Type TValDecl Extends TDecl
 	Method OnSemant()
 	
 		If declTy
+
+			Local at:TType = TArrayType(declTy)
+			
+			While TArrayType(at)
+				at = TArrayType(at).elemType
+			Wend
+		
 			' ensure to set the scope for a function pointer array before semanting
-			If TArrayType(declTy) And TFunctionPtrType(TArrayType(declTy).elemType) Then
-				If Not TFunctionPtrType(TArrayType(declTy).elemType).func.scope Then
+			If TFunctionPtrType(at) Then
+				If Not TFunctionPtrType(at).func.scope Then
 					If scope Then
-						TFunctionPtrType(TArrayType(declTy).elemType).func.scope = scope
+						TFunctionPtrType(at).func.scope = scope
 					Else
-						TFunctionPtrType(TArrayType(declTy).elemType).func.scope = _env
+						TFunctionPtrType(at).func.scope = _env
 					End If
 				End If
 			End If
@@ -1513,8 +1525,8 @@ Const FUNC_METHOD:Int=   $0001			'mutually exclusive with ctor
 Const FUNC_CTOR:Int=     $0002
 Const FUNC_PROPERTY:Int= $0004
 Const FUNC_DTOR:Int=     $0008
-Const FUNC_PTR:Int=      $0100
 Const FUNC_BUILTIN:Int = $0080
+Const FUNC_PTR:Int=      $0100
 Const FUNC_INIT:Int =    $0200
 Const FUNC_NESTED:Int =  $0400
 Const FUNC_OPERATOR:Int= $0800
@@ -1559,7 +1571,7 @@ Type TFuncDecl Extends TBlockDecl
 		For Local i:Int=0 Until args.Length
 			args[i]=TArgDecl( args[i].Copy() )
 		Next
-		Local t:TFuncDecl=New TFuncDecl.CreateF( ident,retType,args,attrs )
+		Local t:TFuncDecl=New TFuncDecl.CreateF( ident,retType,args,attrs)
 		If deep Then
 			For Local stmt:TStmt=EachIn stmts
 				t.AddStmt stmt.Copy( t )

@@ -742,7 +742,7 @@ Type TParser
 		Return ty
 	End Method
 
-	Method ParseDeclType:TType()
+	Method ParseDeclType:TType(attr:Int = 0)
 		Local ty:TType
 		Select _toke
 		Case "@"
@@ -834,7 +834,9 @@ Type TParser
 			If (_toke = "[" Or _toke = "[]") And IsArrayDef()
 				ty = ParseArrayType(ty)
 			Else If _toke = "(" Then
-				ty = New TFunctionPtrType.Create(New TFuncDecl.CreateF("", ty, ParseFuncParamDecl(), FUNC_PTR))
+				Local args:TArgDecl[] = ParseFuncParamDecl()
+				attr :| ParseCallConvention(attr & DECL_API_STDCALL)
+				ty = New TFunctionPtrType.Create(New TFuncDecl.CreateF("", ty, args, FUNC_PTR | (attr & DECL_API_STDCALL)))
 			Else
 				Exit
 			End If
@@ -2187,14 +2189,8 @@ End Rem
 
 		NextToke
 
-		If _tokeType=TOKE_STRINGLIT
-			Local api:String = ParseStringLit().ToLower()
-			If api = "win32" Then
-				attrs:| DECL_API_WIN32
-			End If
-		End If
-
-
+		attrs :| ParseCallConvention()
+		
 		attrs = attrs | DECL_EXTERN
 		If CParse( "private" ) attrs=attrs|DECL_PRIVATE
 
@@ -2354,6 +2350,7 @@ End Rem
 	End Method
 
 	Method ParseDecl:TDecl( toke$,attrs:Int )
+
 		SetErr
 
 		Local id$=ParseIdent()
@@ -2362,7 +2359,7 @@ End Rem
 		
 		
 		If attrs & DECL_EXTERN
-			ty=ParseDeclType()
+			ty=ParseDeclType(attrs & DECL_API_STDCALL)
 			
 			If toke = "const" Then
 				If CParse("=") Then
@@ -2373,7 +2370,7 @@ End Rem
 			init=ParseExpr()
 			ty = init.exprType
 		Else
-			ty=ParseDeclType()
+			ty=ParseDeclType(attrs & DECL_API_STDCALL)
 
 			If CParse( "=" )
 				init=ParseExpr()
@@ -2482,6 +2479,7 @@ End Rem
 	End Method
 
 	Method ParseDeclStmts()
+
 		Local toke$=_toke
 		NextToke
 		Repeat
@@ -2661,7 +2659,7 @@ End Rem
 				ty=ParseDeclType()
 			Else
 				id=ParseIdent()
-				ty=ParseDeclType()
+				ty=ParseDeclType(attrs & DECL_API_STDCALL)
 				If ty._flags & (TType.T_CHAR_PTR | TType.T_SHORT_PTR) Then
 					DoErr "Illegal function return type"
 				End If
@@ -2678,7 +2676,7 @@ End Rem
 		Else
 			'If Not (attrs & FUNC_PTR) Then
 				id=ParseIdent()
-				ty=ParseDeclType()
+				ty=ParseDeclType(attrs & DECL_API_STDCALL)
 				' can only return "$z" and "$w" from an extern function.
 				If ty._flags & (TType.T_CHAR_PTR | TType.T_SHORT_PTR) And Not (attrs & DECL_EXTERN) Then
 					DoErr "Illegal function return type"
@@ -2735,15 +2733,8 @@ End Rem
 				noMangle = True
 			End If
 		End If
-				
-		If _tokeType=TOKE_STRINGLIT
-			' "win32", etc
-			' TODO ? something with this??
-			Local api:String = ParseStringLit().ToLower()
-			If api = "win32" Then
-				attrs :| DECL_API_WIN32
-			End If
-		EndIf
+		
+		attrs :| ParseCallConvention(attrs & DECL_API_STDCALL)
 		
 		If CParse( "nodebug" ) Then
 			attrs :| DECL_NODEBUG
@@ -2860,7 +2851,33 @@ End Rem
 		Return funcDecl
 	End Method
 	
-	
+	Method ParseCallConvention:Int(callConvention:Int = DECL_API_STDCALL)
+		If _tokeType <> TOKE_STRINGLIT Then
+			Return callConvention
+		End If
+		
+		Local api:String = ParseStringLit().ToLower()
+		
+		If api = "os" Then
+?win32
+			api = "win32"
+?macos
+			api = "macos"
+?linux
+			api = "linux"
+?
+		End If
+
+		Select api
+			Case "c", "blitz", "macos", "linux"
+				Return DECL_API_CDECL
+			Case "win32"
+				Return DECL_API_STDCALL
+		End Select
+		
+		Err "Unrecognized calling convention '" + api+ "'"
+	End Method
+
 	Method ParseFuncParamDecl:TArgDecl[]()
 		Local args:TArgDecl[]
 		Parse "("
@@ -3068,7 +3085,7 @@ End Rem
 
 		'If classDecl.IsTemplateArg() Return classDecl
 
-		Local decl_attrs:Int=(attrs & DECL_EXTERN) | (attrs & DECL_NODEBUG) | (attrs & DECL_API_WIN32)
+		Local decl_attrs:Int=(attrs & DECL_EXTERN) | (attrs & DECL_NODEBUG) | (attrs & DECL_API_STDCALL)
 
 		Repeat
 			Local method_attrs:Int=decl_attrs|FUNC_METHOD | (attrs & DECL_NODEBUG)

@@ -246,7 +246,7 @@ Type TCTranslator Extends TTranslator
 			TFunctionPtrType(ty).func.Semant
 
 			Local api:String
-			If TFunctionPtrType(ty).func.attrs & DECL_API_WIN32 Then
+			If TFunctionPtrType(ty).func.attrs & DECL_API_STDCALL Then
 				api = " __stdcall "
 			End If
 			Local args:String
@@ -352,7 +352,16 @@ Type TCTranslator Extends TTranslator
 			Wend
 			Return t + cdecl.ident + p
 		End If
-		If TFunctionPtrType( ty ) Return TransIfcType(TFunctionPtrType(ty).func.retType, TFunctionPtrType(ty).func.ModuleScope().IsSuperStrict()) + TransIfcArgs(TFunctionPtrType(ty).func)
+
+		If TFunctionPtrType( ty ) Then
+
+			Local t:String = TransIfcType(TFunctionPtrType(ty).func.retType, TFunctionPtrType(ty).func.ModuleScope().IsSuperStrict()) + TransIfcArgs(TFunctionPtrType(ty).func)
+			If TFunctionPtrType( ty ).func.attrs & DECL_API_STDCALL Then
+				t :+ "W"
+			End If
+	
+			Return t
+		End If
 		If TExternObjectType( ty ) Return ":" + TExternObjectType(ty).classDecl.ident + p
 		InternalErr
 	End Method
@@ -2844,7 +2853,7 @@ End Rem
 			id :+ "_f"
 		End If
 		
-		If decl.attrs & DECL_API_WIN32 Then
+		If decl.attrs & DECL_API_STDCALL Then
 			api = " __stdcall "
 		End If
 
@@ -3001,7 +3010,7 @@ End Rem
 			bk = ";"
 		End If
 
-		If decl.attrs & DECL_API_WIN32 Then
+		If decl.attrs & DECL_API_STDCALL Then
 			api = " __stdcall "
 		End If
 
@@ -4674,7 +4683,10 @@ End Rem
 		Else If funcDecl.attrs & DECL_PROTECTED Then
 			func :+ "R"
 		End If
-
+		
+		If funcDecl.attrs & DECL_API_STDCALL Then
+			func :+ "W"
+		End If
 
 		func :+ "="
 
@@ -4697,6 +4709,10 @@ End Rem
 
 		' function args
 		func :+ TransIfcArgs(funcDecl)
+
+		If funcDecl.attrs & DECL_API_STDCALL Then
+			func :+ "W"
+		End If
 
 		func :+ "="
 
@@ -4917,7 +4933,7 @@ End Rem
 				flags :+ "S"
 			End If
 			
-			If classDecl.attrs & DECL_API_WIN32 Then
+			If classDecl.attrs & DECL_API_STDCALL Then
 				flags :+ "W"
 			End If
 
@@ -4936,7 +4952,7 @@ End Rem
 		Local g:String = globalDecl.ident
 
 		g:+ TransIfcType(globalDecl.ty, globalDecl.ModuleScope().IsSuperStrict())
-
+		
 		g:+ "&"
 
 		If globalDecl.IsPrivate() Then

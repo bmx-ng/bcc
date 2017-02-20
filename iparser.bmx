@@ -281,8 +281,8 @@ Type TIParser
 							ApplyFunctionAttributes(class, DECL_EXTERN)
 
 						Else If CParse("EW")
-							class.attrs :| DECL_EXTERN | DECL_API_WIN32 
-							ApplyFunctionAttributes(class, DECL_EXTERN | DECL_API_WIN32)
+							class.attrs :| DECL_EXTERN | DECL_API_STDCALL
+							ApplyFunctionAttributes(class, DECL_EXTERN | DECL_API_STDCALL)
 						
 						Else If CParse("AI")
 							class.attrs :| CLASS_INTERFACE | DECL_ABSTRACT
@@ -293,14 +293,14 @@ Type TIParser
 							ApplyFunctionAttributes(class, DECL_EXTERN | DECL_ABSTRACT)
 
 						Else If CParse("EIW")
-							class.attrs :| DECL_EXTERN | CLASS_INTERFACE | DECL_API_WIN32
-							ApplyFunctionAttributes(class, DECL_EXTERN | DECL_ABSTRACT | DECL_API_WIN32)
+							class.attrs :| DECL_EXTERN | CLASS_INTERFACE | DECL_API_STDCALL
+							ApplyFunctionAttributes(class, DECL_EXTERN | DECL_ABSTRACT | DECL_API_STDCALL)
 
 						Else If CParse("ES")
 							class.attrs :| DECL_EXTERN | CLASS_STRUCT
 
 						Else If CParse("ESW")
-							class.attrs :| DECL_EXTERN | CLASS_STRUCT | DECL_API_WIN32 
+							class.attrs :| DECL_EXTERN | CLASS_STRUCT | DECL_API_STDCALL
 
 						End If
 'DebugStop
@@ -853,78 +853,78 @@ Type TIParser
 			fdecl = ParseFuncDecl("", attrs, retTy)
 			ty = retTy
 		End If
-
+		
 		Repeat		
 			If CParse( "F" )
 				attrs:|DECL_FINAL
 			Else If CParse( "FW" )
-				attrs:|DECL_FINAL | DECL_API_WIN32
+				attrs:|DECL_FINAL | DECL_API_STDCALL
 			Else If CParse( "FP" )
 				attrs:|DECL_FINAL|DECL_PRIVATE
 			Else If CParse( "FPW" )
-				attrs:|DECL_FINAL|DECL_PRIVATE| DECL_API_WIN32
+				attrs:|DECL_FINAL|DECL_PRIVATE | DECL_API_STDCALL
 			Else If CParse( "FR" )
 				attrs:|DECL_FINAL|DECL_PROTECTED
 			Else If CParse( "FRW" )
-				attrs:|DECL_FINAL|DECL_PROTECTED| DECL_API_WIN32
+				attrs:|DECL_FINAL|DECL_PROTECTED | DECL_API_STDCALL
 			Else If CParse( "A" )
 				attrs:|DECL_ABSTRACT
 			Else If CParse( "AW" )
-				attrs:|DECL_ABSTRACT | DECL_API_WIN32
+				attrs:|DECL_ABSTRACT | DECL_API_STDCALL
 			Else If CParse( "AP" )
 				attrs:|DECL_ABSTRACT|DECL_PRIVATE
 			Else If CParse( "APW" )
-				attrs:|DECL_ABSTRACT|DECL_PRIVATE| DECL_API_WIN32
+				attrs:|DECL_ABSTRACT|DECL_PRIVATE | DECL_API_STDCALL
 			Else If CParse( "AR" )
 				attrs:|DECL_ABSTRACT|DECL_PROTECTED
 			Else If CParse( "ARW" )
-				attrs:|DECL_ABSTRACT|DECL_PROTECTED| DECL_API_WIN32
+				attrs:|DECL_ABSTRACT|DECL_PROTECTED | DECL_API_STDCALL
 			Else If CParse( "W" )
-				attrs:|DECL_API_WIN32
+				attrs:| DECL_API_STDCALL
 			Else If CParse( "O" )
 				attrs:|FUNC_OPERATOR
 			Else If CParse( "OW" )
-				attrs:|FUNC_OPERATOR| DECL_API_WIN32
+				attrs:|FUNC_OPERATOR | DECL_API_STDCALL
 			Else If CParse( "OP" )
 				attrs:|FUNC_OPERATOR|DECL_PRIVATE
 			Else If CParse( "OPW" )
-				attrs:|FUNC_OPERATOR|DECL_PRIVATE| DECL_API_WIN32
+				attrs:|FUNC_OPERATOR|DECL_PRIVATE | DECL_API_STDCALL
 			Else If CParse( "OR" )
 				attrs:|FUNC_OPERATOR|DECL_PROTECTED
 			Else If CParse( "ORW" )
-				attrs:|FUNC_OPERATOR|DECL_PROTECTED| DECL_API_WIN32
+				attrs:|FUNC_OPERATOR|DECL_PROTECTED | DECL_API_STDCALL
 			Else If CParse( "P" )
 				attrs:|DECL_PRIVATE
 			Else If CParse( "PW" )
-				attrs:|DECL_PRIVATE| DECL_API_WIN32
+				attrs:|DECL_PRIVATE | DECL_API_STDCALL
 			Else If CParse( "R" )
 				attrs:|DECL_PROTECTED
 			Else If CParse( "RW" )
-				attrs:|DECL_PROTECTED| DECL_API_WIN32
+				attrs:|DECL_PROTECTED | DECL_API_STDCALL
 			Else If CParse( "FO" )
 				attrs:|DECL_FINAL|FUNC_OPERATOR
 			Else If CParse( "FOW" )
-				attrs:|DECL_FINAL|FUNC_OPERATOR| DECL_API_WIN32
+				attrs:|DECL_FINAL|FUNC_OPERATOR | DECL_API_STDCALL
 			Else If CParse( "FOP" )
 				attrs:|DECL_FINAL|FUNC_OPERATOR|DECL_PRIVATE
 			Else If CParse( "FOPW" )
-				attrs:|DECL_FINAL|FUNC_OPERATOR|DECL_PRIVATE| DECL_API_WIN32
+				attrs:|DECL_FINAL|FUNC_OPERATOR|DECL_PRIVATE | DECL_API_STDCALL
 			Else If CParse( "FOR" )
 				attrs:|DECL_FINAL|FUNC_OPERATOR|DECL_PROTECTED
 			Else If CParse( "FORW" )
-				attrs:|DECL_FINAL|FUNC_OPERATOR|DECL_PROTECTED| DECL_API_WIN32
+				attrs:|DECL_FINAL|FUNC_OPERATOR|DECL_PROTECTED | DECL_API_STDCALL
 			Else If CParse( "AO" )
 				attrs:|DECL_ABSTRACT|FUNC_OPERATOR
 			Else If CParse( "AOW" )
-				attrs:|DECL_ABSTRACT|FUNC_OPERATOR| DECL_API_WIN32
+				attrs:|DECL_ABSTRACT|FUNC_OPERATOR | DECL_API_STDCALL
 			Else If CParse( "AOP" )
 				attrs:|DECL_ABSTRACT|FUNC_OPERATOR|DECL_PRIVATE
 			Else If CParse( "AOPW" )
-				attrs:|DECL_ABSTRACT|FUNC_OPERATOR|DECL_PRIVATE| DECL_API_WIN32
+				attrs:|DECL_ABSTRACT|FUNC_OPERATOR|DECL_PRIVATE | DECL_API_STDCALL
 			Else If CParse( "AOR" )
 				attrs:|DECL_ABSTRACT|FUNC_OPERATOR|DECL_PROTECTED
 			Else If CParse( "AORW" )
-				attrs:|DECL_ABSTRACT|FUNC_OPERATOR|DECL_PROTECTED| DECL_API_WIN32
+				attrs:|DECL_ABSTRACT|FUNC_OPERATOR|DECL_PROTECTED | DECL_API_STDCALL
 			'Else If CParse( "property" )
 			'	If attrs & FUNC_METHOD
 			'		attrs:|FUNC_PROPERTY
