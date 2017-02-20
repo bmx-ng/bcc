@@ -1759,8 +1759,8 @@ Type TFunctionPtrType Extends TType
 			If Not func.retType.ExtendsType(tyfunc.retType) Then Return False
 			If Not (func.argDecls.Length = tyfunc.argDecls.Length) Then Return False
 			For Local a:Int = 0 Until func.argDecls.Length
-				' does our arg extend declared arg?
-				If Not func.argDecls[a].ty.ExtendsType(tyfunc.argDecls[a].ty) Then Return False
+				' does declared arg extend our arg?
+				If Not tyfunc.argDecls[a].ty.ExtendsType(func.argDecls[a].ty) Then Return False
 			Next
 			Return True
 		EndIf
