@@ -2851,7 +2851,7 @@ End Rem
 		Return funcDecl
 	End Method
 	
-	Method ParseCallConvention:Int(callConvention:Int = DECL_API_STDCALL)
+	Method ParseCallConvention:Int(callConvention:Int = DECL_API_DEFAULT)
 		If _tokeType <> TOKE_STRINGLIT Then
 			Return callConvention
 		End If
