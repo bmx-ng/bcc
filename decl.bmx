@@ -2235,6 +2235,7 @@ End Rem
 	End Method
 	
 	Method GetAllFuncDecls:TFuncDecl[](funcs:TFuncDecl[] = Null, includeSuper:Int = True)
+
 		If Not funcs Then
 			funcs = New TFuncDecl[0]
 		End If
@@ -2256,6 +2257,10 @@ End Rem
 				' found a match - we are overriding it
 				If func.IdentLower() = funcs[i].IdentLower() And func.EqualsArgs(funcs[i]) Then
 					matched = True
+					' but don't override if we are an interface and the function is implemented
+					If IsInterface() And Not funcs[i].ClassScope().IsInterface() Then
+						Exit
+					End If
 					' set this to our own func
 					funcs[i] = func
 					Exit
