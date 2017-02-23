@@ -1676,7 +1676,12 @@ Type TFuncDecl Extends TBlockDecl
 	Method EqualsArgs:Int( decl:TFuncDecl ) ' careful, this is not commutative!
 		If argDecls.Length<>decl.argDecls.Length Return False
 		For Local i:Int=0 Until argDecls.Length
-			If Not decl.argDecls[i].ty.EqualsType( argDecls[i].ty ) And Not decl.argDecls[i].ty.ExtendsType( argDecls[i].ty ) Return False
+			' objects can be subclasses as well as the same.
+			If TObjectType(decl.argDecls[i].ty) Then
+				If Not decl.argDecls[i].ty.EqualsType( argDecls[i].ty ) And Not decl.argDecls[i].ty.ExtendsType( argDecls[i].ty ) Return False
+			Else
+				If Not decl.argDecls[i].ty.EqualsType( argDecls[i].ty ) Return False
+			End If
 		Next
 		Return True
 	End Method
@@ -1685,14 +1690,23 @@ Type TFuncDecl Extends TBlockDecl
 		If IsCtor() Then
 			Return EqualsArgs( decl )
 		Else
-			Return (retType.EqualsType( decl.retType ) Or retType.ExtendsType( decl.retType ) Or decl.retType.EqualsType( retType )) And EqualsArgs( decl )
+			' matching args?
+			If EqualsArgs( decl ) Then
+				' matching return type?
+				If TObjectType(retType) Then
+					Return retType.EqualsType( decl.retType ) Or retType.ExtendsType( decl.retType )' Or decl.retType.EqualsType( retType )) And EqualsArgs( decl )
+				Else
+					Return retType.EqualsType( decl.retType )
+				End If
+			End If
 		End If
+		Return False
 	End Method
 
 	Method OnSemant()
 
 		Local strictVoidToInt:Int = False
-		
+
 		'semant ret type
 		If Not retTypeExpr Then
 			If Not retType Then ' may have previously been set (if this is a function pointer)
@@ -1840,13 +1854,20 @@ Type TFuncDecl Extends TBlockDecl
 							
 							End If
 						
-
-							If Not retType.EqualsType( decl.retType ) And retType.ExtendsType( decl.retType ) Then
-								returnTypeSubclassed = True
+							If TObjectType(retType) And TObjectType(decl.retType ) Then
+								If Not retType.EqualsType( decl.retType ) And retType.ExtendsType( decl.retType ) Then
+									returnTypeSubclassed = True
+								End If
 							End If
 							
 							overrides=TFuncDecl( decl.actual )
 						Else
+							' method overloading?
+							If Not EqualsArgs(decl) Then
+								found = False
+								Continue
+							End If
+							
 							'prepare a more detailed error message
 							If (Not retType.EqualsType( decl.retType ) Or Not retType.ExtendsType( decl.retType )) Or (decl.retType And Not decl.retType.EqualsType( retType )) Or voidReturnTypeFail
 								errorDetails :+ "Return type is ~q"+retType.ToString()+"~q, expected ~q"+decl.retType.ToString()+"~q. "
@@ -1857,11 +1878,7 @@ Type TFuncDecl Extends TBlockDecl
 								found = False
 								Continue
 							End If
-' TODO REMOVE
-' the following doesn't apply when supporting overloading, as we can have methods of the same name with different args length/types
-							If argDecls.Length <> decl.argDecls.Length
-								errorDetails :+ "Argument count differs. Got " + argDecls.Length +", expected " + decl.argDecls.Length + " arguments."
-							End If
+
 							Local argCount:Int = Min(argDecls.Length, decl.argDecls.Length)
 							If argCount > 0
 								For Local i:Int=0 Until argCount
