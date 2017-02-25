@@ -1693,7 +1693,7 @@ Type TFuncDecl Extends TBlockDecl
 			' matching args?
 			If EqualsArgs( decl ) Then
 				' matching return type?
-				If TObjectType(retType) Then
+				If TObjectType(retType) Or TArrayType(retType) Then
 					Return retType.EqualsType( decl.retType ) Or retType.ExtendsType( decl.retType )' Or decl.retType.EqualsType( retType )) And EqualsArgs( decl )
 				Else
 					Return retType.EqualsType( decl.retType )

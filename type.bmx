@@ -1397,7 +1397,7 @@ Type TArrayType Extends TType
 	
 	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
 		Local arrayType:TArrayType=TArrayType( ty )
-		Return (arrayType And ( TVoidType( elemType ) Or elemType.EqualsType( arrayType.elemType ) Or elemType.ExtendsType( arrayType.elemType ) )) Or IsPointerType(ty, 0, TType.T_POINTER) <> Null Or (TObjectType( ty ) And TObjectType( ty ).classDecl.ident="Object")
+		Return (arrayType And dims = arrayType.dims And ( TVoidType( elemType ) Or (TObjectType(elemType) And elemType.EqualsType( arrayType.elemType ) Or elemType.ExtendsType( arrayType.elemType )))) Or IsPointerType(ty, 0, TType.T_POINTER) <> Null Or (TObjectType( ty ) And TObjectType( ty ).classDecl.ident="Object")
 	End Method
 	
 	Method Semant:TType(option:Int = False)
@@ -1552,7 +1552,7 @@ Type TIdentType Extends TType
 		
 		If i=-1
 			tyid=ident.ToLower()
-			
+
 			If tyid = "self" Then
 				' find owning class
 				Local scope:TClassDecl = _env.ClassScope()
