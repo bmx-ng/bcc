@@ -2695,9 +2695,6 @@ End Rem
 	
 	Method CheckInterface(cdecl:TClassDecl, impls:TList)
 		While cdecl
-			For Local idecl:TClassDecl = EachIn cdecl.implments
-				CheckInterface(idecl, impls)
-			Next
 		
 			For Local decl:TFuncDecl=EachIn cdecl.SemantedMethods()
 				Local found:Int
@@ -2715,6 +2712,11 @@ End Rem
 				End If
 				'EndIf
 			Next
+			
+			For Local idecl:TClassDecl = EachIn cdecl.implments
+				CheckInterface(idecl, impls)
+			Next
+
 			cdecl=cdecl.superClass
 		Wend
 	End Method
