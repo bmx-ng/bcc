@@ -3982,8 +3982,9 @@ End Rem
 							If func.IsMethod() Then
 							
 								For Local f:TFuncDecl = EachIn fdecls
+
 									Mungdecl f
-									If f.ident = func.ident And func.EqualsFunc(f) Then
+									If f.ident = func.ident And f.EqualsFunc(func) Then
 										Emit "_" + f.munged + ","
 										Exit
 									End If

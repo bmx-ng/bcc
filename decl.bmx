@@ -1719,7 +1719,7 @@ Type TFuncDecl Extends TBlockDecl
 			' matching args?
 			If EqualsArgs( decl ) Then
 				' matching return type?
-				If TObjectType(retType) Or TArrayType(retType) Then
+				If TObjectType(retType) Or TArrayType(retType) Or TStringType(retType) Then
 					Return retType.EqualsType( decl.retType ) Or retType.ExtendsType( decl.retType )' Or decl.retType.EqualsType( retType )) And EqualsArgs( decl )
 				Else
 					Return retType.EqualsType( decl.retType )
@@ -2664,7 +2664,8 @@ End Rem
 						
 						While cdecl And Not found
 							For Local decl2:TFuncDecl=EachIn cdecl.SemantedMethods( decl.ident )
-								If decl.EqualsFunc( decl2 )
+								' equals (or extends - for object types)
+								If decl2.EqualsFunc( decl )
 									found=True
 									Exit
 								EndIf
@@ -2679,10 +2680,43 @@ End Rem
 					Next
 				Next
 			End If
+		Else
+			' check for compatible overloads, etc.
+
+			Local impls:TList=New TList
+
+			CheckInterface(Self, impls)
+			
 		EndIf
 		
 		PopErr
 		
+	End Method
+	
+	Method CheckInterface(cdecl:TClassDecl, impls:TList)
+		While cdecl
+			For Local idecl:TClassDecl = EachIn cdecl.implments
+				CheckInterface(idecl, impls)
+			Next
+		
+			For Local decl:TFuncDecl=EachIn cdecl.SemantedMethods()
+				Local found:Int
+				For Local decl2:TFuncDecl=EachIn impls
+					If decl.IdentLower() = decl2.IdentLower()
+						If Not decl2.EqualsFunc( decl )
+							Err "Cannot mix incompatible method signatures." + decl2.ToString() + " vs " + decl.ToString() + "."
+						Else
+							found = True
+						End If
+					EndIf
+				Next
+				If Not found Then
+					impls.AddLast decl
+				End If
+				'EndIf
+			Next
+			cdecl=cdecl.superClass
+		Wend
 	End Method
 	
 	Method GetFieldOffset(decl:TFieldDecl)
