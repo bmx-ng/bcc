@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2016 Bruce A Henderson
+' Copyright (c) 2013-2017 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -38,29 +38,19 @@ Const TOKE_STRINGLITEX:Int=7
 Const TOKE_SYMBOL:Int=8
 Const TOKE_LINECOMMENT:Int=9
 Const TOKE_LONGLIT:Int=10
+Const TOKE_NATIVE:Int=11
 
 '***** Tokenizer *****
 Type TToker
 
-	Const _keywords$=";"+ ..
-	"strict;superstrict;"+ ..
-	"public;private;"+ ..
-	"short;int;float;double;long;string;object;ptr;var;varptr;mod;continue;exit;"+ ..
-	"include;import;module;extern;framework;"+ ..
-	"new;self;super;eachin;true;false;null;not;"+ ..
-	"extends;abstract;select;case;default;"+ ..
-	"const;local;global;field;method;function;type;"+ ..
-	"and;or;shl;shr;sar;end;if;then;else;elseif;endif;while;wend;repeat;until;forever;"+ ..
-	"for;to;step;next;return;"+ ..
-	"alias;rem;endrem;throw;assert;try;catch;nodebug;incbin;"+ ..
-	"endselect;endmethod;endfunction;endtype;endextern;endtry;endwhile;pi;release;defdata;readdata;restoredata;" + ..
-	"interface;endinterface;implements;"+ ..
-	"size_t;uint;ulong;struct;endstruct;"
-
-	Global _symbols$[]=[ "..","[]",":*",":/",":+",":-",":|",":&",":~~",":shr",":shl",":sar",":mod" ]
-	Global _symbols_map$[]=[ "..","[]","*=","/=","+=","-=","|=","&=","^=",">>=", "<<=",">>=","%=" ]
-	'Global _symbols$[]=[ "..","[]",":=",":*",":/",":+",":-",":|",":&",":~~" ]
-	'Global _symbols_map$[]=[ "..","[]",":=","*=","/=","+=","-=","|=","&=","~~=" ]
+	Const __keywords$="strict,superstrict,public,private,protected,short,int,float,double,long,string,object,ptr,var,varptr," + ..
+		"mod,continue,exit,include,import,module,extern,framework,new,self,super,eachin,true,false," + ..
+		"null,not,extends,abstract,select,case,default,const,local,global,field,method,function,type," + ..
+		"and,or,shl,shr,sar,end,if,then,else,elseif,endif,while,wend,repeat,until,forever,for,to,step," + ..
+		"next,return,alias,rem,endrem,throw,assert,try,catch,nodebug,incbin,endselect,endmethod," + ..
+		"endfunction,endtype,endextern,endtry,endwhile,pi,release,defdata,readdata,restoredata,interface," + ..
+		"endinterface,implements,size_t,uint,ulong,struct,endstruct,operator"
+	Global _keywords:TMap
 
 	Field _path$
 	Field _line:Int
@@ -83,7 +73,17 @@ Type TToker
 		_tokePos=0
 		_lines = source.split("~n")
 		_preprocess = preprocess
+		If Not _keywords Then
+			initKeywords()
+		End If
 		Return Self
+	End Method
+	
+	Method initKeywords()
+		_keywords = New TMap
+		For Local k:String = EachIn __keywords.Split(",")
+			_keywords.Insert(k, "")
+		Next
 	End Method
 	
 	Method rollback(pos:Int, toketype:Int = -1)
@@ -147,7 +147,7 @@ Type TToker
 			Wend
 			_toke=_source[start.._tokePos]
 			_tokeLower = _toke.ToLower()
-			If _keywords.Contains( ";"+_tokeLower+";" )
+			If _keywords.Contains( _tokeLower )
 				_tokeType=TOKE_KEYWORD
 
 				If Not _lookingForEndRem And _tokeLower = "rem" Then
@@ -169,10 +169,12 @@ Type TToker
 					_tokePos:+1
 				Wend
 			EndIf
-			If TSTR().ToLower()="e"
+			Local _tstr:String = TSTR()
+			If _tstr="e" Or _tstr="E" Then
 				_tokeType=TOKE_FLOATLIT
 				_tokePos:+1
-				If TSTR()="+" Or TSTR()="-" _tokePos:+1
+				_tstr = TSTR()
+				If _tstr="+" Or _tstr="-" _tokePos:+1
 				While IsDigit( TCHR() )
 					_tokePos:+1
 				Wend
@@ -194,39 +196,59 @@ Type TToker
 			Wend
 		Else If str="~q"
 			_tokeType=TOKE_STRINGLIT
-			While TSTR() And TSTR()<>"~q"
+			Local _tstr:String = TSTR()
+			While _tstr And _tstr<>"~q"
 				' Strings can't cross line boundries
-				If TSTR()="~n" Then
+				If _tstr="~n" Then
 					_tokePos:-1
 					Exit
 				End If
 				_tokePos:+1
+				_tstr = TSTR()
 			Wend
 			If _tokePos<_source.Length _tokePos:+1 Else _tokeType=TOKE_STRINGLITEX
 		Else If str="'"
-			_tokeType=TOKE_LINECOMMENT
-			
-			SkipToEOL()
-
-			' completely ignore line comments
-			If TSTR()="~n" Then
-				start = _tokePos
-				If _tokePos<_source.Length
+			Local _tstr:String = TSTR()
+			If _tstr="!" Then
+		
+				_tokeType=TOKE_NATIVE
+				
+				While _tstr 
+					If _tstr="~n" Then
+						_tokePos:-1
+						Exit
+					End If
 					_tokePos:+1
+					_tstr = TSTR()
+				Wend
+		
+			Else
+				_tokeType=TOKE_LINECOMMENT
+				
+				SkipToEOL()
+	
+				' completely ignore line comments
+				If TSTR()="~n" Then
+					start = _tokePos
+					If _tokePos<_source.Length
+						_tokePos:+1
+					End If
+					_line:+1
+					_tokeType=TOKE_SYMBOL
 				End If
-				_line:+1
-				_tokeType=TOKE_SYMBOL
 			End If
-
 		Else If str="." And TSTR()="." Then
 			Local pos:Int = _tokePos
 			Local isValidTilEOL:Int = True
 			_tokePos:+1
-			While TSTR() And TSTR()<>"~n"
+			
+			Local _tstr:String = TSTR()
+			While _tstr And _tstr<>"~n"
 				If Not IsSpace(TCHR()) Then
 					isValidTilEOL = False
 				End If
 				_tokePos:+1
+				_tstr = TSTR()
 			Wend
 			
 			If Not isValidTilEOL Or _preprocess Then
@@ -239,7 +261,6 @@ Type TToker
 				_line:+1
 				_tokeType=TOKE_SPACE
 			End If
-			
 		Else
 
 			_tokeType=TOKE_SYMBOL
@@ -348,12 +369,36 @@ Type TToker
 'Private
 
 	Method TCHR:Int( i:Int=0 )
-		If _tokePos+i<_source.Length Return _source[_tokePos+i]
+		If _lastIndex <> _tokePos+i Then
+			_lastIndex = _tokePos+i
+			If _lastIndex < _source.Length Then
+				_lastTCHR = _source[_lastIndex]
+				_lastTSTR = Chr( _lastTCHR )
+			Else
+				_lastTCHR = 0
+				_lastTSTR = ""
+			End If
+		End If
+		Return _lastTCHR
 	End Method
+	
+	Field _lastIndex:Int = -1
+	Field _lastTCHR:Int
 	
 	Method TSTR$( i:Int=0 )
-		If _tokePos+i<_source.Length Return Chr( _source[_tokePos+i] )
+		If _lastIndex <> _tokePos+i Then
+			_lastIndex = _tokePos+i
+			If _lastIndex < _source.Length Then
+				_lastTCHR = _source[_lastIndex]
+				_lastTSTR = Chr( _lastTCHR )
+			Else
+				_lastTCHR = 0
+				_lastTSTR = ""
+			End If
+		End If
+		Return _lastTSTR
 	End Method
 	
+	Field _lastTSTR:String
 	
 End Type

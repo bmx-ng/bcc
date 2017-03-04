@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2016 Bruce A Henderson
+' Copyright (c) 2013-2017 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -46,6 +46,9 @@ Global _errStack:TList = New TList
 Global OBJECT_BASE_OFFSET:Int = 8
 ' 4 bytes on 32-bit, 8 bytes on 64-bit
 Global POINTER_SIZE:Int = 4
+
+Global _symbols$[]=[ "..","[]",":*",":/",":+",":-",":|",":&",":~~",":shr",":shl",":sar",":mod"]
+Global _symbols_map$[]=[ "..","[]","*=","/=","+=","-=","|=","&=","^=",">>=", "<<=",">>=","%=" ]
 
 Function PushErr( errInfo$ )
 	_errStack.AddLast _errInfo
@@ -113,6 +116,16 @@ Function IsStandardFunc:Int(func:String)
 	
 	Return funcs.Find(func) > 0
 End Function
+
+Function mapSymbol:String(sym:String)
+	For Local i:Int = 0 Until _symbols.length
+		If sym = _symbols[i] Then
+			Return _symbols_map[i]
+		End If
+	Next
+	Return sym
+End Function
+
 
 'enquote depending on ENV_LANG
 '

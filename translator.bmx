@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2016 Bruce A Henderson
+' Copyright (c) 2013-2017 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -57,8 +57,6 @@ Type TTranslator
 	Field debugOut:String
 	
 	Field processingReturnStatement:Int
-
-	Field _inBinary:Int
 
 	Method PushVarScope()
 		varStack.Push customVarStack
@@ -191,7 +189,13 @@ Type TTranslator
 		If TLongType( ty ) Return p + "l"
 		If TULongType( ty ) Return p + "y"
 		If TSizeTType( ty ) Return p + "z"
+		If TFloat64Type( ty ) Return p + "h"
+		If TFloat128Type( ty ) Return p + "k"
+		If TInt128Type( ty ) Return p + "j"
+		If TDouble128Type( ty ) Return p + "m"
 		If TStringType( ty ) Return p + "S"
+		If TWParamType( ty ) Return p + "W"
+		If TLParamType( ty ) Return p + "L"
 		If TArrayType( ty ) Then
 			Return p + "a" + TransMangleType(TArrayType( ty ).elemType)
 		End If
@@ -216,10 +220,12 @@ Type TTranslator
 '			Next
 			Return s + "_" + TransMangleType(func.retType) + "_"
 		End If
+		
+		Err "Unsupported type for name mangling : " + ty.ToString()
 	End Method
 
 	Method MangleMethod:String(fdecl:TFuncDecl)
-		If fdecl.IsMethod() Or fdecl.IsCtor() Then
+		If (fdecl.IsMethod() And Not fdecl.ClassScope().IsStruct())Or fdecl.IsCtor() Then
 			Return MangleMethodArgs(fdecl)
 		Else
 			Return MangleMethodRetType(fdecl) + MangleMethodArgs(fdecl)
@@ -306,7 +312,7 @@ Type TTranslator
 		Local funcs:TFuncDeclList=TFuncDeclList(funcMungs.ValueForKey( fdecl.ident ))
 		If funcs
 			For Local tdecl:TFuncDecl=EachIn funcs
-				If fdecl.EqualsArgs( tdecl )
+				If fdecl.EqualsArgs( tdecl ) And fdecl.scope = tdecl.scope
 					fdecl.munged=tdecl.munged
 					Return
 				EndIf
@@ -317,7 +323,13 @@ Type TTranslator
 		EndIf
 
 		If fdecl.scope Then
-			fdecl.munged = fdecl.scope.munged + "_" + fdecl.ident
+			Local id:String = fdecl.ident
+
+			If fdecl.attrs & FUNC_OPERATOR Then
+				id = MungSymbol(id)
+			End If
+			
+			fdecl.munged = fdecl.scope.munged + "_" + id
 			
 			If Not equalsBuiltInFunc(fdecl.classScope(), fdecl) And Not fdecl.noMangle Then
 				fdecl.munged :+ MangleMethod(fdecl)
@@ -333,6 +345,58 @@ Type TTranslator
 		End If
 		
 		funcs.AddLast fdecl
+	End Method
+	
+	Method MungSymbol:String(sym:String)
+		Select sym
+			Case "*"
+				Return "_mul"
+			Case "/"
+				Return "_div"
+			Case "+"
+				Return "_add"
+			Case "-"
+				Return "_sub"
+			Case "&"
+				Return "_and"
+			Case "|"
+				Return "_or"
+			Case "~~"
+				Return "_xor"
+			Case ":*"
+				Return "_muleq"
+			Case ":/"
+				Return "_diveq"
+			Case ":+"
+				Return "_addeq"
+			Case ":-"
+				Return "_subeq"
+			Case ":&"
+				Return "_andeq"
+			Case ":|"
+				Return "_oreq"
+			Case ":~~"
+				Return "_xoreq"
+			Case "<"
+				Return "_lt"
+			Case "<="
+				Return "_le"
+			Case ">"
+				Return "_gt"
+			Case ">="
+				Return "_ge"
+			Case "="
+				Return "_eq"
+			Case "<>"
+				Return "_ne"
+			Case "mod"
+				Return "_mod"
+			Case "shl"
+				Return "_shl"
+			Case "shr"
+				Return "_shr"
+		End Select
+		Return "?? unknown symbol ?? : " + sym
 	End Method
 	
 	Method MungDecl( decl:TDecl, addIfNotInScope:Int = False )
@@ -562,6 +626,7 @@ End Rem
 	
 	Method TransBinaryOp$( op$,rhs$ )
 'DebugLog "TransBinaryOp '" + op + "' : '" + rhs + "'"
+op = mapSymbol(op)
 		Select op
 		Case "+","-"
 			If rhs.StartsWith( op ) Return op+" "
@@ -587,11 +652,12 @@ End Rem
 	End Method
 	
 	Method TransAssignOp$( op$ )
+op = mapSymbol(op)
 		Select op
-		Case "mod=" Return "%="
-		Case "shl=" Return "<<="
-		Case "shr=" Return ">>="
-		Case "sar=" Return ">>="
+		Case ":mod" Return "%="
+		Case ":shl" Return "<<="
+		Case ":shr" Return ">>="
+		Case ":sar" Return ">>="
 		End Select
 		Return op
 	End Method
@@ -643,10 +709,10 @@ End Rem
 		Return CreateLocal( expr )
 	End Method
 	
-	Method CreateLocal$( expr:TExpr )
-		Local tmp:TLocalDecl=New TLocalDecl.Create( "",expr.exprType,expr, True )
+	Method CreateLocal$( expr:TExpr, init:Int = True, vol:Int = True )
+		Local tmp:TLocalDecl=New TLocalDecl.Create( "",expr.exprType,expr, True, , vol )
 		MungDecl tmp
-		Emit TransLocalDecl( tmp,expr, True )+";"
+		Emit TransLocalDecl( tmp,expr, True, init )+";"
 
 		EmitGDBDebug(_errInfo)
 		
@@ -655,7 +721,7 @@ End Rem
 
 	'***** Utility *****
 
-	Method TransLocalDecl$( decl:TLocalDecl,init:TExpr, declare:Int = False ) Abstract
+	Method TransLocalDecl$( decl:TLocalDecl,init:TExpr, declare:Int = False, outputInit:Int = True ) Abstract
 
 	Method TransGlobalDecl$( gdecl:TGlobalDecl ) Abstract
 	
@@ -711,7 +777,7 @@ End Rem
 	
 	Method EmitLocalDeclarations(decl:TScopeDecl, v:TValDecl = Null) Abstract
 	
-	Method TransType$( ty:TType, ident:String) Abstract
+	Method TransType$( ty:TType, ident:String, fpReturnTypeFunctionArgs:String = Null, fpReturnTypeClassFunc:Int = False) Abstract
 	
 	Method BeginLocalScope()
 		mungStack.Push mungScope
@@ -811,6 +877,8 @@ End Rem
 		
 		If TFieldDecl( decl ) Return TransField( TFieldDecl( decl ),expr.expr )
 
+		If TGlobalDecl( decl ) Return TransGlobal( TGlobalDecl( decl ) )
+
 		InternalErr
 	End Method
 	
@@ -820,12 +888,16 @@ End Rem
 		If Not decl.munged Then
 			MungDecl decl
 		End If
-
-		If (decl.attrs & FUNC_PTR) And (decl.attrs & FUNC_INIT) And Not expr.InvokedWithBraces Return decl.munged
 		
-		If ((decl.attrs & FUNC_PTR) Or (expr.decl.attrs & FUNC_PTR)) And Not expr.InvokedWithBraces Return decl.munged
+		'If (decl.attrs & FUNC_PTR) And (decl.attrs & FUNC_INIT) And Not expr.InvokedWithBraces Return decl.munged
 		
-		If Not expr.InvokedWithBraces And expr.IsRhs And Not expr.args Return decl.munged
+		'If ((decl.attrs & FUNC_PTR) Or (expr.decl.attrs & FUNC_PTR)) And Not expr.InvokedWithBraces Return decl.munged
+		
+		'If Not expr.InvokedWithBraces And expr.IsRhs Return decl.munged
+		
+		' if the call was a statement (even one written without parentheses), then invokedWithBraces is true
+		' so no complicated checks are needed here; if invokedWithBraces is false, this is definitely not a call
+		If Not expr.InvokedWithBraces Then Return decl.munged
 		
 		If decl.munged.StartsWith( "$" ) Return TransIntrinsicExpr( decl,Null,expr.args )
 		
@@ -883,6 +955,14 @@ End Rem
 			expr.args=expr.CastArgs( expr.args,TFuncDecl(decl) )
 			Return expr.expr.Trans() + TransArgs(expr.args, TFuncDecl(decl))
 		End If
+
+		' hmmm, complicated - a function returning and invoking a function pointer...		
+		If TInvokeExpr(expr.expr) And TFunctionPtrType(TInvokeExpr(expr.expr).exprType) Then
+			Local decl:TDecl = TFunctionPtrType(TInvokeExpr(expr.expr).exprType).func.actual
+			decl.Semant()
+			expr.args=expr.CastArgs( expr.args,TFuncDecl(decl) )
+			Return expr.expr.Trans() + TransArgs(expr.args, TFuncDecl(decl))
+		End If
 		
 		InternalErr
 	End Method
@@ -915,19 +995,26 @@ End Rem
 
 			Else
 				
-				Local s:String = stmt.expr.Trans()
-				
-				' we have some temp variables that need to be freed before we can return
-				' put the results into a new variable, and return that.
-				If customVarStack.Count() > 0 Then
-					If Not TFunctionPtrType( stmt.expr.exprType ) Then
-						Emit TransType(stmt.expr.exprType, "rt_") + " rt_ = " + s + ";"
-					Else
-						Emit TransType(stmt.expr.exprType, "rt_") + " = " + s + ";"
-					End If
-					t:+ " rt_"
+				If TSelfExpr(stmt.expr) And TObjectType(TSelfExpr(stmt.expr).exprType).classDecl And TObjectType(TSelfExpr(stmt.expr).exprType).classDecl.IsStruct() Then
+					t :+ Bra("*" + stmt.expr.Trans())
+				Else If TObjectType(stmt.expr.exprType) And TObjectType(stmt.expr.exprType).classDecl.IsStruct() And TConstExpr(stmt.expr) And Not TConstExpr(stmt.expr).value Then
+					Local lvar:String = CreateLocal(stmt.expr)
+					t :+ " " + lvar
 				Else
-					t:+" " + s
+					Local s:String = stmt.expr.Trans()
+					
+					' we have some temp variables that need to be freed before we can return
+					' put the results into a new variable, and return that.
+					If customVarStack.Count() > 0 Then
+						If Not TFunctionPtrType( stmt.expr.exprType ) Then
+							Emit TransType(stmt.expr.exprType, "rt_") + " rt_ = " + s + ";"
+						Else
+							Emit TransType(stmt.expr.exprType, "rt_") + " = " + s + ";"
+						End If
+						t:+ " rt_"
+					Else
+						t:+" " + s
+					End If
 				End If
 			End If
 			
@@ -1341,9 +1428,7 @@ End Rem
 				Emit "}"
 			EndIf
 		Else If stmt.elseBlock.stmts.First()
-			_inBinary :+ 1
 			Emit "if"+Bra( stmt.expr.Trans() )+"{"
-			_inBinary :- 1
 			EmitLocalDeclarations(stmt.thenBlock)
 			FreeVarsIfRequired(False)
 			PushVarScope
@@ -1367,10 +1452,8 @@ End Rem
 '					Emit "if"+Bra( stmt.expr.Trans() )+"{"
 '				End If
 '			Else
-			_inBinary :+ 1
 				Emit "if"+Bra( stmt.expr.Trans() )+"{"
 				FreeVarsIfRequired(False)
-			_inBinary :- 1
 '			End If
 			EmitLocalDeclarations(stmt.thenBlock)
 			PushVarScope
@@ -1412,9 +1495,7 @@ End Rem
 	Method TransWhileStmt$( stmt:TWhileStmt )
 		Local nbroken:Int=broken
 
-		_inBinary :+ 1
 		Emit "while"+Bra( stmt.expr.Trans() )+"{"
-		_inBinary :- 1
 		
 		Local check:TTryBreakCheck = New TTryBreakCheck
 		check.stmt = stmt
@@ -1568,6 +1649,8 @@ End Rem
 	Method TransRestoreDataStmt$( stmt:TRestoreDataStmt ) Abstract
 
 	Method TransReadDataStmt$( stmt:TReadDataStmt ) Abstract
+	
+	Method TransNativeStmt$( stmt:TNativeStmt) Abstract
 
 	'module
 	Method TransApp( app:TAppDecl ) Abstract

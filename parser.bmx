@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2016 Bruce A Henderson
+' Copyright (c) 2013-2017 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -46,6 +46,7 @@ Type TForEachinStmt Extends TLoopStmt
 		Self.varlocal=varlocal
 		Self.expr=expr
 		Self.block=block
+		block.extra = Self
 		Self.loopLabel=loopLabel
 		Self.varExpr = varExpr
 		Return Self
@@ -151,7 +152,7 @@ Type TForEachinStmt Extends TLoopStmt
 
 			EndIf
 
-			Local whileStmt:TWhileStmt=New TWhileStmt.Create( cmpExpr,block,Null, True )
+			Local whileStmt:TWhileStmt=New TWhileStmt.Create( cmpExpr,block,loopLabel, True )
 
 			block=New TBlockDecl.Create( block.scope, True )
 			block.AddStmt New TDeclStmt.Create( exprTmp, True )
@@ -243,7 +244,7 @@ Type TForEachinStmt Extends TLoopStmt
 				block.stmts.AddFirst New TAssignStmt.Create( "=",varExpr,New TCastExpr.Create( varty, nextObjExpr,CAST_EXPLICIT ))
 			EndIf
 
-			Local whileStmt:TWhileStmt=New TWhileStmt.Create( hasNextExpr,block,Null, True )
+			Local whileStmt:TWhileStmt=New TWhileStmt.Create( hasNextExpr,block, loopLabel, True )
 
 			block=New TBlockDecl.Create( block.scope, True )
 			If tmpDecl Then
@@ -541,15 +542,43 @@ Type TParser
 		If CParse( "object" ) Return New TIdentType.Create( "brl.classes.object" )
 
 		Local ty:TType
-		If CParse( "short" ) ty = New TShortType
-		If CParse( "byte" ) ty = New TByteType
-		If CParse( "int" ) ty = New TIntType
-		If CParse( "uint" ) ty = New TUIntType
-		If CParse( "float" ) ty = New TFloatType
-		If CParse( "long" ) ty = New TLongType
-		If CParse( "ulong" ) ty = New TULongType
-		If CParse( "double" ) ty = New TDoubleType
-		If CParse( "size_t" ) ty = New TSizeTType
+		If CParse( "short" )
+			ty = New TShortType
+		Else If CParse( "byte" )
+			ty = New TByteType
+		Else If CParse( "int" )
+			ty = New TIntType
+		Else If CParse( "uint" )
+			ty = New TUIntType
+		Else If CParse( "float" )
+			ty = New TFloatType
+		Else If CParse( "long" )
+			ty = New TLongType
+		Else If CParse( "ulong" )
+			ty = New TULongType
+		Else If CParse( "double" )
+			ty = New TDoubleType
+		Else If CParse( "size_t" )
+			ty = New TSizeTType
+		Else If CParse( "int128" ) Then
+			If opt_arch <> "x64" Err "Intrinsic types only available on x64"
+			ty = New TInt128Type
+		Else If CParse( "float128" ) Then
+			If opt_arch <> "x64" Err "Intrinsic types only available on x64"
+			ty = New TFloat128Type
+		Else If CParse( "double128" ) Then
+			If opt_arch <> "x64" Err "Intrinsic types only available on x64"
+			ty = New TDouble128Type
+		Else If CParse( "float64" ) Then
+			If opt_arch <> "x64" Err "Intrinsic types only available on x64"
+			ty = New TFloat64Type
+		Else If CParse( "wparam" ) Then
+			If opt_platform <> "win32" Err "WParam types only available on Win32"
+			ty = New TWParamType
+		Else If CParse( "lparam" ) Then
+			If opt_platform <> "win32" Err "LParam types only available on Win32"
+			ty = New TLParamType
+		End If
 
 		While CParse("ptr")
 			ty = TType.MapToPointerType(ty)
@@ -567,6 +596,30 @@ Type TParser
 		If CParse( "ulong" ) Return New TULongType
 		If CParse( "double" ) Return New TDoubleType
 		If CParse( "size_t" ) Return New TSizeTType
+		If CParse( "int128" ) Then
+			If opt_arch <> "x64" Err "Intrinsic types only available on x64"
+			Return New TInt128Type
+		End If
+		If CParse( "float128" ) Then
+			If opt_arch <> "x64" Err "Intrinsic types only available on x64"
+			Return New TFloat128Type
+		End If
+		If CParse( "double128" ) Then
+			If opt_arch <> "x64" Err "Intrinsic types only available on x64"
+			Return New TDouble128Type
+		End If
+		If CParse( "float64" ) Then
+			If opt_arch <> "x64" Err "Intrinsic types only available on x64"
+			Return New TFloat64Type
+		End If
+		If CParse( "wparam" ) Then
+			If opt_platform <> "win32" Err "WParam types only available on Win32"
+			Return New TWParamType
+		End If
+		If CParse( "lparam" ) Then
+			If opt_platform <> "win32" Err "LParam types only available on Win32"
+			Return New TLParamType
+		End If
 	End	Method
 
 	Method ParseNewType:TType()
@@ -582,6 +635,30 @@ Type TParser
 		If CParse( "ulong" ) Return New TULongType
 		If CParse( "double" ) Return New TDoubleType
 		If CParse( "size_t" ) Return New TSizeTType
+		If CParse( "int128" ) Then
+			If opt_arch <> "x64" Err "Intrinsic types only available on x64"
+			Return New TInt128Type
+		End If
+		If CParse( "float128" ) Then
+			If opt_arch <> "x64" Err "Intrinsic types only available on x64"
+			Return New TFloat128Type
+		End If
+		If CParse( "double128" ) Then
+			If opt_arch <> "x64" Err "Intrinsic types only available on x64"
+			Return New TDouble128Type
+		End If
+		If CParse( "float64" ) Then
+			If opt_arch <> "x64" Err "Intrinsic types only available on x64"
+			Return New TFloat64Type
+		End If
+		If CParse( "wparam" ) Then
+			If opt_platform <> "win32" Err "WParam types only available on Win32"
+			Return New TWParamType
+		End If
+		If CParse( "lparam" ) Then
+			If opt_platform <> "win32" Err "LParam types only available on Win32"
+			Return New TLParamType
+		End If
 		Return ParseIdentType()
 	End Method
 
@@ -665,7 +742,7 @@ Type TParser
 		Return ty
 	End Method
 
-	Method ParseDeclType:TType()
+	Method ParseDeclType:TType(attr:Int = 0)
 		Local ty:TType
 		Select _toke
 		Case "@"
@@ -725,12 +802,17 @@ Type TParser
 			ty=ParseType()
 
 			If CParse("ptr") Then
-
-				ty = TType.MapToPointerType(ty)
-
-				While CParse("ptr")
+			
+				' FIXME #200
+				'If TStringType(ty) = Null And (TObjectType(ty) = Null Or (TObjectType(ty) <> Null And TObjectType(ty).classDecl.IsExtern())) And TArrayType(ty) = Null Then
 					ty = TType.MapToPointerType(ty)
-				Wend
+	
+					While CParse("ptr")
+						ty = TType.MapToPointerType(ty)
+					Wend
+				'Else
+				'	ty = Null
+				'End If
 
 				If Not ty DoErr "Invalid Pointer type."
 			End If
@@ -747,10 +829,18 @@ Type TParser
 			Wend
 		End Select
 		
-		' array ?
-		While IsArrayDef()
-			ty = ParseArrayType(ty)
-		Wend
+		' array or function pointer?
+		Repeat
+			If (_toke = "[" Or _toke = "[]") And IsArrayDef()
+				ty = ParseArrayType(ty)
+			Else If _toke = "(" Then
+				Local args:TArgDecl[] = ParseFuncParamDecl()
+				attr :| ParseCallConvention(attr & DECL_API_STDCALL)
+				ty = New TFunctionPtrType.Create(New TFuncDecl.CreateF("", ty, args, FUNC_PTR | (attr & DECL_API_STDCALL)))
+			Else
+				Exit
+			End If
+		Forever
 		
 		Return ty
 	End Method
@@ -987,7 +1077,7 @@ Type TParser
 		Case "false"
 			NextToke
 			expr=New TConstExpr.Create( New TIntType,"" )
-		Case "int","long","float","double","object","short","byte","size_t","uint","ulong"
+		Case "int","long","float","double","object","short","byte","size_t","uint","ulong","int128","float64","float128","double128","lparam","wparam"
 			Local id$=_toke
 			Local ty:TType=ParseType()
 
@@ -1009,6 +1099,24 @@ Type TParser
 						ty = New TDoubleType
 					Case "size_t"
 						ty = New TSizeTType
+					Case "int128"
+						If opt_arch <> "x64" Err "Intrinsic types only available on x64"
+						ty = New TInt128Type
+					Case "float128"
+						If opt_arch <> "x64" Err "Intrinsic types only available on x64"
+						ty = New TFloat128Type
+					Case "double128"
+						If opt_arch <> "x64" Err "Intrinsic types only available on x64"
+						ty = New TDouble128Type
+					Case "float64"
+						If opt_arch <> "x64" Err "Intrinsic types only available on x64"
+						ty = New TFloat64Type
+					Case "wparam"
+						If opt_platform <> "win32" Err "WParam types only available on Win32"
+						ty = New TWParamType
+					Case "lparam"
+						If opt_platform <> "win32" Err "LParam types only available on Win32"
+						ty = New TLParamType
 				End Select
 			End If
 
@@ -1246,6 +1354,11 @@ Type TParser
 			Case TOKE_LONGLIT
 				expr=New TConstExpr.Create( New TLongType,_toke )
 				NextToke
+				
+				Local ty:TType = ParseConstNumberType()
+				If ty Then
+					TConstExpr(expr).UpdateType(ty)
+				End If
 			Case TOKE_FLOATLIT
 				expr=New TConstExpr.Create( New TFloatType,_toke )
 				NextToke
@@ -1337,14 +1450,29 @@ Type TParser
 		Return ParsePrimaryExpr( False )
 	End Method
 
-	Method ParseMulDivExpr:TExpr()
+	Method ParsePowExpr:TExpr()
 		Local expr:TExpr=ParseUnaryExpr()
 		Repeat
 			Local op$=_toke
 			Select op
-			Case "^","*","/","mod","shl","shr", "sar"
+			Case "^"
 				NextToke
 				Local rhs:TExpr=ParseUnaryExpr()
+				expr=New TBinaryMathExpr.Create( op,expr,rhs )
+			Default
+				Return expr
+			End Select
+		Forever
+	End Method
+
+	Method ParseMulDivExpr:TExpr()
+		Local expr:TExpr=ParsePowExpr()
+		Repeat
+			Local op$=_toke
+			Select op
+			Case "*","/","mod","shl","shr", "sar"
+				NextToke
+				Local rhs:TExpr=ParsePowExpr()
 				expr=New TBinaryMathExpr.Create( op,expr,rhs )
 			Default
 				Return expr
@@ -1696,6 +1824,7 @@ End Rem
 				If varty._flags & (TType.T_CHAR_PTR | TType.T_SHORT_PTR) Then
 					DoErr "Illegal variable type"
 				End If
+				
 				Parse( "=" )
 			'EndIf
 		Else
@@ -2060,14 +2189,8 @@ End Rem
 
 		NextToke
 
-		If _tokeType=TOKE_STRINGLIT
-			Local api:String = ParseStringLit().ToLower()
-			If api = "win32" Then
-				attrs:| DECL_API_WIN32
-			End If
-		End If
-
-
+		attrs :| ParseCallConvention()
+		
 		attrs = attrs | DECL_EXTERN
 		If CParse( "private" ) attrs=attrs|DECL_PRIVATE
 
@@ -2174,90 +2297,84 @@ End Rem
 			Case "restoredata"
 				ParseRestoreDataStmt()
 			Default
-				Local expr:TExpr=ParsePrimaryExpr( True )
-
-				Select _toke.ToLower()
-				'"=","*=","/=","+=","-=","&=","|=","~~=","Mod","Shl","Shr"
-				Case "=",":*",":/",":+",":-",":&",":|",":~~","mod","shl","shr", ":shl", ":shr", "sar", ":sar", ":mod"
-	'DebugLog _toke
-					' remap symbols...
-					For Local i:Int = 0 Until TToker._symbols.length
-						Local sym$= TToker._symbols[i]
-						If _toke.ToLower() = sym
-							_toke = TToker._symbols_map[i]
-							Exit
-						EndIf
-					Next
-
-
-					If TIdentExpr( expr ) Or TIndexExpr( expr )
-						Local op$=_toke
-						NextToke
-						If Not op.EndsWith( "=" ) And Not op.StartsWith("=")
-							Parse "="
-							op:+"="
-						EndIf
-						_block.AddStmt New TAssignStmt.Create( op,expr,ParseExpr() )
-					Else
-						Err "Assignment operator '"+_toke+"' cannot be used this way."
-					EndIf
-					Return
-				End Select
-
-				If TIdentExpr( expr )
-
-					expr=New TFuncCallExpr.Create( expr,ParseArgs( True ) )
-
-				Else If TFuncCallExpr( expr) Or TInvokeSuperExpr( expr ) Or TNewObjectExpr( expr ) Or TNewExpr(expr)
-
+				If _toke.StartsWith("'!") Then
+					If _tokeType = TOKE_NATIVE Then
+						ParseNativeStmt()
+					End If
 				Else
-					Err "Expression cannot be used as a statement."
-				EndIf
+					Local expr:TExpr=ParsePrimaryExpr( True )
+	
+					Select _toke.ToLower()
+					'"=","*=","/=","+=","-=","&=","|=","~~=","Mod","Shl","Shr"
+					Case "=",":*",":/",":+",":-",":&",":|",":~~","mod","shl","shr", ":shl", ":shr", "sar", ":sar", ":mod"
 
-				_block.AddStmt New TExprStmt.Create( expr )
-
+						' remap symbols...
+						'For Local i:Int = 0 Until TToker._symbols.length
+						'	Local sym$= TToker._symbols[i]
+						'	If _toke.ToLower() = sym
+						'		_toke = TToker._symbols_map[i]
+						'		Exit
+						'	EndIf
+						'Next
+	
+	
+						If TIdentExpr( expr ) Or TIndexExpr( expr )
+							Local op$=_toke.ToLower()
+							NextToke
+						'	If Not op.EndsWith( "=" ) And Not op.StartsWith("=")
+						'		Parse "="
+						'		op:+"="
+						'	EndIf
+							_block.AddStmt New TAssignStmt.Create( op,expr,ParseExpr() )
+						Else
+							Err "Assignment operator '"+_toke+"' cannot be used this way."
+						EndIf
+						Return
+					End Select
+	
+					If TIdentExpr( expr )
+	
+						expr=New TFuncCallExpr.Create( expr,ParseArgs( True ) )
+	
+					Else If TFuncCallExpr( expr) Or TInvokeSuperExpr( expr ) Or TNewObjectExpr( expr ) Or TNewExpr(expr)
+					
+					Else If TIndexExpr(expr)
+						expr = New TFuncCallExpr.Create( expr, ParseArgs( True ) )
+					Else
+						Err "Expression cannot be used as a statement."
+					EndIf
+	
+					_block.AddStmt New TExprStmt.Create( expr )
+				End If
 		End Select
 	End Method
 
 	Method ParseDecl:TDecl( toke$,attrs:Int )
+
 		SetErr
+
 		Local id$=ParseIdent()
 		Local ty:TType
 		Local init:TExpr
-
+		
+		
 		If attrs & DECL_EXTERN
-			ty=ParseDeclType()
-
-'			If CParse("(") Then
-			If _toke = "(" Then
-
-				' function pointer?
-				Local decl:TFuncDecl = ParseFuncDecl("", attrs | FUNC_PTR)
-
-				If Not ty Then
-					ty = New TFunctionPtrType
-					TFunctionPtrType(ty).func = decl
-				Else
-					decl.retType = ty
-					ty = New TFunctionPtrType
-					TFunctionPtrType(ty).func = decl
-				End If
-
-				TFunctionPtrType(ty).func.ident = id
-
-			Else If toke = "const" Then
+			ty=ParseDeclType(attrs & DECL_API_STDCALL)
+			
+			If toke = "const" Then
 				If CParse("=") Then
 					init=ParseExpr()
 				End If
 			End If
 		Else If CParse( ":=" )
 			init=ParseExpr()
+			ty = init.exprType
 		Else
-			ty=ParseDeclType()
+			ty=ParseDeclType(attrs & DECL_API_STDCALL)
 
 			If CParse( "=" )
 				init=ParseExpr()
-			Else If CParse( "[" )
+			Else If CParse( "[" ) ' an initialised array?
 				Local ln:TExpr[]
 				Repeat
 					If CParse(",") Then
@@ -2276,64 +2393,13 @@ End Rem
 				'Wend
 				init=New TNewArrayExpr.Create( ty,ln)
 				ty=New TArrayType.Create( ty, ln.length )
-			Else If _toke = "(" Then
-	 			' function pointer?
-
-				Local fdecl:TFuncDecl = ParseFuncDecl("", FUNC_PTR)
-				If toke = "field" Then
-					fdecl.attrs :| FUNC_METHOD
-				End If
-
-				If Not ty Then
-					ty = New TFunctionPtrType
-					TFunctionPtrType(ty).func = fdecl
-				Else
-					fdecl.retType = ty
-					ty = New TFunctionPtrType
-					TFunctionPtrType(ty).func = fdecl
-				End If
-
-				TFunctionPtrType(ty).func.ident = ""
-
-				' an initialised array of function pointers?
-				If CParse( "[" )
-					Local ln:TExpr[]
-					Repeat
-						If CParse(",") Then
-							ln = ln + [New TNullExpr]
-							Continue
-						End If
-						If CParse("]") Exit
-						ln = ln + [ParseExpr()]
-						If CParse("]") Exit
-						Parse(",")
-					Forever
-					'Parse "]"
-					ty = ParseArrayType(ty)
-					'While CParse( "[]" )
-					'	ty=New TArrayType.Create(ty)
-					'Wend
-					init=New TNewArrayExpr.Create( ty,ln)
-					ty=New TArrayType.Create( ty, ln.length )
-				Else
-					While IsArrayDef()
-						ty = ParseArrayType(ty)
-					Wend
-
-					' check for function pointer init
-					If CParse("=") Then
-						init=ParseExpr()
-					Else
-						init=New TConstExpr.Create( ty,"" )
-					End If
-				End If
-
 			Else If toke<>"const"
 				init=New TConstExpr.Create( ty,"" )
 			Else
 				Err "Constants must be initialized."
 			EndIf
 		EndIf
+		
 
 		Local decl:TValDecl
 
@@ -2345,9 +2411,19 @@ End Rem
 		End Select
 
 		If decl.IsExtern()
-'DebugStop
+			Local cdets:TCastDets
+
 			If CParse( "=" )
-				decl.munged=ParseStringLit()
+				Local munged:String = ParseStringLit()
+				
+				If munged.Find("(") > 0 Then
+					cdets = ParseExternCast(munged, True)
+					If cdets Then
+						decl.munged = cdets.name
+					End If
+				Else
+					decl.munged = munged
+				End If
 			Else
 				decl.munged=decl.ident
 			EndIf
@@ -2355,7 +2431,10 @@ End Rem
 				If TFunctionPtrType(ty) Then
 					TFunctionPtrType(ty).func.munged = decl.munged
 					
-					Local cdets:TCastDets = TCastDets(_externCasts.ValueForKey(TFunctionPtrType(ty).func.munged))
+					If Not cdets Then
+						cdets = TCastDets(_externCasts.ValueForKey(TFunctionPtrType(ty).func.munged))
+					End If
+					
 					If cdets Then
 						TFunctionPtrType(ty).func.castTo = cdets.retType
 						If cdets.noGen Then
@@ -2372,11 +2451,18 @@ End Rem
 
 		EndIf
 
+		' apply any function ptr metadata to decl
+		If TFunctionPtrType(ty) Then
+			If TFunctionPtrType(ty).func And TFunctionPtrType(ty).func.metadata Then
+				decl.metadata = TFunctionPtrType(ty).func.metadata
+			End If
+		End If
+
 		'meta data for variables
-		If CParse( "{" ) Then
-			'print "meta for variable: "+id+ " -> "+ParseMetaData()
-			decl.metadata = ParseMetaData()
-		EndIf
+		Local meta:TMetaData = ParseMetaData()
+		If meta Then
+			decl.metadata = meta
+		End If
 
 		Return decl
 	End Method
@@ -2393,6 +2479,7 @@ End Rem
 	End Method
 
 	Method ParseDeclStmts()
+
 		Local toke$=_toke
 		NextToke
 		Repeat
@@ -2455,12 +2542,18 @@ End Rem
 	'should return a specific "metadata object" ?
 	' metadata is in the form : {key key=value key="value"}
 	Method ParseMetaData:TMetadata()
+		If Not CParse( "{" ) Then
+			Return Null
+		End If
+
 		Local meta:TMetadata = New TMetadata
 
 		SkipEols
 
 		Repeat
-			
+			'reached end of meta data declaration
+			If _toke="}" Then Exit
+
 			If meta.metadataString Then
 				meta.metadataString :+ " "
 			End If
@@ -2502,9 +2595,6 @@ End Rem
 			End If
 			
 			meta.InsertMeta(key.ToLower(), value)
-			
-			'reached end of meta data declaration
-			If _toke="}" Then Exit
 		Forever
 
 		'continue to next token
@@ -2513,9 +2603,9 @@ End Rem
 		'parse this into something
 		Return meta
 	End Method
-
-
-	Method ParseFuncDecl:TFuncDecl( toke$,attrs:Int )
+	
+	
+	Method ParseFuncDecl:TFuncDecl( toke$, attrs:Int, parent:TScopeDecl = Null )
 		SetErr
 
 		If toke Parse toke
@@ -2526,9 +2616,10 @@ End Rem
 		Local meta:TMetadata
 		Local noMangle:Int
 
+		Local classDecl:TClassDecl = TClassDecl(parent)
+
 		If attrs & FUNC_METHOD
 			If _toke="new"
-'DebugStop
 				If attrs & DECL_EXTERN
 					Err "Extern classes cannot have constructors"
 				EndIf
@@ -2536,9 +2627,39 @@ End Rem
 				NextToke
 				attrs:|FUNC_CTOR
 				attrs:&~FUNC_METHOD
+				ty=ParseDeclType()
+			Else If _toke="operator" Then
+				attrs:|FUNC_OPERATOR
+				NextToke
+				
+				Local t:String = _toke.ToLower()
+				NextToke
+				
+				Select t
+					Case "*","/","+","-","&","|","~~"
+						id = t
+					Case ":*",":/",":+",":-",":&",":|",":~~"
+						id = t
+					Case "<",">"',"="',"<=",">=","=","<>"
+						If CParse("=") Then
+							t :+ "="
+						Else If t = "<" And CParse(">") Then
+							t :+ ">"
+						End If
+						id = t
+					Case "="
+						id = t
+					Case "mod", "shl", "shr"
+						id = t
+					Case ":mod", ":shl", ":shr"
+						id = t
+					Default
+						DoErr "Operator must be one of: * / + - & | ~~ :* :/ :+ :- :& :| :~~ < > <= >= = <> mod shl shr :mod :shl :shr"
+				End Select
+				ty=ParseDeclType()
 			Else
 				id=ParseIdent()
-				ty=ParseDeclType()
+				ty=ParseDeclType(attrs & DECL_API_STDCALL)
 				If ty._flags & (TType.T_CHAR_PTR | TType.T_SHORT_PTR) Then
 					DoErr "Illegal function return type"
 				End If
@@ -2550,110 +2671,85 @@ End Rem
 						ty = New TVoidType
 					End If
 				End If
+				' TODO: make sure Delete cannot be declared with parameters?
 			EndIf
 		Else
-			If Not (attrs & FUNC_PTR) Then
+			'If Not (attrs & FUNC_PTR) Then
 				id=ParseIdent()
-				ty=ParseDeclType()
+				ty=ParseDeclType(attrs & DECL_API_STDCALL)
 				' can only return "$z" and "$w" from an extern function.
 				If ty._flags & (TType.T_CHAR_PTR | TType.T_SHORT_PTR) And Not (attrs & DECL_EXTERN) Then
 					DoErr "Illegal function return type"
 				End If
-			End If
+			'End If
 		EndIf
-
+		
+		' every branch in that nested If block up there contains the line "ty=ParseDeclType()";
+		' this already consumed all sets of parentheses and brackets belonging to this function declaration
+		' so we will now extract our actual return type and args from the result
 		Local args:TArgDecl[]
+		If Not TFunctionPtrType(ty) Then
+			DoErr "Expecting function type"
+		Else
+			Local fdecl:TFuncDecl = TFunctionPtrType(ty).func
+			ty = fdecl.retTypeExpr
+			args = fdecl.argDecls
+		End If
+		
+		
+		If CParse( "nodebug" ) Then
+			attrs :| DECL_NODEBUG
+		End If
+			
+		If CParse( "final" )
+			If Not classDecl Then
+				Err "Final cannot be used with global functions"
+			End If
+			attrs:|DECL_FINAL
+		Else If CParse( "abstract" )
+			If Not classDecl Then
+				Err "Abstract cannot be used with global functions"
+			End If
+			
+			If classDecl And classDecl.attrs & DECL_FINAL Then
+				Err "Abstract methods cannot appear in final types"
+			End If
+			
+			attrs:|DECL_ABSTRACT
+		End If
+			
+		If CParse( "nodebug" ) Then
+			attrs :| DECL_NODEBUG
+		End If
 
-		Parse "("
-		SkipEols
-		If _toke<>")"
-			Local nargs:Int
-			Repeat
 
-				Local argId$=ParseIdent()
-
-				Local ty:TType=ParseDeclType()
-
-				' var argument?
-				If CParse("var") Then
-					ty = TType.MapToVarType(ty)
-				End If
-
-				Local init:TExpr
-				' function pointer ?
-				If _toke = "(" Then
-
-					Local fdecl:TFuncDecl = ParseFuncDecl("", FUNC_PTR | DECL_ARG)
-
-					If Not ty Then
-						ty = New TFunctionPtrType
-						TFunctionPtrType(ty).func = fdecl
-					Else
-						fdecl.retType = ty
-						ty = New TFunctionPtrType
-						TFunctionPtrType(ty).func = fdecl
-					End If
-
-					TFunctionPtrType(ty).func.ident = argId
-
-				End If
-				If CParse( "=" ) init=ParseExpr()
-				Local arg:TArgDecl=New TArgDecl.Create( argId,ty,init )
-				If args.Length=nargs args=args + New TArgDecl[10]
-				args[nargs]=arg
-				nargs:+1
-				If _toke=")" Exit
-
-				Parse ","
-			Forever
-			args=args[..nargs]
-		EndIf
-		Parse ")"
-
-		Repeat
-			If CParse( "final" )
-				attrs:|DECL_FINAL
-			Else If CParse( "abstract" )
-				attrs:|DECL_ABSTRACT
-			Else If CParse( "property" )
-				If attrs & FUNC_METHOD
-					attrs:|FUNC_PROPERTY
-				Else
-					Err "Only methods can be properties."
-				EndIf
-			Else If CParse( "nodebug" )
-				' TODO : NoDebug
-				attrs :| DECL_NODEBUG
-			Else If CParse( "{" ) 'meta data
-				' TODO : do something with the metadata
-				'meta data for functions/methods
-				'print "meta for func/meth: "+id+ " -> "+ParseMetaData()
-				meta = ParseMetaData()
-				
-				If meta.HasMeta("nomangle") Then
-					If attrs & FUNC_METHOD Then
-						Err "Only functions can specify NoMangle"
-					Else
-						noMangle = True
-					End If
-				End If
-			Else If _tokeType=TOKE_STRINGLIT
-				' "win32", etc
-				' TODO ? something with this??
-				Local api:String = ParseStringLit().ToLower()
-				If api = "win32" Then
-					attrs :| DECL_API_WIN32
-				End If
+		'meta data for functions/methods
+		meta = ParseMetaData()
+		
+		If meta And meta.HasMeta("nomangle") Then
+			If attrs & FUNC_METHOD Then
+				Err "Only functions can specify NoMangle"
 			Else
-				Exit
-			EndIf
-		Forever
+				noMangle = True
+			End If
+		End If
+		
+		attrs :| ParseCallConvention(attrs & DECL_API_STDCALL)
+		
+		If CParse( "nodebug" ) Then
+			attrs :| DECL_NODEBUG
+		End If
 
 		Local funcDecl:TFuncDecl
 		If attrs & FUNC_CTOR Then
 			funcDecl=New TNewDecl.CreateF( id,ty,args,attrs )
 		Else
-			funcDecl=New TFuncDecl.CreateF( id,ty,args,attrs )
+			'If fdecl Then
+			'	funcDecl = fdecl
+			'	funcDecl.ident = id
+			'Else
+				funcDecl=New TFuncDecl.CreateF( id,ty,args,attrs )
+			'End If
 			funcDecl.noMangle = noMangle
 		End If
 		If meta Then
@@ -2666,9 +2762,20 @@ End Rem
 			' a normal function pointer definition *probably* can't be defined with a munged name?
 			' If there is an equals here, one can assume it is for an initialisation...
 			'If (Not (attrs & FUNC_PTR)) Or (attrs & FUNC_PTR And Not (attrs & DECL_ARG)) Then
+			Local cdets:TCastDets
+			
 			If Not (attrs & FUNC_PTR) Then
 				If CParse( "=" )
-					funcDecl.munged=ParseStringLit()
+					Local munged:String = ParseStringLit()
+					
+					If munged.Find("(") > 0 Then
+						cdets = ParseExternCast(munged, True)
+						If cdets Then
+							funcDecl.munged = cdets.name
+						End If
+					Else
+						funcDecl.munged = munged
+					End If
 				End If
 
 				'Array $resize hack!
@@ -2679,7 +2786,10 @@ End Rem
 
 			If funcDecl.munged Then
 				' look up extern cast list
-				Local cdets:TCastDets = TCastDets(_externCasts.ValueForKey(funcDecl.munged))
+				If Not cdets Then
+					cdets = TCastDets(_externCasts.ValueForKey(funcDecl.munged))
+				End If
+				
 				If cdets Then
 					funcDecl.castTo = cdets.retType
 					If cdets.noGen Then
@@ -2740,6 +2850,69 @@ End Rem
 
 		Return funcDecl
 	End Method
+	
+	Method ParseCallConvention:Int(callConvention:Int = DECL_API_DEFAULT)
+		If _tokeType <> TOKE_STRINGLIT Then
+			Return callConvention
+		End If
+		
+		Local api:String = ParseStringLit().ToLower()
+		
+		If api = "os" Then
+?win32
+			api = "win32"
+?macos
+			api = "macos"
+?linux
+			api = "linux"
+?
+		End If
+
+		Select api
+			Case "c", "blitz", "macos", "linux"
+				Return DECL_API_CDECL
+			Case "win32"
+				Return DECL_API_STDCALL
+		End Select
+		
+		Err "Unrecognized calling convention '" + api+ "'"
+	End Method
+
+	Method ParseFuncParamDecl:TArgDecl[]()
+		Local args:TArgDecl[]
+		Parse "("
+		SkipEols
+		If _toke<>")"
+			Local nargs:Int
+			Repeat
+				
+				Local argId$=ParseIdent()
+
+				Local ty:TType=ParseDeclType()
+
+				Local init:TExpr
+				
+				' var argument?
+				If CParse("var") Then
+					ty = TType.MapToVarType(ty)
+				Else If CParse( "=" )
+					init=ParseExpr()
+				End If
+				
+				Local arg:TArgDecl=New TArgDecl.Create( argId,ty,init )
+				If args.Length=nargs args=args + New TArgDecl[10]
+				args[nargs]=arg
+				nargs:+1
+				If _toke=")" Exit
+
+				Parse ","
+			Forever
+			args=args[..nargs]
+		EndIf
+		Parse ")"
+		Return args
+	End Method
+	
 
 	Method ParseClassDecl:TClassDecl( toke$,attrs:Int )
 		SetErr
@@ -2747,7 +2920,7 @@ End Rem
 		If toke Parse toke
 
 		Local id$=ParseIdent()
-		Local args:TClassDecl[]
+		Local args:TStack = New TStack
 		Local superTy:TIdentType
 		Local imps:TIdentType[]
 		Local meta:TMetadata
@@ -2755,33 +2928,34 @@ End Rem
 		'If (attrs & CLASS_INTERFACE) And (attrs & DECL_EXTERN)
 		'	Err "Interfaces cannot be extern."
 		'EndIf
-Rem
+
 		If CParse( "<" )
 
 			If attrs & DECL_EXTERN
 				Err "Extern classes cannot be generic."
 			EndIf
 
-			If attrs & CLASS_INTERFACE
-				Err "Interfaces cannot be generic."
-			EndIf
+			'If attrs & CLASS_INTERFACE
+			'	Err "Interfaces cannot be generic."
+			'EndIf
 
-			If attrs & CLASS_TEMPLATEARG
-				Err "Class parameters cannot be generic."
-			EndIf
+			'If attrs & CLASS_TEMPLATEARG
+			'	Err "Class parameters cannot be generic."
+			'EndIf
 
 			Local nargs:Int
 			Repeat
-				Local decl:TClassDecl=ParseClassDecl( "",CLASS_TEMPLATEARG )
-				If args.Length=nargs args=args + New TClassDecl[10]
-				args[nargs]=decl
-				nargs:+1
+				'Local decl:TClassDecl=ParseClassDecl( "",CLASS_TEMPLATEARG )
+				'If args.Length=nargs args=args + New TClassDecl[10]
+				'args[nargs]=decl
+				'nargs:+1
+				args.Push ParseIdent()
 			Until Not CParse(",")
-			args=args[..nargs]
+			'args=args[..nargs]
 
 			Parse ">"
 		EndIf
-End Rem
+
 		If CParse( "extends" )
 			'If attrs & CLASS_TEMPLATEARG
 			'	Err "Extends cannot be used with class parameters."
@@ -2820,6 +2994,10 @@ End Rem
 		EndIf
 
 		If CParse( "implements" )
+
+			If attrs & CLASS_STRUCT
+				Err "Implements cannot be used with Structs"
+			EndIf
 
 			'If attrs & DECL_EXTERN
 			'	Err "Implements cannot be used with external classes."
@@ -2888,18 +3066,15 @@ End Rem
 		Forever
 
 		'check for metadata
-		If CParse( "{" )
+		meta = ParseMetaData()
+
+		Local classDecl:TClassDecl=New TClassDecl.Create( id,String[](args.ToArray()),superTy,imps,attrs )
+		
+		If meta Then
 			If attrs & CLASS_STRUCT
 				Err "Structs cannot store metadata."
 			EndIf
 
-			meta = ParseMetaData()
-		End If
-
-
-		Local classDecl:TClassDecl=New TClassDecl.Create( id,args,superTy,imps,attrs )
-		
-		If meta Then
 			classDecl.metadata = meta
 		End If
 
@@ -2910,12 +3085,12 @@ End Rem
 
 		'If classDecl.IsTemplateArg() Return classDecl
 
-		Local decl_attrs:Int=(attrs & DECL_EXTERN) | (attrs & DECL_NODEBUG) | (attrs & DECL_API_WIN32)
+		Local decl_attrs:Int=(attrs & DECL_EXTERN) | (attrs & DECL_NODEBUG) | (attrs & DECL_API_STDCALL)
 
-		Local method_attrs:Int=decl_attrs|FUNC_METHOD | (attrs & DECL_NODEBUG)
-		If attrs & CLASS_INTERFACE method_attrs:|DECL_ABSTRACT
-		
 		Repeat
+			Local method_attrs:Int=decl_attrs|FUNC_METHOD | (attrs & DECL_NODEBUG)
+			If attrs & CLASS_INTERFACE method_attrs:|DECL_ABSTRACT
+		
 			SkipEols
 			Select _toke
 			Case "end"
@@ -2952,11 +3127,23 @@ End Rem
 				NextToke
 				Exit
 			Case "private"
+				If attrs & CLASS_INTERFACE Then
+					Err "Private cannot be used with interfaces."
+				End If
 				NextToke
 				decl_attrs=decl_attrs | DECL_PRIVATE
+				decl_attrs:& ~DECL_PROTECTED
+			Case "protected"
+				If attrs & CLASS_INTERFACE Then
+					Err "Protected cannot be used with interfaces."
+				End If
+				NextToke
+				decl_attrs=decl_attrs | DECL_PROTECTED
+				decl_attrs:& ~DECL_PRIVATE
 			Case "public"
 				NextToke
-				decl_attrs=decl_attrs & ~DECL_PRIVATE
+				decl_attrs:& ~DECL_PRIVATE
+				decl_attrs:& ~DECL_PROTECTED
 			Case "const","global","field"
 				If attrs & DECL_EXTERN Then
 					If (attrs & CLASS_INTERFACE) Then
@@ -2974,10 +3161,10 @@ End Rem
 				EndIf
 				classDecl.InsertDecls ParseDecls( _toke,decl_attrs )
 			Case "method"
-				If attrs & CLASS_STRUCT Then
+				If (attrs & CLASS_STRUCT) And (attrs & DECL_EXTERN) Then
 					Err "Structs can only contain fields."
 				EndIf
-				Local decl:TFuncDecl=ParseFuncDecl( _toke,method_attrs )
+				Local decl:TFuncDecl=ParseFuncDecl( _toke,method_attrs,classDecl )
 				If decl.IsCtor() decl.retTypeExpr=New TObjectType.Create( classDecl )
 				classDecl.InsertDecl decl
 			Case "function"
@@ -2985,12 +3172,16 @@ End Rem
 					Err "Interfaces can only contain constants and methods."
 				EndIf
 				If attrs & CLASS_STRUCT Then
-					Err "Structs can only contain fields."
+					If (attrs & DECL_EXTERN) Then
+						Err "Structs can only contain fields."
+					Else
+						Err "Structs can only contain fields and methods."
+					End If
 				EndIf
 				If attrs & DECL_EXTERN Then
 					Err "Extern Types can only contain methods."
 				End If
-				Local decl:TFuncDecl=ParseFuncDecl( _toke,decl_attrs )
+				Local decl:TFuncDecl=ParseFuncDecl( _toke,decl_attrs,classDecl )
 				classDecl.InsertDecl decl
 			Default
 				Err "Syntax error - expecting class member declaration, not '" + _toke + "'"
@@ -3000,6 +3191,15 @@ End Rem
 		If toke Parse toke
 
 		Return classDecl
+	End Method
+	
+	Method ParseNativeStmt()
+		If Not _toke.StartsWith("'!") Then
+			Err "Syntax error - expecting '!"
+		End If
+		Local raw:String = _toke[2..]
+		_block.AddStmt New TNativeStmt.Create( raw )
+		NextToke
 	End Method
 
 	Method ParseModuleDecl:String( toke$,attrs:Int )
@@ -3188,123 +3388,149 @@ End Rem
 
 
 			If FileType(ePath) = FILETYPE_FILE Then
-	
-				Local toker:TToker=New TToker.Create( ePath,LoadText( ePath ) )
-				toker.NextToke
-	
-				While True
-	
-					SkipEolsToker(toker)
-	
-					If toker._tokeType = TOKE_EOF Exit
-	
-					Local rt$=toker._toke
-					NextTokeToker(toker)
-					
-					If CParseToker(toker,"*") Then
-						rt:+ "*"
-	
-						If CParseToker(toker,"*") Then
-							rt:+ "*"
-						End If
-					End If
-	
-	
-					Local dets:TCastDets = New TCastDets
-					
-					If CParseToker(toker, "__stdcall") Then
-						dets.api = "__stdcall"
-					End If
-	
-					' fname
-					Local fn$=toker._toke
-					NextTokeToker(toker)
-	
-					dets.name = fn
-					dets.retType = rt
-	
-					_externCasts.Insert(fn, dets)
-	
-					' args
-					ParseToker(toker, "(")
-	
-					If CParseToker(toker, ")") Then
-	
-						' don't generate header extern
-						If CParseToker(toker, "!") Then
-							dets.noGen = True
-						End If
-	
-						Continue
-					End If
-	
-					Local i:Int = 0
-					Repeat
-						Local at$=toker._toke
-	
-						If CParseToker(toker, "const") Then
-							at :+ " " + toker._toke
-						End If
-	
-						If CParseToker(toker, "unsigned") Then
-							at :+ " " + toker._toke
-						End If
+			
+				Print "Warning: .x cast definition files are deprecated. You should now place the details in the extern function's alias string. (" + path + ")"
 
-						If CParseToker(toker, "struct") Then
-							at :+ " " + toker._toke
-						End If
-	
-						NextTokeToker(toker)
-						If CParseToker(toker, "*") Then
-							at:+ "*"
-	
-							If CParseToker(toker, "*") Then
-								at:+ "*"
-							End If
-						End If
-	
-						' function pointer
-						If CParseToker(toker, "(") Then
-	
-							ParseToker(toker, "*")
-							ParseToker(toker, ")")
-							at :+ "(*)"
-	
-							ParseToker(toker, "(")
-							at :+ "("
-	
-							While Not CParseToker(toker, ")")
-								NextTokeToker(toker)
-								at :+ toker._toke
-							Wend
-	
-							at :+ ")"
-						End If
-	
-	
-						dets.args :+ [at]
-	
-						If toker._toke=")" Exit
-						ParseToker(toker, ",")
-	
-						i:+ 1
-					Forever
-	
-					NextTokeToker(toker)
-	
-					' don't generate header extern
-					If CParseToker(toker, "!") Then
-						dets.noGen = True
-					End If
-	
-				Wend
-				
+				ParseExternCast(LoadText( ePath ), False, ePath)
+
 			End If
 			
 		Next
 
 	End Method
 
+	Method ParseExternCast:TCastDets(txt:String, single:Int = False, path:String = "")
+		Local toker:TToker = New TToker.Create(path, txt)
+		toker.NextToke
+
+		Local dets:TCastDets
+			
+		While True
+
+			SkipEolsToker(toker)
+
+			If toker._tokeType = TOKE_EOF Exit
+
+			dets = New TCastDets
+
+			Local rt$=toker._toke
+
+			If CParseToker(toker, "const") Then
+				rt :+ " " + toker._toke
+			End If
+
+			If CParseToker(toker, "unsigned") Then
+				rt :+ " " + toker._toke
+			End If
+
+			NextTokeToker(toker)
+			
+			If CParseToker(toker,"*") Then
+				rt:+ "*"
+
+				If CParseToker(toker,"*") Then
+					rt:+ "*"
+				End If
+			End If
+
+
+			If CParseToker(toker, "__stdcall") Then
+				dets.api = "__stdcall"
+			End If
+
+			' fname
+			Local fn$=toker._toke
+			NextTokeToker(toker)
+
+			dets.name = fn
+			dets.retType = rt
+
+			' add to global map (may be referenced by function ptr defs)
+			_externCasts.Insert(fn, dets)
+
+			' args
+			ParseToker(toker, "(")
+
+			If CParseToker(toker, ")") Then
+
+				' don't generate header extern
+				If CParseToker(toker, "!") Then
+					dets.noGen = True
+				End If
+
+				Continue
+			End If
+
+			Local i:Int = 0
+			Repeat
+				Local at$=toker._toke
+
+				If CParseToker(toker, "const") Then
+					at :+ " " + toker._toke
+				End If
+
+				If CParseToker(toker, "unsigned") Then
+					at :+ " " + toker._toke
+				End If
+
+				If CParseToker(toker, "struct") Then
+					at :+ " " + toker._toke
+				End If
+
+				NextTokeToker(toker)
+				If CParseToker(toker, "*") Then
+					at:+ "*"
+
+					If CParseToker(toker, "const") Then
+						at :+ " const"
+					End If
+
+					If CParseToker(toker, "*") Then
+						at:+ "*"
+					End If
+				End If
+
+				' function pointer
+				If CParseToker(toker, "(") Then
+
+					ParseToker(toker, "*")
+					ParseToker(toker, ")")
+					at :+ "(*)"
+
+					ParseToker(toker, "(")
+					at :+ "("
+
+					While Not CParseToker(toker, ")")
+						NextTokeToker(toker)
+						at :+ toker._toke
+					Wend
+
+					at :+ ")"
+				End If
+
+
+				dets.args :+ [at]
+
+				If toker._toke=")" Exit
+				ParseToker(toker, ",")
+
+				i:+ 1
+			Forever
+
+			NextTokeToker(toker)
+
+			' don't generate header extern
+			If CParseToker(toker, "!") Then
+				dets.noGen = True
+			End If
+			
+			If single Then
+				Exit
+			End If
+		Wend
+		
+		Return dets
+	End Method
 
 	Method ParseCurrentFile:Int(path:String, attrs:Int)
 
@@ -3334,6 +3560,8 @@ End Rem
 					gdecl.attrs :| DECL_INITONLY
 					_block.AddStmt New TDeclStmt.Create( gdecl )
 				Next
+			Case "struct"
+				_module.InsertDecl ParseClassDecl( _toke,attrs | CLASS_STRUCT )
 			Case "type"
 				_module.InsertDecl ParseClassDecl( _toke,attrs )
 			Case "interface"
@@ -3602,7 +3830,9 @@ Function Eval$( toker:TToker,_type:TType )
 		src:+toker.Toke()
 		toker.NextToke()
 	Wend
+
 	Local t:String=EvalS( src,_type )
+
 	Return t
 End Function
 
@@ -3929,6 +4159,9 @@ End Rem
 	' opengles target platform
 	env.InsertDecl New TConstDecl.Create( "opengles",New TIntType,New TConstExpr.Create( New TIntType, opt_platform="android" Or opt_platform="raspberrypi" Or opt_platform="emscripten" Or opt_platform="ios" Or (opt_platform="linux" And opt_arch="arm") ),0 )
 
+	' musl - linux only
+	env.InsertDecl New TConstDecl.Create( "musl",New TIntType,New TConstExpr.Create( New TIntType,(opt_musl And (opt_platform="linux" Or opt_platform="android" Or opt_platform="raspberrypi"))),0 )
+	
 	' new compiler
 	env.InsertDecl New TConstDecl.Create( "bmxng",New TIntType,New TConstExpr.Create( New TIntType, True ),0 )
 

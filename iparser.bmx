@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2016 Bruce A Henderson
+' Copyright (c) 2013-2017 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 ' 
@@ -93,7 +93,11 @@ Type TIParser
 			
 			' import Object and String definitions
 			Local par:TIParser = New TIParser
-			par.ParseModuleImport(_mod, "brl.classes", modulepath("brl.blitz"), modulepath("brl.blitz") + "\blitz_classes.i")
+			If FileType(modulepath("brl.blitz") + "\blitz_classes." + opt_platform + ".i") Then
+				par.ParseModuleImport(_mod, "brl.classes", modulepath("brl.blitz"), modulepath("brl.blitz") + "\blitz_classes." + opt_platform + ".i")
+			Else
+				par.ParseModuleImport(_mod, "brl.classes", modulepath("brl.blitz"), modulepath("brl.blitz") + "\blitz_classes.i")
+			End If
 	
 			' set up built-in keywords
 			par = New TIParser
@@ -266,6 +270,9 @@ Type TIParser
 						Else If CParse("A")
 							class.attrs :| DECL_ABSTRACT
 
+						Else If CParse("S")
+							class.attrs :| CLASS_STRUCT
+
 						Else If CParse("AF")
 							class.attrs :| DECL_ABSTRACT | DECL_FINAL
 
@@ -274,8 +281,8 @@ Type TIParser
 							ApplyFunctionAttributes(class, DECL_EXTERN)
 
 						Else If CParse("EW")
-							class.attrs :| DECL_EXTERN | DECL_API_WIN32 
-							ApplyFunctionAttributes(class, DECL_EXTERN | DECL_API_WIN32)
+							class.attrs :| DECL_EXTERN | DECL_API_STDCALL
+							ApplyFunctionAttributes(class, DECL_EXTERN | DECL_API_STDCALL)
 						
 						Else If CParse("AI")
 							class.attrs :| CLASS_INTERFACE | DECL_ABSTRACT
@@ -286,14 +293,14 @@ Type TIParser
 							ApplyFunctionAttributes(class, DECL_EXTERN | DECL_ABSTRACT)
 
 						Else If CParse("EIW")
-							class.attrs :| DECL_EXTERN | CLASS_INTERFACE | DECL_API_WIN32
-							ApplyFunctionAttributes(class, DECL_EXTERN | DECL_ABSTRACT | DECL_API_WIN32)
+							class.attrs :| DECL_EXTERN | CLASS_INTERFACE | DECL_API_STDCALL
+							ApplyFunctionAttributes(class, DECL_EXTERN | DECL_ABSTRACT | DECL_API_STDCALL)
 
 						Else If CParse("ES")
 							class.attrs :| DECL_EXTERN | CLASS_STRUCT
 
 						Else If CParse("ESW")
-							class.attrs :| DECL_EXTERN | CLASS_STRUCT | DECL_API_WIN32 
+							class.attrs :| DECL_EXTERN | CLASS_STRUCT | DECL_API_STDCALL
 
 						End If
 'DebugStop
@@ -501,7 +508,7 @@ Type TIParser
 		'If toke Parse toke
 		
 		Local id$=ParseIdent()
-		Local args:TClassDecl[]
+		Local args:String[]
 		Local superTy:TIdentType
 		Local imps:TIdentType[]
 
@@ -722,7 +729,7 @@ Type TIParser
 		Return str
 	End Method
 
-	Method ParseFuncDecl:TFuncDecl( toke$,attrs:Int )
+	Method ParseFuncDecl:TFuncDecl( toke$,attrs:Int, returnType:TType = Null )
 		SetErr
 
 		'If toke Parse toke
@@ -730,31 +737,30 @@ Type TIParser
 		Local id$
 		Local ty:TType
 		Local meth:Int = attrs & FUNC_METHOD
-		
-		If attrs & FUNC_METHOD
-			If _toker._toke.tolower() = "new"
-'DebugStop
-				If attrs & DECL_EXTERN
-					Err "Extern classes cannot have constructors"
+
+		If Not returnType Then		
+			If attrs & FUNC_METHOD
+				If _toker._toke.tolower() = "new"
+					If attrs & DECL_EXTERN
+						Err "Extern classes cannot have constructors"
+					EndIf
+					id=_toker._toke
+					NextToke
+					attrs:|FUNC_CTOR
+					attrs:&~FUNC_METHOD
+					ty=ParseDeclType(attrs, True)
+				Else
+					If _toker._tokeType = TOKE_STRINGLIT Then
+						id = ParseStringLit()
+					Else
+						id=ParseIdent()
+					End If
+					ty=ParseDeclType(attrs, True)
 				EndIf
-				id=_toker._toke
-				NextToke
-				attrs:|FUNC_CTOR
-				attrs:&~FUNC_METHOD
-				ty=ParseDeclType(attrs, True)
 			Else
 				id=ParseIdent()
 				ty=ParseDeclType(attrs, True)
 			EndIf
-		Else
-			id=ParseIdent()
-			ty=ParseDeclType(attrs, True)
-		EndIf
-
-		If attrs & FUNC_METHOD
-'DebugLog "Found Method :  " + id
-		Else
-'DebugLog "Found Function :  " + id
 		End If
 		
 		Local args:TArgDecl[]
@@ -833,18 +839,92 @@ Type TIParser
 			args=args[..nargs]
 		EndIf
 		Parse ")"
+		
+		If returnType Then
+			Return New TFuncDecl.CreateF(Null, returnType, args, 0)
+		End If
 
+		Local fdecl:TFuncDecl
+		' wait.. so everything until now was a function pointer return type, and we still have to process the function declaration...
+		If _toke = "(" Then
+			Local retTy:TType = New TFunctionPtrType
+			TFunctionPtrType(retTy).func = New TFuncDecl.CreateF("",ty,args,attrs )
+			TFunctionPtrType(retTy).func.attrs :| FUNC_PTR
+			fdecl = ParseFuncDecl("", attrs, retTy)
+			ty = retTy
+		End If
+		
 		Repeat		
 			If CParse( "F" )
 				attrs:|DECL_FINAL
 			Else If CParse( "FW" )
-				attrs:|DECL_FINAL | DECL_API_WIN32
+				attrs:|DECL_FINAL | DECL_API_STDCALL
+			Else If CParse( "FP" )
+				attrs:|DECL_FINAL|DECL_PRIVATE
+			Else If CParse( "FPW" )
+				attrs:|DECL_FINAL|DECL_PRIVATE | DECL_API_STDCALL
+			Else If CParse( "FR" )
+				attrs:|DECL_FINAL|DECL_PROTECTED
+			Else If CParse( "FRW" )
+				attrs:|DECL_FINAL|DECL_PROTECTED | DECL_API_STDCALL
 			Else If CParse( "A" )
 				attrs:|DECL_ABSTRACT
 			Else If CParse( "AW" )
-				attrs:|DECL_ABSTRACT | DECL_API_WIN32
+				attrs:|DECL_ABSTRACT | DECL_API_STDCALL
+			Else If CParse( "AP" )
+				attrs:|DECL_ABSTRACT|DECL_PRIVATE
+			Else If CParse( "APW" )
+				attrs:|DECL_ABSTRACT|DECL_PRIVATE | DECL_API_STDCALL
+			Else If CParse( "AR" )
+				attrs:|DECL_ABSTRACT|DECL_PROTECTED
+			Else If CParse( "ARW" )
+				attrs:|DECL_ABSTRACT|DECL_PROTECTED | DECL_API_STDCALL
 			Else If CParse( "W" )
-				attrs:|DECL_API_WIN32
+				attrs:| DECL_API_STDCALL
+			Else If CParse( "O" )
+				attrs:|FUNC_OPERATOR
+			Else If CParse( "OW" )
+				attrs:|FUNC_OPERATOR | DECL_API_STDCALL
+			Else If CParse( "OP" )
+				attrs:|FUNC_OPERATOR|DECL_PRIVATE
+			Else If CParse( "OPW" )
+				attrs:|FUNC_OPERATOR|DECL_PRIVATE | DECL_API_STDCALL
+			Else If CParse( "OR" )
+				attrs:|FUNC_OPERATOR|DECL_PROTECTED
+			Else If CParse( "ORW" )
+				attrs:|FUNC_OPERATOR|DECL_PROTECTED | DECL_API_STDCALL
+			Else If CParse( "P" )
+				attrs:|DECL_PRIVATE
+			Else If CParse( "PW" )
+				attrs:|DECL_PRIVATE | DECL_API_STDCALL
+			Else If CParse( "R" )
+				attrs:|DECL_PROTECTED
+			Else If CParse( "RW" )
+				attrs:|DECL_PROTECTED | DECL_API_STDCALL
+			Else If CParse( "FO" )
+				attrs:|DECL_FINAL|FUNC_OPERATOR
+			Else If CParse( "FOW" )
+				attrs:|DECL_FINAL|FUNC_OPERATOR | DECL_API_STDCALL
+			Else If CParse( "FOP" )
+				attrs:|DECL_FINAL|FUNC_OPERATOR|DECL_PRIVATE
+			Else If CParse( "FOPW" )
+				attrs:|DECL_FINAL|FUNC_OPERATOR|DECL_PRIVATE | DECL_API_STDCALL
+			Else If CParse( "FOR" )
+				attrs:|DECL_FINAL|FUNC_OPERATOR|DECL_PROTECTED
+			Else If CParse( "FORW" )
+				attrs:|DECL_FINAL|FUNC_OPERATOR|DECL_PROTECTED | DECL_API_STDCALL
+			Else If CParse( "AO" )
+				attrs:|DECL_ABSTRACT|FUNC_OPERATOR
+			Else If CParse( "AOW" )
+				attrs:|DECL_ABSTRACT|FUNC_OPERATOR | DECL_API_STDCALL
+			Else If CParse( "AOP" )
+				attrs:|DECL_ABSTRACT|FUNC_OPERATOR|DECL_PRIVATE
+			Else If CParse( "AOPW" )
+				attrs:|DECL_ABSTRACT|FUNC_OPERATOR|DECL_PRIVATE | DECL_API_STDCALL
+			Else If CParse( "AOR" )
+				attrs:|DECL_ABSTRACT|FUNC_OPERATOR|DECL_PROTECTED
+			Else If CParse( "AORW" )
+				attrs:|DECL_ABSTRACT|FUNC_OPERATOR|DECL_PROTECTED | DECL_API_STDCALL
 			'Else If CParse( "property" )
 			'	If attrs & FUNC_METHOD
 			'		attrs:|FUNC_PROPERTY
@@ -860,7 +940,12 @@ Type TIParser
 		If attrs & FUNC_CTOR Then
 			funcDecl = New TNewDecl.CreateF( id,ty,args,attrs )
 		Else
-			funcDecl = New TFuncDecl.CreateF( id,ty,args,attrs )
+			If fdecl Then
+				funcDecl = fdecl
+				funcDecl.ident = id
+			Else
+				funcDecl = New TFuncDecl.CreateF( id,ty,args,attrs )
+			End If
 		End If
 		
 		funcDecl.retType = ty
@@ -897,6 +982,11 @@ Type TIParser
 		If CParse(":") Then
 			' ret type
 			Local rt$=_toker._toke
+
+			If CParse("unsigned") Then
+				rt :+ " " + _toker._toke
+			End If
+
 			NextToke
 			If CParse("*") Then
 				rt:+ "*"
@@ -1029,6 +1119,15 @@ Type TIParser
 					Wend
 
 				End If
+				
+				If CParse("`") Then
+					If CParse("`") Then
+						attrs :| DECL_PROTECTED
+					Else
+						attrs :| DECL_PRIVATE
+					End If
+				End If
+				
 
 Rem
 			If CParse( "=" )
@@ -1192,6 +1291,12 @@ End Rem
 				ty = New TLongType
 			ElseIf CParse("z") Then
 				ty = New TSizetType
+			ElseIf CParse("j") Then
+				ty = New TInt128Type
+			ElseIf CParse("w") Then
+				ty = New TWParamType
+			ElseIf CParse("x") Then
+				ty = New TLParamType
 			End If
 			
 			If CParse("&") And Not (attrs & DECL_FIELD) Then
@@ -1253,6 +1358,14 @@ End Rem
 		Case "!"
 			NextToke
 			ty=New TDoubleType
+			
+			If CParse("k") Then
+				ty = New TFloat128Type
+			Else If CParse("m") Then
+				ty = New TDouble128Type
+			Else If CParse("h") Then
+				ty = New TFloat64Type
+			End If
 
 			If CParse("&")  And Not (attrs & DECL_FIELD) Then
 				attrs :| DECL_GLOBAL
@@ -1452,6 +1565,66 @@ End Rem
 		End If
 		If CParse( "size_t" )
 			Local ty:TType = New TSizeTType
+			While CParse("ptr")
+				ty = TType.MapToPointerType(ty)
+			Wend
+			While CParse( "*" )
+				ty = TType.MapToPointerType(ty)
+			Wend
+			Return ty
+		End If
+		If CParse( "int128" )
+			Local ty:TType = New TInt128Type
+			While CParse("ptr")
+				ty = TType.MapToPointerType(ty)
+			Wend
+			While CParse( "*" )
+				ty = TType.MapToPointerType(ty)
+			Wend
+			Return ty
+		End If
+		If CParse( "float64" )
+			Local ty:TType = New TFloat64Type
+			While CParse("ptr")
+				ty = TType.MapToPointerType(ty)
+			Wend
+			While CParse( "*" )
+				ty = TType.MapToPointerType(ty)
+			Wend
+			Return ty
+		End If
+		If CParse( "float128" )
+			Local ty:TType = New TFloat128Type
+			While CParse("ptr")
+				ty = TType.MapToPointerType(ty)
+			Wend
+			While CParse( "*" )
+				ty = TType.MapToPointerType(ty)
+			Wend
+			Return ty
+		End If
+		If CParse( "double128" )
+			Local ty:TType = New TDouble128Type
+			While CParse("ptr")
+				ty = TType.MapToPointerType(ty)
+			Wend
+			While CParse( "*" )
+				ty = TType.MapToPointerType(ty)
+			Wend
+			Return ty
+		End If
+		If CParse( "wparam" )
+			Local ty:TType = New TWParamType
+			While CParse("ptr")
+				ty = TType.MapToPointerType(ty)
+			Wend
+			While CParse( "*" )
+				ty = TType.MapToPointerType(ty)
+			Wend
+			Return ty
+		End If
+		If CParse( "lparam" )
+			Local ty:TType = New TLParamType
 			While CParse("ptr")
 				ty = TType.MapToPointerType(ty)
 			Wend

@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2016 Bruce A Henderson
+' Copyright (c) 2013-2017 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -25,7 +25,7 @@ SuperStrict
 
 Import "base.configmap.bmx"
 
-Const version:String = "0.77"
+Const version:String = "0.88"
 
 Const BUILDTYPE_APP:Int = 0
 Const BUILDTYPE_MODULE:Int = 1
@@ -101,6 +101,9 @@ Global opt_strictupgrade:Int = True
 '    generate warnings (and accept) instead of errors for calling methods with arguments that need to be cast down.
 '    May cause issues using overloaded methods.
 Global opt_warnover:Int = False
+' musl libc support
+'    
+Global opt_musl:Int = False
 
 Global opt_filepath:String
 
@@ -194,6 +197,8 @@ Function ParseArgs:String[](args:String[])
 				opt_gdbdebug=True
 			Case "w"
 				opt_warnover=True
+			Case "musl"
+				opt_musl=True
 		End Select
 	
 		count:+ 1

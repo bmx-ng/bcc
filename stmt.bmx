@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2016 Bruce A Henderson
+' Copyright (c) 2013-2017 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -124,22 +124,49 @@ Type TAssignStmt Extends TStmt
 						rhs=rhs.Cast( lhs.exprType )
 						splitOp = False
 						
-					Case "*=","/=","+=","-="
+					Case ":*",":/",":+",":-"
 					
 						If TNumericType( lhs.exprType ) And lhs.exprType.EqualsType( rhs.exprType ) Then
 							splitOp = False
 						End If
+						
+						If TObjectType(lhs.exprType) Then
+							Local args:TExpr[] = [rhs]
+							Try
+								Local decl:TFuncDecl = TFuncDecl(TObjectType(lhs.exprType).classDecl.FindFuncDecl(op, args,,,,True,SCOPE_CLASS_HEIRARCHY))
+								If decl Then
+									lhs = New TInvokeMemberExpr.Create( lhs, decl, args ).Semant()
+									rhs = Null
+									Return
+								End If
+							Catch error:String
+								Err "Operator " + op + " cannot be used with Objects."
+							End Try
+						End If
 					
-					Case "&=","|=","^=","<<=",">>=","%="
+					Case ":&",":|",":^",":shl",":shr",":mod"
 					
-						If TIntType( lhs.exprType ) And lhs.exprType.EqualsType( rhs.exprType ) Then
+						If (TIntType( lhs.exprType ) And lhs.exprType.EqualsType( rhs.exprType ))  Or TObjectType(lhs.exprType) Then
 							splitOp = False
 						End If
-				
+
+						If TObjectType(lhs.exprType) Then
+							Local args:TExpr[] = [rhs]
+							Try
+								Local decl:TFuncDecl = TFuncDecl(TObjectType(lhs.exprType).classDecl.FindFuncDecl(op, args,,,,,SCOPE_CLASS_HEIRARCHY))
+								If decl Then
+									lhs = New TInvokeMemberExpr.Create( lhs, decl, args ).Semant()
+									rhs = Null
+									Return
+								End If
+							Catch error:String
+								Err "Operator " + op + " cannot be used with Objects."
+							End Try
+						End If
 				End Select
 				
 				If splitOp Then
-					rhs = New TBinaryMathExpr.Create(op[..op.length - 1], lhs, rhs).Semant().Cast(lhs.exprType)
+					rhs = New TBinaryMathExpr.Create(op[1..], lhs, rhs).Semant().Cast(lhs.exprType)
 					op = "="
 				End If
 				
@@ -192,6 +219,9 @@ Type TReturnStmt Extends TStmt
 	Method OnSemant()
 		Local fdecl:TFuncDecl=_env.FuncScope()
 		If expr
+			If TIdentExpr(expr) Then
+				TIdentExpr(expr).isRhs = True
+			End If
 			If fdecl.IsCtor() Err "Constructors may not return a value."
 			If TVoidType( fdecl.retType ) Then
 				Local errorText:String = "Function can not return a value."
@@ -688,3 +718,22 @@ Type TRestoreDataStmt Extends TStmt
 	
 End Type
 
+Type TNativeStmt Extends TStmt
+	Field raw:String
+	
+	Method Create:TNativeStmt( raw:String )
+		Self.raw = raw
+		Return Self
+	End Method
+
+	Method OnCopy:TStmt( scope:TScopeDecl )
+		Return New TNativeStmt.Create( raw )
+	End Method
+		
+	Method OnSemant()
+	End Method
+
+	Method Trans$()
+		Return _trans.TransNativeStmt( Self )
+	End Method
+End Type
