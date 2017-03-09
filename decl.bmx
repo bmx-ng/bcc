@@ -1733,6 +1733,12 @@ Type TFuncDecl Extends TBlockDecl
 
 		Local strictVoidToInt:Int = False
 
+		If isCtor() Or isDtor() Then
+			If ClassScope() And ClassScope().IsInterface() Then
+				Err ident + "() cannot be declared in an Interface."
+			End If
+		End If
+
 		'semant ret type
 		If Not retTypeExpr Then
 			If Not retType Then ' may have previously been set (if this is a function pointer)
