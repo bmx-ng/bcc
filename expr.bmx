@@ -1584,8 +1584,16 @@ Type TUnaryExpr Extends TExpr
 				exprType._flags :~ TType.T_VAR
 			End If
 		Case "~~"
-			expr=expr.SemantAndCast( New TIntType )
-			exprType=New TIntType
+			expr=expr.Semant()
+			If Not TIntegralType(expr.exprType) Or IsPointerType(expr.exprType) Then
+				Err "Bitwise complement can only be used with integers"
+			End If
+			If TByteType(expr.exprType) Or TShortType(expr.exprType) Then
+				expr=expr.SemantAndCast( New TIntType )
+				exprType=New TIntType
+			Else
+				exprType = expr.exprType
+			End If
 		Case "not"
 			expr=expr.SemantAndCast( New TBoolType,CAST_EXPLICIT )
 			exprType=New TBoolType
