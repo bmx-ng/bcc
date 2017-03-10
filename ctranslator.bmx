@@ -2364,7 +2364,11 @@ t:+"NULLNULLNULL"
 				Emit s + "if (bbObjectDowncast(ex,&bbArrayClass) != &bbEmptyArray) {"
 				Emit TransType( c.init.ty, c.init.munged )+" "+ c.init.munged + "=(BBARRAY)ex;" 
 			Else If TObjectType(c.init.ty) Then
-				Emit s + "if (bbObjectDowncast(ex,&"+TObjectType(c.init.ty).classDecl.munged+") != &bbNullObject) {"
+				If TObjectType(c.init.ty).classDecl.IsInterface() Then
+					Emit s + "if (bbInterfaceDowncast(ex,&"+TObjectType(c.init.ty).classDecl.munged+"_ifc) != &bbNullObject) {"
+				Else
+					Emit s + "if (bbObjectDowncast(ex,&"+TObjectType(c.init.ty).classDecl.munged+") != &bbNullObject) {"
+				End If
 				Emit TransType( c.init.ty, c.init.munged )+" "+ c.init.munged + "=" + Bra(TransType( c.init.ty, c.init.munged )) + "ex;" 
 			Else
 				Err "Not an object"
