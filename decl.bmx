@@ -1868,21 +1868,7 @@ Type TFuncDecl Extends TBlockDecl
 							' check we aren't attempting to assign weaker access modifiers
 							If (IsProtected() And decl.IsPublic()) Or (IsPrivate() And (decl.IsProtected() Or decl.IsPublic())) Then
 							
-								Local p:String
-								If IsProtected() Then
-									p = "Protected"
-								Else
-									p = "Private"
-								End If
-								
-								Local dp:String
-								If decl.IsPublic() Then
-									dp = "Public"
-								Else
-									dp = "Protected"
-								End If
-							
-								Err ToString() + " clashes with " + decl.ToString() + ". Attempt to assign weaker access privileges ('" + p + "'), was '" + dp + "'."
+								Err PrivilegeError(Self, decl)
 							
 							End If
 						
@@ -1968,6 +1954,24 @@ Type TFuncDecl Extends TBlockDecl
 		Return Super.CheckAccess()
 	End Method
 
+	Function PrivilegeError:String(decl:TFuncDecl, decl2:TFuncDecl)
+		Local p:String
+		If decl.IsProtected() Then
+			p = "Protected"
+		Else
+			p = "Private"
+		End If
+		
+		Local dp:String
+		If decl2.IsPublic() Then
+			dp = "Public"
+		Else
+			dp = "Protected"
+		End If
+	
+		Return decl.ToString() + " clashes with " + decl2.ToString() + ". Attempt to assign weaker access privileges ('" + p + "'), was '" + dp + "'."
+	End Function
+	
 End Type
 
 Type TNewDecl Extends TFuncDecl
@@ -2672,6 +2676,11 @@ End Rem
 							For Local decl2:TFuncDecl=EachIn cdecl.SemantedMethods( decl.ident )
 								' equals (or extends - for object types)
 								If decl2.EqualsFunc( decl )
+									If Not decl2.IsPublic() Then
+										' error on function decl
+										PushErr decl2.errInfo
+										Err TFuncDecl.PrivilegeError(decl2, decl)
+									End If
 									found=True
 									Exit
 								EndIf
@@ -2701,7 +2710,6 @@ End Rem
 	
 	Method CheckInterface(cdecl:TClassDecl, impls:TList)
 		While cdecl
-		
 			For Local decl:TFuncDecl=EachIn cdecl.SemantedMethods()
 				Local found:Int
 				For Local decl2:TFuncDecl=EachIn impls
