@@ -2408,7 +2408,13 @@ End Rem
 
 		Select toke
 		Case "global" decl=New TGlobalDecl.Create( id,ty,init,attrs )
-		Case "field"  decl=New TFieldDecl.Create( id,ty,init,attrs )
+		Case "field"
+			decl=New TFieldDecl.Create( id,ty,init,attrs )
+
+			If TFunctionPtrType(ty) Then
+				TFunctionPtrType(ty).func.attrs :| FUNC_FIELD
+			End If
+
 		Case "const"  decl=New TConstDecl.Create( id,ty,init,attrs )
 		Case "local"  decl=New TLocalDecl.Create( id,ty,init,attrs )
 		End Select

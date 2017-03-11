@@ -1556,6 +1556,7 @@ Const FUNC_PTR:Int=      $0100
 Const FUNC_INIT:Int =    $0200
 Const FUNC_NESTED:Int =  $0400
 Const FUNC_OPERATOR:Int= $0800
+Const FUNC_FIELD:Int=    $1000
 
 'Fix! A func is NOT a block/scope!
 '
@@ -1698,7 +1699,11 @@ Type TFuncDecl Extends TBlockDecl
 	Method IsProperty:Int()
 		Return (attrs & FUNC_PROPERTY)<>0
 	End Method
-	
+
+	Method IsField:Int()
+		Return (attrs & FUNC_FIELD)<>0
+	End Method
+		
 	Method EqualsArgs:Int( decl:TFuncDecl ) ' careful, this is not commutative!
 		If argDecls.Length<>decl.argDecls.Length Return False
 		For Local i:Int=0 Until argDecls.Length

@@ -1208,7 +1208,7 @@ t:+"NULLNULLNULL"
 			End If
 
 			' ((brl_standardio_TCStandardIO_obj*)o->clas)->md_Read(o, xxx, xxx)
-		If decl.IsMethod() Then
+		If decl.IsMethod() Or decl.IsField() Then
 			If  Not (decl.attrs & FUNC_PTR) Then
 
 				Local class:String
