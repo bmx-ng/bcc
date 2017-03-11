@@ -309,8 +309,7 @@ Type TCatchStmt Extends TStmt
 	
 	Method OnSemant()
 		init.Semant
-		If Not TObjectType( init.ty )  And Not TStringType(init.ty) Err "Variable type must extend Throwable"
-		'If Not init.Type.GetClass().IsThrowable() Err "Variable type must extend Throwable"
+		If (Not TObjectType( init.ty ) Or (TObjectType( init.ty ) And TObjectType( init.ty ).classDecl.IsStruct()))  And Not TStringType(init.ty) And Not TArrayType(init.ty) Err "'Catch' variables must be objects"
 		block.InsertDecl init
 		block.Semant
 	End Method
@@ -334,8 +333,7 @@ Type TThrowStmt Extends TStmt
 	
 	Method OnSemant()
 		expr=expr.Semant()
-		If Not TObjectType( expr.exprType ) And Not TStringType(expr.exprType) Err "Expression Type must extend Throwable"
-		'If Not expr.exprType.GetClass().IsThrowable() Err "Expression type must extend Throwable"
+		If (Not TObjectType( expr.exprType ) Or (TObjectType( expr.exprType ) And TObjectType( expr.exprType ).classDecl.IsStruct()))  And Not TStringType(expr.exprType) And Not TArrayType(expr.exprType) Err "'Throw' expression must be an object"
 	End Method
 	
 	Method Trans$()

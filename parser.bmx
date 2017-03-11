@@ -2024,6 +2024,9 @@ End Rem
 					ty= TType.stringType
 				Else
 					ty=ParseType()
+					While IsArrayDef()
+						ty=ParseArrayType(ty)
+					Wend
 				End If
 				Local init:TLocalDecl=New TLocalDecl.Create( id,ty,Null,0 )
 				Local block:TBlockDecl=New TBlockDecl.Create( _block )
