@@ -1161,6 +1161,11 @@ End Rem
 			decl=New TGlobalDecl.Create( id,ty,init,attrs )
 		Else If attrs & DECL_FIELD
 			decl=New TFieldDecl.Create( id,ty,init,attrs )
+			
+			If TFunctionPtrType(ty) Then
+				TFunctionPtrType(ty).func.attrs :| FUNC_FIELD
+			End If
+			
 		Else If attrs & DECL_CONST
 			decl=New TConstDecl.Create( id,ty,init,attrs )
 		Else If attrs & DECL_LOCAL
