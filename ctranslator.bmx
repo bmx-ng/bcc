@@ -1558,7 +1558,7 @@ t:+"NULLNULLNULL"
 					t = "_" + ctorMunged + "_ObjectNew" + TransArgs( expr.args,expr.ctor, "&" + expr.classDecl.actual.munged )
 				Else
 					If expr.classDecl.IsStruct() Then
-						t = "_" + ctorMunged + "_ObjectNew" + TransArgs( expr.args,expr.ctor)
+						t = ctorMunged + "_ObjectNew" + TransArgs( expr.args,expr.ctor)
 					Else
 						t = "_" + ctorMunged + "_ObjectNew" + TransArgs( expr.args,expr.ctor, "&" + expr.classDecl.actual.munged)
 					End If
