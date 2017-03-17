@@ -1877,7 +1877,7 @@ Type TFuncDecl Extends TBlockDecl
 							
 							End If
 						
-							If TObjectType(retType) And TObjectType(decl.retType ) Then
+							If (TObjectType(retType) And TObjectType(decl.retType )) Or (TArrayType(retType) And TArrayType(decl.retType)) Then
 								If Not retType.EqualsType( decl.retType ) And retType.ExtendsType( decl.retType ) Then
 									returnTypeSubclassed = True
 								End If
