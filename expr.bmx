@@ -1486,7 +1486,6 @@ Type TCastExpr Extends TExpr
 
 	Method Eval$()
 		Local val$=expr.Eval()
-		If Not val Return val
 		If TBoolType( exprType )
 			If TIntegralType(expr.exprType)
 				If Long( val ) Return "1"
@@ -1527,6 +1526,10 @@ Type TCastExpr Extends TExpr
 		Else If TFloat64Type( exprType )
 			Return Float( val )
 		Else If TStringType( exprType )
+			If TBoolType( expr.exprType )
+				If val Return "1"
+				Return "0"
+			EndIf
 			Return String( val )
 		Else If TByteType( exprType )
 			Return Byte( val )
