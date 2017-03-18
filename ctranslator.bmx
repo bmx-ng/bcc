@@ -4891,7 +4891,9 @@ End Rem
 		' functions
 		If Not classDecl.IsExtern() Then
 
-			Emit "-New()=" + Enquote("_" + classDecl.munged + "_New")
+			If Not classDecl.attrs & CLASS_INTERFACE Then
+				Emit "-New()=" + Enquote("_" + classDecl.munged + "_New")
+			End If
 			If classHierarchyHasFunction(classDecl, "Delete") Then
 				Emit "-Delete()=" + Enquote("_" + classDecl.munged + "_Delete")
 			End If
