@@ -920,10 +920,10 @@ Type TNewObjectExpr Extends TExpr
 				
 				' find other member decl (field, etc)
 				If Not errorDetails Then
-					Local decl:TVarDecl = TVarDecl(cdecl.GetDecl(id))
-					If decl Then
+					Local decl:TValDecl = TValDecl(cdecl.GetDecl(id))
+					If TVarDecl(decl) Then
 						Local tmp:TLocalDecl=New TLocalDecl.Create( "", eType, expr,, True )
-						Local varExpr:TExpr = New TMemberVarExpr.Create(New TVarExpr.Create( tmp ), decl).Semant()
+						Local varExpr:TExpr = New TMemberVarExpr.Create(New TVarExpr.Create( tmp ), TVarDecl(decl)).Semant()
 						expr = New TStmtExpr.Create( New TDeclStmt.Create( tmp ), varExpr ).Semant()
 						eType = decl.ty
 						If TObjectType(eType) Then
@@ -932,6 +932,12 @@ Type TNewObjectExpr Extends TExpr
 						If TArrayType(eType) Or TStringType(eType) Then
 							cdecl = eType.GetClass()
 						End If
+						Continue
+					End If
+					If TConstDecl(decl) Then
+						decl.Semant()
+						expr = New TConstExpr.Create(decl.ty, TConstDecl(decl).value).Semant()
+						eType = decl.ty
 						Continue
 					End If
 				End If	
