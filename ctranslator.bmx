@@ -4289,7 +4289,12 @@ End Rem
 		
 		For Local fdecl:TFuncDecl = EachIn newDecls
 		
-			EmitClassDeclNew(classDecl, fdecl)
+			If fdecl.scope <> classDecl Then
+				fdecl.Clear()
+				EmitClassDeclNew(classDecl, fdecl)
+			Else
+				EmitClassDeclNew(classDecl, fdecl)
+			End If
 
 			' generate "objectNew" function if required
 			If (fdecl.argDecls And fdecl.argDecls.length) Or classDecl.IsStruct() Then

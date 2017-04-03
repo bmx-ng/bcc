@@ -303,6 +303,9 @@ Type TDecl
 	End Method
 	
 	Method OnSemant() Abstract
+	
+	Method Clear()
+	End Method
 
 End Type
 
@@ -493,6 +496,9 @@ Type TValDecl Extends TDecl
 		End If
 	End Method
 	
+	Method Clear()
+	End Method
+	
 End Type
 
 Type TConstDecl Extends TValDecl
@@ -556,7 +562,9 @@ Type TLocalDecl Extends TVarDecl
 	End Method
 	
 	Method OnCopy:TDecl(deep:Int = True)
-		Return New TLocalDecl.Create( ident,ty,CopyInit(),attrs, generated, volatile )
+		Local decl:TLocalDecl = New TLocalDecl.Create( ident,ty,CopyInit(),attrs &~ DECL_SEMANTED, generated, volatile )
+		decl.scope = scope
+		Return decl
 	End Method
 
 	Method GetDeclPrefix:String()
@@ -565,6 +573,10 @@ Type TLocalDecl Extends TVarDecl
 	
 	Method ToString$()
 		Return GetDeclPrefix() + Super.ToString()
+	End Method
+
+	Method Clear()
+		done = False
 	End Method
 
 End Type
@@ -716,6 +728,9 @@ Type TAliasDecl Extends TDecl
 	End Method
 	
 	Method OnSemant()
+	End Method
+	
+	Method Clear()
 	End Method
 	
 End Type
@@ -1500,6 +1515,9 @@ End Rem
 	Method OnSemant()
 	End Method
 	
+	Method Clear()
+	End Method
+
 End Type
 
 Type TBlockDecl Extends TScopeDecl
@@ -1521,6 +1539,7 @@ Type TBlockDecl Extends TScopeDecl
 	
 	Method OnCopy:TDecl(deep:Int = True)
 		Local t:TBlockDecl=New TBlockDecl
+		t.scope = scope
 		If deep Then
 			For Local stmt:TStmt=EachIn stmts
 				t.AddStmt stmt.Copy( t )
@@ -1543,6 +1562,12 @@ Type TBlockDecl Extends TScopeDecl
 		Local t:TBlockDecl=TBlockDecl( Copy() )
 		t.scope=scope
 		Return t
+	End Method
+
+	Method Clear()
+		For Local stmt:TStmt=EachIn stmts
+			stmt.Clear
+		Next
 	End Method
 
 End Type
@@ -1800,7 +1825,7 @@ Type TFuncDecl Extends TBlockDecl
 		'check for duplicate decl
 		If ident Then
 			For Local decl:TFuncDecl=EachIn scope.SemantedFuncs( ident )
-				If decl<>Self And EqualsArgs( decl )
+				If decl<>Self And EqualsArgs( decl ) And Not decl.IsCTOR()
 					Err "Duplicate declaration "+ToString()
 				EndIf
 				If noMangle Then
@@ -1983,7 +2008,32 @@ Type TNewDecl Extends TFuncDecl
 
 	Field chainedCtor:TNewExpr
 	
-	
+	Method OnCopy:TDecl(deep:Int = True)
+		Local args:TArgDecl[]=argDecls[..]
+		For Local i:Int=0 Until args.Length
+			args[i]=TArgDecl( args[i].Copy() )
+		Next
+		Local t:TNewDecl = TNewDecl(New TNewDecl.CreateF( ident,retType,args,attrs &~DECL_SEMANTED ))
+		If deep Then
+			For Local stmt:TStmt=EachIn stmts
+				t.AddStmt stmt.Copy( t )
+			Next
+		End If
+		t.retType = retType
+		t.scope = scope
+		t.overrides = overrides
+		t.superCtor = superCtor
+		t.castTo = castTo
+		t.noCastGen = noCastGen
+		t.munged = munged
+		t.metadata = metadata
+		t.mangled = mangled
+		t.noMangle = noMangle
+		t.chainedCtor = chainedCtor
+
+		Return  t
+	End Method
+
 
 End Type
 

@@ -49,6 +49,9 @@ Type TStmt
 
 	Method Trans$() Abstract
 
+	Method Clear()
+	End Method
+	
 End Type
 
 Type TDeclStmt Extends TStmt
@@ -66,6 +69,9 @@ Type TDeclStmt Extends TStmt
 	End Method
 
 	Method OnCopy:TStmt( scope:TScopeDecl )
+		If Not decl.scope Then
+			decl.scope = scope
+		End If
 		Return New TDeclStmt.Create( decl.Copy(), generated )
 	End Method
 	
@@ -80,6 +86,11 @@ Type TDeclStmt Extends TStmt
 	Method Trans$()
 		Return _trans.TransDeclStmt( Self )
 	End Method
+	
+	Method Clear()
+		decl.Clear()
+	End Method
+	
 End Type
 
 Type TAssignStmt Extends TStmt
@@ -442,6 +453,9 @@ Type TLoopStmt Extends TStmt
 	Field loopLabel:TLoopLabelDecl
 	Field block:TBlockDecl
 
+	Method Clear()
+		block.Clear()
+	End Method
 End Type
 
 Type TWhileStmt Extends TLoopStmt
@@ -459,7 +473,11 @@ Type TWhileStmt Extends TLoopStmt
 	End Method
 
 	Method OnCopy:TStmt( scope:TScopeDecl )
-		Return New TWhileStmt.Create( expr.Copy(),block.CopyBlock( scope ),TLoopLabelDecl(loopLabel.Copy()), generated )
+		If loopLabel Then
+			Return New TWhileStmt.Create( expr.Copy(),block.CopyBlock( scope ),TLoopLabelDecl(loopLabel.Copy()), generated )
+		Else
+			Return New TWhileStmt.Create( expr.Copy(),block.CopyBlock( scope ),Null, generated )
+		End If
 	End Method
 	
 	Method OnSemant()
