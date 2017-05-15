@@ -4460,7 +4460,11 @@ End Rem
 	
 	Method EmitClassDeclObjectNewProto(classDecl:TClassDecl, fdecl:TFuncDecl)
 
-		Local t:String = TransObject(classdecl) + " _"
+		Local t:String = TransObject(classdecl) + " "
+		
+		If Not classDecl.IsStruct() Then
+			t :+ "_"
+		End If
 		
 		If classDecl = fdecl.scope Then
 			t :+ fdecl.munged
