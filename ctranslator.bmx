@@ -4334,7 +4334,13 @@ End Rem
 			funcMunged = classDecl.munged + "_" + fdecl.ident + MangleMethod(fdecl)
 		End If
 
-		Local t:String = TransObject(classdecl) + " _" + funcMunged + "_ObjectNew"
+		Local t:String = TransObject(classdecl) + " "
+		
+		If Not classDecl.IsStruct() Then
+			t :+ "_"
+		End If
+		
+		t :+ funcMunged + "_ObjectNew"
 
 		'Find decl we override
 		Local odecl:TFuncDecl=fdecl
