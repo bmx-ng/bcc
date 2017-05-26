@@ -22,29 +22,29 @@
 '    distribution.
 '
 
-Const DECL_EXTERN:Int=      $010000
-Const DECL_PRIVATE:Int=     $020000
-Const DECL_ABSTRACT:Int=    $040000
-Const DECL_FINAL:Int=       $080000
+Const DECL_EXTERN:Int=        $010000
+Const DECL_PRIVATE:Int=       $020000
+Const DECL_ABSTRACT:Int=      $040000
+Const DECL_FINAL:Int=         $080000
 
-Const DECL_SEMANTED:Int=    $100000
-Const DECL_SEMANTING:Int=   $200000
+Const DECL_SEMANTED:Int=      $100000
+Const DECL_SEMANTING:Int=     $200000
 
-Const DECL_POINTER:Int=     $400000
+Const DECL_POINTER:Int=       $400000
 
-Const DECL_ARG:Int=         $800000
-Const DECL_INITONLY:Int=   $1000000
+Const DECL_ARG:Int=           $800000
+Const DECL_INITONLY:Int=     $1000000
 
-Const DECL_NODEBUG:Int=    $2000000
-Const DECL_PROTECTED:Int=  $4000000
+Const DECL_NODEBUG:Int=      $2000000
+Const DECL_PROTECTED:Int=    $4000000
 
 Const DECL_API_CDECL:Int=   $00000000
 Const DECL_API_STDCALL:Int= $10000000
-Const DECL_API_DEFAULT:Int= DECL_API_CDECL
+Const DECL_API_DEFAULT:Int=DECL_API_CDECL
 
-Const CLASS_INTERFACE:Int=  $001000
-Const CLASS_THROWABLE:Int=  $002000
-Const CLASS_STRUCT:Int=     $004000
+Const CLASS_INTERFACE:Int=    $002000
+Const CLASS_THROWABLE:Int=    $004000
+Const CLASS_STRUCT:Int=       $008000
 
 Const SCOPE_FUNC:Int = 0
 Const SCOPE_CLASS_LOCAL:Int = 1
@@ -303,6 +303,9 @@ Type TDecl
 	End Method
 	
 	Method OnSemant() Abstract
+	
+	Method Clear()
+	End Method
 
 End Type
 
@@ -493,6 +496,9 @@ Type TValDecl Extends TDecl
 		End If
 	End Method
 	
+	Method Clear()
+	End Method
+	
 End Type
 
 Type TConstDecl Extends TValDecl
@@ -556,7 +562,9 @@ Type TLocalDecl Extends TVarDecl
 	End Method
 	
 	Method OnCopy:TDecl(deep:Int = True)
-		Return New TLocalDecl.Create( ident,ty,CopyInit(),attrs, generated, volatile )
+		Local decl:TLocalDecl = New TLocalDecl.Create( ident,ty,CopyInit(),attrs &~ DECL_SEMANTED, generated, volatile )
+		decl.scope = scope
+		Return decl
 	End Method
 
 	Method GetDeclPrefix:String()
@@ -565,6 +573,10 @@ Type TLocalDecl Extends TVarDecl
 	
 	Method ToString$()
 		Return GetDeclPrefix() + Super.ToString()
+	End Method
+
+	Method Clear()
+		done = False
 	End Method
 
 End Type
@@ -716,6 +728,9 @@ Type TAliasDecl Extends TDecl
 	End Method
 	
 	Method OnSemant()
+	End Method
+	
+	Method Clear()
 	End Method
 	
 End Type
@@ -1500,6 +1515,9 @@ End Rem
 	Method OnSemant()
 	End Method
 	
+	Method Clear()
+	End Method
+
 End Type
 
 Type TBlockDecl Extends TScopeDecl
@@ -1521,6 +1539,7 @@ Type TBlockDecl Extends TScopeDecl
 	
 	Method OnCopy:TDecl(deep:Int = True)
 		Local t:TBlockDecl=New TBlockDecl
+		t.scope = scope
 		If deep Then
 			For Local stmt:TStmt=EachIn stmts
 				t.AddStmt stmt.Copy( t )
@@ -1545,6 +1564,12 @@ Type TBlockDecl Extends TScopeDecl
 		Return t
 	End Method
 
+	Method Clear()
+		For Local stmt:TStmt=EachIn stmts
+			stmt.Clear
+		Next
+	End Method
+
 End Type
 
 Const FUNC_METHOD:Int=   $0001			'mutually exclusive with ctor
@@ -1556,6 +1581,7 @@ Const FUNC_PTR:Int=      $0100
 Const FUNC_INIT:Int =    $0200
 Const FUNC_NESTED:Int =  $0400
 Const FUNC_OPERATOR:Int= $0800
+Const FUNC_FIELD:Int=    $1000
 
 'Fix! A func is NOT a block/scope!
 '
@@ -1698,7 +1724,11 @@ Type TFuncDecl Extends TBlockDecl
 	Method IsProperty:Int()
 		Return (attrs & FUNC_PROPERTY)<>0
 	End Method
-	
+
+	Method IsField:Int()
+		Return (attrs & FUNC_FIELD)<>0
+	End Method
+		
 	Method EqualsArgs:Int( decl:TFuncDecl ) ' careful, this is not commutative!
 		If argDecls.Length<>decl.argDecls.Length Return False
 		For Local i:Int=0 Until argDecls.Length
@@ -1732,6 +1762,12 @@ Type TFuncDecl Extends TBlockDecl
 	Method OnSemant()
 
 		Local strictVoidToInt:Int = False
+
+		If isCtor() Or isDtor() Then
+			If ClassScope() And ClassScope().IsInterface() Then
+				Err ident + "() cannot be declared in an Interface."
+			End If
+		End If
 
 		'semant ret type
 		If Not retTypeExpr Then
@@ -1789,7 +1825,7 @@ Type TFuncDecl Extends TBlockDecl
 		'check for duplicate decl
 		If ident Then
 			For Local decl:TFuncDecl=EachIn scope.SemantedFuncs( ident )
-				If decl<>Self And EqualsArgs( decl )
+				If decl<>Self And EqualsArgs( decl ) And Not decl.IsCTOR()
 					Err "Duplicate declaration "+ToString()
 				EndIf
 				If noMangle Then
@@ -1862,25 +1898,11 @@ Type TFuncDecl Extends TBlockDecl
 							' check we aren't attempting to assign weaker access modifiers
 							If (IsProtected() And decl.IsPublic()) Or (IsPrivate() And (decl.IsProtected() Or decl.IsPublic())) Then
 							
-								Local p:String
-								If IsProtected() Then
-									p = "Protected"
-								Else
-									p = "Private"
-								End If
-								
-								Local dp:String
-								If decl.IsPublic() Then
-									dp = "Public"
-								Else
-									dp = "Protected"
-								End If
-							
-								Err ToString() + " clashes with " + decl.ToString() + ". Attempt to assign weaker access privileges ('" + p + "'), was '" + dp + "'."
+								Err PrivilegeError(Self, decl)
 							
 							End If
 						
-							If TObjectType(retType) And TObjectType(decl.retType ) Then
+							If (TObjectType(retType) And TObjectType(decl.retType )) Or (TArrayType(retType) And TArrayType(decl.retType)) Then
 								If Not retType.EqualsType( decl.retType ) And retType.ExtendsType( decl.retType ) Then
 									returnTypeSubclassed = True
 								End If
@@ -1962,13 +1984,56 @@ Type TFuncDecl Extends TBlockDecl
 		Return Super.CheckAccess()
 	End Method
 
+	Function PrivilegeError:String(decl:TFuncDecl, decl2:TFuncDecl)
+		Local p:String
+		If decl.IsProtected() Then
+			p = "Protected"
+		Else
+			p = "Private"
+		End If
+		
+		Local dp:String
+		If decl2.IsPublic() Then
+			dp = "Public"
+		Else
+			dp = "Protected"
+		End If
+	
+		Return decl.ToString() + " clashes with " + decl2.ToString() + ". Attempt to assign weaker access privileges ('" + p + "'), was '" + dp + "'."
+	End Function
+	
 End Type
 
 Type TNewDecl Extends TFuncDecl
 
 	Field chainedCtor:TNewExpr
 	
-	
+	Method OnCopy:TDecl(deep:Int = True)
+		Local args:TArgDecl[]=argDecls[..]
+		For Local i:Int=0 Until args.Length
+			args[i]=TArgDecl( args[i].Copy() )
+		Next
+		Local t:TNewDecl = TNewDecl(New TNewDecl.CreateF( ident,retType,args,attrs &~DECL_SEMANTED ))
+		If deep Then
+			For Local stmt:TStmt=EachIn stmts
+				t.AddStmt stmt.Copy( t )
+			Next
+		End If
+		t.retType = retType
+		t.scope = scope
+		t.overrides = overrides
+		t.superCtor = superCtor
+		t.castTo = castTo
+		t.noCastGen = noCastGen
+		t.munged = munged
+		t.metadata = metadata
+		t.mangled = mangled
+		t.noMangle = noMangle
+		t.chainedCtor = chainedCtor
+
+		Return  t
+	End Method
+
 
 End Type
 
@@ -2666,6 +2731,11 @@ End Rem
 							For Local decl2:TFuncDecl=EachIn cdecl.SemantedMethods( decl.ident )
 								' equals (or extends - for object types)
 								If decl2.EqualsFunc( decl )
+									If Not decl2.IsPublic() Then
+										' error on function decl
+										PushErr decl2.errInfo
+										Err TFuncDecl.PrivilegeError(decl2, decl)
+									End If
 									found=True
 									Exit
 								EndIf
@@ -2695,7 +2765,6 @@ End Rem
 	
 	Method CheckInterface(cdecl:TClassDecl, impls:TList)
 		While cdecl
-		
 			For Local decl:TFuncDecl=EachIn cdecl.SemantedMethods()
 				Local found:Int
 				For Local decl2:TFuncDecl=EachIn impls

@@ -853,89 +853,35 @@ Type TIParser
 			fdecl = ParseFuncDecl("", attrs, retTy)
 			ty = retTy
 		End If
-		
-		Repeat		
-			If CParse( "F" )
-				attrs:|DECL_FINAL
-			Else If CParse( "FW" )
-				attrs:|DECL_FINAL | DECL_API_STDCALL
-			Else If CParse( "FP" )
-				attrs:|DECL_FINAL|DECL_PRIVATE
-			Else If CParse( "FPW" )
-				attrs:|DECL_FINAL|DECL_PRIVATE | DECL_API_STDCALL
-			Else If CParse( "FR" )
-				attrs:|DECL_FINAL|DECL_PROTECTED
-			Else If CParse( "FRW" )
-				attrs:|DECL_FINAL|DECL_PROTECTED | DECL_API_STDCALL
-			Else If CParse( "A" )
-				attrs:|DECL_ABSTRACT
-			Else If CParse( "AW" )
-				attrs:|DECL_ABSTRACT | DECL_API_STDCALL
-			Else If CParse( "AP" )
-				attrs:|DECL_ABSTRACT|DECL_PRIVATE
-			Else If CParse( "APW" )
-				attrs:|DECL_ABSTRACT|DECL_PRIVATE | DECL_API_STDCALL
-			Else If CParse( "AR" )
-				attrs:|DECL_ABSTRACT|DECL_PROTECTED
-			Else If CParse( "ARW" )
-				attrs:|DECL_ABSTRACT|DECL_PROTECTED | DECL_API_STDCALL
-			Else If CParse( "W" )
-				attrs:| DECL_API_STDCALL
-			Else If CParse( "O" )
-				attrs:|FUNC_OPERATOR
-			Else If CParse( "OW" )
-				attrs:|FUNC_OPERATOR | DECL_API_STDCALL
-			Else If CParse( "OP" )
-				attrs:|FUNC_OPERATOR|DECL_PRIVATE
-			Else If CParse( "OPW" )
-				attrs:|FUNC_OPERATOR|DECL_PRIVATE | DECL_API_STDCALL
-			Else If CParse( "OR" )
-				attrs:|FUNC_OPERATOR|DECL_PROTECTED
-			Else If CParse( "ORW" )
-				attrs:|FUNC_OPERATOR|DECL_PROTECTED | DECL_API_STDCALL
-			Else If CParse( "P" )
-				attrs:|DECL_PRIVATE
-			Else If CParse( "PW" )
-				attrs:|DECL_PRIVATE | DECL_API_STDCALL
-			Else If CParse( "R" )
-				attrs:|DECL_PROTECTED
-			Else If CParse( "RW" )
-				attrs:|DECL_PROTECTED | DECL_API_STDCALL
-			Else If CParse( "FO" )
-				attrs:|DECL_FINAL|FUNC_OPERATOR
-			Else If CParse( "FOW" )
-				attrs:|DECL_FINAL|FUNC_OPERATOR | DECL_API_STDCALL
-			Else If CParse( "FOP" )
-				attrs:|DECL_FINAL|FUNC_OPERATOR|DECL_PRIVATE
-			Else If CParse( "FOPW" )
-				attrs:|DECL_FINAL|FUNC_OPERATOR|DECL_PRIVATE | DECL_API_STDCALL
-			Else If CParse( "FOR" )
-				attrs:|DECL_FINAL|FUNC_OPERATOR|DECL_PROTECTED
-			Else If CParse( "FORW" )
-				attrs:|DECL_FINAL|FUNC_OPERATOR|DECL_PROTECTED | DECL_API_STDCALL
-			Else If CParse( "AO" )
-				attrs:|DECL_ABSTRACT|FUNC_OPERATOR
-			Else If CParse( "AOW" )
-				attrs:|DECL_ABSTRACT|FUNC_OPERATOR | DECL_API_STDCALL
-			Else If CParse( "AOP" )
-				attrs:|DECL_ABSTRACT|FUNC_OPERATOR|DECL_PRIVATE
-			Else If CParse( "AOPW" )
-				attrs:|DECL_ABSTRACT|FUNC_OPERATOR|DECL_PRIVATE | DECL_API_STDCALL
-			Else If CParse( "AOR" )
-				attrs:|DECL_ABSTRACT|FUNC_OPERATOR|DECL_PROTECTED
-			Else If CParse( "AORW" )
-				attrs:|DECL_ABSTRACT|FUNC_OPERATOR|DECL_PROTECTED | DECL_API_STDCALL
-			'Else If CParse( "property" )
-			'	If attrs & FUNC_METHOD
-			'		attrs:|FUNC_PROPERTY
-			'	Else
-			'		Err "Only methods can be properties."
-			'	EndIf
-			Else
-				Exit
-			EndIf
-		Forever
-		
+
+		Local parsed:Int
+		For Local i:Int = 0 Until _toke.Length
+			Select _toke[i]
+				Case Asc("F")
+					attrs:| DECL_FINAL
+					parsed = True
+				Case Asc("W")
+					attrs:| DECL_API_STDCALL
+					parsed = True
+				Case Asc("P")
+					attrs:| DECL_PRIVATE
+					parsed = True
+				Case Asc("A")
+					attrs:| DECL_ABSTRACT
+					parsed = True
+				Case Asc("O")
+					attrs:| FUNC_OPERATOR
+					parsed = True
+				Case Asc("R")
+					attrs:| DECL_PROTECTED
+					parsed = True
+			End Select
+		Next
+
+		If parsed Then
+			NextToke
+		End If
+
 		Local funcDecl:TFuncDecl
 		If attrs & FUNC_CTOR Then
 			funcDecl = New TNewDecl.CreateF( id,ty,args,attrs )
@@ -1161,6 +1107,11 @@ End Rem
 			decl=New TGlobalDecl.Create( id,ty,init,attrs )
 		Else If attrs & DECL_FIELD
 			decl=New TFieldDecl.Create( id,ty,init,attrs )
+			
+			If TFunctionPtrType(ty) Then
+				TFunctionPtrType(ty).func.attrs :| FUNC_FIELD
+			End If
+			
 		Else If attrs & DECL_CONST
 			decl=New TConstDecl.Create( id,ty,init,attrs )
 		Else If attrs & DECL_LOCAL

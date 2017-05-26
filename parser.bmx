@@ -35,11 +35,8 @@ Type TForEachinStmt Extends TLoopStmt
 	Field varty:TType
 	Field varlocal:Int
 	Field expr:TExpr
-	Field block:TBlockDecl
 	Field varExpr:TExpr
 	
-	Field stmts:TList=New TList
-
 	Method Create:TForEachinStmt( varid$,varty:TType,varlocal:Int,expr:TExpr,block:TBlockDecl,loopLabel:TLoopLabelDecl,varExpr:TExpr )
 		Self.varid=varid
 		Self.varty=varty
@@ -53,7 +50,19 @@ Type TForEachinStmt Extends TLoopStmt
 	End Method
 
 	Method OnCopy:TStmt( scope:TScopeDecl )
+		If loopLabel Then
+			If varExpr Then
 		Return New TForEachinStmt.Create( varid,varty,varlocal,expr.Copy(),block.CopyBlock( scope ),TLoopLabelDecl(loopLabel.Copy()), varExpr.Copy() )
+			Else
+				Return New TForEachinStmt.Create( varid,varty,varlocal,expr.Copy(),block.CopyBlock( scope ),TLoopLabelDecl(loopLabel.Copy()), Null )
+			End If
+		Else
+			If varExpr Then
+				Return New TForEachinStmt.Create( varid,varty,varlocal,expr.Copy(),block.CopyBlock( scope ),Null, varExpr.Copy() )
+			Else
+				Return New TForEachinStmt.Create( varid,varty,varlocal,expr.Copy(),block.CopyBlock( scope ),Null, Null )
+			End If
+		End If
 	End Method
 
 	Method OnSemant()
@@ -2024,6 +2033,9 @@ End Rem
 					ty= TType.stringType
 				Else
 					ty=ParseType()
+					While IsArrayDef()
+						ty=ParseArrayType(ty)
+					Wend
 				End If
 				Local init:TLocalDecl=New TLocalDecl.Create( id,ty,Null,0 )
 				Local block:TBlockDecl=New TBlockDecl.Create( _block )
@@ -2405,7 +2417,13 @@ End Rem
 
 		Select toke
 		Case "global" decl=New TGlobalDecl.Create( id,ty,init,attrs )
-		Case "field"  decl=New TFieldDecl.Create( id,ty,init,attrs )
+		Case "field"
+			decl=New TFieldDecl.Create( id,ty,init,attrs )
+
+			If TFunctionPtrType(ty) Then
+				TFunctionPtrType(ty).func.attrs :| FUNC_FIELD
+			End If
+
 		Case "const"  decl=New TConstDecl.Create( id,ty,init,attrs )
 		Case "local"  decl=New TLocalDecl.Create( id,ty,init,attrs )
 		End Select

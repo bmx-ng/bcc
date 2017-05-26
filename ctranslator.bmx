@@ -1208,7 +1208,7 @@ t:+"NULLNULLNULL"
 			End If
 
 			' ((brl_standardio_TCStandardIO_obj*)o->clas)->md_Read(o, xxx, xxx)
-		If decl.IsMethod() Then
+		If decl.IsMethod() Or decl.IsField() Then
 			If  Not (decl.attrs & FUNC_PTR) Then
 
 				Local class:String
@@ -1558,7 +1558,7 @@ t:+"NULLNULLNULL"
 					t = "_" + ctorMunged + "_ObjectNew" + TransArgs( expr.args,expr.ctor, "&" + expr.classDecl.actual.munged )
 				Else
 					If expr.classDecl.IsStruct() Then
-						t = "_" + ctorMunged + "_ObjectNew" + TransArgs( expr.args,expr.ctor)
+						t = ctorMunged + "_ObjectNew" + TransArgs( expr.args,expr.ctor)
 					Else
 						t = "_" + ctorMunged + "_ObjectNew" + TransArgs( expr.args,expr.ctor, "&" + expr.classDecl.actual.munged)
 					End If
@@ -2364,7 +2364,11 @@ t:+"NULLNULLNULL"
 				Emit s + "if (bbObjectDowncast(ex,&bbArrayClass) != &bbEmptyArray) {"
 				Emit TransType( c.init.ty, c.init.munged )+" "+ c.init.munged + "=(BBARRAY)ex;" 
 			Else If TObjectType(c.init.ty) Then
-				Emit s + "if (bbObjectDowncast(ex,&"+TObjectType(c.init.ty).classDecl.munged+") != &bbNullObject) {"
+				If TObjectType(c.init.ty).classDecl.IsInterface() Then
+					Emit s + "if (bbInterfaceDowncast(ex,&"+TObjectType(c.init.ty).classDecl.munged+"_ifc) != &bbNullObject) {"
+				Else
+					Emit s + "if (bbObjectDowncast(ex,&"+TObjectType(c.init.ty).classDecl.munged+") != &bbNullObject) {"
+				End If
 				Emit TransType( c.init.ty, c.init.munged )+" "+ c.init.munged + "=" + Bra(TransType( c.init.ty, c.init.munged )) + "ex;" 
 			Else
 				Err "Not an object"
@@ -4285,7 +4289,12 @@ End Rem
 		
 		For Local fdecl:TFuncDecl = EachIn newDecls
 		
-			EmitClassDeclNew(classDecl, fdecl)
+			If fdecl.scope <> classDecl Then
+				fdecl.Clear()
+				EmitClassDeclNew(classDecl, fdecl)
+			Else
+				EmitClassDeclNew(classDecl, fdecl)
+			End If
 
 			' generate "objectNew" function if required
 			If (fdecl.argDecls And fdecl.argDecls.length) Or classDecl.IsStruct() Then
@@ -4325,7 +4334,13 @@ End Rem
 			funcMunged = classDecl.munged + "_" + fdecl.ident + MangleMethod(fdecl)
 		End If
 
-		Local t:String = TransObject(classdecl) + " _" + funcMunged + "_ObjectNew"
+		Local t:String = TransObject(classdecl) + " "
+		
+		If Not classDecl.IsStruct() Then
+			t :+ "_"
+		End If
+		
+		t :+ funcMunged + "_ObjectNew"
 
 		'Find decl we override
 		Local odecl:TFuncDecl=fdecl
@@ -4451,7 +4466,11 @@ End Rem
 	
 	Method EmitClassDeclObjectNewProto(classDecl:TClassDecl, fdecl:TFuncDecl)
 
-		Local t:String = TransObject(classdecl) + " _"
+		Local t:String = TransObject(classdecl) + " "
+		
+		If Not classDecl.IsStruct() Then
+			t :+ "_"
+		End If
 		
 		If classDecl = fdecl.scope Then
 			t :+ fdecl.munged
@@ -4887,7 +4906,9 @@ End Rem
 		' functions
 		If Not classDecl.IsExtern() Then
 
-			Emit "-New()=" + Enquote("_" + classDecl.munged + "_New")
+			If Not classDecl.attrs & CLASS_INTERFACE Then
+				Emit "-New()=" + Enquote("_" + classDecl.munged + "_New")
+			End If
 			If classHierarchyHasFunction(classDecl, "Delete") Then
 				Emit "-Delete()=" + Enquote("_" + classDecl.munged + "_Delete")
 			End If

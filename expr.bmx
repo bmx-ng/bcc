@@ -920,10 +920,10 @@ Type TNewObjectExpr Extends TExpr
 				
 				' find other member decl (field, etc)
 				If Not errorDetails Then
-					Local decl:TVarDecl = TVarDecl(cdecl.GetDecl(id))
-					If decl Then
+					Local decl:TValDecl = TValDecl(cdecl.GetDecl(id))
+					If TVarDecl(decl) Then
 						Local tmp:TLocalDecl=New TLocalDecl.Create( "", eType, expr,, True )
-						Local varExpr:TExpr = New TMemberVarExpr.Create(New TVarExpr.Create( tmp ), decl).Semant()
+						Local varExpr:TExpr = New TMemberVarExpr.Create(New TVarExpr.Create( tmp ), TVarDecl(decl)).Semant()
 						expr = New TStmtExpr.Create( New TDeclStmt.Create( tmp ), varExpr ).Semant()
 						eType = decl.ty
 						If TObjectType(eType) Then
@@ -932,6 +932,12 @@ Type TNewObjectExpr Extends TExpr
 						If TArrayType(eType) Or TStringType(eType) Then
 							cdecl = eType.GetClass()
 						End If
+						Continue
+					End If
+					If TConstDecl(decl) Then
+						decl.Semant()
+						expr = New TConstExpr.Create(decl.ty, TConstDecl(decl).value).Semant()
+						eType = decl.ty
 						Continue
 					End If
 				End If	
@@ -1486,7 +1492,6 @@ Type TCastExpr Extends TExpr
 
 	Method Eval$()
 		Local val$=expr.Eval()
-		If Not val Return val
 		If TBoolType( exprType )
 			If TIntegralType(expr.exprType)
 				If Long( val ) Return "1"
@@ -1527,6 +1532,10 @@ Type TCastExpr Extends TExpr
 		Else If TFloat64Type( exprType )
 			Return Float( val )
 		Else If TStringType( exprType )
+			If TBoolType( expr.exprType )
+				If val Return "1"
+				Return "0"
+			EndIf
 			Return String( val )
 		Else If TByteType( exprType )
 			Return Byte( val )
@@ -1584,8 +1593,16 @@ Type TUnaryExpr Extends TExpr
 				exprType._flags :~ TType.T_VAR
 			End If
 		Case "~~"
-			expr=expr.SemantAndCast( New TIntType )
-			exprType=New TIntType
+			expr=expr.Semant()
+			If Not TIntegralType(expr.exprType) Or IsPointerType(expr.exprType) Then
+				Err "Bitwise complement can only be used with integers"
+			End If
+			If TByteType(expr.exprType) Or TShortType(expr.exprType) Then
+				expr=expr.SemantAndCast( New TIntType )
+				exprType=New TIntType
+			Else
+				exprType = expr.exprType
+			End If
 		Case "not"
 			expr=expr.SemantAndCast( New TBoolType,CAST_EXPLICIT )
 			exprType=New TBoolType

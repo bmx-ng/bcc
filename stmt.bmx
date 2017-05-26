@@ -49,6 +49,9 @@ Type TStmt
 
 	Method Trans$() Abstract
 
+	Method Clear()
+	End Method
+	
 End Type
 
 Type TDeclStmt Extends TStmt
@@ -66,6 +69,9 @@ Type TDeclStmt Extends TStmt
 	End Method
 
 	Method OnCopy:TStmt( scope:TScopeDecl )
+		If Not decl.scope Then
+			decl.scope = scope
+		End If
 		Return New TDeclStmt.Create( decl.Copy(), generated )
 	End Method
 	
@@ -80,6 +86,11 @@ Type TDeclStmt Extends TStmt
 	Method Trans$()
 		Return _trans.TransDeclStmt( Self )
 	End Method
+	
+	Method Clear()
+		decl.Clear()
+	End Method
+	
 End Type
 
 Type TAssignStmt Extends TStmt
@@ -309,8 +320,7 @@ Type TCatchStmt Extends TStmt
 	
 	Method OnSemant()
 		init.Semant
-		If Not TObjectType( init.ty )  And Not TStringType(init.ty) Err "Variable type must extend Throwable"
-		'If Not init.Type.GetClass().IsThrowable() Err "Variable type must extend Throwable"
+		If (Not TObjectType( init.ty ) Or (TObjectType( init.ty ) And TObjectType( init.ty ).classDecl.IsStruct()))  And Not TStringType(init.ty) And Not TArrayType(init.ty) Err "'Catch' variables must be objects"
 		block.InsertDecl init
 		block.Semant
 	End Method
@@ -334,8 +344,7 @@ Type TThrowStmt Extends TStmt
 	
 	Method OnSemant()
 		expr=expr.Semant()
-		If Not TObjectType( expr.exprType ) And Not TStringType(expr.exprType) Err "Expression Type must extend Throwable"
-		'If Not expr.exprType.GetClass().IsThrowable() Err "Expression type must extend Throwable"
+		If (Not TObjectType( expr.exprType ) Or (TObjectType( expr.exprType ) And TObjectType( expr.exprType ).classDecl.IsStruct()))  And Not TStringType(expr.exprType) And Not TArrayType(expr.exprType) Err "'Throw' expression must be an object"
 	End Method
 	
 	Method Trans$()
@@ -444,6 +453,9 @@ Type TLoopStmt Extends TStmt
 	Field loopLabel:TLoopLabelDecl
 	Field block:TBlockDecl
 
+	Method Clear()
+		block.Clear()
+	End Method
 End Type
 
 Type TWhileStmt Extends TLoopStmt
@@ -461,7 +473,11 @@ Type TWhileStmt Extends TLoopStmt
 	End Method
 
 	Method OnCopy:TStmt( scope:TScopeDecl )
-		Return New TWhileStmt.Create( expr.Copy(),block.CopyBlock( scope ),TLoopLabelDecl(loopLabel.Copy()), generated )
+		If loopLabel Then
+			Return New TWhileStmt.Create( expr.Copy(),block.CopyBlock( scope ),TLoopLabelDecl(loopLabel.Copy()), generated )
+		Else
+			Return New TWhileStmt.Create( expr.Copy(),block.CopyBlock( scope ),Null, generated )
+		End If
 	End Method
 	
 	Method OnSemant()
