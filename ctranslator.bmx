@@ -3224,6 +3224,10 @@ End Rem
 	End Method
 
 	Method EmitClassProto( classDecl:TClassDecl )
+	
+		If classDecl.args Then
+			Return
+		End If
 
 		Local classid$=classDecl.munged
 		Local superid$
@@ -3798,6 +3802,10 @@ End Rem
 	End Method
 
 	Method EmitClassDecl( classDecl:TClassDecl )
+	
+		If classDecl.args Then
+			Return
+		End If
 
 		PushEnv classDecl
 		'If classDecl.IsTemplateInst()
@@ -4854,6 +4862,10 @@ End Rem
 	End Method
 
 	Method EmitIfcClassDecl(classDecl:TClassDecl)
+	
+		If classDecl.args Then
+			Return
+		End If
 
 		Local head:String = classDecl.ident + "^"
 		If classDecl.superClass Then
@@ -5476,7 +5488,7 @@ End If
 			If decl.declImported Continue
 
 			Local cdecl:TClassDecl=TClassDecl( decl )
-			If cdecl And Not cdecl.IsExtern()
+			If cdecl And Not cdecl.IsExtern() And Not cdecl.args
 				If Not cdecl.IsInterface() Then
 					If Not cdecl.IsStruct() Then
 						Emit "bbObjectRegisterType(&" + cdecl.munged + ");"

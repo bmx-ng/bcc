@@ -1539,7 +1539,7 @@ Type TIdentType Extends TType
 	
 	
 	Method Semant:TType(ignoreNotFoundError:Int = 0)
-'If ident="obj" DebugStop
+'If ident="TStack" DebugStop
 		If Not ident Return TType.nullObjectType
 
 		Local targs:TType[args.Length]

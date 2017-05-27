@@ -2384,7 +2384,12 @@ Type TIdentExpr Extends TExpr
 	End Method
 
 	Method Copy:TExpr()
-		Return New TIdentExpr.Create( ident,CopyExpr(expr), _identLower )
+		Local i:TIdentExpr = New TIdentExpr.Create( ident,CopyExpr(expr), _identLower )
+		i.static = static
+		i.isArg = isArg
+		i.isRhs = isRhs
+		i.fixedScope = fixedScope
+		Return i
 	End Method
 
 	Method ToString$()

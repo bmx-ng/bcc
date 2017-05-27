@@ -499,12 +499,13 @@ Type TParser
 		If CParse( "." ) id:+"."+ParseIdent()
 		If CParse( "." ) id:+"."+ParseIdent()
 
-		Local args:TIdentType[]
+		Local args:TType[]
 		If CParse( "<" )
 			Local nargs:Int
 			Repeat
-				Local arg:TIdentType=ParseIdentType()
-				If args.Length=nargs args=args+ New TIdentType[10]
+				'Local arg:TIdentType=ParseIdentType()
+				Local arg:TType = ParseType()
+				If args.Length=nargs args=args+ New TType[10]
 				args[nargs]=arg
 				nargs:+1
 			Until Not CParse(",")
@@ -3086,7 +3087,15 @@ End Rem
 		'check for metadata
 		meta = ParseMetaData()
 
-		Local classDecl:TClassDecl=New TClassDecl.Create( id,String[](args.ToArray()),superTy,imps,attrs )
+		
+		Local sargs:String[] = New String[args.Count()]
+		Local i:Int = 0
+		For Local arg:String = EachIn args
+			sargs[i] = arg
+			i :+ 1
+		Next
+
+		Local classDecl:TClassDecl=New TClassDecl.Create( id,sargs,superTy,imps,attrs )
 		
 		If meta Then
 			If attrs & CLASS_STRUCT

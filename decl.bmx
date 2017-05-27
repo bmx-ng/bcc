@@ -336,7 +336,7 @@ Type TValDecl Extends TDecl
 	End Method
 	
 	Method OnSemant()
-	
+'DebugStop	
 		If declTy
 
 			Local at:TType = TArrayType(declTy)
@@ -562,8 +562,10 @@ Type TLocalDecl Extends TVarDecl
 	End Method
 	
 	Method OnCopy:TDecl(deep:Int = True)
-		Local decl:TLocalDecl = New TLocalDecl.Create( ident,ty,CopyInit(),attrs &~ DECL_SEMANTED, generated, volatile )
+		Local decl:TLocalDecl = New TLocalDecl.Create( ident,declTy,declInit,attrs &~ DECL_SEMANTED, generated, volatile )
 		decl.scope = scope
+		decl.ty = ty
+		decl.init = init
 		Return decl
 	End Method
 
@@ -604,9 +606,9 @@ Type TArgDecl Extends TLocalDecl
 	End Method
 	
 	Method OnCopy:TDecl(deep:Int = True)
-		Local d:TArgDecl = New TArgDecl.Create( ident,ty,CopyInit(),attrs,generated,volatile )
-		d.ty = d.declTy
-		d.init = d.declInit
+		Local d:TArgDecl = New TArgDecl.Create( ident,declTy,declInit,attrs,generated,volatile )
+		d.ty = ty
+		d.init = init
 		Return d
 	End Method
 
@@ -636,7 +638,10 @@ Type TGlobalDecl Extends TVarDecl
 	End Method
 
 	Method OnCopy:TDecl(deep:Int = True)
-		Return New TGlobalDecl.Create( ident,ty,CopyInit(),attrs,funcGlobal )
+		Local g:TGlobalDecl = New TGlobalDecl.Create( ident,declTy,declInit,attrs,funcGlobal )
+		g.ty = ty
+		g.init = init
+		Return g
 	End Method
 	
 	Method ToString$()
@@ -683,7 +688,9 @@ Type TFieldDecl Extends TVarDecl
 	End Method
 
 	Method OnCopy:TDecl(deep:Int = True)
-		Local f:TFieldDecl = New TFieldDecl.Create( ident,ty,CopyInit(),attrs )
+		Local f:TFieldDecl = New TFieldDecl.Create( ident,declTy,declInit,attrs )
+		f.ty = ty
+		f.init = init
 		f.metadata = metadata
 		Return f
 	End Method
@@ -803,14 +810,14 @@ Type TScopeDecl Extends TDecl
 		Return fdecls
 	End Method
 	
-	Method InsertDecl( decl:TDecl )
+	Method InsertDecl( decl:TDecl, isCopy:Int = False )
 
-		If decl.scope And Not (decl.attrs & DECL_INITONLY) InternalErr
+		If decl.scope And Not (decl.attrs & DECL_INITONLY) And Not isCopy InternalErr
 		
 		'Local ident$=decl.ident
 		If Not decl.ident Return
 		
-		If Not decl.scope Then
+		If Not decl.scope Or isCopy Then
 			decl.scope=Self
 		End If
 		_decls.AddLast decl
@@ -1630,6 +1637,7 @@ Type TFuncDecl Extends TBlockDecl
 			Next
 		End If
 		t.retType = retType
+		t.retTypeExpr = retTypeExpr
 		t.scope = scope
 		t.overrides = overrides
 		t.superCtor = superCtor
@@ -2081,7 +2089,7 @@ Type TClassDecl Extends TScopeDecl
 		Self.objectType=New TObjectType.Create( Self )
 		If args
 			instances=New TList
-			instances.AddLast Self
+			'instances.AddLast Self
 		EndIf
 		Return Self
 	End Method
@@ -2203,13 +2211,13 @@ End Rem
 		inst.instanceof=Self
 		inst.instArgs=instArgs
 		instances.AddLast inst
-		
+
 		For Local i:Int=0 Until args.Length
 			inst.InsertDecl New TAliasDecl.Create( args[i].ToString(),instArgs[i],0 )
 		Next
-		
+
 		For Local decl:TDecl=EachIn _decls
-			inst.InsertDecl decl.Copy()
+			inst.InsertDecl decl.Copy(), True
 		Next
 
 		Return inst
@@ -2461,6 +2469,10 @@ End Rem
 	End Method
 	
 	Method OnSemant()
+	
+		If args Then
+			Return
+		End If
 
 		PushEnv Self
 
@@ -2583,6 +2595,9 @@ End Rem
 '		If IsSemanted() Return
 		
 '		Super.Semant()
+		If args Then
+			Return
+		End If
 		
 		For Local decl:TConstDecl = EachIn Decls()
 			decl.Semant()
@@ -3216,7 +3231,16 @@ Type TModuleDecl Extends TScopeDecl
 		Next
 
 		For Local cdecl:TClassDecl=EachIn _decls
-			cdecl.Semant
+			If cdecl.args Then
+				For Local inst:TClassDecl = EachIn cdecl.instances
+					For Local idecl:TDecl = EachIn inst.Decls()
+						If TAliasDecl( idecl ) Continue
+						idecl.Semant()
+					Next
+				Next
+			Else
+				cdecl.Semant
+			End If
 		Next
 
 		For Local fdecl:TFuncDecl=EachIn _decls

@@ -69,10 +69,11 @@ Type TDeclStmt Extends TStmt
 	End Method
 
 	Method OnCopy:TStmt( scope:TScopeDecl )
-		If Not decl.scope Then
-			decl.scope = scope
-		End If
-		Return New TDeclStmt.Create( decl.Copy(), generated )
+		Local d:TDecl = decl.Copy()
+		'If Not d.scope Then
+		d.scope = Null
+		'End If
+		Return New TDeclStmt.Create( d, generated )
 	End Method
 	
 	Method OnSemant()
@@ -223,8 +224,14 @@ Type TReturnStmt Extends TStmt
 	End Method
 
 	Method OnCopy:TStmt( scope:TScopeDecl )
-		If expr Return New TReturnStmt.Create( expr.Copy() )
-		Return New TReturnStmt.Create( Null )
+		Local r:TReturnStmt
+		If expr Then
+			r = New TReturnStmt.Create( expr.Copy() )
+		Else
+			r = New TReturnStmt.Create( Null )
+		End If
+		r.fRetType = fRetType
+		Return r
 	End Method
 	
 	Method OnSemant()
