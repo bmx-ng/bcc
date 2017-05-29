@@ -2062,7 +2062,7 @@ Type TClassDecl Extends TScopeDecl
 
 	Field lastOffset:Int
 
-	Field args:String[]
+	Field args:TTemplateArg[]
 	Field superTy:TIdentType
 	Field impltys:TIdentType[]
 
@@ -2080,7 +2080,7 @@ Type TClassDecl Extends TScopeDecl
 
 	'Global nullObjectClass:TClassDecl=New TNullDecl.Create( "{NULL}",Null,Null,Null,DECL_ABSTRACT|DECL_EXTERN )
 	
-	Method Create:TClassDecl( ident$,args:String[],superTy:TIdentType,impls:TIdentType[],attrs:Int )
+	Method Create:TClassDecl( ident$,args:TTemplateArg[],superTy:TIdentType,impls:TIdentType[],attrs:Int )
 		Self.ident=ident
 		Self.args=args
 		Self.superTy=superTy
@@ -2089,7 +2089,6 @@ Type TClassDecl Extends TScopeDecl
 		Self.objectType=New TObjectType.Create( Self )
 		If args
 			instances=New TList
-			'instances.AddLast Self
 		EndIf
 		Return Self
 	End Method
@@ -2213,7 +2212,16 @@ End Rem
 		instances.AddLast inst
 
 		For Local i:Int=0 Until args.Length
-			inst.InsertDecl New TAliasDecl.Create( args[i].ToString(),instArgs[i],0 )
+		
+			' ensure parameter types are compatible
+			If args[i].superTy Then
+				args[i].superTy = args[i].superTy.Semant()
+				If Not instArgs[i].EqualsType(args[i].superTy) And Not instArgs[i].ExtendsType(args[i].superTy) Then
+					Err "Type parameter '" + instArgs[i].ToString() + "' is not within its bound; should extend '" + args[i].superTy.ToString() + "'"
+				End If
+			End If
+		
+			inst.InsertDecl New TAliasDecl.Create( args[i].ident,instArgs[i],0 )
 		Next
 
 		For Local decl:TDecl=EachIn _decls

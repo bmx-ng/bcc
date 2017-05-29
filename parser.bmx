@@ -2939,7 +2939,7 @@ End Rem
 		If toke Parse toke
 
 		Local id$=ParseIdent()
-		Local args:TStack = New TStack
+		Local args:TList = New TList
 		Local superTy:TIdentType
 		Local imps:TIdentType[]
 		Local meta:TMetadata
@@ -2968,7 +2968,15 @@ End Rem
 				'If args.Length=nargs args=args + New TClassDecl[10]
 				'args[nargs]=decl
 				'nargs:+1
-				args.Push ParseIdent()
+				Local arg:TTemplateArg = New TTemplateArg
+				arg.ident = ParseIdent()
+				
+				If CParse("extends") Then
+					arg.superTy = ParseIdentType()
+				End If
+				
+				args.AddLast arg
+
 			Until Not CParse(",")
 			'args=args[..nargs]
 
@@ -3088,9 +3096,9 @@ End Rem
 		meta = ParseMetaData()
 
 		
-		Local sargs:String[] = New String[args.Count()]
+		Local sargs:TTemplateArg[] = New TTemplateArg[args.Count()]
 		Local i:Int = 0
-		For Local arg:String = EachIn args
+		For Local arg:TTemplateArg = EachIn args
 			sargs[i] = arg
 			i :+ 1
 		Next
@@ -4224,4 +4232,3 @@ Type TCastDets
 	Field api:String
 	
 End Type
-
