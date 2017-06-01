@@ -3962,7 +3962,7 @@ End Rem
 		Emit "}"
 
 		Emit "};"
-		
+
 		Local fdecls:TFuncDecl[] = classDecl.GetAllFuncDecls()
 		Local implementedInterfaces:TMap = classDecl.GetInterfaces()
 		Local ifcCount:Int
@@ -3988,6 +3988,8 @@ End Rem
 					Emit "struct " + classid + "_vdef " + classid + "_ifc_vtable = {"
 					For Local ifc:TClassDecl = EachIn implementedInterfaces.Values()
 						Emit ".interface_" + ifc.ident + "={"
+
+						Local dups:TMap = New TMap
 						
 						For Local func:TFuncDecl = EachIn ifc.GetImplementedFuncs()
 						
@@ -3997,7 +3999,12 @@ End Rem
 
 									Mungdecl f
 									If f.ident = func.ident And f.EqualsFunc(func) Then
-										Emit "_" + f.munged + ","
+										If Not dups.ValueForKey(f.ident) Then
+									
+											Emit "_" + f.munged + ","
+										
+											dups.Insert(f.ident, "")
+										End If
 										Exit
 									End If
 								Next

@@ -956,7 +956,7 @@ Type TScopeDecl Extends TDecl
 			End If
 
 			' if scope is an interface, also check implemented/extended interfaces?
-			If TClassDecl(tscope) And TClassDecl(tscope).IsInterface() Then
+			If TClassDecl(tscope) Then'And TClassDecl(tscope).IsInterface() Then
 				If TClassDecl(tscope).implments Then
 					For Local idecl:TScopeDecl = EachIn TClassDecl(tscope).implments
 						Local decl:Object=idecl.GetDeclList( ident, declList, maxSearchDepth )
@@ -1066,8 +1066,10 @@ Type TScopeDecl Extends TDecl
 			Local cdecl:TClassDecl=TClassDecl( decl )
 			If cdecl
 				cdecl.AssertAccess
-				cdecl=cdecl.GenClassInstance( args )
-				cdecl.Semant
+				If Not cdecl.instanceof Then
+					cdecl=cdecl.GenClassInstance( args )
+					cdecl.Semant
+				End If
 				Return cdecl.objectType
 			EndIf
 		EndIf
@@ -2099,19 +2101,28 @@ Type TClassDecl Extends TScopeDecl
 	
 	Method ToString$()
 		Local t$
+
 		If args Then
-				For Local i:Int=0 Until args.Length
-				If i t:+","
+			For Local i:Int=0 Until args.Length
+				If i Then
+					t :+ ","
+				End If
 				t:+args[i].ToString()
 			Next
 		ElseIf instargs
+			For Local i:Int=0 Until instargs.Length
+				If i Then
+					t :+ ","
+				End If
+				t :+ instargs[i].ToString()
+			Next
 		End If
 		If t t="<"+t+">"
 		Return ident+t
 	End Method
 
 	Method ToTypeString:String()
-		Return ident
+		Return ToString()
 	End Method
 Rem
 	Method GenClassInstance:TClassDecl( instArgs:TClassDecl[] )
@@ -2792,7 +2803,7 @@ End Rem
 				Local found:Int
 				For Local decl2:TFuncDecl=EachIn impls
 					If decl.IdentLower() = decl2.IdentLower()
-						If Not decl2.EqualsFunc( decl )
+						If decl2.argDecls.Length = decl.argDecls.Length And Not decl2.EqualsFunc( decl )
 							Err "Cannot mix incompatible method signatures." + decl2.ToString() + " vs " + decl.ToString() + "."
 						Else
 							found = True
