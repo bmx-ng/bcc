@@ -3168,6 +3168,10 @@ Type TNewExpr Extends TExpr
 		Return Self
 	End Method
 
+	Method Copy:TExpr()
+		Return New TNewExpr.Create(args, isSuper)
+	End Method
+
 	Method Semant:TExpr()
 
 		Local fdecl:TFuncDecl = _env.FuncScope()
