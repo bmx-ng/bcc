@@ -2026,7 +2026,7 @@ Type TNewDecl Extends TFuncDecl
 		Local t:TNewDecl = TNewDecl(New TNewDecl.CreateF( ident,retType,args,attrs &~DECL_SEMANTED ))
 		If deep Then
 			For Local stmt:TStmt=EachIn stmts
-				t.AddStmt stmt.Copy( t )
+				t.AddStmt stmt.Copy(Null)
 			Next
 		End If
 		t.retType = retType
