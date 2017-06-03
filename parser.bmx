@@ -52,7 +52,7 @@ Type TForEachinStmt Extends TLoopStmt
 	Method OnCopy:TStmt( scope:TScopeDecl )
 		If loopLabel Then
 			If varExpr Then
-		Return New TForEachinStmt.Create( varid,varty,varlocal,expr.Copy(),block.CopyBlock( scope ),TLoopLabelDecl(loopLabel.Copy()), varExpr.Copy() )
+				Return New TForEachinStmt.Create( varid,varty,varlocal,expr.Copy(),block.CopyBlock( scope ),TLoopLabelDecl(loopLabel.Copy()), varExpr.Copy() )
 			Else
 				Return New TForEachinStmt.Create( varid,varty,varlocal,expr.Copy(),block.CopyBlock( scope ),TLoopLabelDecl(loopLabel.Copy()), Null )
 			End If
@@ -1829,34 +1829,22 @@ End Rem
 		If CParse( "local" )
 			varlocal=True
 			varid=ParseIdent()
-			'If Not CParse( ":=" )
-				varty=ParseDeclType()
-				If varty._flags & (TType.T_CHAR_PTR | TType.T_SHORT_PTR) Then
-					DoErr "Illegal variable type"
-				End If
-				
-				Parse( "=" )
-			'EndIf
+
+			varty=ParseDeclType()
+			If varty._flags & (TType.T_CHAR_PTR | TType.T_SHORT_PTR) Then
+				DoErr "Illegal variable type"
+			End If
+			
+			Parse( "=" )
+			
+			' use an ident expr to pass the variable to different parts of the statement.
+			' the original implementation passed decl references, which cause problems if we wanted to
+			' copy the statement later.
+			varExpr = New TIdentExpr.Create(varid)
 		Else
 			varlocal=False
-			
+
 			varExpr=ParsePrimaryExpr( False )
-			
-			'varExpr = New TIdentExpr.Create( ParseIdent(),varExpr )
-
-			'ParseConstNumberType()
-			
-'			varid=ParseIdent()
-
-			'While Cparse(".")
-				'NextToke
-				
-			'	varExpr = New TIdentExpr.Create( ParseIdent(),varExpr )
-				
-			'	ParseConstNumberType()
-			'Wend
-			' eat any type stuff
-'			ParseConstNumberType()
 
 			Parse "="
 		EndIf
@@ -1867,10 +1855,6 @@ End Rem
 
 			PushBlock block
 			While Not CParse( "next" )
-				'If CParse( "end" )
-				'	CParse "for"
-				'	Exit
-				'EndIf
 				ParseStmt
 			Wend
 			PopBlock
@@ -1908,8 +1892,10 @@ End Rem
 		If varlocal
 			Local indexVar:TLocalDecl=New TLocalDecl.Create( varid,varty,New TCastExpr.Create( varty,from,1 ),0 )
 			init=New TDeclStmt.Create( indexVar )
-			expr=New TBinaryCompareExpr.Create( op,New TVarExpr.Create( indexVar ),New TCastExpr.Create( varty,term,1 ) )
-			incr=New TAssignStmt.Create( "=",New TVarExpr.Create( indexVar ),New TBinaryMathExpr.Create( "+",New TVarExpr.Create( indexVar ),New TCastExpr.Create( varty,stp,1 ) ) )
+'			expr=New TBinaryCompareExpr.Create( op,New TVarExpr.Create( indexVar ),New TCastExpr.Create( varty,term,1 ) )
+'			incr=New TAssignStmt.Create( "=",New TVarExpr.Create( indexVar ),New TBinaryMathExpr.Create( "+",New TVarExpr.Create( indexVar ),New TCastExpr.Create( varty,stp,1 ) ) )
+			expr=New TBinaryCompareExpr.Create( op, varExpr,New TCastExpr.Create( varty,term,1 ) )
+			incr=New TAssignStmt.Create( "=",varExpr,New TBinaryMathExpr.Create( "+",varExpr,New TCastExpr.Create( varty,stp,1 ) ) )
 		Else
 			' varty is NULL here for the casts. We will back-populate it later.
 '			init=New TAssignStmt.Create( "=",New TIdentExpr.Create( varid ),from )
@@ -1924,10 +1910,6 @@ End Rem
 
 		PushBlock block
 		While Not CParse( "next" )
-			'If CParse( "end" )
-			'	CParse "for"
-			'	Exit
-			'EndIf
 			ParseStmt
 		Wend
 		PopBlock
