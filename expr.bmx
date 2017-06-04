@@ -3169,7 +3169,7 @@ Type TNewExpr Extends TExpr
 	End Method
 
 	Method Copy:TExpr()
-		Return New TNewExpr.Create(args, isSuper)
+		Return New TNewExpr.Create(CopyArgs(args), isSuper)
 	End Method
 
 	Method Semant:TExpr()
