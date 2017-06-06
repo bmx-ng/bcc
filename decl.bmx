@@ -45,6 +45,7 @@ Const DECL_API_DEFAULT:Int=DECL_API_CDECL
 Const CLASS_INTERFACE:Int=    $002000
 Const CLASS_THROWABLE:Int=    $004000
 Const CLASS_STRUCT:Int=       $008000
+Const CLASS_GENERIC:Int=      $001000
 
 Const SCOPE_FUNC:Int = 0
 Const SCOPE_CLASS_LOCAL:Int = 1
@@ -2079,6 +2080,7 @@ Type TClassDecl Extends TScopeDecl
 
 	Field objectType:TObjectType '"canned" objectType
 	Field globInit:Int
+	Field templateSource:TTemplateRecord
 
 	'Global nullObjectClass:TClassDecl=New TNullDecl.Create( "{NULL}",Null,Null,Null,DECL_ABSTRACT|DECL_EXTERN )
 	
@@ -2183,7 +2185,7 @@ Rem
 		Return inst
 	End Method
 End Rem
-	Method GenClassInstance:TClassDecl( instArgs:TType[] )
+	Method GenClassInstance:TClassDecl( instArgs:TType[], declImported:Int = False )
 
 		If instanceof InternalErr
 		
@@ -2211,16 +2213,20 @@ End Rem
 			Next
 			If equal Return inst
 		Next
-		
+
 		Local inst:TClassDecl=New TClassDecl.Create( ident,Null,superTy,impltys, attrs )
 
 		inst.attrs:&~DECL_SEMANTED
+
 		inst.munged=munged
 		inst.errInfo=errInfo
 		inst.scope=scope
 		inst.instanceof=Self
 		inst.instArgs=instArgs
+		inst.templateSource = templateSource
 		instances.AddLast inst
+		
+		inst.declImported = declImported
 
 		For Local i:Int=0 Until args.Length
 		
@@ -2238,6 +2244,10 @@ End Rem
 		For Local decl:TDecl=EachIn _decls
 			inst.InsertDecl decl.Copy(), True
 		Next
+
+		If Not declImported Then
+			inst.scope = _env.scope
+		End If
 
 		Return inst
 	End Method
@@ -2605,6 +2615,7 @@ End Rem
 		EndIf
 
 		'NOTE: do this AFTER super semant so UpdateAttrs order is cool.
+
 		If AppScope() Then
 			AppScope().semantedClasses.AddLast Self
 		End If
@@ -3033,7 +3044,7 @@ Type TModuleDecl Extends TScopeDecl
 		Self.filepath=filepath
 		Self.attrs=attrs
 
-		If ident.Find(".") <> -1 Then
+		If ident.Find(".") <> -1 And ident.find("/") = -1 And ident.find("\") = -1 Then
 			Local m:String = ident[..ident.Find(".")]
 			Local ns:TNamespaceDecl = TNamespaceDecl(_appInstance.GetDecl(m.ToLower()))
 			If Not ns Then

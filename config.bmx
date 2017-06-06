@@ -26,10 +26,11 @@ SuperStrict
 Import BRL.LinkedList
 Import BRL.Map
 Import BRL.FileSystem
+Import Pub.zlib
 
 Import "options.bmx"
 Import "base.stringhelper.bmx"
-
+Import "base64.bmx"
 
 ' debugging help
 Const DEBUG:Int = False
@@ -405,3 +406,54 @@ End Function
 Function HeaderComment:String()
 	' TODO
 End Function
+
+
+Type TTemplateRecord
+
+	Field start:Int
+	Field file:String
+	Field source:String
+	
+	Method Create:TTemplateRecord(start:Int, file:String, source:String)
+		Self.start = start
+		Self.file = file
+		Self.source = source
+		Return Self
+	End Method
+	
+	Method ToString:String()
+
+		Local s:Byte Ptr = source.ToUTF8String()
+		Local slen:Int = strlen_(s)
+		
+		Local dlen:Int = slen + 12		
+		Local data:Byte[dlen]
+		
+		compress2(data, dlen, s, slen, 9)
+		
+		MemFree(s)
+		
+		Local t:String = "{" + start +","+ slen +","+ LangEnquote(file) + ","
+		
+		t :+ LangEnquote(TBase64.Encode(data, dlen, 0, TBase64.DONT_BREAK_LINES))
+
+		Return t + "}"
+
+	End Method
+	
+	Function Load:TTemplateRecord(start:Int, file:String, size:Int, source:String)
+		
+		Local dlen:Int = size + 1
+		Local data:Byte[dlen]
+		
+		Local s:Byte[] = TBase64.Decode(source)
+		
+		uncompress(data, dlen, s, s.length)
+	
+		Return New TTemplateRecord.Create(start, file, String.FromUTF8String(data))
+	End Function
+End Type
+
+Extern
+	Function strlen_:Int(s:Byte Ptr)="strlen"
+End Extern

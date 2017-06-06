@@ -4870,9 +4870,9 @@ End Rem
 
 	Method EmitIfcClassDecl(classDecl:TClassDecl)
 	
-		If classDecl.args Then
-			Return
-		End If
+		'If classDecl.args Then
+		'	Return
+		'End If
 
 		Local head:String = classDecl.ident + "^"
 		If classDecl.superClass Then
@@ -4896,56 +4896,62 @@ End Rem
 		'PushMungScope
 		BeginLocalScope
 
-		' fields, globals and consts
-'		For Local decl:TDecl=EachIn classDecl.Decls()
 
-		' const
-		For Local cDecl:TConstDecl = EachIn classDecl.Decls()
-			cDecl.Semant()
-			
-			EmitIfcConstDecl(cDecl)
-		Next
+		If Not classDecl.templateSource Then
+	
+			' const
+			For Local cDecl:TConstDecl = EachIn classDecl.Decls()
+				cDecl.Semant()
+				
+				EmitIfcConstDecl(cDecl)
+			Next
+	
+				' global
+			For Local gDecl:TGlobalDecl = EachIn classDecl.Decls()
+				gDecl.Semant()
+	
+				EmitIfcGlobalDecl(gDecl)
+			Next
+	
+	
+				' field
+			For Local fDecl:TFieldDecl = EachIn classDecl.Decls()
+				fDecl.Semant()
+	
+				EmitIfcFieldDecl(fDecl)
+			Next
 
-			' global
-		For Local gDecl:TGlobalDecl = EachIn classDecl.Decls()
-			gDecl.Semant()
-
-			EmitIfcGlobalDecl(gDecl)
-		Next
-
-
-			' field
-		For Local fDecl:TFieldDecl = EachIn classDecl.Decls()
-			fDecl.Semant()
-
-			EmitIfcFieldDecl(fDecl)
-		Next
-
+		End If
 
 		' functions
 		If Not classDecl.IsExtern() Then
+		
+			If Not classDecl.templateSource Then
 
-			If Not classDecl.attrs & CLASS_INTERFACE Then
-				Emit "-New()=" + Enquote("_" + classDecl.munged + "_New")
+				If Not classDecl.attrs & CLASS_INTERFACE Then
+					Emit "-New()=" + Enquote("_" + classDecl.munged + "_New")
+				End If
+
+				If classHierarchyHasFunction(classDecl, "Delete") Then
+					Emit "-Delete()=" + Enquote("_" + classDecl.munged + "_Delete")
+				End If
+	
+				For Local decl:TDecl=EachIn classDecl.Decls()
+	
+					Local fdecl:TFuncDecl=TFuncDecl( decl )
+					If fdecl
+						If Not equalsIfcBuiltInFunc(classDecl, fdecl) Then
+							EmitIfcClassFuncDecl fdecl
+						End If
+						Continue
+					EndIf
+	
+				Next
+			
 			End If
-			If classHierarchyHasFunction(classDecl, "Delete") Then
-				Emit "-Delete()=" + Enquote("_" + classDecl.munged + "_Delete")
-			End If
-
-			For Local decl:TDecl=EachIn classDecl.Decls()
-
-				Local fdecl:TFuncDecl=TFuncDecl( decl )
-				If fdecl
-					If Not equalsIfcBuiltInFunc(classDecl, fdecl) Then
-						EmitIfcClassFuncDecl fdecl
-					End If
-					Continue
-				EndIf
-
-			Next
 			
 			Local flags:String
-			
+
 			If classDecl.IsAbstract() Then
 				flags :+ "A"
 			End If
@@ -4960,7 +4966,38 @@ End Rem
 				flags :+ "S"
 			End If
 			
-			Emit "}" + flags + "=" + Enquote(classDecl.munged), False
+			If classDecl.templateSource Then
+				flags :+ "G"
+			End If
+			
+			Local t:String = "}" + flags + "="
+			
+			
+			
+			If classDecl.templateSource Then
+				t :+ Enquote(classDecl.scope.munged)
+			
+				t :+ ",<"
+
+				Local s:String
+				
+				If classDecl.instArgs Then
+					For Local ty:TType = EachIn classDecl.instArgs
+						If s Then
+							s :+ ","
+						End If
+						s :+ ty.ToString()
+					Next
+				Else
+					s = "?"
+				End If
+				
+				t :+ s + ">" + classDecl.templateSource.ToString()
+			Else
+				t :+ Enquote(classDecl.munged)	
+			End If
+			
+			Emit t, False
 		Else
 			For Local decl:TDecl=EachIn classDecl.Decls()
 
@@ -5138,10 +5175,9 @@ End Rem
 		Next
 
 		Emit "int " + app.munged + "();"
-		
 		For Local decl:TDecl=EachIn app.Semanted()
 
-			If decl.declImported Continue
+			If decl.declImported And decl.munged Continue
 
 			MungDecl decl
 

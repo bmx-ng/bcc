@@ -21,11 +21,11 @@
 '    3. This notice may not be removed or altered from any source
 '    distribution.
 ' 
-SuperStrict
+'SuperStrict
 
-Import BRL.MaxUtil
+'Import BRL.MaxUtil
 
-Import "toker.bmx"
+'Import "parser_factory.bmx"
 
 
 Const DECL_GLOBAL:Int = $10
@@ -262,50 +262,44 @@ Type TIParser
 						' class decl
 						class = ParseClassDecl( stm,0 )
 						class.declImported = True
-						_mod.InsertDecl(class)
 
-						If CParse("F")
-							class.attrs :| DECL_FINAL
+						Local parsed:Int
+						For Local i:Int = 0 Until _toke.Length
+							Select _toke[i]
+								Case Asc("F")
+									class.attrs :| DECL_FINAL
+									parsed = True
+								Case Asc("A")
+									class.attrs :| DECL_ABSTRACT
+									'ApplyFunctionAttributes(class, DECL_ABSTRACT)
+									parsed = True
+								Case Asc("S")
+									class.attrs :| CLASS_STRUCT
+									parsed = True
+								Case Asc("E")
+									class.attrs :| DECL_EXTERN
+									ApplyFunctionAttributes(class, DECL_EXTERN)
+									parsed = True
+								Case Asc("W")
+									class.attrs :| DECL_API_STDCALL
+									ApplyFunctionAttributes(class, DECL_API_STDCALL)
+									parsed = True
+								Case Asc("I")
+									class.attrs :| CLASS_INTERFACE
+									ApplyFunctionAttributes(class, DECL_ABSTRACT)
+									parsed = True
+								Case Asc("G")
+									class.attrs :| CLASS_GENERIC
+									parsed = True
+							End Select
+						Next
 
-						Else If CParse("A")
-							class.attrs :| DECL_ABSTRACT
-
-						Else If CParse("S")
-							class.attrs :| CLASS_STRUCT
-
-						Else If CParse("AF")
-							class.attrs :| DECL_ABSTRACT | DECL_FINAL
-
-						Else If CParse("E")
-							class.attrs :| DECL_EXTERN
-							ApplyFunctionAttributes(class, DECL_EXTERN)
-
-						Else If CParse("EW")
-							class.attrs :| DECL_EXTERN | DECL_API_STDCALL
-							ApplyFunctionAttributes(class, DECL_EXTERN | DECL_API_STDCALL)
-						
-						Else If CParse("AI")
-							class.attrs :| CLASS_INTERFACE | DECL_ABSTRACT
-							ApplyFunctionAttributes(class, DECL_ABSTRACT)
-
-						Else If CParse("EI")
-							class.attrs :| DECL_EXTERN | CLASS_INTERFACE
-							ApplyFunctionAttributes(class, DECL_EXTERN | DECL_ABSTRACT)
-
-						Else If CParse("EIW")
-							class.attrs :| DECL_EXTERN | CLASS_INTERFACE | DECL_API_STDCALL
-							ApplyFunctionAttributes(class, DECL_EXTERN | DECL_ABSTRACT | DECL_API_STDCALL)
-
-						Else If CParse("ES")
-							class.attrs :| DECL_EXTERN | CLASS_STRUCT
-
-						Else If CParse("ESW")
-							class.attrs :| DECL_EXTERN | CLASS_STRUCT | DECL_API_STDCALL
-
+						If parsed Then
+							NextToke
 						End If
-'DebugStop
+
 						If CParse( "=" )
-'DebugStop
+
 							If Not class.IsExtern() Then
 								class.munged=ParseStringLit()
 
@@ -315,6 +309,128 @@ Type TIParser
 										fdecl.munged = fdecl.munged.ToLower()
 									Next
 								End If
+								
+								' process generic details
+								If class.attrs & CLASS_GENERIC Then
+
+									If _toke <> "," Then
+										Err "Syntax error - unexpected token '" + _toke + "'"
+									End If
+									
+									NextToke
+
+									Parse "<"
+									Local args:TType[]
+									Local nargs:Int
+									Repeat
+										Local arg:TType = ParseType()
+										If args.Length=nargs args=args+ New TType[10]
+										args[nargs]=arg
+										nargs:+1
+									Until Not CParse(",")
+									args=args[..nargs]
+									Parse ">"
+
+									Parse "{"
+									' line no
+									
+									If _tokeType <> TOKE_INTLIT Then
+										Err "Syntax error - unexpected token '" + _toke + "'"
+									End If
+									
+									Local line:Int = _toke.ToInt()
+									
+									NextToke
+									Parse ","
+									
+									' source size
+									If _tokeType <> TOKE_INTLIT Then
+										Err "Syntax error - unexpected token '" + _toke + "'"
+									End If
+									
+									Local size:Int = _toke.ToInt()
+
+									NextToke
+									Parse ","
+									
+									' path
+									If _tokeType <> TOKE_STRINGLIT Then
+										Err "Syntax error - unexpected token '" + _toke + "'"
+									End If
+									
+									Local path:String = BmxUnquote(_toke)
+									
+									NextToke
+									Parse ","
+
+
+									' source
+									If _tokeType <> TOKE_STRINGLIT Then
+										Err "Syntax error - unexpected token '" + _toke + "'"
+									End If
+									
+									Local source:String = BmxUnquote(_toke)
+									
+									NextToke
+
+									Parse "}"
+
+									class.templateSource = TTemplateRecord.Load(line, path, size, source)
+
+									Local toker:TToker = New TToker.Create(path, class.templateSource.source, False, line)
+									Local parser:TParser = New TParser.Create( toker, Null )
+									
+									Local m:TModuleDecl = New TModuleDecl
+									parser._module = m
+									
+									Local cdecl:TClassDecl = Null
+									
+									Select parser._toke
+										Case "type"
+											cdecl = parser.ParseClassDecl(parser._toke,0)
+										Case "interface"
+											cdecl = parser.ParseClassDecl(parser._toke, CLASS_INTERFACE|DECL_ABSTRACT )
+									End Select
+
+									Local ty:TType = args[0]
+
+									Local genDecl:TClassDecl = TClassDecl(_mod.GetDecl(cdecl.IdentLower()))
+
+									If Not genDecl Then
+										genDecl = TClassDecl(pmod.GetDecl(cdecl.identLower()))
+									End If
+									
+									If genDecl Then
+									
+										If Not TIdentType(ty) Or (TIdentType(ty) And TIdentType(ty).ident <> "?") Then
+										
+											cdecl = genDecl.GenClassInstance(args, True)
+
+											cdecl.scope.munged = class.munged
+											cdecl.scope.scope = _appInstance
+										
+										End If
+									
+										' don't add to module
+										class = Null
+									
+									Else
+
+										class = cdecl
+										class.declImported = True
+										
+										If Not TIdentType(ty) Or (TIdentType(ty) And TIdentType(ty).ident <> "?") Then
+										
+											cdecl = class.GenClassInstance(args)
+											cdecl.declImported = True
+											
+											_mod.munged = class.munged
+										End If
+										
+									End If
+									
+								End If
+								
 							Else
 								Parse "0"
 								If Not class.munged Then
@@ -324,12 +440,15 @@ Type TIParser
 							End If
 						EndIf
 
+						If class Then
+							_mod.InsertDecl(class)
+						End If
+
 						'state = STATE_CLASS
 						'Exit
 				'	Case "%"
 				Default
 					If toker._tokeType = TOKE_EOF
-'DebugStop
 						Exit
 					End If
 
@@ -643,6 +762,7 @@ Type TIParser
 		Select _toker._toke.tolower()
 		Case "@" _toker.NextToke
 		Case "string","___array","object"
+		Case "?"
 		Default	
 			If _toker._tokeType<>TOKE_IDENT Err "Syntax error - expecting identifier."
 		End Select
@@ -658,7 +778,20 @@ Type TIParser
 		While CParse( "." )
 			id:+"."+ParseIdent()
 		Wend
-		Local args:TIdentType[]
+		
+		Local args:TType[]
+		If CParse( "<" )
+			Local nargs:Int
+			Repeat
+				Local arg:TType = ParseType()
+				If args.Length=nargs args=args+ New TType[10]
+				args[nargs]=arg
+				nargs:+1
+			Until Not CParse(",")
+			args=args[..nargs]
+			Parse ">"
+		EndIf
+		
 		Return New TIdentType.Create( id,args )
 	End Method
 
@@ -1599,6 +1732,59 @@ End Rem
 		EndIf
 	End Method
 
+	Method ParseType:TType()
+		Local ty:TType=CParsePrimitiveType()
+		If ty Return ty
+		Return ParseIdentType()
+	End Method
+
+	Method CParsePrimitiveType:TType()
+		If CParse( "string" ) Return TType.stringType
+		If CParse( "object" ) Return New TIdentType.Create( "brl.classes.object" )
+
+		Local ty:TType
+		If CParse( "short" )
+			ty = New TShortType
+		Else If CParse( "byte" )
+			ty = New TByteType
+		Else If CParse( "int" )
+			ty = New TIntType
+		Else If CParse( "uint" )
+			ty = New TUIntType
+		Else If CParse( "float" )
+			ty = New TFloatType
+		Else If CParse( "long" )
+			ty = New TLongType
+		Else If CParse( "ulong" )
+			ty = New TULongType
+		Else If CParse( "double" )
+			ty = New TDoubleType
+		Else If CParse( "size_t" )
+			ty = New TSizeTType
+		Else If CParse( "int128" ) Then
+			If opt_arch <> "x64" Err "Intrinsic types only available on x64"
+			ty = New TInt128Type
+		Else If CParse( "float128" ) Then
+			If opt_arch <> "x64" Err "Intrinsic types only available on x64"
+			ty = New TFloat128Type
+		Else If CParse( "double128" ) Then
+			If opt_arch <> "x64" Err "Intrinsic types only available on x64"
+			ty = New TDouble128Type
+		Else If CParse( "float64" ) Then
+			If opt_arch <> "x64" Err "Intrinsic types only available on x64"
+			ty = New TFloat64Type
+		Else If CParse( "wparam" ) Then
+			If opt_platform <> "win32" Err "WParam types only available on Win32"
+			ty = New TWParamType
+		Else If CParse( "lparam" ) Then
+			If opt_platform <> "win32" Err "LParam types only available on Win32"
+			ty = New TLParamType
+		End If
+
+		While CParse("ptr")
+			ty = TType.MapToPointerType(ty)
+		Wend
+		Return ty
+	End	Method
+
 End Type
-
-

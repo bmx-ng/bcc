@@ -25,7 +25,8 @@ SuperStrict
 
 Import BRL.MaxUtil
 Import "toker.bmx"
-Import "iparser.bmx"
+
+Include "iparser.bmx"
 
 
 Global FILE_EXT$="bmx"
@@ -320,8 +321,6 @@ Type TParser
 	Field _toker:TToker
 	Field _toke:String
 	Field _tokeType:Int
-	'Ronny: _tokerStack is unused
-	'Field _tokerStack:TList=New TList'<TToker>
 
 	Field _block:TBlockDecl
 	Field _blockStack:TList=New TList'<TBlockDecl>
@@ -2918,9 +2917,13 @@ End Rem
 	Method ParseClassDecl:TClassDecl( toke$,attrs:Int )
 		SetErr
 
+		Local calculatedStartLine:Int = _toker.Line()
+		Local startLine:Int = _toker._line
+
 		If toke Parse toke
 
 		Local id$=ParseIdent()
+
 		Local args:TList = New TList
 		Local superTy:TIdentType
 		Local imps:TIdentType[]
@@ -3204,6 +3207,11 @@ End Rem
 				Err "Syntax error - expecting class member declaration, not '" + _toke + "'"
 			End Select
 		Forever
+		
+		If Not args.IsEmpty() Then
+			Local endline:Int = _toker._line
+			classDecl.templateSource = New TTemplateRecord.Create(calculatedStartLine - 1, _toker._path, _toker.Join(startLine, endLine, "~n"))
+		End If
 
 		If toke Parse toke
 
@@ -3580,7 +3588,7 @@ End Rem
 			Case "struct"
 				_module.InsertDecl ParseClassDecl( _toke,attrs | CLASS_STRUCT )
 			Case "type"
-				_module.InsertDecl ParseClassDecl( _toke,attrs )
+				_module.InsertDecl ParseClassDecl( _toke,attrs)
 			Case "interface"
 				_module.InsertDecl ParseClassDecl( _toke,attrs|CLASS_INTERFACE|DECL_ABSTRACT )
 			Case "function"
