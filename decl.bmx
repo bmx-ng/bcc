@@ -2246,7 +2246,7 @@ End Rem
 		Next
 
 		If Not declImported Then
-			inst.scope = _env.scope
+			inst.scope = _env.ModuleScope()
 		End If
 
 		Return inst
