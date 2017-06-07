@@ -425,8 +425,14 @@ Type TTemplateRecord
 
 		Local s:Byte Ptr = source.ToUTF8String()
 		Local slen:Int = strlen_(s)
-		
-		Local dlen:Int = slen + 12		
+
+?Not bmxng		
+		Local dlen:Int = slen + 12
+?bmxng And (win32 Or ptr32)
+		Local dlen:UInt = slen + 12
+?bmxng And ptr64 And Not win32
+		Local dlen:ULong = slen + 12
+?
 		Local data:Byte[dlen]
 		
 		compress2(data, dlen, s, slen, 9)
@@ -443,7 +449,13 @@ Type TTemplateRecord
 	
 	Function Load:TTemplateRecord(start:Int, file:String, size:Int, source:String)
 		
+?Not bmxng		
 		Local dlen:Int = size + 1
+?bmxng And (win32 Or ptr32)
+		Local dlen:UInt = size + 1
+?bmxng And ptr64 And Not win32
+		Local dlen:ULong = size + 1
+?
 		Local data:Byte[dlen]
 		
 		Local s:Byte[] = TBase64.Decode(source)
