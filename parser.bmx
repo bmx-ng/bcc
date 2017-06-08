@@ -67,6 +67,7 @@ Type TForEachinStmt Extends TLoopStmt
 	End Method
 
 	Method OnSemant()
+
 		expr=expr.Semant()
 
 		If TArrayType( expr.exprType ) Or TStringType( expr.exprType )
@@ -175,6 +176,10 @@ Type TForEachinStmt Extends TLoopStmt
 
 		Else If TObjectType( expr.exprType )
 			Local tmpDecl:TDeclStmt
+			Local iterable:Int
+			If TObjectType(expr.exprType).classDecl.ImplementsInterface("iiterable") Then
+				iterable = True
+			End If
 
 			If TInvokeExpr(expr) Or TInvokeMemberExpr(expr) Then
 				Local tmpVar:TLocalDecl=New TLocalDecl.Create( "",expr.exprType,expr,,True )
@@ -183,11 +188,22 @@ Type TForEachinStmt Extends TLoopStmt
 				expr = New TVarExpr.Create( tmpVar )
 			End If
 
-			Local enumerInit:TExpr=New TFuncCallExpr.Create( New TIdentExpr.Create( "ObjectEnumerator",expr ) )
+			Local enumerInit:TExpr
+			If iterable Then
+				enumerInit = New TFuncCallExpr.Create( New TIdentExpr.Create( "Iterator",expr ) )
+			Else
+				enumerInit = New TFuncCallExpr.Create( New TIdentExpr.Create( "ObjectEnumerator",expr ) )
+			End If
 			Local enumerTmp:TLocalDecl=New TLocalDecl.Create( "",Null,enumerInit,,True )
 
 			Local hasNextExpr:TExpr=New TFuncCallExpr.Create( New TIdentExpr.Create( "HasNext",New TVarExpr.Create( enumerTmp ) ) )
-			Local nextObjExpr:TExpr=New TFuncCallExpr.Create( New TIdentExpr.Create( "NextObject",New TVarExpr.Create( enumerTmp ) ) )
+			
+			Local nextObjExpr:TExpr
+			If iterable Then
+				nextObjExpr = New TFuncCallExpr.Create( New TIdentExpr.Create( "NextElement",New TVarExpr.Create( enumerTmp ) ) )
+			Else
+				nextObjExpr = New TFuncCallExpr.Create( New TIdentExpr.Create( "NextObject",New TVarExpr.Create( enumerTmp ) ) )
+			End If
 
 			Local cont:TContinueStmt
 			
@@ -197,7 +213,7 @@ Type TForEachinStmt Extends TLoopStmt
 
 				Local cExpr:TExpr
 				
-				If TIdentType(varty) And TIdentType(varty).ident = "Object" Then
+				If iterable Or (TIdentType(varty) And TIdentType(varty).ident = "Object") Then
 					cExpr = nextObjExpr
 				Else
 					cExpr = New TCastExpr.Create( varty, nextObjExpr,CAST_EXPLICIT )

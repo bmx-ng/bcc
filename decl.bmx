@@ -2862,6 +2862,16 @@ End Rem
 		lastOffset :+ modifier
 	End Method
 	
+	Method ImplementsInterface:Int(ident:String)
+		ident = ident.ToLower()
+		For Local iface:TClassDecl = EachIn implmentsAll
+			If iface.IdentLower() = ident Then
+				Return True
+			End If
+		Next
+		Return False
+	End Method
+	
 	' returns a map of all interfaces implemented in this hierarchy
 	Method GetInterfaces:TMap(map:TMap = Null)
 		If Not map Then
