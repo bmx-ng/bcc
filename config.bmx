@@ -392,9 +392,9 @@ Function FileMung:String(makeApp:Int = False)
 		m :+ "debug"
 	End If
 	
-	If opt_threaded Then
-		m :+ ".mt"
-	End If
+'	If opt_threaded Then
+'		m :+ ".mt"
+'	End If
 	
 	m :+ "." + opt_platform
 	
