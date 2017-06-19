@@ -25,7 +25,7 @@ SuperStrict
 
 Import "base.configmap.bmx"
 
-Const version:String = "0.89"
+Const version:String = "0.90"
 
 Const BUILDTYPE_APP:Int = 0
 Const BUILDTYPE_MODULE:Int = 1
@@ -77,7 +77,7 @@ Global opt_apptype:Int = APPTYPE_NONE
 ' debug
 Global opt_debug:Int = True
 ' threaded
-Global opt_threaded:Int = False
+Global opt_threaded:Int = True
 ' release
 Global opt_release:Int = False
 ' quiet
