@@ -2482,6 +2482,63 @@ End Rem
 		Return funcs
 	End Method
 
+	Method GetOriginalFuncDecl:TFuncDecl(fdecl:TFuncDecl)
+		If Not TClassDecl(Self) Then
+			Return fdecl
+		End If
+		
+		If superClass Then
+			Local decl:TFuncDecl = superClass.GetOriginalFuncDecl(fdecl)
+			If decl <> fdecl Then
+				Return decl
+			End If
+		End If
+		' interface methods
+'		For Local iface:TClassDecl=EachIn implmentsAll
+'			For Local func:TFuncDecl=EachIn iface._decls
+'				Local matched:Int = False
+'
+'				For Local i:Int = 0 Until funcs.length
+'					' found a match - we are overriding it
+'					If func.IdentLower() = funcs[i].IdentLower() Then
+'						matched = True
+'						Exit
+'					End If
+'				Next
+'				
+'				If Not matched Then
+'					funcs :+ [func]
+'				End If
+'			Next
+'		Next
+		'Local found:TFuncDecl = fdecl
+		
+		For Local func:TFuncDecl = EachIn _decls
+		
+			Local matched:Int = False
+			
+			' dont count any that are already in the funcs list
+			'For Local i:Int = 0 Until funcs.length
+				' found a match - we are overriding it
+				If func.IdentLower() = fdecl.IdentLower() And func.EqualsArgs(fdecl) Then
+					Return func
+					' set this to our own func
+					'funcs[i] = func
+					'Exit
+				End If
+			'Next
+			
+			'If Not matched Then
+			'	funcs :+ [func]
+			'End If
+		
+		Next
+		
+		'Return funcs
+		Return fdecl
+	End Method
+
+	
 	Method ExtendsClass:Int( cdecl:TClassDecl )
 		'If Self=nullObjectClass Return True
 		
