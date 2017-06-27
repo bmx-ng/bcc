@@ -29,6 +29,7 @@ Const DECL_FINAL:Int=         $080000
 
 Const DECL_SEMANTED:Int=      $100000
 Const DECL_SEMANTING:Int=     $200000
+Const DECL_CYCLIC:Int=       $8000000
 
 Const DECL_POINTER:Int=       $400000
 
@@ -226,7 +227,12 @@ Type TDecl
 
 		If IsSemanted() Return
 
-		If IsSemanting() Err "Cyclic declaration of '"+ident+"'."
+		If IsSemanting() Then
+			If attrs & DECL_CYCLIC Then
+				Return
+			End If
+			Err "Cyclic declaration of '"+ident+"'."
+		End If
 		
 		If actual<>Self
 			actual.Semant
@@ -2475,7 +2481,7 @@ End Rem
 		
 		Return funcs
 	End Method
-	
+
 	Method ExtendsClass:Int( cdecl:TClassDecl )
 		'If Self=nullObjectClass Return True
 		
@@ -2527,7 +2533,9 @@ End Rem
 		Local impls:TClassDecl[]=New TClassDecl[impltys.Length]
 		Local implsall:TStack=New TStack
 		For Local i:Int=0 Until impltys.Length
+			attrs :| DECL_CYCLIC
 			Local cdecl:TClassDecl=impltys[i].SemantClass()
+			attrs :~ DECL_CYCLIC
 			If Not cdecl.IsInterface()
 				Err cdecl.ToString()+" is a type, not an interface."
 			EndIf
