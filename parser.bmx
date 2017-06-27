@@ -25,7 +25,8 @@ SuperStrict
 
 Import BRL.MaxUtil
 Import "toker.bmx"
-Import "iparser.bmx"
+
+Include "iparser.bmx"
 
 
 Global FILE_EXT$="bmx"
@@ -52,7 +53,7 @@ Type TForEachinStmt Extends TLoopStmt
 	Method OnCopy:TStmt( scope:TScopeDecl )
 		If loopLabel Then
 			If varExpr Then
-		Return New TForEachinStmt.Create( varid,varty,varlocal,expr.Copy(),block.CopyBlock( scope ),TLoopLabelDecl(loopLabel.Copy()), varExpr.Copy() )
+				Return New TForEachinStmt.Create( varid,varty,varlocal,expr.Copy(),block.CopyBlock( scope ),TLoopLabelDecl(loopLabel.Copy()), varExpr.Copy() )
 			Else
 				Return New TForEachinStmt.Create( varid,varty,varlocal,expr.Copy(),block.CopyBlock( scope ),TLoopLabelDecl(loopLabel.Copy()), Null )
 			End If
@@ -66,6 +67,7 @@ Type TForEachinStmt Extends TLoopStmt
 	End Method
 
 	Method OnSemant()
+
 		expr=expr.Semant()
 
 		If TArrayType( expr.exprType ) Or TStringType( expr.exprType )
@@ -174,6 +176,10 @@ Type TForEachinStmt Extends TLoopStmt
 
 		Else If TObjectType( expr.exprType )
 			Local tmpDecl:TDeclStmt
+			Local iterable:Int
+			If TObjectType(expr.exprType).classDecl.ImplementsInterface("iiterable") Then
+				iterable = True
+			End If
 
 			If TInvokeExpr(expr) Or TInvokeMemberExpr(expr) Then
 				Local tmpVar:TLocalDecl=New TLocalDecl.Create( "",expr.exprType,expr,,True )
@@ -182,11 +188,22 @@ Type TForEachinStmt Extends TLoopStmt
 				expr = New TVarExpr.Create( tmpVar )
 			End If
 
-			Local enumerInit:TExpr=New TFuncCallExpr.Create( New TIdentExpr.Create( "ObjectEnumerator",expr ) )
+			Local enumerInit:TExpr
+			If iterable Then
+				enumerInit = New TFuncCallExpr.Create( New TIdentExpr.Create( "Iterator",expr ) )
+			Else
+				enumerInit = New TFuncCallExpr.Create( New TIdentExpr.Create( "ObjectEnumerator",expr ) )
+			End If
 			Local enumerTmp:TLocalDecl=New TLocalDecl.Create( "",Null,enumerInit,,True )
 
 			Local hasNextExpr:TExpr=New TFuncCallExpr.Create( New TIdentExpr.Create( "HasNext",New TVarExpr.Create( enumerTmp ) ) )
-			Local nextObjExpr:TExpr=New TFuncCallExpr.Create( New TIdentExpr.Create( "NextObject",New TVarExpr.Create( enumerTmp ) ) )
+			
+			Local nextObjExpr:TExpr
+			If iterable Then
+				nextObjExpr = New TFuncCallExpr.Create( New TIdentExpr.Create( "NextElement",New TVarExpr.Create( enumerTmp ) ) )
+			Else
+				nextObjExpr = New TFuncCallExpr.Create( New TIdentExpr.Create( "NextObject",New TVarExpr.Create( enumerTmp ) ) )
+			End If
 
 			Local cont:TContinueStmt
 			
@@ -196,7 +213,7 @@ Type TForEachinStmt Extends TLoopStmt
 
 				Local cExpr:TExpr
 				
-				If TIdentType(varty) And TIdentType(varty).ident = "Object" Then
+				If iterable Or (TIdentType(varty) And TIdentType(varty).ident = "Object") Then
 					cExpr = nextObjExpr
 				Else
 					cExpr = New TCastExpr.Create( varty, nextObjExpr,CAST_EXPLICIT )
@@ -320,8 +337,6 @@ Type TParser
 	Field _toker:TToker
 	Field _toke:String
 	Field _tokeType:Int
-	'Ronny: _tokerStack is unused
-	'Field _tokerStack:TList=New TList'<TToker>
 
 	Field _block:TBlockDecl
 	Field _blockStack:TList=New TList'<TBlockDecl>
@@ -499,12 +514,13 @@ Type TParser
 		If CParse( "." ) id:+"."+ParseIdent()
 		If CParse( "." ) id:+"."+ParseIdent()
 
-		Local args:TIdentType[]
+		Local args:TType[]
 		If CParse( "<" )
 			Local nargs:Int
 			Repeat
-				Local arg:TIdentType=ParseIdentType()
-				If args.Length=nargs args=args+ New TIdentType[10]
+				'Local arg:TIdentType=ParseIdentType()
+				Local arg:TType = ParseType()
+				If args.Length=nargs args=args+ New TType[10]
 				args[nargs]=arg
 				nargs:+1
 			Until Not CParse(",")
@@ -1828,34 +1844,22 @@ End Rem
 		If CParse( "local" )
 			varlocal=True
 			varid=ParseIdent()
-			'If Not CParse( ":=" )
-				varty=ParseDeclType()
-				If varty._flags & (TType.T_CHAR_PTR | TType.T_SHORT_PTR) Then
-					DoErr "Illegal variable type"
-				End If
-				
-				Parse( "=" )
-			'EndIf
+
+			varty=ParseDeclType()
+			If varty._flags & (TType.T_CHAR_PTR | TType.T_SHORT_PTR) Then
+				DoErr "Illegal variable type"
+			End If
+			
+			Parse( "=" )
+			
+			' use an ident expr to pass the variable to different parts of the statement.
+			' the original implementation passed decl references, which cause problems if we wanted to
+			' copy the statement later.
+			varExpr = New TIdentExpr.Create(varid)
 		Else
 			varlocal=False
-			
+
 			varExpr=ParsePrimaryExpr( False )
-			
-			'varExpr = New TIdentExpr.Create( ParseIdent(),varExpr )
-
-			'ParseConstNumberType()
-			
-'			varid=ParseIdent()
-
-			'While Cparse(".")
-				'NextToke
-				
-			'	varExpr = New TIdentExpr.Create( ParseIdent(),varExpr )
-				
-			'	ParseConstNumberType()
-			'Wend
-			' eat any type stuff
-'			ParseConstNumberType()
 
 			Parse "="
 		EndIf
@@ -1866,10 +1870,6 @@ End Rem
 
 			PushBlock block
 			While Not CParse( "next" )
-				'If CParse( "end" )
-				'	CParse "for"
-				'	Exit
-				'EndIf
 				ParseStmt
 			Wend
 			PopBlock
@@ -1907,8 +1907,10 @@ End Rem
 		If varlocal
 			Local indexVar:TLocalDecl=New TLocalDecl.Create( varid,varty,New TCastExpr.Create( varty,from,1 ),0 )
 			init=New TDeclStmt.Create( indexVar )
-			expr=New TBinaryCompareExpr.Create( op,New TVarExpr.Create( indexVar ),New TCastExpr.Create( varty,term,1 ) )
-			incr=New TAssignStmt.Create( "=",New TVarExpr.Create( indexVar ),New TBinaryMathExpr.Create( "+",New TVarExpr.Create( indexVar ),New TCastExpr.Create( varty,stp,1 ) ) )
+'			expr=New TBinaryCompareExpr.Create( op,New TVarExpr.Create( indexVar ),New TCastExpr.Create( varty,term,1 ) )
+'			incr=New TAssignStmt.Create( "=",New TVarExpr.Create( indexVar ),New TBinaryMathExpr.Create( "+",New TVarExpr.Create( indexVar ),New TCastExpr.Create( varty,stp,1 ) ) )
+			expr=New TBinaryCompareExpr.Create( op, varExpr,New TCastExpr.Create( varty,term,1 ) )
+			incr=New TAssignStmt.Create( "=",varExpr,New TBinaryMathExpr.Create( "+",varExpr,New TCastExpr.Create( varty,stp,1 ) ) )
 		Else
 			' varty is NULL here for the casts. We will back-populate it later.
 '			init=New TAssignStmt.Create( "=",New TIdentExpr.Create( varid ),from )
@@ -1923,10 +1925,6 @@ End Rem
 
 		PushBlock block
 		While Not CParse( "next" )
-			'If CParse( "end" )
-			'	CParse "for"
-			'	Exit
-			'EndIf
 			ParseStmt
 		Wend
 		PopBlock
@@ -2935,10 +2933,14 @@ End Rem
 	Method ParseClassDecl:TClassDecl( toke$,attrs:Int )
 		SetErr
 
+		Local calculatedStartLine:Int = _toker.Line()
+		Local startLine:Int = _toker._line
+
 		If toke Parse toke
 
 		Local id$=ParseIdent()
-		Local args:TStack = New TStack
+
+		Local args:TList = New TList
 		Local superTy:TIdentType
 		Local imps:TIdentType[]
 		Local meta:TMetadata
@@ -2967,7 +2969,15 @@ End Rem
 				'If args.Length=nargs args=args + New TClassDecl[10]
 				'args[nargs]=decl
 				'nargs:+1
-				args.Push ParseIdent()
+				Local arg:TTemplateArg = New TTemplateArg
+				arg.ident = ParseIdent()
+				
+				If CParse("extends") Then
+					arg.superTy = ParseIdentType()
+				End If
+				
+				args.AddLast arg
+
 			Until Not CParse(",")
 			'args=args[..nargs]
 
@@ -3086,7 +3096,15 @@ End Rem
 		'check for metadata
 		meta = ParseMetaData()
 
-		Local classDecl:TClassDecl=New TClassDecl.Create( id,String[](args.ToArray()),superTy,imps,attrs )
+		
+		Local sargs:TTemplateArg[] = New TTemplateArg[args.Count()]
+		Local i:Int = 0
+		For Local arg:TTemplateArg = EachIn args
+			sargs[i] = arg
+			i :+ 1
+		Next
+
+		Local classDecl:TClassDecl=New TClassDecl.Create( id,sargs,superTy,imps,attrs )
 		
 		If meta Then
 			If attrs & CLASS_STRUCT
@@ -3205,6 +3223,11 @@ End Rem
 				Err "Syntax error - expecting class member declaration, not '" + _toke + "'"
 			End Select
 		Forever
+		
+		If Not args.IsEmpty() Then
+			Local endline:Int = _toker._line
+			classDecl.templateSource = New TTemplateRecord.Create(calculatedStartLine - 1, _toker._path, _toker.Join(startLine, endLine, "~n"))
+		End If
 
 		If toke Parse toke
 
@@ -3581,7 +3604,7 @@ End Rem
 			Case "struct"
 				_module.InsertDecl ParseClassDecl( _toke,attrs | CLASS_STRUCT )
 			Case "type"
-				_module.InsertDecl ParseClassDecl( _toke,attrs )
+				_module.InsertDecl ParseClassDecl( _toke,attrs)
 			Case "interface"
 				_module.InsertDecl ParseClassDecl( _toke,attrs|CLASS_INTERFACE|DECL_ABSTRACT )
 			Case "function"
@@ -4215,4 +4238,3 @@ Type TCastDets
 	Field api:String
 	
 End Type
-

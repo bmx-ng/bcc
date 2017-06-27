@@ -3240,6 +3240,10 @@ End Rem
 
 	Method EmitClassProto( classDecl:TClassDecl )
 	
+		If classDecl.args Then
+			Return
+		End If
+
 		Local classid$=classDecl.munged
 		Local superid$
 		If classDecl.superClass Then
@@ -3814,6 +3818,10 @@ End Rem
 
 	Method EmitClassDecl( classDecl:TClassDecl )
 	
+		If classDecl.args Then
+			Return
+		End If
+
 		PushEnv classDecl
 		'If classDecl.IsTemplateInst()
 		'	Return
@@ -3996,6 +4004,8 @@ End Rem
 					For Local ifc:TClassDecl = EachIn implementedInterfaces.Values()
 						Emit ".interface_" + ifc.ident + "={"
 
+						Local dups:TMap = New TMap
+						
 						For Local func:TFuncDecl = EachIn ifc.GetImplementedFuncs()
 						
 							If func.IsMethod() Then
@@ -4004,7 +4014,14 @@ End Rem
 
 									Mungdecl f
 									If f.ident = func.ident And f.EqualsFunc(func) Then
+
+										If Not dups.ValueForKey(f.ident) Then
+									
 											Emit "_" + f.munged + ","
+										
+											dups.Insert(f.ident, "")
+										End If
+
 										Exit
 									End If
 								Next
@@ -4909,8 +4926,7 @@ End Rem
 		'PushMungScope
 		BeginLocalScope
 
-		' fields, globals and consts
-'		For Local decl:TDecl=EachIn classDecl.Decls()
+		If Not classDecl.templateSource Then
 	
 			' const
 			For Local cDecl:TConstDecl = EachIn classDecl.Decls()
@@ -4934,13 +4950,17 @@ End Rem
 				EmitIfcFieldDecl(fDecl)
 			Next
 
+		End If
 
 		' functions
 		If Not classDecl.IsExtern() Then
 		
+			If Not classDecl.templateSource Then
+
 				If Not classDecl.attrs & CLASS_INTERFACE Then
 					Emit "-New()=" + Enquote("_" + classDecl.munged + "_New")
 				End If
+
 				If classHierarchyHasFunction(classDecl, "Delete") Then
 					Emit "-Delete()=" + Enquote("_" + classDecl.munged + "_Delete")
 				End If
@@ -4956,6 +4976,8 @@ End Rem
 					EndIf
 	
 				Next
+			
+			End If
 			
 			Local flags:String
 
@@ -4973,7 +4995,39 @@ End Rem
 				flags :+ "S"
 			End If
 			
-			Emit "}" + flags + "=" + Enquote(classDecl.munged), False
+			If classDecl.templateSource Then
+				flags :+ "G"
+			End If
+			
+			Local t:String = "}" + flags + "="
+			
+			
+			
+			If classDecl.templateSource Then
+				t :+ Enquote(classDecl.scope.munged)
+			
+				t :+ ",<"
+
+				Local s:String
+				
+				If classDecl.instArgs Then
+					For Local ty:TType = EachIn classDecl.instArgs
+						If s Then
+							s :+ ","
+						End If
+						s :+ ty.ToString()
+					Next
+				Else
+					s = "?"
+				End If
+				
+				t :+ s + ">" + classDecl.templateSource.ToString()
+			Else
+				t :+ Enquote(classDecl.munged)	
+			End If
+			
+			Emit t, False
+
 		Else
 			For Local decl:TDecl=EachIn classDecl.Decls()
 
@@ -5151,10 +5205,10 @@ End Rem
 		Next
 
 		Emit "int " + app.munged + "();"
-		
+
 		For Local decl:TDecl=EachIn app.Semanted()
 
-			If decl.declImported Continue
+			If decl.declImported And decl.munged Continue
 
 			MungDecl decl
 
@@ -5508,7 +5562,8 @@ End If
 			If decl.declImported Continue
 
 			Local cdecl:TClassDecl=TClassDecl( decl )
-			If cdecl And Not cdecl.IsExtern()
+
+			If cdecl And Not cdecl.IsExtern() And Not cdecl.args
 				If Not cdecl.IsInterface() Then
 					If Not cdecl.IsStruct() Then
 						Emit "bbObjectRegisterType((BBCLASS)&" + cdecl.munged + ");"

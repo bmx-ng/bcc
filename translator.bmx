@@ -443,6 +443,12 @@ Type TTranslator
 '		Case "cpp"
 			If TModuleDecl( decl.scope )
 				munged=decl.ModuleScope().munged+"_"+id
+				
+				If TClassDecl(decl) And TClassDecl(decl).instArgs Then
+					For Local ty:TType = EachIn TClassDecl(decl).instArgs
+						munged :+ TransMangleType(ty)
+					Next
+				End If
 			EndIf
 
 			If TModuleDecl( decl )
@@ -458,6 +464,12 @@ Type TTranslator
 			Else
 				If decl.scope Then
 					munged = decl.scope.munged + "_" + id
+					
+					If TClassDecl(decl) And TClassDecl(decl).instArgs Then
+						For Local ty:TType = EachIn TClassDecl(decl).instArgs
+							munged :+ TransMangleType(ty)
+						Next
+					End If
 					
 					' fields are lowercase with underscore prefix.
 					' a function pointer with FUNC_METHOD is a field function pointer.

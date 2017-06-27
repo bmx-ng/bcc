@@ -1539,7 +1539,7 @@ Type TIdentType Extends TType
 	
 	
 	Method Semant:TType(ignoreNotFoundError:Int = 0)
-'If ident="obj" DebugStop
+'If ident="IPair" DebugStop
 		If Not ident Return TType.nullObjectType
 
 		Local targs:TType[args.Length]
@@ -2009,3 +2009,16 @@ Type TLParamType Extends TParamType
 	End Method
 
 End Type
+
+Type TTemplateArg
+	Field ident:String
+	Field superTy:TType
+	
+	Method ToString:String()
+		Local s:String = ident
+		If superTy Then
+			s :+ " Extends " + superTy.ToString()
+		End If
+	End Method
+End Type
+

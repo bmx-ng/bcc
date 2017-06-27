@@ -63,8 +63,9 @@ Type TToker
 	
 	Field _lookingForEndRem:Int
 	Field _preprocess:Int
+	Field _lineOffset:Int
 	
-	Method Create:TToker( path$,source$, preprocess:Int = False )
+	Method Create:TToker( path$,source$, preprocess:Int = False, lineOffset:Int = 0 )
 		_path=path
 		_line=1
 		_source=source
@@ -73,6 +74,7 @@ Type TToker
 		_tokePos=0
 		_lines = source.split("~n")
 		_preprocess = preprocess
+		_lineOffset = lineOffset
 		If Not _keywords Then
 			initKeywords()
 		End If
@@ -112,7 +114,7 @@ Type TToker
 	End Method
 	
 	Method Line:Int()
-		Return _line
+		Return _line + _lineOffset
 	End Method
 	
 	Method NextToke$()
@@ -397,6 +399,15 @@ Type TToker
 			End If
 		End If
 		Return _lastTSTR
+	End Method
+	
+	Method Join:String(startLine:Int, endLine:Int, s:String)
+		Local sb:TStringBuffer = New TStringBuffer
+		For Local i:Int = startLine - 1 To endLine
+			sb.Append(_lines[i])
+			sb.Append(s)
+		Next
+		Return sb.ToString()
 	End Method
 	
 	Field _lastTSTR:String

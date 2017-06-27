@@ -69,10 +69,11 @@ Type TDeclStmt Extends TStmt
 	End Method
 
 	Method OnCopy:TStmt( scope:TScopeDecl )
-		If Not decl.scope Then
-			decl.scope = scope
-		End If
-		Return New TDeclStmt.Create( decl.Copy(), generated )
+		Local d:TDecl = decl.Copy()
+		'If Not d.scope Then
+		d.scope = Null
+		'End If
+		Return New TDeclStmt.Create( d, generated )
 	End Method
 	
 	Method OnSemant()
@@ -223,8 +224,14 @@ Type TReturnStmt Extends TStmt
 	End Method
 
 	Method OnCopy:TStmt( scope:TScopeDecl )
-		If expr Return New TReturnStmt.Create( expr.Copy() )
-		Return New TReturnStmt.Create( Null )
+		Local r:TReturnStmt
+		If expr Then
+			r = New TReturnStmt.Create( expr.Copy() )
+		Else
+			r = New TReturnStmt.Create( Null )
+		End If
+		r.fRetType = fRetType
+		Return r
 	End Method
 	
 	Method OnSemant()
@@ -539,7 +546,14 @@ Type TForStmt Extends TLoopStmt
 	End Method
 
 	Method OnCopy:TStmt( scope:TScopeDecl )
-		Return New TForStmt.Create( init.Copy( scope ),expr.Copy(),incr.Copy( scope ),block.CopyBlock( scope ),TLoopLabelDecl(loopLabel.Copy()) )
+	
+		Local b:TBlockDecl = block.CopyBlock( scope )
+	
+		If loopLabel Then
+			Return New TForStmt.Create( init.Copy( Null ),expr.Copy(),incr.Copy( Null ),b,TLoopLabelDecl(loopLabel.Copy()) )
+		Else
+			Return New TForStmt.Create( init.Copy( Null ),expr.Copy(),incr.Copy(Null),b,Null )
+		End If
 	End Method
 	
 	Method OnSemant()
@@ -552,8 +566,6 @@ Type TForStmt Extends TLoopStmt
 		End If
 		init.Semant
 
-		PopEnv
-
 		If updateCastTypes Then
 			' ty in the casts are currently Null - we didn't know at the time of creating the statement, what the variable type was.
 			' Now we do, so we'll fill in the gaps.
@@ -561,7 +573,10 @@ Type TForStmt Extends TLoopStmt
 			TCastExpr(TBinaryMathExpr(TAssignStmt(incr).rhs).rhs).ty = TAssignStmt(init).lhs.exprType.Copy()
 		End If
 
+		' scope for expression part should be block-scope
 		expr=expr.Semant()
+
+		PopEnv
 
 		' for anything other than a const value, use a new local variable
 		If Not TConstExpr(TBinaryCompareExpr(expr).rhs) Then
@@ -575,7 +590,12 @@ Type TForStmt Extends TLoopStmt
 		block.Semant
 		_loopnest:-1
 
+		' scope for increment part is also block-scope
+		PushEnv block
+
 		incr.Semant
+		
+		PopEnv
 
 		'dodgy as hell! Reverse comparison for backward loops!
 		Local assop:TAssignStmt=TAssignStmt( incr )

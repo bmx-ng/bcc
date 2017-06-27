@@ -29,6 +29,7 @@ Const DECL_FINAL:Int=         $080000
 
 Const DECL_SEMANTED:Int=      $100000
 Const DECL_SEMANTING:Int=     $200000
+Const DECL_CYCLIC:Int=       $8000000
 
 Const DECL_POINTER:Int=       $400000
 
@@ -45,6 +46,7 @@ Const DECL_API_DEFAULT:Int=DECL_API_CDECL
 Const CLASS_INTERFACE:Int=    $002000
 Const CLASS_THROWABLE:Int=    $004000
 Const CLASS_STRUCT:Int=       $008000
+Const CLASS_GENERIC:Int=      $001000
 
 Const SCOPE_FUNC:Int = 0
 Const SCOPE_CLASS_LOCAL:Int = 1
@@ -225,7 +227,12 @@ Type TDecl
 
 		If IsSemanted() Return
 
-		If IsSemanting() Err "Cyclic declaration of '"+ident+"'."
+		If IsSemanting() Then
+			If attrs & DECL_CYCLIC Then
+				Return
+			End If
+			Err "Cyclic declaration of '"+ident+"'."
+		End If
 		
 		If actual<>Self
 			actual.Semant
@@ -336,7 +343,7 @@ Type TValDecl Extends TDecl
 	End Method
 	
 	Method OnSemant()
-	
+'DebugStop	
 		If declTy
 
 			Local at:TType = TArrayType(declTy)
@@ -562,8 +569,10 @@ Type TLocalDecl Extends TVarDecl
 	End Method
 	
 	Method OnCopy:TDecl(deep:Int = True)
-		Local decl:TLocalDecl = New TLocalDecl.Create( ident,ty,CopyInit(),attrs &~ DECL_SEMANTED, generated, volatile )
+		Local decl:TLocalDecl = New TLocalDecl.Create( ident,declTy,declInit,attrs &~ DECL_SEMANTED, generated, volatile )
 		decl.scope = scope
+		decl.ty = ty
+		decl.init = init
 		Return decl
 	End Method
 
@@ -604,9 +613,9 @@ Type TArgDecl Extends TLocalDecl
 	End Method
 	
 	Method OnCopy:TDecl(deep:Int = True)
-		Local d:TArgDecl = New TArgDecl.Create( ident,ty,CopyInit(),attrs,generated,volatile )
-		d.ty = d.declTy
-		d.init = d.declInit
+		Local d:TArgDecl = New TArgDecl.Create( ident,declTy,declInit,attrs,generated,volatile )
+		d.ty = ty
+		d.init = init
 		Return d
 	End Method
 
@@ -636,7 +645,10 @@ Type TGlobalDecl Extends TVarDecl
 	End Method
 
 	Method OnCopy:TDecl(deep:Int = True)
-		Return New TGlobalDecl.Create( ident,ty,CopyInit(),attrs,funcGlobal )
+		Local g:TGlobalDecl = New TGlobalDecl.Create( ident,declTy,declInit,attrs,funcGlobal )
+		g.ty = ty
+		g.init = init
+		Return g
 	End Method
 	
 	Method ToString$()
@@ -683,7 +695,9 @@ Type TFieldDecl Extends TVarDecl
 	End Method
 
 	Method OnCopy:TDecl(deep:Int = True)
-		Local f:TFieldDecl = New TFieldDecl.Create( ident,ty,CopyInit(),attrs )
+		Local f:TFieldDecl = New TFieldDecl.Create( ident,declTy,declInit,attrs )
+		f.ty = ty
+		f.init = init
 		f.metadata = metadata
 		Return f
 	End Method
@@ -803,14 +817,14 @@ Type TScopeDecl Extends TDecl
 		Return fdecls
 	End Method
 	
-	Method InsertDecl( decl:TDecl )
+	Method InsertDecl( decl:TDecl, isCopy:Int = False )
 
-		If decl.scope And Not (decl.attrs & DECL_INITONLY) InternalErr
+		If decl.scope And Not (decl.attrs & DECL_INITONLY) And Not isCopy InternalErr
 		
 		'Local ident$=decl.ident
 		If Not decl.ident Return
 		
-		If Not decl.scope Then
+		If Not decl.scope Or isCopy Then
 			decl.scope=Self
 		End If
 		_decls.AddLast decl
@@ -949,7 +963,7 @@ Type TScopeDecl Extends TDecl
 			End If
 
 			' if scope is an interface, also check implemented/extended interfaces?
-			If TClassDecl(tscope) And TClassDecl(tscope).IsInterface() Then
+			If TClassDecl(tscope) Then'And TClassDecl(tscope).IsInterface() Then
 				If TClassDecl(tscope).implments Then
 					For Local idecl:TScopeDecl = EachIn TClassDecl(tscope).implments
 						Local decl:Object=idecl.GetDeclList( ident, declList, maxSearchDepth )
@@ -1059,8 +1073,10 @@ Type TScopeDecl Extends TDecl
 			Local cdecl:TClassDecl=TClassDecl( decl )
 			If cdecl
 				cdecl.AssertAccess
-				cdecl=cdecl.GenClassInstance( args )
-				cdecl.Semant
+				If Not cdecl.instanceof Then
+					cdecl=cdecl.GenClassInstance( args )
+					cdecl.Semant
+				End If
 				Return cdecl.objectType
 			EndIf
 		EndIf
@@ -1630,6 +1646,7 @@ Type TFuncDecl Extends TBlockDecl
 			Next
 		End If
 		t.retType = retType
+		t.retTypeExpr = retTypeExpr
 		t.scope = scope
 		t.overrides = overrides
 		t.superCtor = superCtor
@@ -2016,7 +2033,7 @@ Type TNewDecl Extends TFuncDecl
 		Local t:TNewDecl = TNewDecl(New TNewDecl.CreateF( ident,retType,args,attrs &~DECL_SEMANTED ))
 		If deep Then
 			For Local stmt:TStmt=EachIn stmts
-				t.AddStmt stmt.Copy( t )
+				t.AddStmt stmt.Copy(Null)
 			Next
 		End If
 		t.retType = retType
@@ -2054,7 +2071,7 @@ Type TClassDecl Extends TScopeDecl
 
 	Field lastOffset:Int
 
-	Field args:String[]
+	Field args:TTemplateArg[]
 	Field superTy:TIdentType
 	Field impltys:TIdentType[]
 
@@ -2069,10 +2086,11 @@ Type TClassDecl Extends TScopeDecl
 
 	Field objectType:TObjectType '"canned" objectType
 	Field globInit:Int
+	Field templateSource:TTemplateRecord
 
 	'Global nullObjectClass:TClassDecl=New TNullDecl.Create( "{NULL}",Null,Null,Null,DECL_ABSTRACT|DECL_EXTERN )
 	
-	Method Create:TClassDecl( ident$,args:String[],superTy:TIdentType,impls:TIdentType[],attrs:Int )
+	Method Create:TClassDecl( ident$,args:TTemplateArg[],superTy:TIdentType,impls:TIdentType[],attrs:Int )
 		Self.ident=ident
 		Self.args=args
 		Self.superTy=superTy
@@ -2081,7 +2099,6 @@ Type TClassDecl Extends TScopeDecl
 		Self.objectType=New TObjectType.Create( Self )
 		If args
 			instances=New TList
-			instances.AddLast Self
 		EndIf
 		Return Self
 	End Method
@@ -2092,19 +2109,28 @@ Type TClassDecl Extends TScopeDecl
 	
 	Method ToString$()
 		Local t$
+
 		If args Then
-				For Local i:Int=0 Until args.Length
-				If i t:+","
+			For Local i:Int=0 Until args.Length
+				If i Then
+					t :+ ","
+				End If
 				t:+args[i].ToString()
 			Next
 		ElseIf instargs
+			For Local i:Int=0 Until instargs.Length
+				If i Then
+					t :+ ","
+				End If
+				t :+ instargs[i].ToString()
+			Next
 		End If
 		If t t="<"+t+">"
 		Return ident+t
 	End Method
 
 	Method ToTypeString:String()
-		Return ident
+		Return ToString()
 	End Method
 Rem
 	Method GenClassInstance:TClassDecl( instArgs:TClassDecl[] )
@@ -2165,7 +2191,7 @@ Rem
 		Return inst
 	End Method
 End Rem
-	Method GenClassInstance:TClassDecl( instArgs:TType[] )
+	Method GenClassInstance:TClassDecl( instArgs:TType[], declImported:Int = False )
 
 		If instanceof InternalErr
 		
@@ -2193,24 +2219,41 @@ End Rem
 			Next
 			If equal Return inst
 		Next
-		
+
 		Local inst:TClassDecl=New TClassDecl.Create( ident,Null,superTy,impltys, attrs )
 
 		inst.attrs:&~DECL_SEMANTED
+
 		inst.munged=munged
 		inst.errInfo=errInfo
 		inst.scope=scope
 		inst.instanceof=Self
 		inst.instArgs=instArgs
+		inst.templateSource = templateSource
 		instances.AddLast inst
 		
+		inst.declImported = declImported
+
 		For Local i:Int=0 Until args.Length
-			inst.InsertDecl New TAliasDecl.Create( args[i].ToString(),instArgs[i],0 )
-		Next
 		
-		For Local decl:TDecl=EachIn _decls
-			inst.InsertDecl decl.Copy()
+			' ensure parameter types are compatible
+			If args[i].superTy Then
+				args[i].superTy = args[i].superTy.Semant()
+				If Not instArgs[i].EqualsType(args[i].superTy) And Not instArgs[i].ExtendsType(args[i].superTy) Then
+					Err "Type parameter '" + instArgs[i].ToString() + "' is not within its bound; should extend '" + args[i].superTy.ToString() + "'"
+				End If
+			End If
+		
+			inst.InsertDecl New TAliasDecl.Create( args[i].ident,instArgs[i],0 )
 		Next
+
+		For Local decl:TDecl=EachIn _decls
+			inst.InsertDecl decl.Copy(), True
+		Next
+
+		If Not declImported Then
+			inst.scope = _env.ModuleScope()
+		End If
 
 		Return inst
 	End Method
@@ -2456,11 +2499,12 @@ End Rem
 			If func.IdentLower() = fdecl.IdentLower() And func.EqualsArgs(fdecl) Then
 				Return func
 			End If
-			
+		
 		Next
 		
 		Return fdecl
 	End Method
+
 	
 	Method ExtendsClass:Int( cdecl:TClassDecl )
 		'If Self=nullObjectClass Return True
@@ -2484,6 +2528,10 @@ End Rem
 	End Method
 	
 	Method OnSemant()
+	
+		If args Then
+			Return
+		End If
 
 		PushEnv Self
 
@@ -2509,7 +2557,9 @@ End Rem
 		Local impls:TClassDecl[]=New TClassDecl[impltys.Length]
 		Local implsall:TStack=New TStack
 		For Local i:Int=0 Until impltys.Length
+			attrs :| DECL_CYCLIC
 			Local cdecl:TClassDecl=impltys[i].SemantClass()
+			attrs :~ DECL_CYCLIC
 			If Not cdecl.IsInterface()
 				Err cdecl.ToString()+" is a type, not an interface."
 			EndIf
@@ -2597,6 +2647,7 @@ End Rem
 		EndIf
 
 		'NOTE: do this AFTER super semant so UpdateAttrs order is cool.
+
 		If AppScope() Then
 			AppScope().semantedClasses.AddLast Self
 		End If
@@ -2606,6 +2657,9 @@ End Rem
 '		If IsSemanted() Return
 		
 '		Super.Semant()
+		If args Then
+			Return
+		End If
 		
 		For Local decl:TConstDecl = EachIn Decls()
 			decl.Semant()
@@ -2792,7 +2846,7 @@ End Rem
 				Local found:Int
 				For Local decl2:TFuncDecl=EachIn impls
 					If decl.IdentLower() = decl2.IdentLower()
-						If Not decl2.EqualsFunc( decl )
+						If decl2.argDecls.Length = decl.argDecls.Length And Not decl2.EqualsFunc( decl )
 							Err "Cannot mix incompatible method signatures." + decl2.ToString() + " vs " + decl.ToString() + "."
 						Else
 							found = True
@@ -2838,6 +2892,16 @@ End Rem
 		decl.offset = lastOffset
 		
 		lastOffset :+ modifier
+	End Method
+	
+	Method ImplementsInterface:Int(ident:String)
+		ident = ident.ToLower()
+		For Local iface:TClassDecl = EachIn implmentsAll
+			If iface.IdentLower() = ident Then
+				Return True
+			End If
+		Next
+		Return False
 	End Method
 	
 	' returns a map of all interfaces implemented in this hierarchy
@@ -3022,7 +3086,7 @@ Type TModuleDecl Extends TScopeDecl
 		Self.filepath=filepath
 		Self.attrs=attrs
 
-		If ident.Find(".") <> -1 Then
+		If ident.Find(".") <> -1 And ident.find("/") = -1 And ident.find("\") = -1 Then
 			Local m:String = ident[..ident.Find(".")]
 			Local ns:TNamespaceDecl = TNamespaceDecl(_appInstance.GetDecl(m.ToLower()))
 			If Not ns Then
@@ -3239,7 +3303,16 @@ Type TModuleDecl Extends TScopeDecl
 		Next
 
 		For Local cdecl:TClassDecl=EachIn _decls
-			cdecl.Semant
+			If cdecl.args Then
+				For Local inst:TClassDecl = EachIn cdecl.instances
+					For Local idecl:TDecl = EachIn inst.Decls()
+						If TAliasDecl( idecl ) Continue
+						idecl.Semant()
+					Next
+				Next
+			Else
+				cdecl.Semant
+			End If
 		Next
 
 		For Local fdecl:TFuncDecl=EachIn _decls
