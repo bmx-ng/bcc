@@ -2438,6 +2438,29 @@ End Rem
 		
 		Return funcs
 	End Method
+
+	Method GetOriginalFuncDecl:TFuncDecl(fdecl:TFuncDecl)
+		If Not TClassDecl(Self) Then
+			Return fdecl
+		End If
+		
+		If superClass Then
+			Local decl:TFuncDecl = superClass.GetOriginalFuncDecl(fdecl)
+			If decl <> fdecl Then
+				Return decl
+			End If
+		End If
+		
+		For Local func:TFuncDecl = EachIn _decls
+		
+			If func.IdentLower() = fdecl.IdentLower() And func.EqualsArgs(fdecl) Then
+				Return func
+			End If
+			
+		Next
+		
+		Return fdecl
+	End Method
 	
 	Method ExtendsClass:Int( cdecl:TClassDecl )
 		'If Self=nullObjectClass Return True
