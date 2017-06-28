@@ -357,7 +357,7 @@ Type TConstExpr Extends TExpr
 
 	Method Create:TConstExpr( ty:TType,value$ )
 		originalValue = value
-		
+
 		If TNumericType( ty ) And IsPointerType(ty, 0, TType.T_POINTER) Then
 			Self.ty=ty
 			If value Then
@@ -368,7 +368,7 @@ Type TConstExpr Extends TExpr
 			Return Self
 		End If
 		
-		If TIntType( ty ) Or TShortType( ty ) Or TByteType( ty ) Or TLongType( ty ) Or TUIntType( ty ) Or TULongType( ty ) Or TWParamType(ty) Or TLParamType(ty)
+		If TIntegralType( ty ) Then
 			Local radix:Int
 			If value.StartsWith( "%" )
 				radix=1
@@ -377,80 +377,162 @@ Type TConstExpr Extends TExpr
 			EndIf
 
 			If radix
-				Local val:Long = 0
-
+				Local v:TMAPM  = TMAPM.CreateMAPM()
+				Local mul:TMAPM
+				Local c:TMAPM = TMAPM.CreateMAPM()
+				
+				If radix = 1 Then
+					mul = MM_Two
+				Else
+					mul = MM_Sixteen
+				End If
+			
 				For Local i:Int=1 Until value.Length
 					Local ch:Int=value[i]
+					
+					v = v.Multiply(mul)
+					
 					If ch>=48 And ch<58
-						val=val Shl radix | (ch & 15)
+						c.SetInt(ch & 15)
 					Else
-						val=val Shl radix | ((ch & 15)+9)
+						c.SetInt((ch & 15)+9)
 					EndIf
+					
+					v = v.Add(c)
 				Next
-				If TIntType(ty) And val >= 2147483648:Long Then
-					value = String( -2147483648:Long + (val - 2147483648:Long))
-				Else
-					If TShortType( ty ) Then
-						value=String( Short(val) )
-					Else If TByteType( ty ) Then
-						value=String( Byte(val) )
-					Else
-						value=String( val )
-					End If
-				End If
+
+				value = v.ToIntString()
+
 			Else
-				If TShortType( ty ) Then
-					value = String.FromLong(Short(value.ToLong()))
-				Else If TByteType( ty ) Then
-					value = String.FromLong(Byte(value.ToLong()))
+				Local v:TMAPM  = TMAPM.CreateMAPM(value)
+			
+				If TByteType( ty ) Then
+
+					While v.Compare(MM_MaxByte) > 0
+						v = v.Modulo(MM_MaxByteMod)
+					Wend
+					
+					While v.Compare(MM_Zero) < 0
+						v = MM_MaxByteP1.Add(v)
+					Wend
+					
+					value = v.ToIntString()
+
+				Else If TShortType( ty ) Then
+
+					While v.Compare(MM_MaxShort) > 0
+						v = v.Modulo(MM_MaxShortMod)
+					Wend
+					
+					While v.Compare(MM_Zero) < 0
+						v = MM_MaxShortP1.Add(v)
+					Wend
+					
+					value = v.ToIntString()
+				
+				Else If TIntType(ty) Or (TLParamType(ty) And WORD_SIZE = 4) Then ' fit number to Int
+
+					While v.Compare(MM_MaxInt) > 0
+						v = MM_MaxIntNeg.Add(v)
+					Wend
+					
+					While v.Compare(MM_MinInt) < 0
+						v = MM_MinIntPos.Add(v)
+					Wend
+					
+					value = v.ToIntString()
+
+				Else If TLongType(ty) Or (TLParamType(ty) And WORD_SIZE = 8) Then ' fit number to Long
+
+					While v.Compare(MM_MaxLong) > 0
+						v = MM_MaxLongNeg.Add(v)
+					Wend
+					
+					While v.Compare(MM_MinLong) < 0
+						v = MM_MinLongPos.Add(v)
+					Wend
+					
+					value = v.ToIntString()
+				
+				Else If TUIntType(ty) Or ((TSizeTType(ty) Or TWParamType(ty)) And WORD_SIZE = 4) Then ' fit number to UInt
+
+					While v.Compare(MM_MaxUInt) > 0
+						v = v.Modulo(MM_MaxUIntMod)
+					Wend
+					
+					While v.Compare(MM_Zero) < 0
+						v = MM_MaxUIntP1.Add(v)
+					Wend
+				
+					value = v.ToIntString()
+					
+				Else If TULongType(ty) Or ((TSizeTType(ty) Or TWParamType(ty)) And WORD_SIZE = 8) Then ' fit number to ULong
+					
+					While v.Compare(MM_MaxULong) > 0
+						v = v.Modulo(MM_MaxULongMod)
+					Wend
+					
+					While v.Compare(MM_Zero) < 0
+						v = MM_MaxULongP1.Add(v)
+					Wend
+				
+					value = v.ToIntString()
+					
 				Else
-					Local buf:Byte[64]
-					Local b:Int
-					Local v:String = value.Trim()
-					Local leading0:Int = True
-					If v Then
-						Local i:Int
-						If v[0] = Asc("+") Then
-							i = 1
-						Else If v[0] = Asc("-") Then
-							i = 1
-							buf[b] = Asc("-")
-							b:+ 1
-						End If
-						
-						While i < value.Length
-							If Not IsDigit(v[i]) Then
-								Exit
+					Rem
+						Local buf:Byte[64]
+						Local b:Int
+						Local v:String = value.Trim()
+						Local leading0:Int = True
+						If v Then
+							Local i:Int
+							If v[0] = Asc("+") Then
+								i = 1
+							Else If v[0] = Asc("-") Then
+								i = 1
+								buf[b] = Asc("-")
+								b:+ 1
 							End If
-							If leading0 And v[i] = Asc("0") Then
-								i :+ 1
-								Continue
-							End If
-							leading0 = False
-							buf[b] = v[i]
 							
-							b :+ 1
-							i :+ 1
-						Wend
-						
-						If leading0 Then
-							value = "0"
+							While i < value.Length
+								If Not IsDigit(v[i]) Then
+									Exit
+								End If
+								If leading0 And v[i] = Asc("0") Then
+									i :+ 1
+									Continue
+								End If
+								leading0 = False
+								buf[b] = v[i]
+								
+								b :+ 1
+								i :+ 1
+							Wend
+							
+							If leading0 Then
+								value = "0"
+							Else
+								value = String.FromBytes(buf, b)
+							End If
 						Else
-							value = String.FromBytes(buf, b)
+							value = "0"
 						End If
-					Else
-						value = "0"
-					End If
+					End Rem
 				End If
 			EndIf
 
 		Else If TDecimalType( ty )
 			If Not (value.Contains("e") Or value.Contains("E") Or value.Contains(".") Or value.Contains("inf") Or value.Contains("nan"))
-				value:+".0"
+				If TFloatType(ty) Then
+					value:+".00000000"
+				Else
+					value:+".0000000000000000"
+				End If
 			EndIf
 		EndIf
 		Self.ty=ty
-		Self.value=value
+		Self.value = value
+		
 		Return Self
 	End Method
 	

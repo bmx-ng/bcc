@@ -31,6 +31,7 @@ Import Pub.zlib
 Import "options.bmx"
 Import "base.stringhelper.bmx"
 Import "base64.bmx"
+Import "mapm/mapm.bmx"
 
 ' debugging help
 Const DEBUG:Int = False
