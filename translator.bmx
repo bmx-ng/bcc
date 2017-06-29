@@ -791,6 +791,8 @@ op = mapSymbol(op)
 	
 	Method TransType$( ty:TType, ident:String, fpReturnTypeFunctionArgs:String = Null, fpReturnTypeClassFunc:Int = False) Abstract
 
+	Method TransObject:String(decl:TScopeDecl, this:Int = False) Abstract
+	
 	Method BeginLocalScope()
 		mungStack.Push mungScope
 		mungScope:TMap=New TMap'<TDecl>
@@ -1013,7 +1015,15 @@ End Rem
 					Local lvar:String = CreateLocal(stmt.expr)
 					t :+ " " + lvar
 				Else
-					Local s:String = stmt.expr.Trans()
+
+					Local s:String
+					
+					' cast to function return type
+					If TObjectType(stmt.fRetType) Then
+						s :+ Bra(transObject(TObjectType(stmt.fRetType).classDecl))
+					End If
+
+					s :+ stmt.expr.Trans()
 					
 					' we have some temp variables that need to be freed before we can return
 					' put the results into a new variable, and return that.

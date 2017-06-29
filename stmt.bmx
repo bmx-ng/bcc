@@ -236,6 +236,7 @@ Type TReturnStmt Extends TStmt
 	
 	Method OnSemant()
 		Local fdecl:TFuncDecl=_env.FuncScope()
+		fRetType = fdecl.retType
 		If expr
 			If TIdentExpr(expr) Then
 				TIdentExpr(expr).isRhs = True
@@ -248,7 +249,6 @@ Type TReturnStmt Extends TStmt
 				End If
 				Err errorText
 			End If
-			fRetType = fdecl.retType
 			expr=expr.SemantAndCast( fdecl.retType )
 		Else If fdecl.IsCtor()
 			expr=New TSelfExpr.Semant()
