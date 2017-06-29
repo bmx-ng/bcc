@@ -329,7 +329,7 @@ Type TTranslator
 				id = MungSymbol(id)
 			End If
 			
-			fdecl.munged = fdecl.scope.munged + "_" + id
+			fdecl.munged = fdecl.ParentScope().munged + "_" + id
 			
 			If Not equalsBuiltInFunc(fdecl.classScope(), fdecl) And Not fdecl.noMangle Then
 				fdecl.munged :+ MangleMethod(fdecl)
@@ -790,7 +790,7 @@ op = mapSymbol(op)
 	Method EmitLocalDeclarations(decl:TScopeDecl, v:TValDecl = Null) Abstract
 	
 	Method TransType$( ty:TType, ident:String, fpReturnTypeFunctionArgs:String = Null, fpReturnTypeClassFunc:Int = False) Abstract
-	
+
 	Method BeginLocalScope()
 		mungStack.Push mungScope
 		mungScope:TMap=New TMap'<TDecl>

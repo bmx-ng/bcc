@@ -201,6 +201,20 @@ Type TDecl
 		If scope Return scope.AppScope()
 	End Method
 	
+	' find an owning scope of function, class or module
+	Method ParentScope:TScopeDecl()
+		Local _scope:TScopeDecl = scope.FuncScope()
+		If Not _scope Then
+			_scope = scope.ClassScope()
+		End If
+		
+		If Not _scope Then
+			_scope = scope.ModuleScope()
+		End If
+		
+		Return _scope
+	End Method
+	
 	Method CheckAccess:Int()
 		If IsPrivate() And ModuleScope()<>_env.ModuleScope() Return False
 		Return True
@@ -259,6 +273,18 @@ Type TDecl
 			If TFuncDecl(Self) And attrs & FUNC_PTR
 				'DebugLog "**** " + ident
 			Else
+			
+				' a nested function needs to be scoped to another function, class or module.
+				If attrs & FUNC_NESTED Then
+					Local sc:TScopeDecl = ParentScope()
+					
+					' if our scope isn't one of the above, let it be so.
+					If sc <> scope Then
+						scope = Null
+						sc.InsertDecl(Self)
+					End If
+				End If
+			
 
 				scope._semanted.AddLast Self
 				
@@ -270,7 +296,6 @@ Type TDecl
 				EndIf
 				
 				If TModuleDecl( scope )
-'DebugStop
 					' FIXME
 					Local app:TAppDecl = AppScope()
 					If app Then
@@ -1568,6 +1593,12 @@ Type TBlockDecl Extends TScopeDecl
 
 	Method OnSemant()
 		PushEnv Self
+		
+		' any nested functions?
+		For Local fdecl:TFuncDecl = EachIn _decls
+			fdecl.Semant
+		Next
+		
 		For Local stmt:TStmt=EachIn stmts
 			stmt.Semant
 		Next
