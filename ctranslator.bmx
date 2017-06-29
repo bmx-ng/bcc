@@ -3096,9 +3096,13 @@ End Rem
 			End If
 
 			If decl.IsAbstract() Then
-				' TODO : remove following line when generation stablises.
-				Emit "printf(~qAbstract method called : " + decl.ident + "\n~q);fflush(stdout);"
 				Emit "brl_blitz_NullMethodError();"
+				If Not TVoidType( decl.retType ) Then
+					Local ret:TReturnStmt = New TReturnStmt.Create(New TConstExpr.Create( decl.retType,"" ).Semant())
+					ret.fRetType = decl.retType
+					Emit ret.Trans() + ";"
+					unreachable = False
+				End If
 			Else
 
 				decl.Semant()
@@ -3828,7 +3832,7 @@ End Rem
 	End Method
 
 	Method EmitClassDecl( classDecl:TClassDecl )
-	
+
 		If classDecl.args Then
 			Return
 		End If

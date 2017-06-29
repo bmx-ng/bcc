@@ -1613,7 +1613,7 @@ End Rem
 			decl = True
 			Emit "{"
 			Emit TransDeclStmt(TDeclStmt(stmt.init), True) + ";"
-			init = TDeclStmt(stmt.init).decl.munged
+			'init = TDeclStmt(stmt.init).decl.munged
 			vdecl = TValDecl(TDeclStmt(stmt.init).decl)
 		Else
 			init=stmt.init.Trans()
