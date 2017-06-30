@@ -2901,7 +2901,7 @@ End Rem
 				For Local decl2:TFuncDecl=EachIn impls
 					If decl.IdentLower() = decl2.IdentLower()
 						If decl2.argDecls.Length = decl.argDecls.Length And Not decl2.EqualsFunc( decl )
-							Err "Cannot mix incompatible method signatures." + decl2.ToString() + " vs " + decl.ToString() + "."
+						'	Err "Cannot mix incompatible method signatures." + decl2.ToString() + " vs " + decl.ToString() + "."
 						Else
 							found = True
 						End If
