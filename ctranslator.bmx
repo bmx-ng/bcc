@@ -470,7 +470,7 @@ Type TCTranslator Extends TTranslator
 				Local arg:TExpr = args[i]
 				
 				' object cast to match param type
-				If TObjectType(ty) Then
+				If TObjectType(ty) And Not TObjectType(ty).classDecl.IsStruct() Then
 					Local fdecl:TFuncDecl = decl
 					If TClassDecl(decl.scope) Then
 						fdecl = TClassDecl(decl.scope).GetOriginalFuncDecl(decl)
@@ -2112,12 +2112,12 @@ t:+"NULLNULLNULL"
 		End If
 		
 		If expr.op = "^" Then
-			Return "pow" + Bra(t_lhs + ", " + t_rhs)
+			Return "bbFloatPow" + Bra(t_lhs + ", " + t_rhs)
 		End If
 		
 		If expr.op = "mod" Or expr.op = "%" Then
 			If TDecimalType(expr.lhs.exprType) Or TDecimalType(expr.rhs.exprType) Then
-				Return "fmod" + Bra(t_lhs + ", " + t_rhs)
+				Return "bbFloatMod" + Bra(t_lhs + ", " + t_rhs)
 			End If
 		End If
 		
@@ -2341,7 +2341,7 @@ t:+"NULLNULLNULL"
 		Case "asin","acos","atan" Return "(float)"+Bra( id+Bra(arg0)+"*R2D" )
 		Case "atan2" Return "(float)"+Bra( id+Bra(arg0+","+arg1)+"*R2D" )
 		Case "sqrt","floor","ceil","log" Return "(float)"+id+Bra( arg0 )
-		Case "pow" Return "(float)"+id+Bra( arg0+","+arg1 )
+		Case "pow" Return "(float)bbFloatPow"+Bra( arg0+","+arg1 )
 		'
 		End Select
 		InternalErr
@@ -2574,7 +2574,7 @@ t:+"NULLNULLNULL"
 
 		If stmt.op = ":%" Then
 			If TDecimalType(stmt.lhs.exprType) Or TDecimalType(stmt.rhs.exprType) Then
-				Return lhs + "=fmod" + Bra(lhs + "," + rhs)
+				Return lhs + "=bbFloatMod" + Bra(lhs + "," + rhs)
 			End If
 		End If
 		
@@ -4029,11 +4029,18 @@ End Rem
 
 									Mungdecl f
 									If f.ident = func.ident And f.EqualsFunc(func) Then
-										If Not dups.ValueForKey(f.ident) Then
 									
+										Local id:String = f.ident + "_"
+										
+										For Local arg:TArgDecl = EachIn f.argDecls
+											id :+ TransMangleType(arg.ty)
+										Next
+										
+										If Not dups.ValueForKey(id) Then
+
 											Emit "_" + f.munged + ","
 										
-											dups.Insert(f.ident, "")
+											dups.Insert(id, "")
 										End If
 										Exit
 									End If
