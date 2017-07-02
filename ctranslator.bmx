@@ -458,7 +458,7 @@ Type TCTranslator Extends TTranslator
 		If objParam And (decl.IsMethod() Or decl.isCtor()) And ((Not decl.IsExtern()) Or (decl.IsExtern() And TClassDecl(decl.scope) And Not TClassDecl(decl.scope).IsStruct())) Then
 			' object cast to match param type
 			If TClassDecl(decl.scope) Then
-				t :+ Bra(TransObject(TClassDecl(decl.scope).GetLatestFuncDecl(decl).scope))
+				t :+ Bra(TransObject(TClassDecl(decl.scope).GetLatestFuncDecl(decl).scope, TClassDecl(decl.scope).IsStruct()))
 			End If
 			t:+ objParam
 		End If
@@ -1186,40 +1186,52 @@ t:+"NULLNULLNULL"
 					End If
 
 				Else If TIndexExpr(lhs) Then
-					Local lvar:String = CreateLocal(lhs, False, False)
-					Local lvarInit:String = Bra(lvar + " = " + lhs.Trans())
-				
-'					Local loc:String = CreateLocal(lhs)
-					Local obj:String = Bra(TransObject(decl.scope))
-
-					Local cdecl:TClassDecl = TClassDecl(decl.scope)
-
-					' Null test
-					If opt_debug Then
-						lvarInit = TransDebugNullObjectError(lvarInit, cdecl)
-					End If
-
-					If decl.attrs & FUNC_PTR Then
-						Local op:String
-						If cdecl.IsStruct() Then op = "." Else op = "->"
-						Return lhs.Trans() + op + decl.munged+TransArgs( args,decl, Null)
-					Else
-						If decl.scope.IsExtern()
-							'Local cdecl:TClassDecl = TClassDecl(decl.scope)
-							
-							If Not cdecl.IsStruct()  Then
-								Return Bra(lvarInit) + "->vtbl->" + decl.munged + Bra(TransArgs( args,decl, lvar ))
-							End If
-							Err "TODO extern types not allowed methods"
+					If TClassDecl(decl.scope) And TClassDecl(decl.scope).IsStruct() Then
+					
+						Local lvar:String = CreateLocal(lhs, True, False)
+					
+						If Not isPointerType(lhs.exprType) Then
+							Return "_" + decl.munged+TransArgs( args,decl, "&" + lvar )
 						Else
-							'Local cdecl:TClassDecl = TClassDecl(decl.scope)
+							Return "_" + decl.munged+TransArgs( args,decl, lvar )
+						End If
+					Else
+						Local lvar:String = CreateLocal(lhs, False, False)
+						Local lvarInit:String = Bra(lvar + " = " + lhs.Trans())
+					
+	'					Local loc:String = CreateLocal(lhs)
+						Local obj:String = Bra(TransObject(decl.scope))
 	
-							If cdecl And (cdecl.IsInterface() And Not equalsBuiltInFunc(cdecl, decl)) Then
-								Local ifc:String = Bra("(struct " + cdecl.munged + "_methods*)" + Bra("bbObjectInterface(" + obj + lvarInit + ", " + "&" + cdecl.munged + "_ifc)"))
-								Return ifc + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, lvar )
-							Else					
-								Local class:String = Bra(lvarInit + "->clas" + tSuper)
-								Return class + "->" + TransFuncPrefix(decl.scope, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, lvar )
+						Local cdecl:TClassDecl = TClassDecl(decl.scope)
+	
+
+						' Null test
+						If opt_debug Then
+							lvarInit = TransDebugNullObjectError(lvarInit, cdecl)
+						End If
+	
+						If decl.attrs & FUNC_PTR Then
+							Local op:String
+							If cdecl.IsStruct() Then op = "." Else op = "->"
+							Return lhs.Trans() + op + decl.munged+TransArgs( args,decl, Null)
+						Else
+							If decl.scope.IsExtern()
+								'Local cdecl:TClassDecl = TClassDecl(decl.scope)
+								
+								If Not cdecl.IsStruct()  Then
+									Return Bra(lvarInit) + "->vtbl->" + decl.munged + Bra(TransArgs( args,decl, lvar ))
+								End If
+								Err "TODO extern types not allowed methods"
+							Else
+								'Local cdecl:TClassDecl = TClassDecl(decl.scope)
+		
+								If cdecl And (cdecl.IsInterface() And Not equalsBuiltInFunc(cdecl, decl)) Then
+									Local ifc:String = Bra("(struct " + cdecl.munged + "_methods*)" + Bra("bbObjectInterface(" + obj + lvarInit + ", " + "&" + cdecl.munged + "_ifc)"))
+									Return ifc + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, lvar )
+								Else					
+									Local class:String = Bra(lvarInit + "->clas" + tSuper)
+									Return class + "->" + TransFuncPrefix(decl.scope, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, lvar )
+								End If
 							End If
 						End If
 					End If
@@ -1621,6 +1633,11 @@ t:+"NULLNULLNULL"
 	End Method
 
 	Method TransSelfExpr$( expr:TSelfExpr )
+		If (TObjectType(expr.exprType) And TObjectType(expr.exprType).classDecl.IsStruct()) Or ..
+				(TClassType(expr.exprType) And TClassType(expr.exprType).classDecl.IsStruct()) Then
+			Return "*o"
+		End If
+		
 		Return "o"
 	End Method
 
@@ -1682,7 +1699,7 @@ t:+"NULLNULLNULL"
 		Else If IsPointerType( dst, 0, TType.T_POINTER | TType.T_CHAR_PTR | TType.T_SHORT_PTR )
 
 			If TArrayType(src) Then
-				Return Bra(Bra(TransType(dst, "")) + "BBARRAYDATA(" + t + "," + t + "->dims)")
+				Return Bra(Bra(TransType(dst, "")) + "BBARRAYDATA(" + t + ",1)")
 			End If
 			'If TByteType(src) And Not IsPointerType(src, TType.T_BYTE, TType.T_POINTER) Return Bra("&"+t)
 
@@ -2201,13 +2218,13 @@ t:+"NULLNULLNULL"
 				If opt_debug Then
 					Return Bra(Bra(TransType(TArrayType( expr.expr.exprType).elemType, "*")) + Bra("BBARRAYDATAINDEX(" + Bra(t_expr) + "," + Bra(t_expr) + "->dims," + t_index + ")")) + "[" + t_index + "]"
 				Else
-					Return Bra(Bra(TransType(TArrayType( expr.expr.exprType).elemType, "*")) + Bra("BBARRAYDATA(" + Bra(t_expr) + "," + Bra(t_expr) + "->dims)")) + "[" + t_index + "]"
+					Return Bra(Bra(TransType(TArrayType( expr.expr.exprType).elemType, "*")) + Bra("BBARRAYDATA(" + t_expr + ",1)")) + "[" + t_index + "]"
 				End If
 			Else
 				If opt_debug Then
 					Return Bra("(" + TransType(expr.exprType, "") + "*)BBARRAYDATAINDEX(" + Bra(t_expr) + "," + Bra(t_expr) + "->dims," + t_index + ")") + "[" + t_index + "]"
 				Else
-					Return Bra("(" + TransType(expr.exprType, "") + "*)BBARRAYDATA(" + Bra(t_expr) + "," + Bra(t_expr) + "->dims)") + "[" + t_index + "]"
+					Return Bra("(" + TransType(expr.exprType, "") + "*)BBARRAYDATA(" + t_expr + ",1)") + "[" + t_index + "]"
 				End If
 			End If
 		End If

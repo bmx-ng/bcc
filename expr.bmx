@@ -289,6 +289,11 @@ Type TExpr
 			End If
 			
 		End If
+		' balance structs
+		If TObjectType( lhs ).EqualsType(rhs) And TObjectType( lhs ).classDecl.IsStruct() And TObjectType( rhs ).classDecl.IsStruct() Then
+			Return lhs
+		End If
+		
 		Err "Can't balance types "+lhs.ToString()+" and "+rhs.ToString()+"."
 	End Method
 

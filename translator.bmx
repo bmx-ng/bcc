@@ -898,7 +898,7 @@ End Rem
 	
 	Method TransInvokeExpr$( expr:TInvokeExpr )
 		Local decl:TFuncDecl=TFuncDecl( expr.decl.actual ),t$
-'If decl.ident = "OnDebugStop" DebugStop	
+
 		If Not decl.munged Then
 			MungDecl decl
 		End If
@@ -921,7 +921,7 @@ End Rem
 				Return CreateLocal(expr)
 			End If
 		Else
-			If decl Return TransFunc( TFuncDecl(decl),expr.args,Null )
+			Return TransFunc( TFuncDecl(decl),expr.args,Null )
 		End If
 		
 		InternalErr
@@ -938,7 +938,7 @@ End Rem
 				Return CreateLocal(expr)
 			End If
 		Else
-			If decl Return TransFunc( TFuncDecl(decl),expr.args,expr.expr )	
+			Return TransFunc( TFuncDecl(decl),expr.args,expr.expr )	
 		End If
 		
 		InternalErr
@@ -1009,9 +1009,7 @@ End Rem
 
 			Else
 				
-				If TSelfExpr(stmt.expr) And TObjectType(TSelfExpr(stmt.expr).exprType).classDecl And TObjectType(TSelfExpr(stmt.expr).exprType).classDecl.IsStruct() Then
-					t :+ Bra("*" + stmt.expr.Trans())
-				Else If TObjectType(stmt.expr.exprType) And TObjectType(stmt.expr.exprType).classDecl.IsStruct() And TConstExpr(stmt.expr) And Not TConstExpr(stmt.expr).value Then
+				If TObjectType(stmt.expr.exprType) And TObjectType(stmt.expr.exprType).classDecl.IsStruct() And TConstExpr(stmt.expr) And Not TConstExpr(stmt.expr).value Then
 					Local lvar:String = CreateLocal(stmt.expr)
 					t :+ " " + lvar
 				Else
