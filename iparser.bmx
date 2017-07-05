@@ -378,7 +378,7 @@ Type TIParser
 									class.templateSource = TTemplateRecord.Load(line, path, size, source)
 
 									Local toker:TToker = New TToker.Create(path, class.templateSource.source, False, line)
-									Local parser:TParser = New TParser.Create( toker, Null )
+									Local parser:TParser = New TParser.Create( toker, _appInstance )
 									
 									Local m:TModuleDecl = New TModuleDecl
 									parser._module = m
