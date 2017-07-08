@@ -43,6 +43,8 @@ Const DECL_API_CDECL:Int=   $00000000
 Const DECL_API_STDCALL:Int= $10000000
 Const DECL_API_DEFAULT:Int=DECL_API_CDECL
 
+Const DECL_NESTED:Int=      $20000000
+
 Const CLASS_INTERFACE:Int=    $002000
 Const CLASS_THROWABLE:Int=    $004000
 Const CLASS_STRUCT:Int=       $008000
@@ -203,16 +205,16 @@ Type TDecl
 	
 	' find an owning scope of function, class or module
 	Method ParentScope:TScopeDecl()
-		Local _scope:TScopeDecl = scope.FuncScope()
-		If Not _scope Then
-			_scope = scope.ClassScope()
+		If scope Then
+			' func scope
+			If TFuncDecl( scope ) Return TFuncDecl( scope )
+			' class scope
+			If TClassDecl( scope ) Return TClassDecl( scope )
+			' module scope
+			If TModuleDecl( scope ) Return TModuleDecl( scope )
+
+			Return scope.ParentScope()
 		End If
-		
-		If Not _scope Then
-			_scope = scope.ModuleScope()
-		End If
-		
-		Return _scope
 	End Method
 	
 	Method CheckAccess:Int()
@@ -221,6 +223,7 @@ Type TDecl
 	End Method
 	
 	Method AssertAccess()
+If ident="abc" DebugStop
 		If Not CheckAccess()
 			If IsPrivate() Then
 				Err ToString() +" is private."
@@ -274,8 +277,8 @@ Type TDecl
 				'DebugLog "**** " + ident
 			Else
 			
-				' a nested function needs to be scoped to another function, class or module.
-				If attrs & FUNC_NESTED Then
+				' a nested function/class needs to be scoped to another function, class or module.
+				If attrs & FUNC_NESTED Or attrs & DECL_NESTED Then
 					Local sc:TScopeDecl = ParentScope()
 					
 					' if our scope isn't one of the above, let it be so.
@@ -284,7 +287,6 @@ Type TDecl
 						sc.InsertDecl(Self)
 					End If
 				End If
-			
 
 				scope._semanted.AddLast Self
 				
@@ -740,11 +742,38 @@ Type TFieldDecl Extends TVarDecl
 	End Method
 
 	Method CheckAccess:Int()
-		If IsPrivate() And ClassScope()<>_env.ClassScope() Return False
-		If IsProtected() And ClassScope() Then
+		Local cs:TClassDecl = ClassScope()
+
+		If IsPrivate() And cs Then
+			Local ec:TClassDecl = _env.ClassScope()
+			While ec
+				If cs = ec Then
+					Return True
+				End If
+				
+				ec = _env.scope.scope.ClassScope()
+			Wend
+			
+			If Not ec Then
+				Return False
+			End If
+		End If
+		If IsProtected() And cs Then
 			Local ec:TClassDecl = _env.ClassScope()
 			If Not ec Return False
-			If Not ec.ExtendsClass(ClassScope()) Return False
+			
+			While ec
+				If ec.ExtendsClass(cs) Then
+					Return True
+				End If
+				
+				ec = _env.scope.scope.ClassScope()
+			Wend
+			
+			If Not ec Then
+				Return False
+			End If
+			'If Not ec.ExtendsClass(ClassScope()) Return False
 		End If
 		Return True
 	End Method
@@ -1597,6 +1626,11 @@ Type TBlockDecl Extends TScopeDecl
 		' any nested functions?
 		For Local fdecl:TFuncDecl = EachIn _decls
 			fdecl.Semant
+		Next
+
+		' any nested classes?
+		For Local cdecl:TClassDecl = EachIn _decls
+			cdecl.Semant
 		Next
 		
 		For Local stmt:TStmt=EachIn stmts
@@ -2729,6 +2763,11 @@ End Rem
 		Next
 
 		For Local decl:TFieldDecl = EachIn Decls()
+			decl.Semant()
+		Next
+
+		' nested classes
+		For Local decl:TClassDecl = EachIn Decls()
 			decl.Semant()
 		Next
 

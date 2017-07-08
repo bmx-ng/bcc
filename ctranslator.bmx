@@ -958,7 +958,7 @@ t:+"NULLNULLNULL"
 	End Method
 
 	Method TransFunc$( decl:TFuncDecl,args:TExpr[],lhs:TExpr, sup:Int = False, scope:TScopeDecl = Null )
-'If decl.ident = "eventfilter" DebugStop
+
 		' for calling the super class method instead
 		Local tSuper:String
 		If sup Then
@@ -2850,7 +2850,7 @@ End Rem
 '		End If
 	End Method
 
-	Method EmitClassFuncProto( decl:TFuncDecl, isStruct:Int = False)
+	Method EmitClassFuncProto( decl:TFuncDecl, isStruct:Int = False, emitFuncProtos:Int = True)
 		'PushMungScope
 		BeginLocalScope
 
@@ -2919,15 +2919,18 @@ End Rem
 		'End If
 
 '		If Not proto Or (proto And Not odecl.IsExtern()) Then
+		'If emitFuncProtos
 			If Not TFunctionPtrType(decl.retType) Then
 				If Not odecl.castTo Then
 					If Not isStruct Then
 						Emit pre + TransType( decl.retType, "" )+" "+ Bra(api + "*" + id)+Bra( args ) + bk
 					End If
-					If decl.IsMethod() Then
-						Emit TransType(decl.retType, "") + " _" + decl.munged +Bra( args ) + bk
-					Else
-						Emit TransType(decl.retType, "") + api + " " + decl.munged +Bra( args ) + bk
+					If emitFuncProtos
+						If decl.IsMethod() Then
+							Emit TransType(decl.retType, "") + " _" + decl.munged +Bra( args ) + bk
+						Else
+							Emit TransType(decl.retType, "") + api + " " + decl.munged +Bra( args ) + bk
+						End If
 					End If
 				Else
 					If Not odecl.noCastGen Then
@@ -2936,10 +2939,12 @@ End Rem
 								Emit pre + odecl.castTo +" "+Bra(api + "*" + id)+Bra( args ) + bk
 							End If
 						End If
-						If decl.IsMethod() Then
-							Emit odecl.castTo + " _" + decl.munged +Bra( args ) + bk
-						Else
-							Emit odecl.castTo + " " + decl.munged +Bra( args ) + bk
+						If emitFuncProtos
+							If decl.IsMethod() Then
+								Emit odecl.castTo + " _" + decl.munged +Bra( args ) + bk
+							Else
+								Emit odecl.castTo + " " + decl.munged +Bra( args ) + bk
+							End If
 						End If
 					End If
 				End If
@@ -2964,7 +2969,7 @@ End Rem
 			For Local t$=EachIn argCasts
 				Emit t
 			Next
-'		End If
+		'End If
 
 		'PopMungScope
 		EndLocalScope
@@ -2987,8 +2992,15 @@ End Rem
 
 		MungDecl decl
 
-		' emit nested functions
+		' emit nested functions/classes
 		If Not proto Then
+			' emit nested classes
+			For Local cdecl:TClassDecl = EachIn decl._decls
+				MungDecl cdecl
+				EmitClassProto(cdecl, False)
+				EmitClassDecl(cdecl)
+			Next
+		
 			' emit nested protos
 			For Local fdecl:TFuncDecl = EachIn decl._decls
 				EmitFuncDecl(fdecl, True, classFunc)
@@ -3270,7 +3282,7 @@ End Rem
 
 	End Method
 
-	Method EmitClassProto( classDecl:TClassDecl )
+	Method EmitClassProto( classDecl:TClassDecl, emitFuncProtos:Int = True )
 	
 		If classDecl.args Then
 			Return
@@ -3284,24 +3296,26 @@ End Rem
 
 		'Emit "void _" + classid + "_New" + Bra(TransObject(classdecl) + " o") + ";"
 		
-		EmitClassDeclNewListProto(classDecl)
-		
-		If classHierarchyHasFunction(classDecl, "Delete") Then
-			Emit "void _" + classid + "_Delete" + Bra(TransObject(classdecl) + " o") + ";"
-		End If
+		If emitFuncProtos Then
+			EmitClassDeclNewListProto(classDecl)
 
-		If classHasFunction(classDecl, "ToString") Then
-			Emit "BBSTRING _" + classid + "_ToString" + Bra(TransObject(classdecl) + " o") + ";"
-		End If
+			If classHierarchyHasFunction(classDecl, "Delete") Then
+				Emit "void _" + classid + "_Delete" + Bra(TransObject(classdecl) + " o") + ";"
+			End If
+	
+			If classHasFunction(classDecl, "ToString") Then
+				Emit "BBSTRING _" + classid + "_ToString" + Bra(TransObject(classdecl) + " o") + ";"
+			End If
+	
+			If classHasFunction(classDecl, "Compare") Then
+				Emit "BBINT _" + classid + "_Compare(" + TransObject(classdecl) + " o, BBOBJECT otherObject);"
+			End If
+	
+			If classHasFunction(classDecl, "SendMessage") Then
+				Emit "BBOBJECT _" + classid + "_SendMessage(" + TransObject(classdecl) + " o, BBOBJECT message, BBOBJECT source);"
+			End If
 
-		If classHasFunction(classDecl, "Compare") Then
-			Emit "BBINT _" + classid + "_Compare(" + TransObject(classdecl) + " o, BBOBJECT otherObject);"
 		End If
-
-		If classHasFunction(classDecl, "SendMessage") Then
-			Emit "BBOBJECT _" + classid + "_SendMessage(" + TransObject(classdecl) + " o, BBOBJECT message, BBOBJECT source);"
-		End If
-
 		'Local reserved:String = ",New,Delete,ToString,Compare,SendMessage,_reserved1_,_reserved2_,_reserved3_,".ToLower()
 
 		classDecl.SemantParts()
@@ -3312,9 +3326,8 @@ End Rem
 
 			Local fdecl:TFuncDecl =TFuncDecl( decl )
 			If fdecl
-
 				If Not equalsBuiltInFunc(classDecl, fdecl) And Not equalsTorFunc(classDecl, fdecl) Then
-					EmitClassFuncProto( fdecl )
+					EmitClassFuncProto( fdecl, , emitFuncProtos )
 					Continue
 				End If
 			EndIf
@@ -3871,6 +3884,13 @@ End Rem
 
 
 		If Not classDecl.IsExtern() Then
+			' process nested classes
+			For Local cdecl:TClassDecl = EachIn classDecl._decls
+				MungDecl cdecl
+				EmitClassProto(cdecl, False)
+				EmitClassDecl(cdecl)
+			Next
+		
 			' process nested functions for new
 			Local decl:TFuncDecl = classDecl.FindFuncDecl("new",,,,,,SCOPE_CLASS_HEIRARCHY)
 			If decl And decl.scope = classDecl Then ' only our own New method, not any from superclasses
@@ -4512,6 +4532,9 @@ End Rem
 		
 		If fdecl.argDecls.Length Then
 			If classDecl = fdecl.scope Then
+				If Not fdecl.munged Then
+					MungDecl fdecl
+				End If
 				t :+ fdecl.munged
 			Else
 				t :+ classDecl.munged + "_" + fdecl.ident + MangleMethod(fdecl)

@@ -2248,6 +2248,8 @@ End Rem
 			' nested function - needs to get added to the "module"
 			Case "function"
 				_block.InsertDecl ParseFuncDecl( _toke,FUNC_NESTED)
+			Case "type"
+				_block.InsertDecl ParseClassDecl( _toke,DECL_NESTED)
 			Case "return"
 				ParseReturnStmt()
 			Case "exit"
@@ -2699,7 +2701,7 @@ End Rem
 				End If
 			'End If
 		EndIf
-		
+
 		' every branch in that nested If block up there contains the line "ty=ParseDeclType()";
 		' this already consumed all sets of parentheses and brackets belonging to this function declaration
 		' so we will now extract our actual return type and args from the result
@@ -3219,6 +3221,8 @@ End Rem
 				End If
 				Local decl:TFuncDecl=ParseFuncDecl( _toke,decl_attrs,classDecl )
 				classDecl.InsertDecl decl
+			Case "type"
+				classDecl.InsertDecl ParseClassDecl( _toke,DECL_NESTED)
 			Default
 				Err "Syntax error - expecting class member declaration, not '" + _toke + "'"
 			End Select
