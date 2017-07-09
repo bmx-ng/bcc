@@ -742,16 +742,19 @@ Type TFieldDecl Extends TVarDecl
 	End Method
 
 	Method CheckAccess:Int()
+
 		Local cs:TClassDecl = ClassScope()
 
 		If IsPrivate() And cs Then
 			Local ec:TClassDecl = _env.ClassScope()
+
 			While ec
+
 				If cs = ec Then
 					Return True
 				End If
 				
-				ec = _env.scope.scope.ClassScope()
+				ec = ec.scope.ClassScope()
 			Wend
 			
 			If Not ec Then
@@ -760,20 +763,18 @@ Type TFieldDecl Extends TVarDecl
 		End If
 		If IsProtected() And cs Then
 			Local ec:TClassDecl = _env.ClassScope()
-			If Not ec Return False
 			
 			While ec
 				If ec.ExtendsClass(cs) Then
 					Return True
 				End If
 				
-				ec = _env.scope.scope.ClassScope()
+				ec = ec.scope.ClassScope()
 			Wend
 			
 			If Not ec Then
 				Return False
 			End If
-			'If Not ec.ExtendsClass(ClassScope()) Return False
 		End If
 		Return True
 	End Method
