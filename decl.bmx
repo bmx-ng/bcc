@@ -993,16 +993,27 @@ Type TScopeDecl Extends TDecl
 	End Method
 	
 	' returns a list of all matching named decls in scope
-	Method FindDeclList:Object(ident:String, override:Int = False, declList:TFuncDeclList = Null, maxSearchDepth:Int = SCOPE_ALL )
-	
+	Method FindDeclList:Object(ident:String, override:Int = False, declList:TFuncDeclList = Null, maxSearchDepth:Int = SCOPE_ALL, skipMultipleClassScopes:Int = False )
+
 		If Not declList Then
 			declList = New TFuncDeclList
 		End If
 	
 		If Not override And _env<>Self Return GetDeclList( ident, declList, maxSearchDepth )
 		
+		Local hadClassScope:Int
 		Local tscope:TScopeDecl=Self
 		While tscope
+			If TClassDecl(tscope) Then
+			
+				If skipMultipleClassScopes And hadClassScope Then
+					tscope=tscope.scope
+					Continue
+				End If
+			
+				hadClassScope = True
+			End If
+		
 			Local decl:Object=tscope.GetDeclList( ident, declList, maxSearchDepth )
 			'If decl And (Not TFuncDeclList(decl) And declList.IsEmpty()) Return decl
 			If decl Then
@@ -2314,7 +2325,11 @@ End Rem
 		Next
 
 		For Local decl:TDecl=EachIn _decls
-			inst.InsertDecl decl.Copy(), True
+			If TClassDecl(decl) Then
+				inst.InsertDecl TClassDecl(decl).GenClassInstance(instArgs, declImported), True
+			Else
+				inst.InsertDecl decl.Copy(), True
+			End If
 		Next
 
 		If Not declImported Then
@@ -2617,7 +2632,7 @@ End Rem
 	End Method
 	
 	Method OnSemant()
-	
+
 		If args Then
 			Return
 		End If
@@ -2641,7 +2656,7 @@ End Rem
 			End If
 			If superClass.IsFinal() Err "Final types cannot be extended."
 		EndIf
-		
+
 		'Semant implemented interfaces
 		Local impls:TClassDecl[]=New TClassDecl[impltys.Length]
 		Local implsall:TStack=New TStack
@@ -2734,6 +2749,12 @@ End Rem
 			'	InsertDecl fdecl
 			'EndIf
 		EndIf
+
+		For Local decl:TDecl=EachIn _decls
+			If TClassDecl(decl) Then
+				TClassDecl(decl).Semant
+			End If
+		Next
 
 		'NOTE: do this AFTER super semant so UpdateAttrs order is cool.
 

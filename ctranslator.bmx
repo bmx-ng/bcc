@@ -4393,9 +4393,11 @@ End Rem
 		Local classid$=classDecl.munged
 		Local superid$=classDecl.superClass.actual.munged
 
-		Local newDecls:TFuncDeclList = TFuncDeclList(classdecl.FindDeclList("new", SCOPE_CLASS_LOCAL))
+		Local newDecls:TFuncDeclList = TFuncDeclList(classdecl.FindDeclList("new", True,,,True))
 		
 		For Local fdecl:TFuncDecl = EachIn newDecls
+		
+			MungDecl fdecl
 		
 			If fdecl.scope <> classDecl Then
 				fdecl.Clear()
@@ -4417,7 +4419,7 @@ End Rem
 		Local classid$=classDecl.munged
 		'Local superid$=classDecl.superClass.actual.munged
 
-		Local newDecls:TFuncDeclList = TFuncDeclList(classdecl.FindDeclList("new", SCOPE_CLASS_LOCAL))
+		Local newDecls:TFuncDeclList = TFuncDeclList(classdecl.FindDeclList("new", True,,,True))
 		
 		For Local fdecl:TFuncDecl = EachIn newDecls
 		
@@ -4447,7 +4449,7 @@ End Rem
 		If Not classDecl.IsStruct() Then
 			t :+ "_"
 		End If
-		
+
 		t :+ funcMunged + "_ObjectNew"
 
 		'Find decl we override

@@ -833,6 +833,10 @@ Type TNewObjectExpr Extends TExpr
 			Err "Expression is not a class."
 		EndIf
 		
+		If objTy And Not objTy.classDecl.Semanted() Then
+			objTy.classDecl.Semant()
+		End If
+		
 		' 
 		If clsTy And clsTy.instance Then
 			instanceExpr = New TSelfExpr.Semant()
@@ -1154,7 +1158,7 @@ Type TCastExpr Extends TExpr
 		expr=expr.Semant()
 
 		Local src:TType=expr.exprType
-		
+
 		'equal?
 		If src.EqualsType( ty ) Return expr
 
