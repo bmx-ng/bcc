@@ -382,7 +382,11 @@ Type TBreakStmt Extends TStmt
 	End Method
 
 	Method OnCopy:TStmt( scope:TScopeDecl )
-		Return New TBreakStmt.Create(label.Copy())
+		If label Then
+			Return New TBreakStmt.Create(label.Copy())
+		Else
+			Return New TBreakStmt.Create(Null)
+		End If
 	End Method
 	
 	Method Trans$()
