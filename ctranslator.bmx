@@ -5513,6 +5513,24 @@ End If
 
 		SetOutput("source")
 
+
+		' nested type forward declarations
+		For Local decl:TClassDecl=EachIn app.Semanted()
+			For Local cdecl:TClassDecl = EachIn decl._decls
+				MungDecl decl
+				MungDecl cdecl
+				If cdecl.declImported Or (cdecl.IsExtern() And Not cdecl.IsStruct()) Continue
+				If Not cdecl.IsStruct()
+					Emit "struct " + cdecl.munged + "_obj;"
+				Else
+					Emit "struct " + cdecl.munged + ";"
+				End If
+				If cdecl.IsInterface() Then
+					Emit "extern const struct BBInterface " + cdecl.munged + "_ifc;"
+				End If
+			Next
+		Next
+
 		' Private Global declarations
 		' since we don't declare them in the header, they need to be near the top of the source
 		For Local decl:TDecl=EachIn app.Semanted()
