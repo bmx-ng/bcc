@@ -106,6 +106,7 @@ Type TToker
 		_lines=toker._lines
 		_lookingForEndRem=toker._lookingForEndRem
 		_preprocess=toker._preprocess
+		_lineOffset=toker._lineOffset
 		Return Self
 	End Method
 	
