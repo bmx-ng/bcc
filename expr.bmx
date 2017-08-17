@@ -988,7 +988,7 @@ Type TNewArrayExpr Extends TExpr
 	End Method
 
 	Method Copy:TExpr()
-		If exprType InternalErr
+		'If exprType InternalErr
 		Local cexpr:TExpr[expr.length]
 		For Local i:Int = 0 Until expr.length
 			cexpr[i] = CopyExpr(expr[i])
