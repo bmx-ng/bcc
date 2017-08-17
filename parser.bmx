@@ -177,6 +177,10 @@ Type TForEachinStmt Extends TLoopStmt
 		Else If TObjectType( expr.exprType )
 			Local tmpDecl:TDeclStmt
 			Local iterable:Int
+
+			' ensure semanted
+			TObjectType(expr.exprType).classDecl.Semant()
+			
 			If TObjectType(expr.exprType).classDecl.ImplementsInterface("iiterable") Then
 				iterable = True
 			End If

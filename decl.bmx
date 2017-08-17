@@ -3018,6 +3018,12 @@ End Rem
 				Return True
 			End If
 		Next
+		
+		' check hierarchy
+		If superClass Then
+			Return superClass.ImplementsInterface(ident)
+		End If
+		
 		Return False
 	End Method
 	
