@@ -2024,10 +2024,12 @@ End Rem
 
 		Local block:TBlockDecl=New TBlockDecl.Create( _block )
 		Local catches:TList=New TList
+		Local finallyStmt:TFinallyStmt = Null
 
 		PushBlock block
 		While _toke<>"end" And _toke<>"endtry"
 			If CParse( "catch" )
+				If finallyStmt Then Err "'Catch' can not appear after 'Finally'."
 				Local id:String=ParseIdent()
 				Local ty:TType
 				If Not CParse(":") Then
@@ -2042,6 +2044,12 @@ End Rem
 				Local init:TLocalDecl=New TLocalDecl.Create( id,ty,Null,0 )
 				Local block:TBlockDecl=New TBlockDecl.Create( _block )
 				catches.AddLast(New TCatchStmt.Create( init,block ))
+				PopBlock
+				PushBlock block
+			Else If CParse("finally") Then
+				If finallyStmt Then Err "Try statement cannot have more than one Finally block."
+				Local block:TBlockDecl = New TBlockDecl.Create(_block, , True)
+				finallyStmt = New TFinallyStmt.Create(block)
 				PopBlock
 				PushBlock block
 			Else
@@ -2062,14 +2070,14 @@ End Rem
 
 		PopBlock
 		
+		If catches.Count() = 0 And Not finallyStmt Then Err "Expecting 'Catch' or 'Finally'."
+		
 		If Not CParse("endtry") Then
-			' TODO : handle case of no catch - perhaps throw the exception again.
-			'If Not catches.Length() Err "Try block must have at least one catch block"
 			NextToke
 			CParse "try"
 		End If
 
-		_block.AddStmt New TTryStmt.Create( block,TCatchStmt[](catches.ToArray()) )
+		_block.AddStmt New TTryStmt.Create( block,TCatchStmt[](catches.ToArray()),finallyStmt )
 	End Method
 
 	Method ParseThrowStmt()
@@ -2171,9 +2179,9 @@ End Rem
 				SetErr
 				Select _toke
 				Case "case"
-					Err "Case can not appear after default."
+					Err "Case can not appear after Default."
 				Case "default"
-					Err "Select statement can have only one default block."
+					Err "Select statement can have only one Default block."
 				End Select
 				ParseStmt
 
