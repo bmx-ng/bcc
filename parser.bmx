@@ -2716,6 +2716,7 @@ End Rem
 			Local fdecl:TFuncDecl = TFunctionPtrType(ty).func
 			ty = fdecl.retTypeExpr
 			args = fdecl.argDecls
+			attrs :| (fdecl.attrs & DECL_API_FLAGS)
 		End If
 		
 		
