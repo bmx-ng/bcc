@@ -557,7 +557,11 @@ Type TConstDecl Extends TValDecl
 	End Method
 
 	Method OnCopy:TDecl(deep:Int = True)
-		Return New TConstDecl.Create( ident,ty,CopyInit(), attrs )
+		If IsSemanted() Then
+			Return New TConstDecl.Create( ident,ty,CopyInit(), attrs )
+		Else
+			Return New TConstDecl.Create( ident, declTy, declInit, attrs)
+		End If
 	End Method
 	
 	Method OnSemant()
