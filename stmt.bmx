@@ -517,7 +517,11 @@ Type TRepeatStmt Extends TLoopStmt
 	End Method
 
 	Method OnCopy:TStmt( scope:TScopeDecl )
-		Return New TRepeatStmt.Create( block.CopyBlock( scope ),expr.Copy(),TLoopLabelDecl(loopLabel.Copy()) )
+		If loopLabel Then
+			Return New TRepeatStmt.Create( block.CopyBlock( scope ),expr.Copy(),TLoopLabelDecl(loopLabel.Copy()) )
+		Else
+			Return New TRepeatStmt.Create( block.CopyBlock( scope ),expr.Copy(),Null )
+		End If
 	End Method
 	
 	Method OnSemant()
