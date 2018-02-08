@@ -2882,13 +2882,14 @@ End Rem
 		Local api:String = ParseStringLit().ToLower()
 		
 		If api = "os" Then
-?win32
-			api = "win32"
-?macos
-			api = "macos"
-?linux
-			api = "linux"
-?
+			Select opt_platform
+				Case "macos", "osx", "ios"
+					api = "macos"
+				Case "linux", "android", "raspberrypi"
+					api = "linux"
+				Case "win32"
+					api = "win32"
+			End Select
 		End If
 
 		Select api
