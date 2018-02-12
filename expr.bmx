@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2017 Bruce A Henderson
+' Copyright (c) 2013-2018 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -850,7 +850,8 @@ Type TNewObjectExpr Extends TExpr
 
 		If Not instanceExpr Then
 			If classDecl.IsInterface() Err "Cannot create instance of an interface."
-			If classDecl.IsAbstract() Err "Cannot create instance of an abstract class."
+			If classDecl.IsAbstract() Err "Cannot create instance of abstract type " + classDecl.ToString() + ..
+				", which is either declared Abstract or has (or inherits) an abstract Method."
 		End If
 		'If classDecl.IsTemplateArg() Err "Cannot create instance of a generic argument."
 		If classDecl.args And Not classDecl.instanceof Err "Cannot create instance of a generic class."
@@ -2724,6 +2725,7 @@ Type TIdentExpr Extends TExpr
 			If expr And Not static Then
 				Return New TInvokeMemberExpr.Create( expr,fdecl,args ).Semant()
 			Else
+				If fdecl.IsStatic() And fdecl.IsAbstract() Err "Cannot call abstract " + fdecl.ToString()
 				Return New TInvokeExpr.Create( fdecl,args, funcCall ).Semant()
 			End If
 		EndIf

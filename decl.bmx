@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2017 Bruce A Henderson
+' Copyright (c) 2013-2018 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -2715,18 +2715,7 @@ End Rem
 		'If IsTemplateInst()
 		'	Return
 		'EndIf
-		
-		'Are we abstract?
-		If Not IsAbstract()
-			For Local decl:TDecl=EachIn _decls
-				Local fdecl:TFuncDecl=TFuncDecl( decl )
-				If fdecl And fdecl.IsAbstract()
-					attrs:|DECL_ABSTRACT
-					Exit
-				EndIf
-			Next
-		EndIf
-		
+				
 		If Not lastOffset And superClass Then
 			lastOffset = superClass.LastOffset
 		End If
@@ -2868,28 +2857,22 @@ End Rem
 		PushErr errInfo
 		
 		If Not IsInterface()
-			'
-			'check for duplicate fields! - BlitzMax supports fields with the same name in subclasses..
-			'
-			'For Local decl:TDecl=EachIn Semanted()
-			'	Local fdecl:TFieldDecl=TFieldDecl( decl )
-			'	If Not fdecl Continue
-			'	Local cdecl:TClassDecl=superClass
-			'	While cdecl
-			'		For Local decl:TDecl=EachIn cdecl.Semanted()
-			'			If decl.ident=fdecl.ident Err "Field '"+fdecl.ident+"' in class "+ToString()+" overrides existing declaration in class "+cdecl.ToString()
-			'		Next
-			'		cdecl=cdecl.superClass
-			'	Wend
-			'Next
-			'
-			'Check we implement all abstract methods!
-			'
+
+			' BlitzMax types are promoted to Abstract if they have an abstract method
+			If Not IsAbstract()
+				For Local fdecl:TFuncDecl = EachIn GetAllFuncDecls()
+					If fdecl.IsMethod() And fdecl.IsAbstract()
+						attrs:|DECL_ABSTRACT
+					End If
+				Next
+			End If
+
+			' Check we implement all abstract methods!
 			If IsInstanced()
 				Local cdecl:TClassDecl=Self
 				Local impls:TList=New TList'<TFuncDecl>
 				While cdecl
-					For Local decl:TFuncDecl=EachIn cdecl.SemantedMethods()
+					For Local decl:TFuncDecl=EachIn cdecl.SemantedFuncs()
 						If decl.IsAbstract()
 							Local found:Int
 							For Local decl2:TFuncDecl=EachIn impls
@@ -2899,7 +2882,7 @@ End Rem
 								EndIf
 							Next
 							If Not found
-								Err "Can't create instance of type "+ToString()+" due to abstract method "+decl.ToString()+"."
+                                Err "Can't create instance of type "+ToString()+" due to abstract method "+decl.ToString()+"."
 							EndIf
 						Else
 							impls.AddLast decl

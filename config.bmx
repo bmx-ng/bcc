@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2017 Bruce A Henderson
+' Copyright (c) 2013-2018 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -424,7 +424,11 @@ Type TTemplateRecord
 	Method ToString:String()
 
 		Local s:Byte Ptr = source.ToUTF8String()
+?Not bmxng
 		Local slen:Int = strlen_(s)
+?bmxng
+		Local slen:UInt = strlen_(s)
+?
 
 ?Not bmxng		
 		Local dlen:Int = slen + 12
@@ -459,9 +463,11 @@ Type TTemplateRecord
 		Local data:Byte[dlen]
 		
 		Local s:Byte[] = TBase64.Decode(source)
-		
+?Not bmxng
 		uncompress(data, dlen, s, s.length)
-	
+?bmxng
+		uncompress(data, dlen, s, UInt(s.length))
+?	
 		Return New TTemplateRecord.Create(start, file, String.FromUTF8String(data))
 	End Function
 End Type
