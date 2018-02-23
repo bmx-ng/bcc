@@ -814,6 +814,8 @@ Type TNewObjectExpr Extends TExpr
 		Local it:TIdentType = TIdentType(ty)
 		Local iArgs:TExpr[] = SemantArgs(CopyArgs(args))
 
+		Local isNewSelf:Int = (it.ident = "self")
+		
 		ty=ty.Semant(True)
 		If Not ty Then
 			' maybe it's an instance of a type ?
@@ -877,7 +879,11 @@ Type TNewObjectExpr Extends TExpr
 			End If
 		EndIf
 
-		classDecl.attrs:|CLASS_INSTANCED
+		' New Self doesn't necessarily create an instance of ourself - we might be an instance of
+		' a subclass at the time...
+		If Not isNewSelf Then
+			classDecl.attrs:|CLASS_INSTANCED
+		End If
 
 		If TClassType(ty) Then
 			exprType=New TObjectType.Create(TClassType(ty).classDecl)
