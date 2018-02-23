@@ -814,7 +814,7 @@ Type TNewObjectExpr Extends TExpr
 		Local it:TIdentType = TIdentType(ty)
 		Local iArgs:TExpr[] = SemantArgs(CopyArgs(args))
 
-		Local isNewSelf:Int = (it.ident = "self")
+		Local isNewSelf:Int = (it And it.ident = "self")
 		
 		ty=ty.Semant(True)
 		If Not ty Then
