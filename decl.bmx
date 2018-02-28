@@ -1831,6 +1831,10 @@ Type TFuncDecl Extends TBlockDecl
 	Method EqualsArgs:Int( decl:TFuncDecl ) ' careful, this is not commutative!
 		If argDecls.Length<>decl.argDecls.Length Return False
 		For Local i:Int=0 Until argDecls.Length
+			' ensure arg decls have been semanted
+			decl.argDecls[i].Semant()
+			argDecls[i].Semant()
+			
 			' objects can be subclasses as well as the same.
 			If TObjectType(decl.argDecls[i].ty) Then
 				If Not decl.argDecls[i].ty.EqualsType( argDecls[i].ty ) And Not decl.argDecls[i].ty.ExtendsType( argDecls[i].ty ) Return False
