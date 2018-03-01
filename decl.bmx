@@ -2873,27 +2873,11 @@ End Rem
 
 			' Check we implement all abstract methods!
 			If IsInstanced()
-				Local cdecl:TClassDecl=Self
-				Local impls:TList=New TList'<TFuncDecl>
-				While cdecl
-					For Local decl:TFuncDecl=EachIn cdecl.SemantedFuncs()
-						If decl.IsAbstract()
-							Local found:Int
-							For Local decl2:TFuncDecl=EachIn impls
-								If decl.IdentLower() = decl2.IdentLower() And decl2.EqualsFunc( decl )
-									found=True
-									Exit
-								EndIf
-							Next
-							If Not found
-                                Err "Can't create instance of type "+ToString()+" due to abstract method "+decl.ToString()+"."
-							EndIf
-						Else
-							impls.AddLast decl
-						EndIf
-					Next
-					cdecl=cdecl.superClass
-				Wend
+				For Local fdecl:TFuncDecl = EachIn GetAllFuncDecls()
+					If fdecl.IsAbstract() Then
+						Err "Can't create instance of type "+ToString()+" due to abstract "+fdecl.ToString()+"."
+					End If
+				Next
 			EndIf
 			'
 			'Check we implement all interface methods!
