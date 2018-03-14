@@ -445,7 +445,7 @@ Type TTemplateRecord
 		
 		Local t:String = "{" + start +","+ slen +","+ LangEnquote(file) + ","
 		
-		t :+ LangEnquote(TBase64.Encode(data, dlen, 0, TBase64.DONT_BREAK_LINES))
+		t :+ LangEnquote(TBase64.Encode(data, Int(dlen), 0, TBase64.DONT_BREAK_LINES))
 
 		Return t + "}"
 
