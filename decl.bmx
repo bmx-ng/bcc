@@ -2306,7 +2306,13 @@ End Rem
 			If equal Return inst
 		Next
 
-		Local inst:TClassDecl=New TClassDecl.Create( ident,Null,superTy,impltys, attrs )
+		Local inst:TClassDecl = TClassDecl(TGenProcessor.processor.ParseGeneric(templateSource))
+		inst.ident=ident
+		inst.args=Null
+		inst.instances = Null
+		inst.superTy=superTy
+		inst.impltys=impltys
+		inst.attrs=attrs
 
 		inst.attrs:&~DECL_SEMANTED
 
@@ -2320,26 +2326,35 @@ End Rem
 		
 		inst.declImported = declImported
 
+		PushEnv inst
+
 		For Local i:Int=0 Until args.Length
 		
+			Local arg:TTemplateArg = args[i]
+
+			inst.InsertDecl New TAliasDecl.Create( arg.ident,instArgs[i],0 )
+
 			' ensure parameter types are compatible
-			If args[i].superTy Then
-				args[i].superTy = args[i].superTy.Semant()
-				If Not instArgs[i].EqualsType(args[i].superTy) And Not instArgs[i].ExtendsType(args[i].superTy) Then
-					Err "Type parameter '" + instArgs[i].ToString() + "' is not within its bound; should extend '" + args[i].superTy.ToString() + "'"
-				End If
+			If arg.superTy Then
+				For Local n:Int = 0 Until arg.superTy.length
+					arg.superTy[n] = arg.superTy[n].Semant()
+					If Not instArgs[i].EqualsType(arg.superTy[n]) And Not instArgs[i].ExtendsType(arg.superTy[n]) Then
+						Err "Type parameter '" + instArgs[i].ToString() + "' is not within its bound; should extend '" + arg.superTy[n].ToString() + "'"
+					End If
+				Next
 			End If
 		
-			inst.InsertDecl New TAliasDecl.Create( args[i].ident,instArgs[i],0 )
 		Next
+		
+		PopEnv
 
-		For Local decl:TDecl=EachIn _decls
-			If TClassDecl(decl) Then
-				inst.InsertDecl TClassDecl(decl).GenClassInstance(instArgs, declImported), True
-			Else
-				inst.InsertDecl decl.Copy(), True
-			End If
-		Next
+'		For Local decl:TDecl=EachIn _decls
+'			If TClassDecl(decl) Then
+'				inst.InsertDecl TClassDecl(decl).GenClassInstance(instArgs, declImported), True
+'			Else
+'				inst.InsertDecl decl.Copy(), True
+'			End If
+'		Next
 
 		If Not declImported Then
 			inst.scope = _env.ModuleScope()

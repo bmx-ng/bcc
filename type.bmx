@@ -2012,12 +2012,26 @@ End Type
 
 Type TTemplateArg
 	Field ident:String
-	Field superTy:TType
+	Field superTy:TType[]
+	
+	Method ExtendsType(ty:TType)
+		If Not superTy Then
+			superTy = New TType[0]
+		End If
+		
+		superTy :+ [ty]
+	End Method
 	
 	Method ToString:String()
 		Local s:String = ident
 		If superTy Then
-			s :+ " Extends " + superTy.ToString()
+			s :+ " Extends "
+			For Local i:Int = 0 Until superTy.length
+				If i Then
+					s:+ " And "
+				End If
+				s :+ superTy[i].ToString()
+			Next
 		End If
 	End Method
 End Type

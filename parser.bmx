@@ -336,7 +336,7 @@ Type TIncbin
 End Type
 
 '***** Parser *****
-Type TParser
+Type TParser Extends TGenProcessor
 
 	Field _toker:TToker
 	Field _toke:String
@@ -2980,9 +2980,9 @@ End Rem
 				Local arg:TTemplateArg = New TTemplateArg
 				arg.ident = ParseIdent()
 				
-				If CParse("extends") Then
-					arg.superTy = ParseIdentType()
-				End If
+'				If CParse("extends") Then
+'					arg.superTy = ParseIdentType()
+'				End If
 				
 				args.AddLast arg
 
@@ -2990,6 +2990,34 @@ End Rem
 			'args=args[..nargs]
 
 			Parse ">"
+
+			If CParse( "where" ) Then
+'DebugStop
+				Repeat
+					Local argIdent:String = ParseIdent()
+					
+					Parse("extends")
+					
+					Local found:Int
+					For Local arg:TTemplateArg = EachIn args
+						If arg.ident = argIdent Then
+						
+							Repeat
+							
+								arg.ExtendsType(ParseIdentType())
+							
+							Until Not CParse("and")
+						
+							found = True
+							Exit
+						EndIf
+					Next
+					If Not found Then
+						Err "Use of undeclared type '" + argIdent + "'."
+					End If
+					
+				Until Not CParse(",")
+			End If
 		EndIf
 
 		If CParse( "extends" )
@@ -3681,6 +3709,24 @@ End Rem
 		Return attrs
 	End Method
 
+	Method ParseGeneric:Object(templateSource:TTemplateRecord)
+		Local toker:TToker = New TToker.Create(templateSource.file, templateSource.source, False, templateSource.start)
+		Local parser:TParser = New TParser.Create( toker, _appInstance )
+		
+		Local m:TModuleDecl = New TModuleDecl
+		parser._module = m
+		
+		Local cdecl:TClassDecl = Null
+		
+		Select parser._toke
+		Case "type"
+			cdecl = parser.ParseClassDecl(parser._toke,0)
+		Case "interface"
+			cdecl = parser.ParseClassDecl(parser._toke, CLASS_INTERFACE|DECL_ABSTRACT )
+		End Select
+		
+		Return cdecl
+	End Method
 
 	Method ParseMain()
 
