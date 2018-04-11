@@ -52,7 +52,7 @@ Type TType
 		Return T_MAX_DISTANCE
 	End Method
 	
-	Method Semant:TType(option:Int = False)
+	Method Semant:TType(option:Int = False, callback:TCallback = Null)
 		Return Self
 	End Method
 
@@ -1352,7 +1352,7 @@ Type TStringType Extends TType
 		Return cdecl
 	End Method
 	
-	Method Semant:TType(option:Int = 0)
+	Method Semant:TType(option:Int = 0, callback:TCallback = Null)
 		GetClass()
 		Return Self
 	End Method
@@ -1400,8 +1400,8 @@ Type TArrayType Extends TType
 		Return (arrayType And dims = arrayType.dims And ( TVoidType( elemType ) Or (TObjectType(elemType) And elemType.EqualsType( arrayType.elemType ) Or elemType.ExtendsType( arrayType.elemType )))) Or IsPointerType(ty, 0, TType.T_POINTER) <> Null Or (TObjectType( ty ) And TObjectType( ty ).classDecl.ident="Object")
 	End Method
 	
-	Method Semant:TType(option:Int = False)
-		Local ty:TType=elemType.Semant()
+	Method Semant:TType(option:Int = False, callback:TCallback = Null)
+		Local ty:TType=elemType.Semant(option, callback)
 		If ty<>elemType Return New TArrayType.Create( ty, dims )
 		Return Self
 	End Method
@@ -1538,13 +1538,13 @@ Type TIdentType Extends TType
 	'End Method
 	
 	
-	Method Semant:TType(ignoreNotFoundError:Int = 0)
+	Method Semant:TType(ignoreNotFoundError:Int = 0, callback:TCallback = Null)
 'If ident="IPair" DebugStop
 		If Not ident Return TType.nullObjectType
 
 		Local targs:TType[args.Length]
 		For Local i:Int=0 Until args.Length
-			targs[i]=args[i].Semant()
+			targs[i]=args[i].Semant(ignoreNotFoundError, callback)
 		Next
 		
 		Local tyid$,ty:TType
@@ -1571,13 +1571,13 @@ Type TIdentType Extends TType
 			End If
 			
 			If Not ty Then
-				ty=_env.FindType( tyid,targs )
+				ty=_env.FindType( tyid,targs, callback )
 			End If
 
 			' finally scan all modules for it
 			If Not ty Then
 				For Local mdecl:TModuleDecl = EachIn _appInstance.globalImports.Values()
-					ty=mdecl.FindType( tyid,targs )
+					ty=mdecl.FindType( tyid,targs, callback )
 					If ty Exit
 				Next
 			End If
@@ -1606,7 +1606,7 @@ Type TIdentType Extends TType
 			End If
 			
 			If Not ty Then
-				ty=_env.FindType( tyid,targs )
+				ty=_env.FindType( tyid,targs, callback )
 			End If
 			
 			If Not ty Then
@@ -1614,7 +1614,7 @@ Type TIdentType Extends TType
 		
 				' try scope search first
 				tyid=id[..i]
-				ty=_env.FindType( tyid,targs )				
+				ty=_env.FindType( tyid,targs, callback )				
 
 				If Not ty Then
 					' no? now try module search
@@ -1622,7 +1622,7 @@ Type TIdentType Extends TType
 					Local mdecl:TModuleDecl=_env.FindModuleDecl( modid )
 					If Not mdecl Err "Module '"+modid+"' not found"
 					tyid=id[i+1..]
-					ty=mdecl.FindType( tyid,targs )
+					ty=mdecl.FindType( tyid,targs, callback )
 				End If
 			End If
 		EndIf
@@ -1650,8 +1650,8 @@ Type TIdentType Extends TType
 		Return ty
 	End Method
 
-	Method SemantClass:TClassDecl()
-		Local ty:TObjectType=TObjectType( Semant() )
+	Method SemantClass:TClassDecl(callback:TCallback = Null)
+		Local ty:TObjectType=TObjectType( Semant(False, callback) )
 		If Not ty Err "Type is not a class"
 		Return ty.classDecl
 	End Method
@@ -1804,7 +1804,7 @@ Type TFunctionPtrType Extends TType
 		Return ty
 	End Method
 
-	Method Semant:TType(option:Int = False)
+	Method Semant:TType(option:Int = False, callback:TCallback = Null)
 		func.Semant()
 		Return Self
 	End Method

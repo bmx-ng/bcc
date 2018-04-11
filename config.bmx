@@ -481,6 +481,10 @@ Type TGenProcessor Abstract
 	
 End Type
 
+Type TCallback
+	Method Callback(obj:Object) Abstract
+End Type
+
 Extern
 	Function strlen_:Int(s:Byte Ptr)="strlen"
 End Extern

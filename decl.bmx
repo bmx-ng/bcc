@@ -401,7 +401,7 @@ Type TValDecl Extends TDecl
 					End If
 				End If
 			End If
-			
+
 			ty=declTy.Semant()
 
 			If Not deferInit Then
@@ -1129,7 +1129,7 @@ Type TScopeDecl Extends TDecl
 		Return decl
 	End Method
 
-	Method FindType:TType( ident$,args:TType[] )
+	Method FindType:TType( ident$,args:TType[], callback:TCallback = Null )
 'DebugLog Self.ident + "::FindType::" + ident
 		Local decl:Object=(GetDecl( ident ))
 		If decl Then
@@ -1145,13 +1145,13 @@ Type TScopeDecl Extends TDecl
 			If cdecl
 				cdecl.AssertAccess
 				If Not cdecl.instanceof Then
-					cdecl=cdecl.GenClassInstance( args )
+					cdecl=cdecl.GenClassInstance( args, False, callback )
 					cdecl.Semant
 				End If
 				Return cdecl.objectType
 			EndIf
 		EndIf
-		If scope Return scope.FindType( ident,args )
+		If scope Return scope.FindType( ident,args, callback )
 	End Method
 	
 	Method FindScopeDecl:TScopeDecl( ident$ )
@@ -1900,7 +1900,6 @@ Type TFuncDecl Extends TBlockDecl
 					End If
 				End If
 			End If
-		
 			retType=retTypeExpr.Semant()
 			
 			' for Strict code, a void return type becomes Int
@@ -2153,6 +2152,16 @@ Type TNullDecl Extends TClassDecl
 
 End Type
 
+' used to handle recursive generics
+' by setting the superclass as soon as we know it,
+' which allows the semanting of the instance to complete.
+Type TClassDeclCallback Extends TCallback
+	Field decl:TClassDecl
+	Method callback(obj:Object)
+		decl.superClass = TClassDecl(obj)
+	End Method
+End Type
+
 Type TClassDecl Extends TScopeDecl
 
 	Field lastOffset:Int
@@ -2277,7 +2286,7 @@ Rem
 		Return inst
 	End Method
 End Rem
-	Method GenClassInstance:TClassDecl( instArgs:TType[], declImported:Int = False )
+	Method GenClassInstance:TClassDecl( instArgs:TType[], declImported:Int = False, callback:TCallback = Null )
 
 		If instanceof InternalErr
 		
@@ -2326,6 +2335,10 @@ End Rem
 		
 		inst.declImported = declImported
 
+		If callback Then
+			callback.callback(inst)
+		End If
+
 		PushEnv inst
 		
 		' install aliases
@@ -2340,8 +2353,17 @@ End Rem
 
 			' ensure parameter types are compatible
 			If arg.superTy Then
+
+				'If Not instArgs[i].IsSemanted() Then
+				If TObjectType(instArgs[i]) Then
+					TObjectType(instArgs[i]).classDecl.Semant()
+				End If
+				'End If
+			
 				For Local n:Int = 0 Until arg.superTy.length
+
 					arg.superTy[n] = arg.superTy[n].Semant()
+
 					If Not instArgs[i].EqualsType(arg.superTy[n]) And Not instArgs[i].ExtendsType(arg.superTy[n]) Then
 						Err "Type parameter '" + instArgs[i].ToString() + "' is not within its bound; should extend '" + arg.superTy[n].ToString() + "'"
 					End If
@@ -2676,9 +2698,11 @@ End Rem
 
 		'Semant superclass		
 		If superTy
-			'superClass=superTy.FindClass()
+			Local cb:TClassDeclCallback = New TClassDeclCallback
+			cb.decl = Self
+			
 			attrs :| DECL_CYCLIC
-			superClass=superTy.SemantClass()
+			superClass=superTy.SemantClass(cb)
 			attrs :~ DECL_CYCLIC
 			If superClass.IsInterface() Then
 				If Not IsExtern() Or Not superClass.IsExtern() Err superClass.ToString()+" is an interface, not a class."
