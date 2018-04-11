@@ -201,6 +201,7 @@ Type TExpr
 				If TObjectType(rhs) And TObjectType(rhs).classDecl.ident = "Object" Then
 					Return rhs
 				End If
+				Return New TStringType
 			Else
 				Return New TStringType
 			End If

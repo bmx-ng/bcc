@@ -336,7 +336,7 @@ Type TIncbin
 End Type
 
 '***** Parser *****
-Type TParser
+Type TParser Extends TGenProcessor
 
 	Field _toker:TToker
 	Field _toke:String
@@ -514,7 +514,7 @@ Type TParser
 
 	Method ParseIdentType:TIdentType()
 		Local id$=ParseIdent()
-'DebugLog "ParseIdentType : " + id
+
 		If CParse( "." ) id:+"."+ParseIdent()
 		If CParse( "." ) id:+"."+ParseIdent()
 
@@ -522,8 +522,19 @@ Type TParser
 		If CParse( "<" )
 			Local nargs:Int
 			Repeat
-				'Local arg:TIdentType=ParseIdentType()
 				Local arg:TType = ParseType()
+				
+				Repeat
+					If (_toke = "[" Or _toke = "[]") And IsArrayDef()
+						arg = ParseArrayType(arg)
+					Else If _toke = "(" Then
+						Local argDecls:TArgDecl[] = ParseFuncParamDecl()
+						arg = New TFunctionPtrType.Create(New TFuncDecl.CreateF("", arg, argDecls, FUNC_PTR))
+					Else
+						Exit
+					End If
+				Forever
+				
 				If args.Length=nargs args=args+ New TType[10]
 				args[nargs]=arg
 				nargs:+1
@@ -2980,9 +2991,9 @@ End Rem
 				Local arg:TTemplateArg = New TTemplateArg
 				arg.ident = ParseIdent()
 				
-				If CParse("extends") Then
-					arg.superTy = ParseIdentType()
-				End If
+'				If CParse("extends") Then
+'					arg.superTy = ParseIdentType()
+'				End If
 				
 				args.AddLast arg
 
@@ -2990,6 +3001,34 @@ End Rem
 			'args=args[..nargs]
 
 			Parse ">"
+
+			If CParse( "where" ) Then
+'DebugStop
+				Repeat
+					Local argIdent:String = ParseIdent()
+					
+					Parse("extends")
+					
+					Local found:Int
+					For Local arg:TTemplateArg = EachIn args
+						If arg.ident = argIdent Then
+						
+							Repeat
+							
+								arg.ExtendsType(ParseIdentType())
+							
+							Until Not CParse("and")
+						
+							found = True
+							Exit
+						EndIf
+					Next
+					If Not found Then
+						Err "Use of undeclared type '" + argIdent + "'."
+					End If
+					
+				Until Not CParse(",")
+			End If
 		EndIf
 
 		If CParse( "extends" )
@@ -3681,6 +3720,24 @@ End Rem
 		Return attrs
 	End Method
 
+	Method ParseGeneric:Object(templateSource:TTemplateRecord)
+		Local toker:TToker = New TToker.Create(templateSource.file, templateSource.source, False, templateSource.start)
+		Local parser:TParser = New TParser.Create( toker, _appInstance )
+		
+		Local m:TModuleDecl = New TModuleDecl
+		parser._module = m
+		
+		Local cdecl:TClassDecl = Null
+		
+		Select parser._toke
+		Case "type"
+			cdecl = parser.ParseClassDecl(parser._toke,0)
+		Case "interface"
+			cdecl = parser.ParseClassDecl(parser._toke, CLASS_INTERFACE|DECL_ABSTRACT )
+		End Select
+		
+		Return cdecl
+	End Method
 
 	Method ParseMain()
 

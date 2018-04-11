@@ -4327,6 +4327,10 @@ End Rem
 			' field initialisation
 			For Local decl:TFieldDecl=EachIn classDecl.Decls()
 			
+				If Not decl.IsSemanted() Then
+					decl.Semant()
+				End If
+			
 				Local fld:String
 	
 				' ((int*)((char*)o + 5))[0] =

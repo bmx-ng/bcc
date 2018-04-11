@@ -47,6 +47,8 @@ If opt_buildtype = BUILDTYPE_MODULE Then
 	End If
 End If
 
+TGenProcessor.processor = New TParser
+
 Local app:TAppDecl 
 Local trans:TCTranslator 
 Try
