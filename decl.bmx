@@ -2327,12 +2327,16 @@ End Rem
 		inst.declImported = declImported
 
 		PushEnv inst
+		
+		' install aliases
+		For Local i:Int=0 Until args.Length
+			inst.InsertDecl New TAliasDecl.Create( args[i].ident,instArgs[i],0 )
+		Next
 
+		' process parameter types
 		For Local i:Int=0 Until args.Length
 		
 			Local arg:TTemplateArg = args[i]
-
-			inst.InsertDecl New TAliasDecl.Create( arg.ident,instArgs[i],0 )
 
 			' ensure parameter types are compatible
 			If arg.superTy Then
