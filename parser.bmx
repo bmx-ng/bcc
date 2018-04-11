@@ -514,7 +514,7 @@ Type TParser Extends TGenProcessor
 
 	Method ParseIdentType:TIdentType()
 		Local id$=ParseIdent()
-'DebugLog "ParseIdentType : " + id
+
 		If CParse( "." ) id:+"."+ParseIdent()
 		If CParse( "." ) id:+"."+ParseIdent()
 
@@ -522,8 +522,19 @@ Type TParser Extends TGenProcessor
 		If CParse( "<" )
 			Local nargs:Int
 			Repeat
-				'Local arg:TIdentType=ParseIdentType()
 				Local arg:TType = ParseType()
+				
+				Repeat
+					If (_toke = "[" Or _toke = "[]") And IsArrayDef()
+						arg = ParseArrayType(arg)
+					Else If _toke = "(" Then
+						Local argDecls:TArgDecl[] = ParseFuncParamDecl()
+						arg = New TFunctionPtrType.Create(New TFuncDecl.CreateF("", arg, argDecls, FUNC_PTR))
+					Else
+						Exit
+					End If
+				Forever
+				
 				If args.Length=nargs args=args+ New TType[10]
 				args[nargs]=arg
 				nargs:+1
