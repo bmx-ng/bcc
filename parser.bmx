@@ -2949,7 +2949,7 @@ End Rem
 	End Method
 	
 
-	Method ParseClassDecl:TClassDecl( toke$,attrs:Int )
+	Method ParseClassDecl:TClassDecl( toke$,attrs:Int, templateDets:TTemplateDets = Null )
 		SetErr
 
 		Local calculatedStartLine:Int = _toker.Line()
@@ -3267,7 +3267,13 @@ End Rem
 				Local decl:TFuncDecl=ParseFuncDecl( _toke,decl_attrs,classDecl )
 				classDecl.InsertDecl decl
 			Case "type"
-				classDecl.InsertDecl ParseClassDecl( _toke,DECL_NESTED)
+				If templateDets Then
+					Local cdecl:TClassDecl = ParseClassDecl( _toke,DECL_NESTED, templateDets)
+					cdecl = cdecl.GenClassInstance(templateDets.instArgs, False, Null, templateDets)
+					classDecl.InsertDecl cdecl, True
+				Else
+					classDecl.InsertDecl ParseClassDecl( _toke,DECL_NESTED)
+				End If
 			Default
 				Err "Syntax error - expecting class member declaration, not '" + _toke + "'"
 			End Select
@@ -3720,7 +3726,7 @@ End Rem
 		Return attrs
 	End Method
 
-	Method ParseGeneric:Object(templateSource:TTemplateRecord)
+	Method ParseGeneric:Object(templateSource:TTemplateRecord, templateDets:TTemplateDets)
 		Local toker:TToker = New TToker.Create(templateSource.file, templateSource.source, False, templateSource.start)
 		Local parser:TParser = New TParser.Create( toker, _appInstance )
 		
@@ -3731,9 +3737,9 @@ End Rem
 		
 		Select parser._toke
 		Case "type"
-			cdecl = parser.ParseClassDecl(parser._toke,0)
+			cdecl = parser.ParseClassDecl(parser._toke,0, templateDets )
 		Case "interface"
-			cdecl = parser.ParseClassDecl(parser._toke, CLASS_INTERFACE|DECL_ABSTRACT )
+			cdecl = parser.ParseClassDecl(parser._toke, CLASS_INTERFACE|DECL_ABSTRACT, templateDets )
 		End Select
 		
 		Return cdecl

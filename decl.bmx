@@ -1145,7 +1145,7 @@ Type TScopeDecl Extends TDecl
 			If cdecl
 				cdecl.AssertAccess
 				If Not cdecl.instanceof Then
-					cdecl=cdecl.GenClassInstance( args, False, callback )
+					cdecl=cdecl.GenClassInstance( args, False, callback, Null )
 					cdecl.Semant
 				End If
 				Return cdecl.objectType
@@ -2286,7 +2286,7 @@ Rem
 		Return inst
 	End Method
 End Rem
-	Method GenClassInstance:TClassDecl( instArgs:TType[], declImported:Int = False, callback:TCallback = Null )
+	Method GenClassInstance:TClassDecl( instArgs:TType[], declImported:Int = False, callback:TCallback = Null, templateDets:TTemplateDets = Null )
 
 		If instanceof InternalErr
 		
@@ -2314,8 +2314,12 @@ End Rem
 			Next
 			If equal Return inst
 		Next
+		
+		If Not templateDets Then
+			templateDets = New TTemplateDets.Create(instArgs)
+		End If
 
-		Local inst:TClassDecl = TClassDecl(TGenProcessor.processor.ParseGeneric(templateSource))
+		Local inst:TClassDecl = TClassDecl(TGenProcessor.processor.ParseGeneric(templateSource, templateDets))
 		inst.ident=ident
 		inst.args=Null
 		inst.instances = Null
@@ -3660,4 +3664,24 @@ Type TStringConst
 	Field id:String
 	Field count:Int
 
+End Type
+
+Type TTemplateDets
+
+	Field instArgs:TType[]
+
+	Method Create:TTemplateDets(instArgs:TType[])
+		Self.instArgs = instArgs
+		Return Self
+	End Method
+
+End Type
+
+Type TGenProcessor Abstract
+
+	Global processor:TGenProcessor
+
+	Method ParseGeneric:Object(templ:TTemplateRecord, dets:TTemplateDets)
+	End Method
+	
 End Type

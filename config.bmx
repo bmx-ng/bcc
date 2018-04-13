@@ -472,15 +472,6 @@ Type TTemplateRecord
 	End Function
 End Type
 
-Type TGenProcessor Abstract
-
-	Global processor:TGenProcessor
-
-	Method ParseGeneric:Object(templ:TTemplateRecord)
-	End Method
-	
-End Type
-
 Type TCallback
 	Method Callback(obj:Object) Abstract
 End Type
