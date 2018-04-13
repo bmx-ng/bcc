@@ -2298,9 +2298,34 @@ End Rem
 			Next
 		EndIf
 		
+		Local originalInstArgs:TType[] = instArgs
+		
 		'check number of args
-		If args.Length<>instArgs.Length
-			Err "Wrong number of type arguments for class "+ToString()
+		If args.Length<>instArgs.Length Then
+			If Not templateDets Or args.Length > instArgs.Length Then
+				Err "Wrong number of type arguments for class "+ToString()
+			Else
+				' create new instArgs with matched aliases
+				Local newInstArgs:TType[] = New TType[args.length]
+				For Local i:Int = 0 Until args.length
+					Local arg:TTemplateArg = args[i]
+					Local instArg:TType
+					' find match
+					For Local n:Int = 0 Until templateDets.args.length
+						Local templateArg:TTemplateArg = templateDets.args[n]
+						If templateArg.ident.ToLower() = arg.ident.ToLower() Then
+							instArg = instArgs[n]
+							Exit
+						End If
+					Next
+					If Not instArg Then
+						Err "Cannot find argument type '" + arg.ident + "' for class " + ToString()
+					End If
+					newInstArgs[i] = instArg
+				Next
+				
+				instArgs = newInstArgs
+			End If
 		EndIf
 		
 		'look for existing instance
@@ -2316,7 +2341,8 @@ End Rem
 		Next
 		
 		If Not templateDets Then
-			templateDets = New TTemplateDets.Create(instArgs)
+			' pass in the original instargs, as an inner-inner type will be able to see all of the originals
+			templateDets = New TTemplateDets.Create(originalInstArgs, args)
 		End If
 
 		Local inst:TClassDecl = TClassDecl(TGenProcessor.processor.ParseGeneric(templateSource, templateDets))
@@ -3669,9 +3695,11 @@ End Type
 Type TTemplateDets
 
 	Field instArgs:TType[]
+	Field args:TTemplateArg[]
 
-	Method Create:TTemplateDets(instArgs:TType[])
+	Method Create:TTemplateDets(instArgs:TType[], args:TTemplateArg[])
 		Self.instArgs = instArgs
+		Self.args = args
 		Return Self
 	End Method
 
