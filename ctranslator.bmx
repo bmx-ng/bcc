@@ -4689,11 +4689,11 @@ End Rem
 
 	Method TransFieldRef:String(decl:TFieldDecl, variable:String, exprType:TType = Null)
 		Local s:String = variable
-'DebugStop
+		
 		Local ind:String = "->"
 		If decl.scope And TClassDecl(decl.scope) And TClassDecl(decl.scope).IsStruct() Then
-			Local exprIsStruct:Int = TObjectType(exprType) And TObjectType(exprType).classDecl.attrs & CLASS_STRUCT
-			If exprType And (exprIsStruct Or Not IsPointerType(exprType)) And variable <> "o" Then
+			Local exprIsStruct:Int = Not exprType Or (TObjectType(exprType) And TObjectType(exprType).classDecl.attrs & CLASS_STRUCT)
+			If (exprIsStruct Or (exprType And Not IsPointerType(exprType))) And variable <> "o" Then
 				ind = "."
 			End If
 		End If
