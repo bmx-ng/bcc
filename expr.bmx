@@ -1795,8 +1795,16 @@ Type TBinaryMathExpr Extends TBinaryExpr
 			Select op
 			Case "^" Return x^y
 			Case "*" Return x*y
-			Case "/" Return x/y
-			Case "mod" Return x Mod y
+			Case "/" 
+				If Not y Then
+					Err "Integer division by zero"
+				End If
+				Return x/y
+			Case "mod"
+				If Not y Then
+					Err "Integer division by zero"
+				End If
+				Return x Mod y
 			Case "shl" Return x Shl y
 			Case "shr" Return x Shr y
 			Case "+" Return x + y
@@ -1810,8 +1818,16 @@ Type TBinaryMathExpr Extends TBinaryExpr
 			Select op
 			Case "^" Return x^y
 			Case "*" Return x*y
-			Case "/" Return x/y
-			Case "mod" Return x Mod y
+			Case "/"
+				If Not y Then
+					Err "Integer division by zero"
+				End If
+				Return x/y
+			Case "mod"
+				If Not y Then
+					Err "Integer division by zero"
+				End If
+				Return x Mod y
 			Case "shl" Return x Shl y
 			Case "shr" Return x Shr y
 			Case "+" Return x + y
