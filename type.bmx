@@ -1378,9 +1378,10 @@ Type TArrayType Extends TType
 	Field elemType:TType
 	Field dims:Int
 	
-	Method Create:TArrayType( elemType:TType, dims:Int = 1 )
+	Method Create:TArrayType( elemType:TType, dims:Int = 1, flags:Int = 0 )
 		Self.elemType=elemType
 		Self.dims = dims
+		Self._flags = flags
 		Return Self
 	End Method
 	
@@ -1402,7 +1403,7 @@ Type TArrayType Extends TType
 	
 	Method Semant:TType(option:Int = False, callback:TCallback = Null)
 		Local ty:TType=elemType.Semant(option, callback)
-		If ty<>elemType Return New TArrayType.Create( ty, dims )
+		If ty<>elemType Return New TArrayType.Create( ty, dims, _flags )
 		Return Self
 	End Method
 	
