@@ -1606,6 +1606,25 @@ Type TUnaryExpr Extends TExpr
 	Method Semant:TExpr()
 		If exprType Return Self
 
+		expr = expr.Semant()
+
+		' operator overload?
+		If TObjectType(expr.exprType) Then
+			'Local args:TExpr[] = [rhs]
+			Try
+				Local decl:TFuncDecl = TFuncDecl(TObjectType(expr.exprType).classDecl.FindFuncDecl(op, Null,,,,True,SCOPE_CLASS_HEIRARCHY))
+				If decl Then
+					Return New TInvokeMemberExpr.Create( expr, decl, Null ).Semant()
+				End If
+			Catch error:String
+				If error.StartsWith("Compile Error") Then
+					Throw error
+				Else
+					Err "Operator " + op + " cannot be used with Objects."
+				End If
+			End Try
+		End If
+
 		Select op
 		Case "+","-"
 			expr=expr.Semant()
