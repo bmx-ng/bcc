@@ -1018,8 +1018,15 @@ t:+"NULLNULLNULL"
 										Return "_" + decl.munged+TransArgs( args,decl, TransSubExpr( lhs ) )
 									End If
 								Else
-									Local class:String = Bra(TransSubExpr( lhs )) + "->clas" + tSuper
-									Return class + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, TransSubExpr( lhs ) )
+									Local obj:String = TransSubExpr( lhs )
+									Local preObj:String = obj
+									
+									If opt_debug Then
+										preObj = TransDebugNullObjectError(obj, cdecl)
+									End If
+									
+									Local class:String = Bra(preObj) + "->clas" + tSuper
+									Return class + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, obj )
 '									Local class:String = Bra(lvarInit) + "->clas" + tSuper
 '									Return class + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, lvar )
 								End If
