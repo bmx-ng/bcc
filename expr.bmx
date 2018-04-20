@@ -1609,7 +1609,7 @@ Type TUnaryExpr Extends TExpr
 		expr = expr.Semant()
 
 		' operator overload?
-		If TObjectType(expr.exprType) Then
+		If TObjectType(expr.exprType) And (op = "+" Or op = "-" Or op = "~~") Then
 			'Local args:TExpr[] = [rhs]
 			Try
 				Local decl:TFuncDecl = TFuncDecl(TObjectType(expr.exprType).classDecl.FindFuncDecl(op, Null,,,,True,SCOPE_CLASS_HEIRARCHY))
