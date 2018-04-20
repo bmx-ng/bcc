@@ -3318,7 +3318,7 @@ Type TModuleDecl Extends TScopeDecl
 		
 			For Local mdecl:TModuleDecl = EachIn _getDeclTreeCache
 
-				If ident = mdecl.ident
+				If ident = mdecl.ident And mdecl <> Self
 					_getDeclCache.Insert(ident, mdecl)
 					Return mdecl
 				End If
