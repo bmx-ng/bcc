@@ -77,6 +77,10 @@ Type TDeclStmt Extends TStmt
 	End Method
 	
 	Method OnSemant()
+		If TLocalDecl(decl) And _env.FindTry() Then
+			TLocalDecl(decl).declaredInTry = True
+		End If
+		
 		decl.Semant
 		' if scope is already set, don't try to add it to the current scope.
 		If Not decl.scope Then
@@ -116,6 +120,7 @@ Type TAssignStmt Extends TStmt
 			TIdentExpr(rhs).isRhs = True
 		End If
 		rhs=rhs.Semant()
+
 		lhs=lhs.SemantSet( op,rhs )
 		If TInvokeExpr( lhs ) Or TInvokeMemberExpr( lhs )
 			rhs=Null

@@ -588,9 +588,10 @@ End Type
 Type TLocalDecl Extends TVarDecl
 
 	Field done:Int
-	Field volatile:Int = True
+	Field volatile:Int = False
+	Field declaredInTry:Int
 
-	Method Create:TLocalDecl( ident$,ty:TType,init:TExpr,attrs:Int=0, generated:Int = False, volatile:Int = True )
+	Method Create:TLocalDecl( ident$,ty:TType,init:TExpr,attrs:Int=0, generated:Int = False, volatile:Int = False )
 		Self.ident=ident
 		Self.declTy=ty
 		Self.declInit=init
@@ -605,13 +606,23 @@ Type TLocalDecl Extends TVarDecl
 		decl.scope = scope
 		decl.ty = ty
 		decl.init = init
+		decl.declaredInTry = declaredInTry
 		Return decl
 	End Method
 
 	Method GetDeclPrefix:String()
 		Return "Local "
 	End Method
-	
+
+	Method OnSemant()
+		If declTy Then
+			If TObjectType(declTy) Or TArrayType(declTy) Then
+				volatile = True
+			End If
+		End If
+		Super.OnSemant()
+	End Method
+		
 	Method ToString$()
 		Return GetDeclPrefix() + Super.ToString()
 	End Method
@@ -1598,7 +1609,20 @@ End Rem
 		
 		If scope Return scope.FindLoop( ident )
 	End Method
-	
+
+	Method FindTry:TTryStmtDecl()
+
+		If TTryStmtDecl(Self) Then
+			Return TTryStmtDecl(Self)
+		End If
+
+		If TFuncDecl(scope) Or TModuleDecl(scope)
+			Return Null
+		End If
+		
+		If scope Return scope.FindTry()
+	End Method
+
 	Method OnSemant()
 	End Method
 	
@@ -1912,7 +1936,7 @@ Type TFuncDecl Extends TBlockDecl
 		If TArrayType( retType ) And Not retType.EqualsType( retType.ActualType() )
 '			Err "Return type cannot be an array of generic objects."
 		EndIf
-		
+
 		'semant args
 		For Local arg:TArgDecl=EachIn argDecls
 			InsertDecl arg
@@ -3207,6 +3231,10 @@ Type TDefDataDecl Extends TDecl
 		End If
 	End Method
 	
+End Type
+
+Type TTryStmtDecl Extends TBlockDecl
+	Field tryStmt:TTryStmt
 End Type
 
 Const MODULE_STRICT:Int=1

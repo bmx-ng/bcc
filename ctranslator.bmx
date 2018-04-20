@@ -705,6 +705,11 @@ t:+"NULLNULLNULL"
 				initTrans = "=" + cast + init.Trans()
 			End If
 		End If
+		
+		Local volTrans:String = " "
+		If decl.volatile Then
+			volTrans = " volatile "
+		End If
 	
 		If Not declare And opt_debug Then
 			Local ty:TType = decl.ty
@@ -738,21 +743,21 @@ t:+"NULLNULLNULL"
 						If TObjectType(ty).classdecl.IsInterface() Then
 							Return TransType( ty, decl.munged )+" "+decl.munged + initTrans
 						Else
-							Return TransType( ty, decl.munged )+" "+decl.munged + initTrans
+							Return TransType( ty, decl.munged )+ volTrans +decl.munged + initTrans
 						End If
 					Else
 						If TObjectType(ty).classdecl.IsStruct() Then
 							Return TransType( ty, decl.munged )+" "+decl.munged + initTrans
 						Else
-							If decl.volatile Then
-								Return TransType( ty, decl.munged )+" volatile "+decl.munged + initTrans
-							Else
-								Return TransType( ty, decl.munged )+" "+decl.munged + initTrans
-							End If
+							'If decl.volatile Then
+								Return TransType( ty, decl.munged )+ volTrans +decl.munged + initTrans
+							'Else
+							'	Return TransType( ty, decl.munged )+" "+decl.munged + initTrans
+							'End If
 						End If
 					End If
 				Else
-					Return TransType( ty, decl.munged )+" "+decl.munged + initTrans
+					Return TransType( ty, decl.munged )+ volTrans +decl.munged + initTrans
 				End If
 			End If
 		End If
@@ -783,7 +788,11 @@ t:+"NULLNULLNULL"
 					End If
 				End If
 			Else
-				Return TransType( decl.ty, decl.munged )+" "+decl.munged + "=" + TransValue(decl.ty, "")
+				If TLocalDecl(decl) And TLocalDecl(decl).volatile Then
+					Return TransType( decl.ty, decl.munged )+" volatile "+decl.munged + "=" + TransValue(decl.ty, "")
+				Else
+					Return TransType( decl.ty, decl.munged )+" "+decl.munged + "=" + TransValue(decl.ty, "")
+				End If
 			End If
 		End If
 	End Method

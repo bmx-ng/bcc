@@ -2033,7 +2033,11 @@ End Rem
 	Method ParseTryStmt()
 		Parse "try"
 
-		Local block:TBlockDecl=New TBlockDecl.Create( _block )
+		Local tryStmtDecl:TTryStmtDecl = TTryStmtDecl(New TTryStmtDecl.Create( _block ))
+		
+		PushBlock tryStmtDecl
+
+		Local block:TBlockDecl=New TBlockDecl.Create( tryStmtDecl )
 		Local catches:TList=New TList
 
 		PushBlock block
@@ -2071,7 +2075,7 @@ End Rem
 			End If
 		Wend
 
-		PopBlock
+		PopBlock ' try block
 		
 		If Not CParse("endtry") Then
 			' TODO : handle case of no catch - perhaps throw the exception again.
@@ -2080,7 +2084,14 @@ End Rem
 			CParse "try"
 		End If
 
-		_block.AddStmt New TTryStmt.Create( block,TCatchStmt[](catches.ToArray()) )
+		PopBlock ' tryStmtDecl
+		
+		Local tryStmt:TTryStmt = New TTryStmt.Create( block,TCatchStmt[](catches.ToArray()) )
+
+		tryStmtDecl.tryStmt = tryStmt
+
+		_block.AddStmt tryStmt
+		
 	End Method
 
 	Method ParseThrowStmt()
@@ -2729,7 +2740,6 @@ End Rem
 			args = fdecl.argDecls
 			attrs :| (fdecl.attrs & DECL_API_FLAGS)
 		End If
-		
 		
 		If CParse( "nodebug" ) Then
 			attrs :| DECL_NODEBUG

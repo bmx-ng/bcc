@@ -163,6 +163,16 @@ Type TExpr
 						stmt.exprType = TNewObjectExpr(args[i]).ty
 						args[i] = stmt
 					End If
+
+					' passing a non volatile local as Var from within a Try block?					
+					If TVarExpr(args[i]) Then
+						Local ldecl:TLocalDecl = TLocalDecl(TVarExpr(args[i]).decl)
+						If ldecl Then
+							If Not ldecl.volatile And Not ldecl.declaredInTry And _env.FindTry() Then
+								ldecl.volatile = True
+							End If
+						End If
+					End If
 				End If
 				
 				If (funcDecl.argDecls[i].ty._flags & TType.T_VAR) And Not (funcDecl.argDecls[i].ty.EqualsType(args[i].exprType)) Then
@@ -2552,8 +2562,16 @@ Type TIdentExpr Extends TExpr
 		End If
 		
 		If vdecl
+		
+			If op And TLocalDecl( vdecl )
 
-			If TConstDecl( vdecl )
+				Local ldecl:TLocalDecl = TLocalDecl( vdecl )
+
+				If Not ldecl.volatile And Not ldecl.declaredInTry And scope.FindTry() Then
+					ldecl.volatile = True
+				End If
+
+			Else If TConstDecl( vdecl )
 '				If rhs Err "Constant '"+ident+"' cannot be modified."
 '				Return New TConstExpr.Create( vdecl.ty,TConstDecl( vdecl ).value ).Semant()
 				If rhs Err "Constant '"+ident+"' cannot be modified."
