@@ -1605,7 +1605,11 @@ t:+"NULLNULLNULL"
 			End If
 
 			If expr.instanceExpr Then
-				t = "_" + ctorMunged + "_ObjectNew" + TransArgs( expr.args,expr.ctor, Bra(expr.instanceExpr.Trans()) + "->clas" )
+				If expr.classDEcl.IsStruct() Then
+					t = ctorMunged + "_ObjectNew" + TransArgs( expr.args,expr.ctor)
+				Else
+					t = "_" + ctorMunged + "_ObjectNew" + TransArgs( expr.args,expr.ctor, Bra(expr.instanceExpr.Trans()) + "->clas" )
+				End If
 			Else
 				If ClassHasObjectField(expr.classDecl) And Not expr.classDecl.IsStruct() Then
 					t = "_" + ctorMunged + "_ObjectNew" + TransArgs( expr.args,expr.ctor, "&" + expr.classDecl.actual.munged )
