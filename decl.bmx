@@ -987,8 +987,11 @@ Type TScopeDecl Extends TDecl
 				End If
 				
 				Local found:Int
+				' remove matching functions from decl list.
+				' a match should match exactly. If an arg is a subclass of another
+				' then that is not a match, and we will distance test later..
 				For Local func:TFuncDecl = EachIn declList
-					If func.equalsFunc(fdecl) Then
+					If func.equalsFunc(fdecl, True) Then
 						found = True
 						Exit
 'Else
@@ -1852,7 +1855,8 @@ Type TFuncDecl Extends TBlockDecl
 		Return (attrs & FUNC_FIELD)<>0
 	End Method
 		
-	Method EqualsArgs:Int( decl:TFuncDecl ) ' careful, this is not commutative!
+	' exactMatch requires args to be equal. If an arg is a subclass, that is not a match.
+	Method EqualsArgs:Int( decl:TFuncDecl, exactMatch:Int = False ) ' careful, this is not commutative!
 		If argDecls.Length<>decl.argDecls.Length Return False
 		For Local i:Int=0 Until argDecls.Length
 			' ensure arg decls have been semanted
@@ -1861,7 +1865,7 @@ Type TFuncDecl Extends TBlockDecl
 			
 			' objects can be subclasses as well as the same.
 			If TObjectType(decl.argDecls[i].ty) Then
-				If Not decl.argDecls[i].ty.EqualsType( argDecls[i].ty ) And Not decl.argDecls[i].ty.ExtendsType( argDecls[i].ty ) Return False
+				If Not decl.argDecls[i].ty.EqualsType( argDecls[i].ty ) And (exactMatch Or Not decl.argDecls[i].ty.ExtendsType( argDecls[i].ty )) Return False
 			Else
 				If Not decl.argDecls[i].ty.EqualsType( argDecls[i].ty ) Return False
 			End If
@@ -1869,12 +1873,13 @@ Type TFuncDecl Extends TBlockDecl
 		Return True
 	End Method
 
-	Method EqualsFunc:Int( decl:TFuncDecl ) ' careful, this is not commutative!
+	' exactMatch requires args to be equal. If an arg is a subclass, that is not a match.
+	Method EqualsFunc:Int( decl:TFuncDecl, exactMatch:Int = False) ' careful, this is not commutative!
 		If IsCtor() Then
-			Return EqualsArgs( decl )
+			Return EqualsArgs( decl, exactMatch )
 		Else
 			' matching args?
-			If EqualsArgs( decl ) Then
+			If EqualsArgs( decl, exactMatch ) Then
 				' matching return type?
 				If TObjectType(retType) Or TArrayType(retType) Or TStringType(retType) Then
 					Return retType.EqualsType( decl.retType ) Or retType.ExtendsType( decl.retType )' Or decl.retType.EqualsType( retType )) And EqualsArgs( decl )
