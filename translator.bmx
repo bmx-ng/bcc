@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2017 Bruce A Henderson
+' Copyright (c) 2013-2018 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -380,6 +380,8 @@ Type TTranslator
 				Return "_or"
 			Case "~~"
 				Return "_xor"
+			Case "^"
+				Return "_pow"
 			Case ":*"
 				Return "_muleq"
 			Case ":/"
@@ -394,6 +396,8 @@ Type TTranslator
 				Return "_oreq"
 			Case ":~~"
 				Return "_xoreq"
+			Case ":^"
+				Return "_poweq"
 			Case "<"
 				Return "_lt"
 			Case "<="

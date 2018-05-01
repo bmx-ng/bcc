@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2017 Bruce A Henderson
+' Copyright (c) 2013-2018 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -705,6 +705,11 @@ t:+"NULLNULLNULL"
 				initTrans = "=" + cast + init.Trans()
 			End If
 		End If
+		
+		Local volTrans:String = " "
+		If decl.volatile Then
+			volTrans = " volatile "
+		End If
 	
 		If Not declare And opt_debug Then
 			Local ty:TType = decl.ty
@@ -738,21 +743,21 @@ t:+"NULLNULLNULL"
 						If TObjectType(ty).classdecl.IsInterface() Then
 							Return TransType( ty, decl.munged )+" "+decl.munged + initTrans
 						Else
-							Return TransType( ty, decl.munged )+" "+decl.munged + initTrans
+							Return TransType( ty, decl.munged )+ volTrans +decl.munged + initTrans
 						End If
 					Else
 						If TObjectType(ty).classdecl.IsStruct() Then
 							Return TransType( ty, decl.munged )+" "+decl.munged + initTrans
 						Else
-							If decl.volatile Then
-								Return TransType( ty, decl.munged )+" volatile "+decl.munged + initTrans
-							Else
-								Return TransType( ty, decl.munged )+" "+decl.munged + initTrans
-							End If
+							'If decl.volatile Then
+								Return TransType( ty, decl.munged )+ volTrans +decl.munged + initTrans
+							'Else
+							'	Return TransType( ty, decl.munged )+" "+decl.munged + initTrans
+							'End If
 						End If
 					End If
 				Else
-					Return TransType( ty, decl.munged )+" "+decl.munged + initTrans
+					Return TransType( ty, decl.munged )+ volTrans +decl.munged + initTrans
 				End If
 			End If
 		End If
@@ -783,7 +788,11 @@ t:+"NULLNULLNULL"
 					End If
 				End If
 			Else
-				Return TransType( decl.ty, decl.munged )+" "+decl.munged + "=" + TransValue(decl.ty, "")
+				If TLocalDecl(decl) And TLocalDecl(decl).volatile Then
+					Return TransType( decl.ty, decl.munged )+" volatile "+decl.munged + "=" + TransValue(decl.ty, "")
+				Else
+					Return TransType( decl.ty, decl.munged )+" "+decl.munged + "=" + TransValue(decl.ty, "")
+				End If
 			End If
 		End If
 	End Method
@@ -1018,8 +1027,15 @@ t:+"NULLNULLNULL"
 										Return "_" + decl.munged+TransArgs( args,decl, TransSubExpr( lhs ) )
 									End If
 								Else
-									Local class:String = Bra(TransSubExpr( lhs )) + "->clas" + tSuper
-									Return class + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, TransSubExpr( lhs ) )
+									Local obj:String = TransSubExpr( lhs )
+									Local preObj:String = obj
+									
+									If opt_debug Then
+										preObj = TransDebugNullObjectError(obj, cdecl)
+									End If
+									
+									Local class:String = Bra(preObj) + "->clas" + tSuper
+									Return class + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, obj )
 '									Local class:String = Bra(lvarInit) + "->clas" + tSuper
 '									Return class + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, lvar )
 								End If
@@ -1589,7 +1605,11 @@ t:+"NULLNULLNULL"
 			End If
 
 			If expr.instanceExpr Then
-				t = "_" + ctorMunged + "_ObjectNew" + TransArgs( expr.args,expr.ctor, Bra(expr.instanceExpr.Trans()) + "->clas" )
+				If expr.classDEcl.IsStruct() Then
+					t = ctorMunged + "_ObjectNew" + TransArgs( expr.args,expr.ctor)
+				Else
+					t = "_" + ctorMunged + "_ObjectNew" + TransArgs( expr.args,expr.ctor, Bra(expr.instanceExpr.Trans()) + "->clas" )
+				End If
 			Else
 				If ClassHasObjectField(expr.classDecl) And Not expr.classDecl.IsStruct() Then
 					t = "_" + ctorMunged + "_ObjectNew" + TransArgs( expr.args,expr.ctor, "&" + expr.classDecl.actual.munged )
@@ -4391,6 +4411,10 @@ End Rem
 			' field initialisation
 			For Local decl:TFieldDecl=EachIn classDecl.Decls()
 			
+				If Not decl.IsSemanted() Then
+					decl.Semant()
+				End If
+			
 				Local fld:String
 	
 				' ((int*)((char*)o + 5))[0] =
@@ -4749,11 +4773,11 @@ End Rem
 
 	Method TransFieldRef:String(decl:TFieldDecl, variable:String, exprType:TType = Null)
 		Local s:String = variable
-'DebugStop
+		
 		Local ind:String = "->"
 		If decl.scope And TClassDecl(decl.scope) And TClassDecl(decl.scope).IsStruct() Then
-			Local exprIsStruct:Int = TObjectType(exprType) And TObjectType(exprType).classDecl.attrs & CLASS_STRUCT
-			If exprType And (exprIsStruct Or Not IsPointerType(exprType)) And variable <> "o" Then
+			Local exprIsStruct:Int = Not exprType Or (TObjectType(exprType) And TObjectType(exprType).classDecl.attrs & CLASS_STRUCT)
+			If (exprIsStruct Or (exprType And Not IsPointerType(exprType))) And variable <> "o" Then
 				ind = "."
 			End If
 		End If

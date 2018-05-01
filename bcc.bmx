@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2017 Bruce A Henderson
+' Copyright (c) 2013-2018 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -46,6 +46,8 @@ If opt_buildtype = BUILDTYPE_MODULE Then
 		opt_ismain = True
 	End If
 End If
+
+TGenProcessor.processor = New TParser
 
 Local app:TAppDecl 
 Local trans:TCTranslator 

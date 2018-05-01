@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2017 Bruce A Henderson
+' Copyright (c) 2013-2018 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -163,6 +163,16 @@ Type TExpr
 						stmt.exprType = TNewObjectExpr(args[i]).ty
 						args[i] = stmt
 					End If
+
+					' passing a non volatile local as Var from within a Try block?					
+					If TVarExpr(args[i]) Then
+						Local ldecl:TLocalDecl = TLocalDecl(TVarExpr(args[i]).decl)
+						If ldecl Then
+							If Not ldecl.volatile And Not ldecl.declaredInTry And _env.FindTry() Then
+								ldecl.volatile = True
+							End If
+						End If
+					End If
 				End If
 				
 				If (funcDecl.argDecls[i].ty._flags & TType.T_VAR) And Not (funcDecl.argDecls[i].ty.EqualsType(args[i].exprType)) Then
@@ -201,6 +211,7 @@ Type TExpr
 				If TObjectType(rhs) And TObjectType(rhs).classDecl.ident = "Object" Then
 					Return rhs
 				End If
+				Return New TStringType
 			Else
 				Return New TStringType
 			End If
@@ -814,6 +825,8 @@ Type TNewObjectExpr Extends TExpr
 		Local it:TIdentType = TIdentType(ty)
 		Local iArgs:TExpr[] = SemantArgs(CopyArgs(args))
 
+		Local isNewSelf:Int = (it And it.ident = "self")
+		
 		ty=ty.Semant(True)
 		If Not ty Then
 			' maybe it's an instance of a type ?
@@ -850,7 +863,8 @@ Type TNewObjectExpr Extends TExpr
 
 		If Not instanceExpr Then
 			If classDecl.IsInterface() Err "Cannot create instance of an interface."
-			If classDecl.IsAbstract() Err "Cannot create instance of an abstract class."
+			If classDecl.IsAbstract() Err "Cannot create instance of abstract type " + classDecl.ToString() + ..
+				", which is either declared Abstract or has (or inherits) an abstract Method."
 		End If
 		'If classDecl.IsTemplateArg() Err "Cannot create instance of a generic argument."
 		If classDecl.args And Not classDecl.instanceof Err "Cannot create instance of a generic class."
@@ -876,7 +890,11 @@ Type TNewObjectExpr Extends TExpr
 			End If
 		EndIf
 
-		classDecl.attrs:|CLASS_INSTANCED
+		' New Self doesn't necessarily create an instance of ourself - we might be an instance of
+		' a subclass at the time...
+		If Not isNewSelf Then
+			classDecl.attrs:|CLASS_INSTANCED
+		End If
 
 		If TClassType(ty) Then
 			exprType=New TObjectType.Create(TClassType(ty).classDecl)
@@ -1486,6 +1504,11 @@ Type TCastExpr Extends TExpr
 			Return Self
 		End If
 
+		If TObjectType(ty) And TObjectType(src) And TObjectType(ty).classdecl.IsInterface() And flags & CAST_EXPLICIT Then
+			exprType = ty
+			Return Self
+		End If
+
 		If Not exprType
 			Err "Unable to convert from "+src.ToString()+" to "+ty.ToString()+"."
 		EndIf
@@ -1592,6 +1615,25 @@ Type TUnaryExpr Extends TExpr
 
 	Method Semant:TExpr()
 		If exprType Return Self
+
+		expr = expr.Semant()
+
+		' operator overload?
+		If TObjectType(expr.exprType) And (op = "+" Or op = "-" Or op = "~~") Then
+			'Local args:TExpr[] = [rhs]
+			Try
+				Local decl:TFuncDecl = TFuncDecl(TObjectType(expr.exprType).classDecl.FindFuncDecl(op, Null,,,,True,SCOPE_CLASS_HEIRARCHY))
+				If decl Then
+					Return New TInvokeMemberExpr.Create( expr, decl, Null ).Semant()
+				End If
+			Catch error:String
+				If error.StartsWith("Compile Error") Then
+					Throw error
+				Else
+					Err "Operator " + op + " cannot be used with Objects."
+				End If
+			End Try
+		End If
 
 		Select op
 		Case "+","-"
@@ -1782,8 +1824,16 @@ Type TBinaryMathExpr Extends TBinaryExpr
 			Select op
 			Case "^" Return x^y
 			Case "*" Return x*y
-			Case "/" Return x/y
-			Case "mod" Return x Mod y
+			Case "/" 
+				If Not y Then
+					Err "Integer division by zero"
+				End If
+				Return x/y
+			Case "mod"
+				If Not y Then
+					Err "Integer division by zero"
+				End If
+				Return x Mod y
 			Case "shl" Return x Shl y
 			Case "shr" Return x Shr y
 			Case "+" Return x + y
@@ -1797,8 +1847,16 @@ Type TBinaryMathExpr Extends TBinaryExpr
 			Select op
 			Case "^" Return x^y
 			Case "*" Return x*y
-			Case "/" Return x/y
-			Case "mod" Return x Mod y
+			Case "/"
+				If Not y Then
+					Err "Integer division by zero"
+				End If
+				Return x/y
+			Case "mod"
+				If Not y Then
+					Err "Integer division by zero"
+				End If
+				Return x Mod y
 			Case "shl" Return x Shl y
 			Case "shr" Return x Shr y
 			Case "+" Return x + y
@@ -2504,8 +2562,16 @@ Type TIdentExpr Extends TExpr
 		End If
 		
 		If vdecl
+		
+			If op And TLocalDecl( vdecl )
 
-			If TConstDecl( vdecl )
+				Local ldecl:TLocalDecl = TLocalDecl( vdecl )
+
+				If Not ldecl.volatile And Not ldecl.declaredInTry And scope.FindTry() Then
+					ldecl.volatile = True
+				End If
+
+			Else If TConstDecl( vdecl )
 '				If rhs Err "Constant '"+ident+"' cannot be modified."
 '				Return New TConstExpr.Create( vdecl.ty,TConstDecl( vdecl ).value ).Semant()
 				If rhs Err "Constant '"+ident+"' cannot be modified."
@@ -2724,6 +2790,7 @@ Type TIdentExpr Extends TExpr
 			If expr And Not static Then
 				Return New TInvokeMemberExpr.Create( expr,fdecl,args ).Semant()
 			Else
+				If fdecl.IsStatic() And fdecl.IsAbstract() Err "Cannot call abstract " + fdecl.ToString()
 				Return New TInvokeExpr.Create( fdecl,args, funcCall ).Semant()
 			End If
 		EndIf

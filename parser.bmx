@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2017 Bruce A Henderson
+' Copyright (c) 2013-2018 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -336,7 +336,7 @@ Type TIncbin
 End Type
 
 '***** Parser *****
-Type TParser
+Type TParser Extends TGenProcessor
 
 	Field _toker:TToker
 	Field _toke:String
@@ -514,7 +514,7 @@ Type TParser
 
 	Method ParseIdentType:TIdentType()
 		Local id$=ParseIdent()
-'DebugLog "ParseIdentType : " + id
+
 		If CParse( "." ) id:+"."+ParseIdent()
 		If CParse( "." ) id:+"."+ParseIdent()
 
@@ -522,8 +522,19 @@ Type TParser
 		If CParse( "<" )
 			Local nargs:Int
 			Repeat
-				'Local arg:TIdentType=ParseIdentType()
 				Local arg:TType = ParseType()
+				
+				Repeat
+					If (_toke = "[" Or _toke = "[]") And IsArrayDef()
+						arg = ParseArrayType(arg)
+					Else If _toke = "(" Then
+						Local argDecls:TArgDecl[] = ParseFuncParamDecl()
+						arg = New TFunctionPtrType.Create(New TFuncDecl.CreateF("", arg, argDecls, FUNC_PTR))
+					Else
+						Exit
+					End If
+				Forever
+				
 				If args.Length=nargs args=args+ New TType[10]
 				args[nargs]=arg
 				nargs:+1
@@ -2022,7 +2033,11 @@ End Rem
 	Method ParseTryStmt()
 		Parse "try"
 
-		Local block:TBlockDecl=New TBlockDecl.Create( _block )
+		Local tryStmtDecl:TTryStmtDecl = TTryStmtDecl(New TTryStmtDecl.Create( _block ))
+		
+		PushBlock tryStmtDecl
+
+		Local block:TBlockDecl=New TBlockDecl.Create( tryStmtDecl )
 		Local catches:TList=New TList
 		Local finallyStmt:TFinallyStmt = Null
 
@@ -2068,16 +2083,23 @@ End Rem
 			End If
 		Wend
 
-		PopBlock
-		
 		If catches.Count() = 0 And Not finallyStmt Then Err "Expecting 'Catch' or 'Finally'."
+		
+		PopBlock ' try block
 		
 		If Not CParse("endtry") Then
 			NextToke
 			CParse "try"
 		End If
 
-		_block.AddStmt New TTryStmt.Create( block,TCatchStmt[](catches.ToArray()),finallyStmt )
+		PopBlock ' tryStmtDecl
+		
+		Local tryStmt:TTryStmt = New TTryStmt.Create(block,TCatchStmt[](catches.ToArray()), finallyStmt)
+
+		tryStmtDecl.tryStmt = tryStmt
+
+		_block.AddStmt tryStmt
+		
 	End Method
 
 	Method ParseThrowStmt()
@@ -2666,9 +2688,9 @@ End Rem
 				NextToke
 				
 				Select t
-					Case "*","/","+","-","&","|","~~"
+					Case "*","/","+","-","&","|","~~","^"
 						id = t
-					Case ":*",":/",":+",":-",":&",":|",":~~"
+					Case ":*",":/",":+",":-",":&",":|",":~~",":^"
 						id = t
 					Case "<",">"',"="',"<=",">=","=","<>"
 						If CParse("=") Then
@@ -2724,8 +2746,8 @@ End Rem
 			Local fdecl:TFuncDecl = TFunctionPtrType(ty).func
 			ty = fdecl.retTypeExpr
 			args = fdecl.argDecls
+			attrs :| (fdecl.attrs & DECL_API_FLAGS)
 		End If
-		
 		
 		If CParse( "nodebug" ) Then
 			attrs :| DECL_NODEBUG
@@ -2889,13 +2911,14 @@ End Rem
 		Local api:String = ParseStringLit().ToLower()
 		
 		If api = "os" Then
-?win32
-			api = "win32"
-?macos
-			api = "macos"
-?linux
-			api = "linux"
-?
+			Select opt_platform
+				Case "macos", "osx", "ios"
+					api = "macos"
+				Case "linux", "android", "raspberrypi"
+					api = "linux"
+				Case "win32"
+					api = "win32"
+			End Select
 		End If
 
 		Select api
@@ -2944,7 +2967,7 @@ End Rem
 	End Method
 	
 
-	Method ParseClassDecl:TClassDecl( toke$,attrs:Int )
+	Method ParseClassDecl:TClassDecl( toke$,attrs:Int, templateDets:TTemplateDets = Null )
 		SetErr
 
 		Local calculatedStartLine:Int = _toker.Line()
@@ -2986,9 +3009,9 @@ End Rem
 				Local arg:TTemplateArg = New TTemplateArg
 				arg.ident = ParseIdent()
 				
-				If CParse("extends") Then
-					arg.superTy = ParseIdentType()
-				End If
+'				If CParse("extends") Then
+'					arg.superTy = ParseIdentType()
+'				End If
 				
 				args.AddLast arg
 
@@ -2996,6 +3019,34 @@ End Rem
 			'args=args[..nargs]
 
 			Parse ">"
+
+			If CParse( "where" ) Then
+'DebugStop
+				Repeat
+					Local argIdent:String = ParseIdent()
+					
+					Parse("extends")
+					
+					Local found:Int
+					For Local arg:TTemplateArg = EachIn args
+						If arg.ident = argIdent Then
+						
+							Repeat
+							
+								arg.ExtendsType(ParseIdentType())
+							
+							Until Not CParse("and")
+						
+							found = True
+							Exit
+						EndIf
+					Next
+					If Not found Then
+						Err "Use of undeclared type '" + argIdent + "'."
+					End If
+					
+				Until Not CParse(",")
+			End If
 		EndIf
 
 		If CParse( "extends" )
@@ -3234,7 +3285,13 @@ End Rem
 				Local decl:TFuncDecl=ParseFuncDecl( _toke,decl_attrs,classDecl )
 				classDecl.InsertDecl decl
 			Case "type"
-				classDecl.InsertDecl ParseClassDecl( _toke,DECL_NESTED)
+				If templateDets Then
+					Local cdecl:TClassDecl = ParseClassDecl( _toke,DECL_NESTED, templateDets)
+					cdecl = cdecl.GenClassInstance(templateDets.instArgs, False, Null, templateDets)
+					classDecl.InsertDecl cdecl, True
+				Else
+					classDecl.InsertDecl ParseClassDecl( _toke,DECL_NESTED)
+				End If
 			Default
 				Err "Syntax error - expecting class member declaration, not '" + _toke + "'"
 			End Select
@@ -3687,6 +3744,24 @@ End Rem
 		Return attrs
 	End Method
 
+	Method ParseGeneric:Object(templateSource:TTemplateRecord, templateDets:TTemplateDets)
+		Local toker:TToker = New TToker.Create(templateSource.file, templateSource.source, False, templateSource.start)
+		Local parser:TParser = New TParser.Create( toker, _appInstance )
+		
+		Local m:TModuleDecl = New TModuleDecl
+		parser._module = m
+		
+		Local cdecl:TClassDecl = Null
+		
+		Select parser._toke
+		Case "type"
+			cdecl = parser.ParseClassDecl(parser._toke,0, templateDets )
+		Case "interface"
+			cdecl = parser.ParseClassDecl(parser._toke, CLASS_INTERFACE|DECL_ABSTRACT, templateDets )
+		End Select
+		
+		Return cdecl
+	End Method
 
 	Method ParseMain()
 
@@ -3993,7 +4068,7 @@ End Rem
 			con = 0
 			Try
 				If Eval( toker,New TIntType ) = "1" con = 1
-			Catch error:String
+			Catch Error:String
 				con = 0
 			End Try
 

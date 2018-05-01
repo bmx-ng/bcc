@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2017 Bruce A Henderson
+' Copyright (c) 2013-2018 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -77,6 +77,10 @@ Type TDeclStmt Extends TStmt
 	End Method
 	
 	Method OnSemant()
+		If TLocalDecl(decl) And _env.FindTry() Then
+			TLocalDecl(decl).declaredInTry = True
+		End If
+		
 		decl.Semant
 		' if scope is already set, don't try to add it to the current scope.
 		If Not decl.scope Then
@@ -116,6 +120,7 @@ Type TAssignStmt Extends TStmt
 			TIdentExpr(rhs).isRhs = True
 		End If
 		rhs=rhs.Semant()
+
 		lhs=lhs.SemantSet( op,rhs )
 		If TInvokeExpr( lhs ) Or TInvokeMemberExpr( lhs )
 			rhs=Null
@@ -550,7 +555,11 @@ Type TRepeatStmt Extends TLoopStmt
 	End Method
 
 	Method OnCopy:TStmt( scope:TScopeDecl )
-		Return New TRepeatStmt.Create( block.CopyBlock( scope ),expr.Copy(),TLoopLabelDecl(loopLabel.Copy()) )
+		If loopLabel Then
+			Return New TRepeatStmt.Create( block.CopyBlock( scope ),expr.Copy(),TLoopLabelDecl(loopLabel.Copy()) )
+		Else
+			Return New TRepeatStmt.Create( block.CopyBlock( scope ),expr.Copy(),Null )
+		End If
 	End Method
 	
 	Method OnSemant()
