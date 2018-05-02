@@ -224,7 +224,6 @@ Type TDecl
 	End Method
 	
 	Method AssertAccess()
-If ident="abc" DebugStop
 		If Not CheckAccess()
 			If IsPrivate() Then
 				Err ToString() +" is private."
@@ -1637,10 +1636,12 @@ End Type
 Type TBlockDecl Extends TScopeDecl
 	Field stmts:TList=New TList
 	Field extra:Object
+	Field isFinallyBlock:Int
 	
-	Method Create:TBlockDecl( scope:TScopeDecl, generated:Int = False )
-		Self.scope=scope
+	Method Create:TBlockDecl( scope:TScopeDecl, generated:Int = False, isFinallyBlock:Int = False )
+		Self.scope = scope
 		Self.generated = generated
+		Self.isFinallyBlock = isFinallyBlock
 		
 		attrs :| (scope.attrs & DECL_NODEBUG)
 		
@@ -1679,6 +1680,37 @@ Type TBlockDecl Extends TScopeDecl
 		
 		For Local stmt:TStmt=EachIn stmts
 			stmt.Semant
+			
+			If TReturnStmt(stmt) Then
+				If SurroundingFinallyBlock(Self) Then PushErr stmt.errInfo; Err "Return cannot be used inside a Finally block."
+			Else If TBreakStmt(stmt) Then
+				Local loop:TLoopStmt
+				If TLoopLabelExpr(TBreakStmt(stmt).label) Then
+					loop = TLoopLabelExpr(TBreakStmt(stmt).label).loop
+				Else
+					loop = TLoopStmt(Self.FindLoop())
+				End If
+				Local f:TBlockDecl = SurroundingFinallyBlock(Self)
+				If f And f <> SurroundingFinallyBlock(loop.block) Then PushErr stmt.errInfo; Err "Exit cannot be used to leave a Finally block."
+			Else If TContinueStmt(stmt) Then
+				Local loop:TLoopStmt
+				If TLoopLabelExpr(TContinueStmt(stmt).label) Then
+					loop = TLoopLabelExpr(TContinueStmt(stmt).label).loop
+				Else
+					loop = TLoopStmt(Self.FindLoop())
+				End If
+				Local f:TBlockDecl = SurroundingFinallyBlock(Self)
+				If f And f <> SurroundingFinallyBlock(loop.block) Then PushErr stmt.errInfo; Err "Continue cannot be used to leave a Finally block."
+			End If
+			
+			Function SurroundingFinallyBlock:TBlockDecl(block:TBlockDecl)
+				' get the innermost Finally block surrounding the current statement
+				While block And Not TFuncDecl(block)
+					If block.isFinallyBlock Then Return block
+					block = TBlockDecl(block.scope)
+				Wend
+				Return Null
+			End Function
 		Next
 		PopEnv
 	End Method
@@ -3157,7 +3189,7 @@ End Rem
 	
 End Type
 
-Type TLoopLabelDecl Extends TDecl
+Type TLoopLabelDecl Extends TDecl ' also used internally for Try constructs
 
 	Field realIdent:String
 

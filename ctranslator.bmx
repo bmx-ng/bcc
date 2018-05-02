@@ -2390,90 +2390,154 @@ t:+"NULLNULLNULL"
 
 	'***** Statements *****
 
-	Method TransTryStmt$( stmt:TTryStmt )
-		Emit "do {"
+	Method TransTryStmt$(tryStmt:TTryStmt)
+		Emit "{"
 		
-		EmitLocalDeclarations(stmt.block)
+		If tryStmt.finallyStmt Then MungDecl tryStmt.finallyStmt.finallyLabel
+		MungDecl tryStmt.rethrowLabel
+		MungDecl tryStmt.endTryLabel
 		
-		Emit "jmp_buf * buf = bbExEnter();"
-		Emit "switch(setjmp(*buf)) {"
-		Emit "case 0: {"
-		If opt_debug Then
-			Emit "bbOnDebugPushExState();"
+		Emit "BBOBJECT ex;"
+		If tryStmt.finallyStmt Then
+			' for a nested Try construct, only declare this label once, because leaving such a construct
+			' via Return, Exit Or Continue requires a jump to multiple Finally blocks in direct succession
+			' and the "inner" declarations of retptr wouldn't be visible to the "outer" Finally blocks
+			Local alreadyDeclared:Int = False
+			For Local t:TTryStmt = EachIn tryStack
+				If t.finallyStmt Then alreadyDeclared = True; Exit
+			Next
+			If Not alreadyDeclared Then
+				Emit "void* retptr = &&" + tryStmt.rethrowLabel.munged + ";"
+			Else
+				Emit "retptr = &&" + tryStmt.rethrowLabel.munged + ";"
+			End If
 		End If
-		PushLoopTryStack(stmt)
-		tryStack.Push(stmt.block)
-		EmitBlock( stmt.block )
-		tryStack.Pop()
+		Emit "jmp_buf* buf = bbExEnter();"
+		Emit "switch(setjmp(*buf)) {"
+		
+		' Try block:
+		Emit "case 0: {"
+		
+		EmitLocalDeclarations tryStmt.block
+		
+		If opt_debug Then Emit "bbOnDebugPushExState();"
+		PushLoopTryStack tryStmt
+		tryStack.Push tryStmt
+		EmitBlock tryStmt.block
+		tryStack.Pop
 		PopLoopTryStack
 		Emit "bbExLeave();"
-		If opt_debug Then
-			Emit "bbOnDebugPopExState();"
-		End If
+		If opt_debug Then Emit "bbOnDebugPopExState();"
+		
+		' run the Finally block if control reaches the end of the Try block
+		If tryStmt.finallyStmt Then EmitFinallyJmp tryStmt.finallyStmt, tryStmt.endTryLabel
 		Emit "}"
 		Emit "break;"
-		Emit "case 1:"
-		Emit "{"
-
-		If opt_debug Then
-			Emit "bbOnDebugPopExState();"
-		End If
-
-		Emit "BBOBJECT ex = bbExObject();"
-		Local s:String = ""
-		For Local c:TCatchStmt=EachIn stmt.catches
-			MungDecl c.init
-			If TStringType(c.init.ty) Then
-				Emit s + "if (bbObjectDowncast((BBOBJECT)ex,(BBClass*)&bbStringClass) != &bbEmptyString) {"
-				Emit TransType( c.init.ty, c.init.munged )+" "+ c.init.munged + "=(BBSTRING)ex;" 
-			Else If TArrayType(c.init.ty) Then
-				Emit s + "if (bbObjectDowncast((BBOBJECT)ex,(BBClass*)&bbArrayClass) != &bbEmptyArray) {"
-				Emit TransType( c.init.ty, c.init.munged )+" "+ c.init.munged + "=(BBARRAY)ex;" 
-			Else If TObjectType(c.init.ty) Then
-				If TObjectType(c.init.ty).classDecl.IsInterface() Then
-					Emit s + "if (bbInterfaceDowncast(ex,&"+TObjectType(c.init.ty).classDecl.munged+"_ifc) != &bbNullObject) {"
-				Else
-					Emit s + "if (bbObjectDowncast((BBOBJECT)ex,(BBClass*)&"+TObjectType(c.init.ty).classDecl.munged+") != &bbNullObject) {"
-				End If
-				Emit TransType( c.init.ty, c.init.munged )+" "+ c.init.munged + "=" + Bra(TransType( c.init.ty, c.init.munged )) + "ex;" 
+		
+		' Catch blocks:
+		If tryStmt.catches Then
+			Emit "case 1: {"
+			If opt_debug Then Emit "bbOnDebugPopExState();"
+			If tryStmt.finallyStmt Then
+				If opt_debug Then Emit "bbOnDebugPushExState();"
+				Emit "ex = bbExCatchAndReenter();"
 			Else
-				Err "Not an object"
+				Emit "ex = bbExCatch();"
+			End If
+			Local s:String = ""
+			For Local catchStmt:TCatchStmt = EachIn tryStmt.catches
+				MungDecl catchStmt.init
+				If TStringType(catchStmt.init.ty) Then
+					Emit s + "if (bbObjectDowncast((BBOBJECT)ex,(BBClass*)&bbStringClass) != &bbEmptyString) {"
+					Emit TransType(catchStmt.init.ty, catchStmt.init.munged) + " " + catchStmt.init.munged + "=(BBSTRING)ex;" 
+				Else If TArrayType(catchStmt.init.ty) Then
+					Emit s + "if (bbObjectDowncast((BBOBJECT)ex,(BBClass*)&bbArrayClass) != &bbEmptyArray) {"
+					Emit TransType(catchStmt.init.ty, catchStmt.init.munged) + " " + catchStmt.init.munged + "=(BBARRAY)ex;" 
+				Else If TObjectType(catchStmt.init.ty) Then
+					If TObjectType(catchStmt.init.ty).classDecl.IsInterface() Then
+						Emit s + "if (bbInterfaceDowncast(ex,&" + TObjectType(catchStmt.init.ty).classDecl.munged + "_ifc) != &bbNullObject) {"
+					Else
+						Emit s + "if (bbObjectDowncast((BBOBJECT)ex,(BBClass*)&" + TObjectType(catchStmt.init.ty).classDecl.munged + ") != &bbNullObject) {"
+					End If
+					Emit TransType(catchStmt.init.ty, catchStmt.init.munged) + " " + catchStmt.init.munged + "=" + Bra(TransType(catchStmt.init.ty, catchStmt.init.munged)) + "ex;" 
+				Else
+					Err "Not an object"
+				End If
+				
+				EmitLocalDeclarations catchStmt.block, catchStmt.init
+				
+				If tryStmt.finallyStmt Then
+					PushLoopTryStack tryStmt
+					tryStack.Push tryStmt
+					EmitBlock catchStmt.block
+					tryStack.Pop
+					PopLoopTryStack
+				Else
+					EmitBlock catchStmt.block
+				End If
+				
+				s = "} else "
+			Next
+		
+			If tryStmt.finallyStmt Then
+				Emit s + "{"
+				' run the Finally block if an exception was thrown from the Try block but not handled by any of the Catch blocks
+				Emit "bbExLeave();"
+				If opt_debug Then Emit "bbOnDebugPopExState();"
+				EmitFinallyJmp tryStmt.finallyStmt, tryStmt.rethrowLabel
+				Emit "}"
+				
+				' run the Finally block if an exception was thrown from the Try block and handled by one of the Catch blocks
+				Emit "bbExLeave();"
+				If opt_debug Then Emit "bbOnDebugPopExState();"
+				EmitFinallyJmp tryStmt.finallyStmt, tryStmt.endTryLabel
+			Else
+				Emit s + "{"
+				Emit "goto " + tryStmt.rethrowLabel.munged + ";"
+				Emit "}"
+				Emit "goto " + tryStmt.endTryLabel.munged + ";"
 			End If
 			
-			EmitLocalDeclarations(c.block, c.init)
-			
-			EmitBlock( c.block )
-			s = "} else "
-		Next
-		If s Then
-			Emit s + " {"
-			' unhandled exception
+			Emit "}"
+			Emit "break;"
+		Else ' no catch blocks exist
+			Emit "case 1:"
+			'If opt_debug Then Emit "bbOnDebugPopExState();"
+		End If
+		
+		If tryStmt.finallyStmt Then
+			' run the Finally block if an exception was thrown from a Catch block
+			Emit "case 2: {"
+			If opt_debug Then Emit "bbOnDebugPopExState();"
+			Emit "ex = bbExCatch();"
+			Emit "retptr = &&" + tryStmt.rethrowLabel.munged + ";"
+			Emit TransLabel(tryStmt.finallyStmt.finallyLabel)
+			EmitFinallyStmt tryStmt.finallyStmt
+			Emit "goto *retptr;"
+			Emit TransLabel(tryStmt.rethrowLabel)
 			Emit "bbExThrow(ex);"
 			Emit "}"
+			Emit "break;"
 		Else
-			' unhandled exception
+			Emit TransLabel(tryStmt.rethrowLabel)
 			Emit "bbExThrow(ex);"
 		End If
-
+		
 		Emit "}"
-		Emit "break;"
 		Emit "}"
-		Emit "} while(0);"
+		Emit TransLabel(tryStmt.endTryLabel)
 	End Method
 	
-	Method EmitTryStack()
-		For Local i:Int = 0 Until tryStack.Length()
-			Emit "bbExLeave();"
-			If opt_debug Then
-				Emit "bbOnDebugPopExState();"
-			End If
-		Next
+	Method EmitFinallyJmp(stmt:TFinallyStmt, returnLabel:TLoopLabelDecl)
+		Emit "retptr = &&" + returnLabel.munged + ";"
+		Emit "goto " + stmt.finallyLabel.munged + ";"
 	End Method
-
-	Method EmitLocalScopeStack()
-		For Local i:Int = 0 Until localScope.Length()
-			Emit "// TODO"
-		Next
+	
+	Method EmitFinallyStmt(f:TFinallyStmt)
+		Emit "{"
+		EmitLocalDeclarations f.block
+		EmitBlock f.block
+		Emit "}"
 	End Method
 
 	Method EmitDebugEnterScope(block:TBlockDecl)

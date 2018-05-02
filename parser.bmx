@@ -2039,10 +2039,12 @@ End Rem
 
 		Local block:TBlockDecl=New TBlockDecl.Create( tryStmtDecl )
 		Local catches:TList=New TList
+		Local finallyStmt:TFinallyStmt = Null
 
 		PushBlock block
 		While _toke<>"end" And _toke<>"endtry"
 			If CParse( "catch" )
+				If finallyStmt Then Err "'Catch' can not appear after 'Finally'."
 				Local id:String=ParseIdent()
 				Local ty:TType
 				If Not CParse(":") Then
@@ -2057,6 +2059,12 @@ End Rem
 				Local init:TLocalDecl=New TLocalDecl.Create( id,ty,Null,0 )
 				Local block:TBlockDecl=New TBlockDecl.Create( _block )
 				catches.AddLast(New TCatchStmt.Create( init,block ))
+				PopBlock
+				PushBlock block
+			Else If CParse("finally") Then
+				If finallyStmt Then Err "Try statement cannot have more than one Finally block."
+				Local block:TBlockDecl = New TBlockDecl.Create(_block, , True)
+				finallyStmt = New TFinallyStmt.Create(block)
 				PopBlock
 				PushBlock block
 			Else
@@ -2075,18 +2083,18 @@ End Rem
 			End If
 		Wend
 
+		If catches.Count() = 0 And Not finallyStmt Then Err "Expecting 'Catch' or 'Finally'."
+		
 		PopBlock ' try block
 		
 		If Not CParse("endtry") Then
-			' TODO : handle case of no catch - perhaps throw the exception again.
-			'If Not catches.Length() Err "Try block must have at least one catch block"
 			NextToke
 			CParse "try"
 		End If
 
 		PopBlock ' tryStmtDecl
 		
-		Local tryStmt:TTryStmt = New TTryStmt.Create( block,TCatchStmt[](catches.ToArray()) )
+		Local tryStmt:TTryStmt = New TTryStmt.Create(block,TCatchStmt[](catches.ToArray()), finallyStmt)
 
 		tryStmtDecl.tryStmt = tryStmt
 
@@ -2193,9 +2201,9 @@ End Rem
 				SetErr
 				Select _toke
 				Case "case"
-					Err "Case can not appear after default."
+					Err "Case can not appear after Default."
 				Case "default"
-					Err "Select statement can have only one default block."
+					Err "Select statement can have only one Default block."
 				End Select
 				ParseStmt
 
@@ -4060,7 +4068,7 @@ End Rem
 			con = 0
 			Try
 				If Eval( toker,New TIntType ) = "1" con = 1
-			Catch error:String
+			Catch Error:String
 				con = 0
 			End Try
 

@@ -138,13 +138,30 @@ Type TTranslator
 				
 				Exit
 			End If
-
 			count :+ 1
 		Next
 		
 		Return count
 	End Method
 
+	Method LoopTryStmts:TTryStmt[](findStmt:TStmt)
+		Local stmts:TTryStmt[]
+		
+		For Local stmt:Object = EachIn loopTryStack
+			If TTryStmt(stmt) Then
+				stmts :+ [TTryStmt(stmt)]
+			Else
+				If findStmt And findStmt <> stmt Then
+					Continue
+				End If
+				
+				Exit
+			End If
+		Next
+		
+		Return stmts
+	End Method
+	
 	Method GetTopLoop:TTryBreakCheck(findStmt:TStmt)
 		For Local tbc:TTryBreakCheck = EachIn loopTryStack
 			If findStmt And findStmt <> tbc.stmt Then
@@ -465,6 +482,8 @@ Type TTranslator
 		If Not munged
 			If TLocalDecl( decl )
 				munged="bbt_"+id
+			Else If TLoopLabelDecl(decl)
+				munged = "_" + TLoopLabelDecl(decl).realIdent
 			Else
 				If decl.scope Then
 					munged = decl.scope.munged + "_" + id
@@ -1075,25 +1094,31 @@ End Rem
 		
 		Return bc.contId
 	End Method
-
+	
 	Method TransContinueStmt$( stmt:TContinueStmt )
-		unreachable=True
-
+		Local returnStr:String
+		
 		Local contLoop:TStmt
 		' if we are continuing with a loop label, we'll need to find it in the stack
 		If stmt.label And TLoopLabelExpr(stmt.label) Then
 			contLoop = TLoopLabelExpr(stmt.label).loop
 		End If
-		' get count of Try statements in the stack in this loop
-		Local count:Int = LoopTryDepth(contLoop)
+		' get Try statements in the stack in this loop
+		Local tryStmts:TTryStmt[] = LoopTryStmts(contLoop)
+		Local count:Int = tryStmts.length
+		Local nowUnreachable:Int = False
 		If count > 0 Then
 			Local bc:TTryBreakCheck = GetTopLoop(contLoop)
 			If bc Then
 				NextContId(bc)
 				For Local i:Int = 0 Until count
 					Emit "bbExLeave();"
-					If opt_debug Then
-						Emit "bbOnDebugPopExState();"
+					If opt_debug Then Emit "bbOnDebugPopExState();"
+					If tryStmts[i].finallyStmt Then
+						Local returnLabelDecl:TLoopLabelDecl = New TLoopLabelDecl.Create("continue")
+						MungDecl returnLabelDecl
+						EmitFinallyJmp tryStmts[i].finallyStmt, returnLabelDecl
+						Emit TransLabel(returnLabelDecl)
 					End If
 				Next
 				Emit "goto " + TransLabelCont(bc, False)
@@ -1120,43 +1145,50 @@ End Rem
 					InternalErr
 				End If
 			Else
-
 				If opt_debug And stmt.loop And Not stmt.loop.block.IsNoDebug() Then
 					count = LoopLocalScopeDepth(Null)
 				End If
 				For Local i:Int = 0 Until count
 					Emit "bbOnDebugLeaveScope();"
 				Next
-
+				
 				' No Try statements in the stack here..
 				If stmt.label And TLoopLabelExpr(stmt.label) Then
 					Emit "goto " + TransLoopLabelCont(TLoopLabelExpr(stmt.label).loop.loopLabel.realIdent, False)
 				Else
-					Return "continue"
+					returnStr = "continue"
 				End If
 			End If
 		End If
+		
+		unreachable = True
+		Return returnStr
 	End Method
 	
 	Method TransBreakStmt$( stmt:TBreakStmt )
-		unreachable=True
-		broken:+1
-
+		Local returnStr:String
+		
 		Local brkLoop:TStmt
 		' if we are exiting with a loop label, we'll need to find it in the stack
 		If stmt.label And TLoopLabelExpr(stmt.label) Then
 			brkLoop = TLoopLabelExpr(stmt.label).loop
 		End If
-		' get count of Try statements in the stack in this loop
-		Local count:Int = LoopTryDepth(brkLoop)
+		' get Try statements in the stack in this loop
+		Local tryStmts:TTryStmt[] = LoopTryStmts(brkLoop)
+		Local count:Int = tryStmts.length
+		Local nowUnreachable:Int = False
 		If count > 0 Then
 			Local bc:TTryBreakCheck = GetTopLoop(brkLoop)
 			If bc Then
 				NextExitId(bc)
 				For Local i:Int = 0 Until count
 					Emit "bbExLeave();"
-					If opt_debug Then
-						Emit "bbOnDebugPopExState();"
+					If opt_debug Then Emit "bbOnDebugPopExState();"
+					If tryStmts[i].finallyStmt Then
+						Local returnLabelDecl:TLoopLabelDecl = New TLoopLabelDecl.Create("break")
+						MungDecl returnLabelDecl
+						EmitFinallyJmp tryStmts[i].finallyStmt, returnLabelDecl
+						Emit TransLabel(returnLabelDecl)
 					End If
 				Next
 				Emit "goto " + TransLabelExit(bc, False)
@@ -1183,7 +1215,6 @@ End Rem
 					InternalErr
 				End If
 			Else
-
 				If opt_debug And stmt.loop And Not stmt.loop.block.IsNoDebug() Then
 					count = LoopLocalScopeDepth(Null)
 				End If
@@ -1195,20 +1226,23 @@ End Rem
 				If stmt.label And TLoopLabelExpr(stmt.label) Then
 					Emit "goto " + TransLoopLabelExit(TLoopLabelExpr(stmt.label).loop.loopLabel.realIdent, False)
 				Else
-					Return "break"
+					returnStr = "break"
 				End If
 			End If
 		End If
+		
+		unreachable = True
+		broken :+ 1
+		Return returnStr
 	End Method
 	
 	Method TransTryStmt$( stmt:TTryStmt )
 	End Method
 	
-	Method EmitTryStack() Abstract
-
+	Method EmitFinallyJmp(stmt:TFinallyStmt, returnLabel:TLoopLabelDecl) Abstract
+	
 	Method TransThrowStmt$( stmt:TThrowStmt )
 	End Method
-	
 
 	Method TransBuiltinExpr$( expr:TBuiltinExpr )
 		If TMinExpr(expr) Return TransMinExpr(TMinExpr(expr))
@@ -1279,6 +1313,10 @@ End Rem
 			Return "_loopexit_" + id.ToLower() + ";"
 		End If
 	End Method
+	
+	Method TransLabel:String(labelDecl:TLoopLabelDecl)
+		Return labelDecl.munged + ":;"
+	End Method
 
 	'***** Block statements - all very C like! *****
 	
@@ -1306,7 +1344,7 @@ End Rem
 		Return code
 	End Method
 	
-	'returns unreachable status!
+	'returns and resets unreachable status
 	Method EmitBlock:Int( block:TBlockDecl )
 		Local stmtCount:Int
 'DebugStop
@@ -1364,12 +1402,12 @@ End Rem
 			EmitGDBDebug(stmt)
 			
 			If TReturnStmt(stmt) And Not tryStack.IsEmpty() Then
-				processingReturnStatement = True
+				processingReturnStatement = 1
 			End If
 			
 			Local t$=stmt.Trans()
 			
-			processingReturnStatement = False
+			processingReturnStatement = 0
 			
 			If opt_debug And Not block.IsNoDebug() Then
 				If TReturnStmt(stmt) Then
@@ -1378,9 +1416,18 @@ End Rem
 					Next
 				End If
 			End If
-
+			
 			If TReturnStmt(stmt) Then
-				EmitTryStack()
+				For Local tryStmt:TTryStmt = EachIn tryStack
+					Emit "bbExLeave();"
+					If opt_debug Then Emit "bbOnDebugPopExState();"
+					If tryStmt.finallyStmt Then
+						Local returnLabelDecl:TLoopLabelDecl = New TLoopLabelDecl.Create("return")
+						MungDecl returnLabelDecl
+						EmitFinallyJmp tryStmt.finallyStmt, returnLabelDecl
+						Emit TransLabel(returnLabelDecl)
+					End If
+				Next
 			End If
 			
 			If t Emit t+";"
@@ -1539,6 +1586,7 @@ End Rem
 		End If
 
 		If stmt.loopLabel Then
+			MungDecl stmt.loopLabel
 			Emit TransLoopLabelCont(stmt.loopLabel.realIdent, True)
 		End If
 		
@@ -1581,6 +1629,7 @@ End Rem
 		End If
 
 		If stmt.loopLabel Then
+			MungDecl stmt.loopLabel
 			Emit TransLoopLabelCont(stmt.loopLabel.realIdent, True)
 		End If
 		
@@ -1643,6 +1692,7 @@ End Rem
 		End If
 
 		If stmt.loopLabel Then
+			MungDecl stmt.loopLabel
 			Emit TransLoopLabelCont(stmt.loopLabel.realIdent, True)
 		End If
 		
