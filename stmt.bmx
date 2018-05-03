@@ -255,6 +255,7 @@ Type TReturnStmt Extends TStmt
 				Err errorText
 			End If
 			expr=expr.SemantAndCast( fdecl.retType )
+			If TIdentTypeExpr(expr) Err "Function must return a value."
 		Else If fdecl.IsCtor()
 			expr=New TSelfExpr.Semant()
 		Else If Not TVoidType( fdecl.retType )
