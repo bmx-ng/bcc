@@ -57,6 +57,18 @@ Const SCOPE_CLASS_HEIRARCHY:Int = 2
 Const SCOPE_MODULE:Int = 3
 Const SCOPE_ALL:Int = 4
 
+Const BLOCK_OTHER:Int =     $000
+Const BLOCK_LOOP:Int =      $001
+Const BLOCK_TRY:Int =       $002
+Const BLOCK_CATCH:Int =     $004
+Const BLOCK_FINALLY:Int =   $008
+Const BLOCK_IF:Int =        $010
+Const BLOCK_ELSE:Int =      $020
+Const BLOCK_FUNCTION:Int =  $040
+
+Const BLOCK_TRY_CATCH:Int = BLOCK_TRY | BLOCK_CATCH
+Const BLOCK_IF_ELSE:Int =   BLOCK_IF | BLOCK_ELSE
+
 'Const CALL_CONV_CDECL:Int = 0
 'Const CALL_CONV_STDCALL:Int = 1
 'Const CALL_CONV_DEFAULT:Int = CALL_CONV_CDECL
@@ -1636,12 +1648,12 @@ End Type
 Type TBlockDecl Extends TScopeDecl
 	Field stmts:TList=New TList
 	Field extra:Object
-	Field isFinallyBlock:Int
+	Field blockType:Int
 	
-	Method Create:TBlockDecl( scope:TScopeDecl, generated:Int = False, isFinallyBlock:Int = False )
+	Method Create:TBlockDecl( scope:TScopeDecl, generated:Int = False, blockType:Int = BLOCK_OTHER )
 		Self.scope = scope
 		Self.generated = generated
-		Self.isFinallyBlock = isFinallyBlock
+		Self.blockType = blockType
 		
 		attrs :| (scope.attrs & DECL_NODEBUG)
 		
@@ -1662,6 +1674,7 @@ Type TBlockDecl Extends TScopeDecl
 		End If
 		t.extra = extra
 		t.generated = generated
+		t.blockType = blockType
 		Return t
 	End Method
 
@@ -1706,7 +1719,7 @@ Type TBlockDecl Extends TScopeDecl
 			Function SurroundingFinallyBlock:TBlockDecl(block:TBlockDecl)
 				' get the innermost Finally block surrounding the current statement
 				While block And Not TFuncDecl(block)
-					If block.isFinallyBlock Then Return block
+					If block.blockType = BLOCK_FINALLY Then Return block
 					block = TBlockDecl(block.scope)
 				Wend
 				Return Null
@@ -1727,6 +1740,26 @@ Type TBlockDecl Extends TScopeDecl
 		Next
 	End Method
 
+	Method ToString:String()
+		Select blockType
+			Case BLOCK_OTHER
+				Return "TBlockDecl:Other"
+			Case BLOCK_LOOP
+				Return "TBlockDecl:Loop"
+			Case BLOCK_TRY
+				Return "TBlockDecl:Try"
+			Case BLOCK_CATCH
+				Return "TBlockDecl:Catch"
+			Case BLOCK_FINALLY
+				Return "TBlockDecl:Finally"
+			Case BLOCK_IF
+				Return "TBlockDecl:If"
+			Case BLOCK_ELSE
+				Return "TBlockDecl:Else"
+			Default
+				Return "TBlockDecl:Unknown"
+		End Select
+	End Method
 End Type
 
 Const FUNC_METHOD:Int=   $0001			'mutually exclusive with ctor
@@ -1772,6 +1805,7 @@ Type TFuncDecl Extends TBlockDecl
 			Self.argDecls = New TArgDecl[0]
 		End If
 		Self.attrs=attrs
+		Self.blockType = BLOCK_FUNCTION
 		Return Self
 	End Method
 	
@@ -1797,6 +1831,7 @@ Type TFuncDecl Extends TBlockDecl
 		t.metadata = metadata
 		t.mangled = mangled
 		t.noMangle = noMangle
+		t.blockType = blockType
 		Return  t
 	End Method
 
@@ -3272,6 +3307,10 @@ End Type
 
 Type TTryStmtDecl Extends TBlockDecl
 	Field tryStmt:TTryStmt
+	
+	Method ToString:String()
+		Return "TTryStmtDecl"
+	End Method
 End Type
 
 Const MODULE_STRICT:Int=1

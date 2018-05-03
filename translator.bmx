@@ -103,6 +103,13 @@ Type TTranslator
 		Return count
 	End Method
 
+	Method DumpLocalScope:Int()
+		Print "DumpLocalScope:"
+		For Local stmt:Object = EachIn localScope
+			Print "    " + stmt.ToString()
+		Next
+	End Method
+	
 	Method GetTopLocalLoop:TTryBreakCheck(findStmt:TStmt)
 		For Local tbc:TTryBreakCheck = EachIn localScope
 			If findStmt And findStmt <> tbc.stmt Then
@@ -121,6 +128,30 @@ Type TTranslator
 		Else
 			loopTryStack.Push stmt
 		End If
+	End Method
+	
+	Method TryDownToBlockScopeCount:Int(endBlockType:Int)
+		Local lastTry:Int
+		Local firstBlock:Int
+		Local count:Int
+		For Local stmt:Object = EachIn localScope
+			If TBlockDecl(stmt) Then
+				If TBlockDecl(stmt).blockType & BLOCK_TRY_CATCH Then
+					lastTry = count
+				Else If TBlockDecl(stmt).blockType = endBlockType Then
+					firstBlock = count
+					Exit
+				End If
+			End If
+			
+			If TTryBreakCheck(stmt) Then
+				Continue
+			End If
+			
+			count :+ 1
+		Next
+		
+		Return firstBlock - lastTry
 	End Method
 
 	Method PopLoopTryStack()
@@ -1114,6 +1145,17 @@ End Rem
 				For Local i:Int = 0 Until count
 					Emit "bbExLeave();"
 					If opt_debug Then Emit "bbOnDebugPopExState();"
+					
+					' in debug we also roll back scope from first Try in scope down to the loop scope itself
+					If opt_debug And (i = count - 1) And stmt.loop And Not stmt.loop.block.IsNoDebug() Then
+
+						Local loopCount:Int = TryDownToBlockScopeCount(BLOCK_LOOP)
+
+						For Local n:Int = 0 Until loopCount
+							Emit "bbOnDebugLeaveScope();"
+						Next
+					End If
+
 					If tryStmts[i].finallyStmt Then
 						Local returnLabelDecl:TLoopLabelDecl = New TLoopLabelDecl.Create("continue")
 						MungDecl returnLabelDecl
@@ -1184,6 +1226,17 @@ End Rem
 				For Local i:Int = 0 Until count
 					Emit "bbExLeave();"
 					If opt_debug Then Emit "bbOnDebugPopExState();"
+					
+					' in debug we also roll back scope from first Try in scope down to the loop scope itself
+					If opt_debug And (i = count - 1) And stmt.loop And Not stmt.loop.block.IsNoDebug() Then
+
+						Local loopCount:Int = TryDownToBlockScopeCount(BLOCK_LOOP)
+
+						For Local n:Int = 0 Until loopCount
+							Emit "bbOnDebugLeaveScope();"
+						Next
+					End If
+					
 					If tryStmts[i].finallyStmt Then
 						Local returnLabelDecl:TLoopLabelDecl = New TLoopLabelDecl.Create("break")
 						MungDecl returnLabelDecl
@@ -1409,25 +1462,39 @@ End Rem
 			
 			processingReturnStatement = 0
 			
-			If opt_debug And Not block.IsNoDebug() Then
-				If TReturnStmt(stmt) Then
-					For Local b:TBlockDecl = EachIn localScope
-						Emit "bbOnDebugLeaveScope();"
-					Next
-				End If
-			End If
-			
 			If TReturnStmt(stmt) Then
-				For Local tryStmt:TTryStmt = EachIn tryStack
-					Emit "bbExLeave();"
-					If opt_debug Then Emit "bbOnDebugPopExState();"
-					If tryStmt.finallyStmt Then
-						Local returnLabelDecl:TLoopLabelDecl = New TLoopLabelDecl.Create("return")
-						MungDecl returnLabelDecl
-						EmitFinallyJmp tryStmt.finallyStmt, returnLabelDecl
-						Emit TransLabel(returnLabelDecl)
+				Local stackSize:Int = tryStack.Count()
+				Local count:Int
+				
+				If stackSize Then
+					For Local tryStmt:TTryStmt = EachIn tryStack
+						Emit "bbExLeave();"
+						If opt_debug Then Emit "bbOnDebugPopExState();"
+						
+						' in debug we need to roll back scope from first Try in scope down to the function scope
+						If opt_debug And (count = stackSize - 1) And Not block.IsNoDebug() Then
+							Local loopCount:Int = TryDownToBlockScopeCount(BLOCK_FUNCTION)
+							For Local n:Int = 0 Until loopCount
+								Emit "bbOnDebugLeaveScope();"
+							Next
+						End If
+	
+						If tryStmt.finallyStmt Then
+							Local returnLabelDecl:TLoopLabelDecl = New TLoopLabelDecl.Create("return")
+							MungDecl returnLabelDecl
+							EmitFinallyJmp tryStmt.finallyStmt, returnLabelDecl
+							Emit TransLabel(returnLabelDecl)
+						End If
+						
+						count :+ 1
+					Next
+				Else
+					If opt_debug And Not block.IsNoDebug() Then
+						For Local b:TBlockDecl = EachIn localScope
+							Emit "bbOnDebugLeaveScope();"
+						Next
 					End If
-				Next
+				End If
 			End If
 			
 			If t Emit t+";"
@@ -1910,4 +1977,7 @@ Type TTryBreakCheck
 
 	Field stmt:TStmt
 	
+	Method ToString:String()
+		Return "TTryBreakCheck"
+	End Method
 End Type

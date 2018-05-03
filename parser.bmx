@@ -110,8 +110,8 @@ Type TForEachinStmt Extends TLoopStmt
 					expr=New TBinaryCompareExpr.Create( "=",expr, New TNullExpr.Create(TType.nullObjectType))
 
 					' then continue
-					Local thenBlock:TBlockDecl=New TBlockDecl.Create( block.scope )
-					Local elseBlock:TBlockDecl=New TBlockDecl.Create( block.scope )
+					Local thenBlock:TBlockDecl=New TBlockDecl.Create( block.scope, , BLOCK_IF )
+					Local elseBlock:TBlockDecl=New TBlockDecl.Create( block.scope, , BLOCK_ELSE )
 					cont = New TContinueStmt
 					thenBlock.AddStmt cont
 
@@ -144,8 +144,8 @@ Type TForEachinStmt Extends TLoopStmt
 					expr=New TBinaryCompareExpr.Create( "=",varExpr, New TNullExpr.Create(TType.nullObjectType))
 
 					' then continue
-					Local thenBlock:TBlockDecl=New TBlockDecl.Create( block.scope )
-					Local elseBlock:TBlockDecl=New TBlockDecl.Create( block.scope )
+					Local thenBlock:TBlockDecl=New TBlockDecl.Create( block.scope, , BLOCK_IF )
+					Local elseBlock:TBlockDecl=New TBlockDecl.Create( block.scope, , BLOCK_ELSE )
 					cont = New TContinueStmt
 					thenBlock.AddStmt cont
 
@@ -165,7 +165,7 @@ Type TForEachinStmt Extends TLoopStmt
 
 			Local whileStmt:TWhileStmt=New TWhileStmt.Create( cmpExpr,block,loopLabel, True )
 
-			block=New TBlockDecl.Create( block.scope, True )
+			block=New TBlockDecl.Create( block.scope, True, BLOCK_LOOP )
 			block.AddStmt New TDeclStmt.Create( exprTmp, True )
 			block.AddStmt New TDeclStmt.Create( indexTmp, True )
 			block.AddStmt whileStmt
@@ -233,8 +233,8 @@ Type TForEachinStmt Extends TLoopStmt
 				expr=New TBinaryCompareExpr.Create( "=",expr, New TNullExpr.Create(TType.nullObjectType))
 
 				' then continue
-				Local thenBlock:TBlockDecl=New TBlockDecl.Create( block.scope, True )
-				Local elseBlock:TBlockDecl=New TBlockDecl.Create( block.scope, True )
+				Local thenBlock:TBlockDecl=New TBlockDecl.Create( block.scope, True, BLOCK_IF )
+				Local elseBlock:TBlockDecl=New TBlockDecl.Create( block.scope, True, BLOCK_ELSE )
 				cont = New TContinueStmt.Create(Null, True)
 				thenBlock.AddStmt cont
 
@@ -262,8 +262,8 @@ Type TForEachinStmt Extends TLoopStmt
 				Local expr:TExpr=New TBinaryCompareExpr.Create( "=",varExpr, New TNullExpr.Create(TType.nullObjectType))
 
 				' then continue
-				Local thenBlock:TBlockDecl=New TBlockDecl.Create( block.scope )
-				Local elseBlock:TBlockDecl=New TBlockDecl.Create( block.scope )
+				Local thenBlock:TBlockDecl=New TBlockDecl.Create( block.scope, ,BLOCK_IF )
+				Local elseBlock:TBlockDecl=New TBlockDecl.Create( block.scope, ,BLOCK_ELSE )
 				cont = New TContinueStmt
 				thenBlock.AddStmt cont
 
@@ -276,7 +276,7 @@ Type TForEachinStmt Extends TLoopStmt
 
 			Local whileStmt:TWhileStmt=New TWhileStmt.Create( hasNextExpr,block, loopLabel, True )
 
-			block=New TBlockDecl.Create( block.scope, True )
+			block=New TBlockDecl.Create( block.scope, True, BLOCK_LOOP )
 			If tmpDecl Then
 				block.AddStmt tmpDecl
 			End If
@@ -1653,8 +1653,8 @@ End Rem
 		CParse "then"
 
 		'create empty blocks for then/else
-		Local thenBlock:TBlockDecl=New TBlockDecl.Create( _block )
-		Local elseBlock:TBlockDecl=New TBlockDecl.Create( _block )
+		Local thenBlock:TBlockDecl=New TBlockDecl.Create( _block, ,BLOCK_IF )
+		Local elseBlock:TBlockDecl=New TBlockDecl.Create( _block, ,BLOCK_ELSE )
 
 		'define if the current if is a "singleline if"
 		'"singleline ifs" are not allowed to contain "endif" "end if"
@@ -1794,7 +1794,7 @@ End Rem
 		Parse "while"
 
 		Local expr:TExpr=ParseExpr()
-		Local block:TBlockDecl=New TBlockDecl.Create( _block )
+		Local block:TBlockDecl=New TBlockDecl.Create( _block, , BLOCK_LOOP )
 
 		PushBlock block
 		While Not CParse( "wend" ) And Not CParse( "endwhile" )
@@ -1826,7 +1826,7 @@ End Rem
 
 		Parse "repeat"
 
-		Local block:TBlockDecl=New TBlockDecl.Create( _block )
+		Local block:TBlockDecl=New TBlockDecl.Create( _block, , BLOCK_LOOP )
 
 		PushBlock block
 		While _toke<>"until" And _toke<>"forever"
@@ -1881,7 +1881,7 @@ End Rem
 
 		If CParse( "eachin" )
 			Local expr:TExpr=ParseExpr()
-			Local block:TBlockDecl=New TBlockDecl.Create( _block )
+			Local block:TBlockDecl=New TBlockDecl.Create( _block, , BLOCK_LOOP )
 
 			PushBlock block
 			While Not CParse( "next" )
@@ -1936,7 +1936,7 @@ End Rem
 			incr=New TAssignStmt.Create( "=",varExpr,New TBinaryMathExpr.Create( "+",varExpr,New TCastExpr.Create( varty,stp,1 ) ) )
 		EndIf
 
-		Local block:TBlockDecl=New TBlockDecl.Create( _block )
+		Local block:TBlockDecl=New TBlockDecl.Create( _block, , BLOCK_LOOP )
 
 		PushBlock block
 		While Not CParse( "next" )
@@ -2037,7 +2037,7 @@ End Rem
 		
 		PushBlock tryStmtDecl
 
-		Local block:TBlockDecl=New TBlockDecl.Create( tryStmtDecl )
+		Local block:TBlockDecl=New TBlockDecl.Create( tryStmtDecl, , BLOCK_TRY )
 		Local catches:TList=New TList
 		Local finallyStmt:TFinallyStmt = Null
 
@@ -2057,13 +2057,13 @@ End Rem
 					Wend
 				End If
 				Local init:TLocalDecl=New TLocalDecl.Create( id,ty,Null,0 )
-				Local block:TBlockDecl=New TBlockDecl.Create( _block )
+				Local block:TBlockDecl=New TBlockDecl.Create( _block, , BLOCK_CATCH )
 				catches.AddLast(New TCatchStmt.Create( init,block ))
 				PopBlock
 				PushBlock block
 			Else If CParse("finally") Then
 				If finallyStmt Then Err "Try statement cannot have more than one Finally block."
-				Local block:TBlockDecl = New TBlockDecl.Create(_block, , True)
+				Local block:TBlockDecl = New TBlockDecl.Create(_block, , BLOCK_FINALLY)
 				finallyStmt = New TFinallyStmt.Create(block)
 				PopBlock
 				PushBlock block
@@ -2162,8 +2162,8 @@ End Rem
 					EndIf
 				Until Not CParse(",")
 
-				Local thenBlock:TBlockDecl=New TBlockDecl.Create( _block )
-				Local elseBlock:TBlockDecl=New TBlockDecl.Create( _block )
+				Local thenBlock:TBlockDecl=New TBlockDecl.Create( _block, , BLOCK_IF )
+				Local elseBlock:TBlockDecl=New TBlockDecl.Create( _block, , BLOCK_ELSE )
 
 				Local ifstmt:TIfStmt=New TIfStmt.Create( comp,thenBlock,elseBlock )
 				block.AddStmt ifstmt
