@@ -1742,6 +1742,8 @@ Type TBlockDecl Extends TScopeDecl
 
 	Method ToString:String()
 		Select blockType
+			Case BLOCK_FUNCTION
+				Return Super.ToString()
 			Case BLOCK_OTHER
 				Return "TBlockDecl:Other"
 			Case BLOCK_LOOP
