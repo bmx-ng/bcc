@@ -3190,7 +3190,8 @@ End Rem
 
 		Repeat
 			Local method_attrs:Int=decl_attrs|FUNC_METHOD | (attrs & DECL_NODEBUG)
-			If attrs & CLASS_INTERFACE method_attrs:|DECL_ABSTRACT
+			Local abst_attrs:Int = 0
+			If attrs & CLASS_INTERFACE abst_attrs:|DECL_ABSTRACT
 		
 			SkipEols
 			Select _toke
@@ -3265,13 +3266,13 @@ End Rem
 				If (attrs & CLASS_STRUCT) And (attrs & DECL_EXTERN) Then
 					Err "Structs can only contain fields."
 				EndIf
-				Local decl:TFuncDecl=ParseFuncDecl( _toke,method_attrs,classDecl )
+				Local decl:TFuncDecl=ParseFuncDecl( _toke,method_attrs | abst_attrs,classDecl )
 				If decl.IsCtor() decl.retTypeExpr=New TObjectType.Create( classDecl )
 				classDecl.InsertDecl decl
 			Case "function"
-				If (attrs & CLASS_INTERFACE)
-					Err "Interfaces can only contain constants and methods."
-				EndIf
+				'If (attrs & CLASS_INTERFACE)
+				'	Err "Interfaces can only contain constants and methods."
+				'EndIf
 				If attrs & CLASS_STRUCT Then
 					If (attrs & DECL_EXTERN) Then
 						Err "Structs can only contain fields."
@@ -3282,7 +3283,7 @@ End Rem
 				If attrs & DECL_EXTERN Then
 					Err "Extern Types can only contain methods."
 				End If
-				Local decl:TFuncDecl=ParseFuncDecl( _toke,decl_attrs,classDecl )
+				Local decl:TFuncDecl=ParseFuncDecl( _toke,decl_attrs | abst_attrs,classDecl )
 				classDecl.InsertDecl decl
 			Case "type"
 				If templateDets Then

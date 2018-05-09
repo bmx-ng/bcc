@@ -3334,15 +3334,14 @@ End Rem
 					While link<>list._head
 						Local ofdecl:TFuncDecl = TFuncDecl(link._value)
 						If fdecl.ident = ofdecl.ident And fdecl.EqualsArgs(ofdecl) Then
+
 							If fdecl.overrides Then
 								link._value = fdecl
 								ignore = True
 								Exit
 							End If
 							
-							If TFuncDecl(link._value).IsMethod() Then
-								ignore = True
-							End If
+							ignore = True
 						EndIf
 						link = link._succ
 					Wend
