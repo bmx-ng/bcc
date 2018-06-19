@@ -1238,7 +1238,7 @@ Type TCastExpr Extends TExpr
 
 			EndIf
 			
-			If TNullType(src) Then
+			If TNullType(src) And Not TVoidType(ty) Then
 				exprType = ty
 			End If
 			
