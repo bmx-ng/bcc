@@ -2795,6 +2795,7 @@ End Rem
 		Local funcDecl:TFuncDecl
 		If attrs & FUNC_CTOR Then
 			funcDecl=New TNewDecl.CreateF( id,ty,args,attrs )
+			TNewDecl(funcDecl).cdecl = classdecl
 		Else
 			'If fdecl Then
 			'	funcDecl = fdecl
@@ -3267,7 +3268,6 @@ End Rem
 					Err "Structs can only contain fields."
 				EndIf
 				Local decl:TFuncDecl=ParseFuncDecl( _toke,method_attrs | abst_attrs,classDecl )
-				If decl.IsCtor() decl.retTypeExpr=New TObjectType.Create( classDecl )
 				classDecl.InsertDecl decl
 			Case "function"
 				'If (attrs & CLASS_INTERFACE)

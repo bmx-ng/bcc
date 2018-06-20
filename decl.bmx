@@ -1965,9 +1965,13 @@ Type TFuncDecl Extends TBlockDecl
 		Local strictVoidToInt:Int = False
 
 		If isCtor() Or isDtor() Then
+			If retTypeExpr And Not TVoidType(retTypeExpr) Then
+				Err ident + "() cannot specify a return type"
+			End If
 			If ClassScope() And ClassScope().IsInterface() Then
 				Err ident + "() cannot be declared in an Interface."
 			End If
+			If IsCtor() retTypeExpr=New TObjectType.Create( TNewDecl(Self).cDecl )
 		End If
 
 		'semant ret type
@@ -2207,6 +2211,7 @@ End Type
 Type TNewDecl Extends TFuncDecl
 
 	Field chainedCtor:TNewExpr
+	Field cdecl:TClassDecl
 	
 	Method OnCopy:TDecl(deep:Int = True)
 		Local args:TArgDecl[]=argDecls[..]

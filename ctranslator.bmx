@@ -4893,7 +4893,9 @@ End Rem
 			func :+ funcDecl.ident
 		End If
 
-		func :+ TransIfcType(funcDecl.retType, funcDecl.ModuleScope().IsSuperStrict())
+		If Not TNewDecl(funcDecl) Then
+			func :+ TransIfcType(funcDecl.retType, funcDecl.ModuleScope().IsSuperStrict())
+		End If
 
 		' function args
 		func :+ TransIfcArgs(funcDecl)

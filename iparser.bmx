@@ -691,7 +691,7 @@ Type TIParser
 				'_toker.
 				NextToke
 				
-				Local decl:TFuncDecl = ParseFuncDecl( _toke,method_attrs|FUNC_METHOD )
+				Local decl:TFuncDecl = ParseFuncDecl( _toke,method_attrs|FUNC_METHOD, ,classDecl )
 				'If decl.IsCtor() decl.retTypeExpr=New TObjectType.Create( classDecl )
 				classDecl.InsertDecl decl
 				
@@ -862,7 +862,7 @@ Type TIParser
 		Return str
 	End Method
 
-	Method ParseFuncDecl:TFuncDecl( toke$,attrs:Int, returnType:TType = Null )
+	Method ParseFuncDecl:TFuncDecl( toke$,attrs:Int, returnType:TType = Null, classDecl:TClassDecl = Null )
 		SetErr
 
 		'If toke Parse toke
@@ -881,7 +881,7 @@ Type TIParser
 					NextToke
 					attrs:|FUNC_CTOR
 					attrs:&~FUNC_METHOD
-					ty=ParseDeclType(attrs, True)
+					ParseDeclType(attrs, True)
 				Else
 					If _toker._tokeType = TOKE_STRINGLIT Then
 						id = ParseStringLit()
@@ -1018,6 +1018,7 @@ Type TIParser
 		Local funcDecl:TFuncDecl
 		If attrs & FUNC_CTOR Then
 			funcDecl = New TNewDecl.CreateF( id,ty,args,attrs )
+			TNewDecl(funcDecl).cdecl = classDecl
 		Else
 			If fdecl Then
 				funcDecl = fdecl
