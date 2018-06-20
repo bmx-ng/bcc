@@ -5046,7 +5046,13 @@ End Rem
 	End Method
 
 	Method EmitIfcFieldDecl(fieldDecl:TFieldDecl)
-		Local f:String = "." + fieldDecl.ident + TransIfcType(fieldDecl.ty, fieldDecl.ModuleScope().IsSuperStrict())
+		Local f:String
+		If fieldDecl.IsReadOnly() Then
+			f :+ "@"
+		Else
+			f :+ "."
+		End If
+		f :+ fieldDecl.ident + TransIfcType(fieldDecl.ty, fieldDecl.ModuleScope().IsSuperStrict())
 
 		f :+ "&"
 		

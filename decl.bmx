@@ -26,6 +26,7 @@ Const DECL_EXTERN:Int=        $010000
 Const DECL_PRIVATE:Int=       $020000
 Const DECL_ABSTRACT:Int=      $040000
 Const DECL_FINAL:Int=         $080000
+Const DECL_READ_ONLY:Int=     $000100
 
 Const DECL_SEMANTED:Int=      $100000
 Const DECL_SEMANTING:Int=     $200000
@@ -176,6 +177,10 @@ Type TDecl
 	
 	Method IsPublic:Int()
 		Return Not (IsPrivate() Or IsProtected())
+	End Method
+	
+	Method IsReadOnly:Int()
+		Return (attrs & DECL_READ_ONLY)<>0
 	End Method
 	
 	Method IsAbstract:Int()

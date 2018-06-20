@@ -702,7 +702,10 @@ Type TIParser
 				'If decl.IsCtor() decl.retTypeExpr=New TObjectType.Create( classDecl )
 				classDecl.InsertDecl decl
 
-			Case "." ' field
+			Case ".", "@" ' field
+				If _toker._toke = "@" Then
+					decl_attrs :| DECL_READ_ONLY
+				End If
 				NextToke
 				decl_attrs :| DECL_FIELD
 				Local decl:TDecl= ParseDecl( _toke,decl_attrs )

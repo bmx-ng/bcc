@@ -49,7 +49,7 @@ Type TToker
 		"and,or,shl,shr,sar,end,if,then,else,elseif,endif,while,wend,repeat,until,forever,for,to,step," + ..
 		"next,return,alias,rem,endrem,throw,assert,try,catch,finally,nodebug,incbin,endselect,endmethod," + ..
 		"endfunction,endtype,endextern,endtry,endwhile,pi,release,defdata,readdata,restoredata,interface," + ..
-		"endinterface,implements,size_t,uint,ulong,struct,endstruct,operator,where"
+		"endinterface,implements,size_t,uint,ulong,struct,endstruct,operator,where,readonly"
 	Global _keywords:TMap
 
 	Field _path$

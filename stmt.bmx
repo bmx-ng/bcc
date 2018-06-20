@@ -128,6 +128,24 @@ Type TAssignStmt Extends TStmt
 		If TInvokeExpr( lhs ) Or TInvokeMemberExpr( lhs )
 			rhs=Null
 		Else
+		
+			' can't assign to readonly field outside of its class constructor
+			If TVarExpr(lhs) Or TMemberVarExpr(lhs) Then
+				Local decl:TFieldDecl
+				If TVarExpr(lhs) Then
+					decl = TFieldDecl(TVarExpr(lhs).decl)
+				Else
+					decl = TFieldDecl(TMemberVarExpr(lhs).decl)
+				End If
+				If decl And decl.IsReadOnly() Then
+					' check scope for ctor
+					Local scope:TFuncDecl = _env.FuncScope()
+					If Not scope Or Not scope.IsCtor() Or (decl.ClassScope() <> scope.ClassScope()) Then
+						Err "Cannot modify ReadOnly field " + decl.ident
+					End If
+				End If
+			End If
+		
 			If IsPointerType(lhs.exprType, 0, TType.T_POINTER | TType.T_VARPTR) And TNumericType(rhs.exprType) Then
 				' with pointer assignment we don't cast the numeric to a pointer
 				

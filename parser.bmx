@@ -2412,9 +2412,9 @@ End Rem
 					init=ParseExpr()
 				End If
 			End If
-		Else If CParse( ":=" )
-			init=ParseExpr()
-			ty = init.exprType
+'		Else If CParse( ":=" )
+'			init=ParseExpr()
+'			ty = init.exprType
 		Else
 			ty=ParseDeclType(attrs & DECL_API_STDCALL)
 
@@ -2444,6 +2444,12 @@ End Rem
 			Else
 				Err "Constants must be initialized."
 			EndIf
+			
+			If toke = "field" Then
+				If CParse("readonly") Then
+					attrs :| DECL_READ_ONLY
+				End If
+			End If
 		EndIf
 		
 
