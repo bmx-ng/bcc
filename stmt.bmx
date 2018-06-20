@@ -77,8 +77,11 @@ Type TDeclStmt Extends TStmt
 	End Method
 	
 	Method OnSemant()
-		If TLocalDecl(decl) And _env.FindTry() Then
-			TLocalDecl(decl).declaredInTry = True
+		If TLocalDecl(decl) Then
+			Local tryStmtDecl:TTryStmtDecl = _env.FindTry()
+			If tryStmtDecl Then
+				TLocalDecl(decl).declaredInTry = tryStmtDecl
+			End If
 		End If
 		
 		decl.Semant

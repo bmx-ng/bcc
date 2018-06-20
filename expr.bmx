@@ -167,8 +167,9 @@ Type TExpr
 					' passing a non volatile local as Var from within a Try block?					
 					If TVarExpr(args[i]) Then
 						Local ldecl:TLocalDecl = TLocalDecl(TVarExpr(args[i]).decl)
-						If ldecl Then
-							If Not ldecl.volatile And Not ldecl.declaredInTry And _env.FindTry() Then
+						If ldecl And Not ldecl.volatile Then
+							Local tryStmtDecl:TTryStmtDecl = _env.FindTry()
+							If tryStmtDecl And (Not ldecl.declaredInTry Or tryStmtDecl <> ldecl.declaredInTry) Then
 								ldecl.volatile = True
 							End If
 						End If
@@ -2567,8 +2568,11 @@ Type TIdentExpr Extends TExpr
 
 				Local ldecl:TLocalDecl = TLocalDecl( vdecl )
 
-				If Not ldecl.volatile And Not ldecl.declaredInTry And scope.FindTry() Then
-					ldecl.volatile = True
+				If Not ldecl.volatile Then
+					Local tryStmtDecl:TTryStmtDecl = scope.FindTry()
+					If tryStmtDecl And (Not ldecl.declaredInTry Or tryStmtDecl <> ldecl.declaredInTry) Then
+						ldecl.volatile = True
+					End If
 				End If
 
 			Else If TConstDecl( vdecl )

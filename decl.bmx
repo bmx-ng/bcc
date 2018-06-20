@@ -600,7 +600,7 @@ Type TLocalDecl Extends TVarDecl
 
 	Field done:Int
 	Field volatile:Int = False
-	Field declaredInTry:Int
+	Field declaredInTry:TTryStmtDecl
 
 	Method Create:TLocalDecl( ident$,ty:TType,init:TExpr,attrs:Int=0, generated:Int = False, volatile:Int = False )
 		Self.ident=ident
