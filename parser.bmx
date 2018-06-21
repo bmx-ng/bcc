@@ -446,7 +446,7 @@ Type TParser Extends TGenProcessor
 			Case "~n"
 				Return "end-of-line"
 		End Select
-		Return toke
+		Return "'" + toke + "'"
 	End Method
 
 	Method CParse:Int( toke$ )
@@ -1412,7 +1412,7 @@ Type TParser Extends TGenProcessor
 				_app.mapStringConsts(BmxUnquote( _toke ))
 				NextToke
 			Default
-				Err "Expecting expression but encountered '"+_toke+"'"
+				Err "Expecting expression but encountered "+DescribeToke(_toke)
 			End Select
 		End Select
 
@@ -1477,8 +1477,6 @@ Type TParser Extends TGenProcessor
 	End Method
 
 	Method ParseUnaryExpr:TExpr()
-
-		SkipEols
 
 		Local op$=_toke
 		Select op
