@@ -133,40 +133,54 @@ Type TExpr
 			If Not funcDecl.argDecls[i].IsSemanted() Then
 				funcDecl.argDecls[i].Semant()
 			End If
+			
+			Local argExpr:TExpr = args[i]
 
-			If i < args.length And args[i]
-				If TInvokeExpr(args[i]) And Not TInvokeExpr(args[i]).invokedWithBraces Then
+			If i < args.length And argExpr
+				If TInvokeExpr(argExpr) And Not TInvokeExpr(argExpr).invokedWithBraces Then
 					If Not IsPointerType(funcDecl.argDecls[i].ty, TType.T_BYTE) And Not TFunctionPtrType(funcDecl.argDecls[i].ty) Then
-						Err "Unable to convert from '" + args[i].exprType.ToString() + "()' to '" + funcDecl.argDecls[i].ty.ToString() + "'"
+						Err "Unable to convert from '" + argExpr.exprType.ToString() + "()' to '" + funcDecl.argDecls[i].ty.ToString() + "'"
 					End If
 				End If
 
-				If TInvokeMemberExpr(args[i]) And Not TInvokeMemberExpr(args[i]).invokedWithBraces Then
+				If TInvokeMemberExpr(argExpr) And Not TInvokeMemberExpr(argExpr).invokedWithBraces Then
 					If Not IsPointerType(funcDecl.argDecls[i].ty, TType.T_BYTE) And Not TFunctionPtrType(funcDecl.argDecls[i].ty) Then
-						Err "Unable to convert from '" + args[i].exprType.ToString() + "()' to '" + funcDecl.argDecls[i].ty.ToString() + "'"
+						Err "Unable to convert from '" + argExpr.exprType.ToString() + "()' to '" + funcDecl.argDecls[i].ty.ToString() + "'"
 					End If
 				End If
 
 				If funcDecl.argDecls[i].ty._flags & TType.T_VAR Then
 
-					If TConstExpr(args[i]) Or TBinaryExpr(args[i]) Or (TIndexExpr(args[i]) And TStringType(TIndexExpr(args[i]).expr.exprType)) Or ..
-							TInvokeExpr(args[i]) Or TInvokeMemberExpr(args[i]) Then
+					If TConstExpr(argExpr) Or TBinaryExpr(argExpr) Or (TIndexExpr(argExpr) And TStringType(TIndexExpr(argExpr).expr.exprType)) Or ..
+							TInvokeExpr(argExpr) Or TInvokeMemberExpr(argExpr) Then
 						Err "Expression for 'Var' parameter must be a variable"
 					End If
 
 					' Passing a "new" object into a Var, requires us to create a local variable and pass its address instead.
-					If TNewObjectExpr(args[i]) Then
-						Local tmp:TLocalDecl=New TLocalDecl.Create( "",TNewObjectExpr(args[i]).ty,args[i],, True )
+					If TNewObjectExpr(argExpr) Then
+						Local tmp:TLocalDecl=New TLocalDecl.Create( "",TNewObjectExpr(argExpr).ty,argExpr,, True )
 						tmp.Semant()
 						Local v:TVarExpr = New TVarExpr.Create( tmp )
 						Local stmt:TExpr = New TStmtExpr.Create( New TDeclStmt.Create( tmp ), v ).Semant()
-						stmt.exprType = TNewObjectExpr(args[i]).ty
+						stmt.exprType = TNewObjectExpr(argExpr).ty
 						args[i] = stmt
+					End If
+					
+					If TVarExpr(argExpr) Or TMemberVarExpr(argExpr) Then
+						Local decl:TDecl
+						If TVarExpr(argExpr) Then
+							decl = TVarExpr(argExpr).decl
+						Else
+							decl = TMemberVarExpr(argExpr).decl
+						End If
+						If decl.IsReadOnly() Then
+							Err "Expression for 'Var' parameter cannot be a ReadOnly variable"
+						End If
 					End If
 
 					' passing a non volatile local as Var from within a Try block?					
-					If TVarExpr(args[i]) Then
-						Local ldecl:TLocalDecl = TLocalDecl(TVarExpr(args[i]).decl)
+					If TVarExpr(argExpr) Then
+						Local ldecl:TLocalDecl = TLocalDecl(TVarExpr(argExpr).decl)
 						If ldecl And Not ldecl.volatile Then
 							Local tryStmtDecl:TTryStmtDecl = _env.FindTry()
 							If tryStmtDecl And (Not ldecl.declaredInTry Or tryStmtDecl <> ldecl.declaredInTry) Then
@@ -176,19 +190,19 @@ Type TExpr
 					End If
 				End If
 				
-				If (funcDecl.argDecls[i].ty._flags & TType.T_VAR) And Not (funcDecl.argDecls[i].ty.EqualsType(args[i].exprType)) Then
-					If (Not TObjectType(funcDecl.argDecls[i].ty)) Or (TObjectType(funcDecl.argDecls[i].ty) And Not args[i].exprType.ExtendsType(funcDecl.argDecls[i].ty)) Then
+				If (funcDecl.argDecls[i].ty._flags & TType.T_VAR) And Not (funcDecl.argDecls[i].ty.EqualsType(argExpr.exprType)) Then
+					If (Not TObjectType(funcDecl.argDecls[i].ty)) Or (TObjectType(funcDecl.argDecls[i].ty) And Not argExpr.exprType.ExtendsType(funcDecl.argDecls[i].ty)) Then
 						err "Variable for 'Var' parameter is not of matching type"
 					End If
 				End If
 
 				' re-test auto array for compatible consts.
-				If TArrayExpr(args[i]) And TArrayType(funcDecl.argDecls[i].ty) And TNumericType(TArrayType(funcDecl.argDecls[i].ty).elemType) Then
-					TArrayExpr(args[i]).toType = TArrayType(funcDecl.argDecls[i].ty).elemType
-					args[i].exprType = Null
-					args[i].Semant()
+				If TArrayExpr(argExpr) And TArrayType(funcDecl.argDecls[i].ty) And TNumericType(TArrayType(funcDecl.argDecls[i].ty).elemType) Then
+					TArrayExpr(argExpr).toType = TArrayType(funcDecl.argDecls[i].ty).elemType
+					argExpr.exprType = Null
+					argExpr.Semant()
 				End If
-				args[i]=args[i].Cast( funcDecl.argDecls[i].ty )
+				args[i]=argExpr.Cast( funcDecl.argDecls[i].ty )
 			Else If funcDecl.argDecls[i].init
 				If i = args.length Then
 					' extend args to add default init entry
