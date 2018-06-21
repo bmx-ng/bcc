@@ -164,6 +164,7 @@ Type TExpr
 						Local stmt:TExpr = New TStmtExpr.Create( New TDeclStmt.Create( tmp ), v ).Semant()
 						stmt.exprType = TNewObjectExpr(argExpr).ty
 						args[i] = stmt
+						argExpr = args[i]
 					End If
 					
 					If TVarExpr(argExpr) Or TMemberVarExpr(argExpr) Then
@@ -174,7 +175,14 @@ Type TExpr
 							decl = TMemberVarExpr(argExpr).decl
 						End If
 						If decl.IsReadOnly() Then
-							Err "Expression for 'Var' parameter cannot be a ReadOnly variable"
+							If TFieldDecl(decl) Then
+								Local scope:TFuncDecl = _env.FuncScope()
+								If Not scope Or Not scope.IsCtor() Or (decl.ClassScope() <> scope.ClassScope()) Then
+									Err "Expression for 'Var' parameter cannot be a ReadOnly variable"
+								End If
+							Else
+								Err "Expression for 'Var' parameter cannot be a ReadOnly variable"
+							End If
 						End If
 					End If
 

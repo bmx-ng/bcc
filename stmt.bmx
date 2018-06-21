@@ -129,19 +129,23 @@ Type TAssignStmt Extends TStmt
 			rhs=Null
 		Else
 		
-			' can't assign to readonly field outside of its class constructor
+			' can't assign to readonly field outside of its class constructor, or anytime for readonly variable
 			If TVarExpr(lhs) Or TMemberVarExpr(lhs) Then
-				Local decl:TFieldDecl
+				Local decl:TDecl
 				If TVarExpr(lhs) Then
-					decl = TFieldDecl(TVarExpr(lhs).decl)
+					decl = TVarExpr(lhs).decl
 				Else
-					decl = TFieldDecl(TMemberVarExpr(lhs).decl)
+					decl = TMemberVarExpr(lhs).decl
 				End If
 				If decl And decl.IsReadOnly() Then
-					' check scope for ctor
-					Local scope:TFuncDecl = _env.FuncScope()
-					If Not scope Or Not scope.IsCtor() Or (decl.ClassScope() <> scope.ClassScope()) Then
-						Err "Cannot modify ReadOnly field " + decl.ident
+					If TFieldDecl(decl) Then
+						' check scope for ctor
+						Local scope:TFuncDecl = _env.FuncScope()
+						If Not scope Or Not scope.IsCtor() Or (decl.ClassScope() <> scope.ClassScope()) Then
+							Err "Cannot modify ReadOnly field " + decl.ident
+						End If
+					Else
+						Err "Cannot modify ReadOnly variable " + decl.ident
 					End If
 				End If
 			End If
