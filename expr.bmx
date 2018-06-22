@@ -2450,6 +2450,10 @@ Type TIdentTypeExpr Extends TExpr
 		Return _trans.TransIdentTypeExpr( Self )
 	End Method
 
+	Method Cast:TExpr( ty:TType,castFlags:Int=0 )
+		Err "Unable to convert from Type to " + ty.ToString()
+	End Method
+
 End Type
 
 Type TIdentExpr Extends TExpr
