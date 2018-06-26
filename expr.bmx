@@ -855,8 +855,11 @@ Type TNewObjectExpr Extends TExpr
 			' maybe it's an instance of a type ?
 			Local decl:TVarDecl = TVarDecl(_env.FindDecl(it.ident))
 			If decl And TObjectType(decl.ty) Then
+				' this legacy feature is deprecated. Issue a warning but let it go for now...
 				ty = decl.ty
 				instanceExpr = New TVarExpr.Create(decl).Semant()
+				' 
+				Warn("Use of New <Object instance> is deprecated, and support will be removed in a future update.")
 			Else
 				Err "Type '"+it.ident+"' not found"
 			End If
