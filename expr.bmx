@@ -134,9 +134,10 @@ Type TExpr
 				funcDecl.argDecls[i].Semant()
 			End If
 			
-			Local argExpr:TExpr = args[i]
+			If i < args.length And args[i]
 
-			If i < args.length And argExpr
+				Local argExpr:TExpr = args[i]
+
 				If TInvokeExpr(argExpr) And Not TInvokeExpr(argExpr).invokedWithBraces Then
 					If Not IsPointerType(funcDecl.argDecls[i].ty, TType.T_BYTE) And Not TFunctionPtrType(funcDecl.argDecls[i].ty) Then
 						Err "Unable to convert from '" + argExpr.exprType.ToString() + "()' to '" + funcDecl.argDecls[i].ty.ToString() + "'"
