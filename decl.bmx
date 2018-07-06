@@ -3076,6 +3076,7 @@ End Rem
 					For Local decl:TFuncDecl=EachIn iface.SemantedMethods()
 						Local found:Int
 
+						Local voidReturnTypeFail:Int
 						Local cdecl:TClassDecl=Self
 						
 						While cdecl And Not found
@@ -3089,6 +3090,19 @@ End Rem
 									End If
 									found=True
 									Exit
+								Else
+									If decl2.EqualsArgs( decl, False ) Then
+										If TVoidType(decl.retType) And TIntType(decl2.retType) Then
+											' if we are only strict, we may fail on type mismatch
+											If Not ModuleScope().IsSuperStrict() Then
+												' we have the option of upgrading our return type to match superstrict parent
+												If Not opt_strictupgrade Then
+													voidReturnTypeFail = True
+												End If
+											End If
+										End If
+
+									End If
 								EndIf
 							Next
 						
@@ -3096,7 +3110,11 @@ End Rem
 						Wend
 
 						If Not found
-							Err decl.ToString() + " must be implemented by type " + ToString()
+							Local errorDetails:String = decl.ToString() + " must be implemented by type " + ToString()
+							If voidReturnTypeFail Then
+								errorDetails :+ " You may have Strict type overriding SuperStrict type. "
+							End If
+							Err errorDetails
 						EndIf
 					Next
 				Next
