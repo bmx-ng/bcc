@@ -3202,7 +3202,12 @@ End Rem
 		If Not proto Then
 
 			If PROFILER Then
-				DebugPrint("", TransFullName(decl))
+				Select decl.ident
+					Case "WritePixel", "PixelPtr", "CopyPixels", "ConvertPixels", "ConvertPixelsToStdFormat", "ConvertPixelsFromStdFormat"
+					Case "OnDebugEnterScope", "OnDebugEnterStm", "GetDbgState", "OnDebugLeaveScope", "OnDebugPopExState", "OnDebugPushExState"
+					Default
+						DebugPrint("", TransFullName(decl))
+				End Select
 			End If
 				
 			If DEBUG Then
