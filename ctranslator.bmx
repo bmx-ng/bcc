@@ -5729,6 +5729,27 @@ End If
 		Emit "if (!" + app.munged + "_inited) {"
 		Emit app.munged + "_inited = 1;"
 
+		' add global roots
+		Local first:TGlobalDecl
+		Local last:TGlobalDecl
+				
+		For Local decl:TGlobalDecl=EachIn app.semantedGlobals
+
+			If decl.declImported Continue
+
+			decl.Semant
+
+			If Not first Then
+				first = decl
+			End If
+			
+			last = decl
+		Next
+
+		If first Then
+			Emit "GC_add_roots(&" + first.munged + ", &" + last.munged + " + 1);"
+		End If
+
 		' register incbins
 		For Local ib:TIncbin = EachIn app.incbins
 			Emit "bbIncbinAdd(&" + TStringConst(app.stringConsts.ValueForKey(ib.file)).id + ",&" + app.munged + "_ib_" + ib.id + "," + ib.length + ");"
