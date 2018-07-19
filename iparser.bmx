@@ -745,6 +745,7 @@ Type TIParser
 				
 				Local decl:TDecl= ParseDecl( _toke,decl_attrs | DECL_CONST)
 				classDecl.InsertDecl decl
+				decl.declImported = True
 			End If
 			
 		Forever
