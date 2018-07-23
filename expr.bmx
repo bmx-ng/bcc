@@ -2667,7 +2667,7 @@ Type TIdentExpr Extends TExpr
 		End Try
 
 		If fdecl
-			If _env.ModuleScope().IsStrict() And Not fdecl.IsProperty() And Not isArg And Not fdecl.maybeFunctionPtr Err "Identifier '"+ident+"' cannot be used in this way."
+			If Not isArg And Not fdecl.maybeFunctionPtr Err "Identifier '"+ident+"' cannot be used in this way."
 
 			fdecl.maybeFunctionPtr = False
 			
