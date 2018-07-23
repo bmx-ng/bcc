@@ -2443,11 +2443,6 @@ End Rem
 				Err "Constants must be initialized."
 			EndIf
 			
-			If toke = "field" Then
-				If CParse("readonly") Then
-					attrs :| DECL_READ_ONLY
-				End If
-			End If
 		EndIf
 		
 
@@ -2523,8 +2518,14 @@ End Rem
 		Return decl
 	End Method
 
-	Method ParseDecls:TList( toke$,attrs:Int )
+	Method ParseDecls:TList( toke$,attrs:Int, isField:Int = False )
 		If toke Parse toke
+
+		If isField Then
+			If CParse("readonly") Then
+				attrs :| DECL_READ_ONLY
+			End If
+		End If
 
 		Local decls:TList=New TList'<Decl>
 		Repeat
@@ -3266,7 +3267,8 @@ End Rem
 				If (attrs & CLASS_STRUCT) And _toke<>"field"
 					Err "Structs can only contain fields."
 				EndIf
-				classDecl.InsertDecls ParseDecls( _toke,decl_attrs )
+				
+				classDecl.InsertDecls ParseDecls( _toke,decl_attrs, _toke = "field")
 			Case "method"
 				If (attrs & CLASS_STRUCT) And (attrs & DECL_EXTERN) Then
 					Err "Structs can only contain fields."
