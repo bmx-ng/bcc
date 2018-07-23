@@ -5721,6 +5721,18 @@ End If
 			EndIf
 		Next
 
+		' emit nested functions/classes for localmain
+		' emit nested protos
+		For Local fdecl:TFuncDecl = EachIn app.mainFunc._decls
+			EmitFuncDecl(fdecl, True)
+		Next
+		
+		' emit nested bodies
+		For Local fdecl:TFuncDecl = EachIn app.mainFunc._decls
+			EmitFuncDecl(fdecl, False)
+		Next
+
+
 		Emit "static int " + app.munged + "_inited" + " = 0;"
 
 		Emit "int " + app.munged + "(){"
