@@ -864,6 +864,8 @@ Type TNewObjectExpr Extends TExpr
 			Else
 				Err "Type '"+it.ident+"' not found"
 			End If
+		Else If isNewSelf Then
+			Warn("Use of New Self is deprecated, and support will be removed in a future update.")
 		End If
 		args=SemantArgs( args )
 
