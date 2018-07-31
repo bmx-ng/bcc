@@ -3984,7 +3984,11 @@ End Rem
 			Next
 		
 			' process nested functions for new
-			Local decl:TFuncDecl = classDecl.FindFuncDecl("new",,,,,,SCOPE_CLASS_HEIRARCHY)
+			Local decl:TFuncDecl
+			Try
+				decl = classDecl.FindFuncDecl("new",,,,,True,SCOPE_CLASS_HEIRARCHY)
+			Catch e:String
+			End Try
 			If decl And decl.scope = classDecl Then ' only our own New method, not any from superclasses
 				decl.Semant
 				' emit nested protos
@@ -5304,9 +5308,11 @@ End Rem
 			ib.length = buf.length
 
 			Emit "unsigned char " + ident + "[] = {"
-			Local s:String
+			Local sb:TStringBuffer = New TStringBuffer
 
 			Local hx:Short[2]
+			Local lines:Int
+			Local count:Int
 			For Local i:Int = 0 Until buf.length
 				Local val:Int = buf[i]
 
@@ -5316,17 +5322,27 @@ End Rem
 					hx[k]=n
 					val:Shr 4
 				Next
-				s :+ "0x" + String.FromShorts( hx,2 )
+				sb.Append("0x").AppendShorts( hx,2 )
 
-				s :+ ","
+				sb.Append(",")
+				
+				count :+ 5
 
-				If s.length > 80 Then
-					Emit s
-					s = ""
+				If count > 80 Then
+					sb.Append("~n")
+					count = 0
+					lines :+ 1
 				End If
+				
+				If lines > 100 Then
+					Emit sb.ToString()
+					sb.SetLength(0)
+					lines = 0
+				End If
+				
 			Next
 
-			Emit s
+			Emit sb.ToString()
 			Emit "};"
 
 		End If
@@ -5558,8 +5574,8 @@ End If
 			Local mung:String = FileMung(False)
 
 			Local name:String = StripAll(app.mainModule.filepath)
-			Local file:String = name + ".bmx" + mung + ".incbin.h"
-			Local filepath:String = OutputFilePath(opt_filepath, mung, "incbin.h")
+			Local file:String = name + ".bmx" + mung + ".incbin.c"
+			Local filepath:String = OutputFilePath(opt_filepath, mung, "incbin.c")
 
 			If IncBinRequiresRebuild(filepath, app.incbins) Then
 
@@ -5578,8 +5594,6 @@ End If
 			End If
 
 			SetOutput("pre_source")
-
-			Emit "#include ~q" + file + "~q"
 		End If
 	End Method
 
@@ -5732,6 +5746,10 @@ End If
 			EmitFuncDecl(fdecl, False)
 		Next
 
+		' incbin decls
+		For Local ib:TIncbin = EachIn app.incbins
+			Emit "extern unsigned char * " + app.munged + "_ib_" + ib.id + ";"
+		Next
 
 		Emit "static int " + app.munged + "_inited" + " = 0;"
 

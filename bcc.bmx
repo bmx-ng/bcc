@@ -156,7 +156,7 @@ End Function
 Function SaveIncBinHeader(file:String, trans:TCTranslator, mung:String, app:TAppDecl)
 
 	If app.genIncBinHeader Then
-		Local path:String = OutputFilePath(file, mung, "incbin.h")
+		Local path:String = OutputFilePath(file, mung, "incbin.c")
 
 		SaveText(trans.JoinLines("incbin"), path)
 	End If

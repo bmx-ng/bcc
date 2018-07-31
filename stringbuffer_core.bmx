@@ -137,7 +137,15 @@ Type TStringBuffer
 		bmx_stringbuffer_append_utf8string(buffer, chars)
 		Return Self
 	End Method
-	
+
+	Rem
+	bbdoc: Appends an array of shorts onto the string builder.
+	End Rem
+	Method AppendShorts:TStringBuffer(shorts:Short Ptr, length:Int)
+		bmx_stringbuffer_append_shorts(buffer, shorts, length)
+		Return Self
+	End Method
+
 	Rem
 	bbdoc: Finds first occurance of a sub string.
 	returns: -1 if @subString not found.

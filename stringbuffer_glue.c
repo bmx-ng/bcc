@@ -501,6 +501,16 @@ void bmx_stringbuffer_append_utf8string(struct MaxStringBuffer * buf, const char
 	}
 }
 
+void bmx_stringbuffer_append_shorts(struct MaxStringBuffer * buf, short * shorts, int length) {
+	if (length > 0) {
+		bmx_stringbuffer_resize(buf, buf->count + length);
+		BBChar * p = buf->buffer + buf->count;
+		memcpy(p, shorts, length * sizeof(BBChar));
+		
+		buf->count += length;
+	}	
+}
+
 /* ----------------------------------------------------- */
 
 int bmx_stringbuffer_splitbuffer_length(struct MaxSplitBuffer * buf) {

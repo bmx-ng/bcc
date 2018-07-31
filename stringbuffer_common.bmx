@@ -54,6 +54,7 @@ Extern
 	Function bmx_stringbuffer_removecharat(buffer:Byte Ptr, index:Int)
 	Function bmx_stringbuffer_append_cstring(buffer:Byte Ptr, chars:Byte Ptr)
 	Function bmx_stringbuffer_append_utf8string(buffer:Byte Ptr, chars:Byte Ptr)
+	Function bmx_stringbuffer_append_shorts(buffer:Byte Ptr, shorts:Short Ptr, length:Int)
 
 	Function bmx_stringbuffer_splitbuffer_length:Int(splitPtr:Byte Ptr)
 	Function bmx_stringbuffer_splitbuffer_text:String(splitPtr:Byte Ptr, index:Int)
