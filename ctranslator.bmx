@@ -5782,7 +5782,7 @@ End If
 
 		' register incbins
 		For Local ib:TIncbin = EachIn app.incbins
-			Emit "bbIncbinAdd(&" + TStringConst(app.stringConsts.ValueForKey(ib.file)).id + ",&" + app.munged + "_ib_" + ib.id + "," + ib.length + ");"
+			Emit "bbIncbinAdd(&" + TStringConst(app.stringConsts.ValueForKey(ib.file)).id + "," + app.munged + "_ib_" + ib.id + "," + ib.length + ");"
 		Next
 		
 		Local importOnce:TMap = New TMap
