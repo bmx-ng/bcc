@@ -2924,11 +2924,13 @@ End Rem
 					api = "linux"
 				Case "win32"
 					api = "win32"
+				Case "nx"
+					api = "nx"
 			End Select
 		End If
 
 		Select api
-			Case "c", "blitz", "macos", "linux"
+			Case "c", "blitz", "macos", "linux", "nx"
 				Return DECL_API_CDECL
 			Case "win32"
 				Return DECL_API_STDCALL
@@ -4302,7 +4304,11 @@ End Rem
 
 	' musl - linux only
 	env.InsertDecl New TConstDecl.Create( "musl",New TIntType,New TConstExpr.Create( New TIntType,(opt_musl And (opt_platform="linux" Or opt_platform="android" Or opt_platform="raspberrypi"))),0 )
-	
+
+	' nx / switch
+	env.InsertDecl New TConstDecl.Create( "nx",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="nx" ),0 )
+	env.InsertDecl New TConstDecl.Create( "nxARM64",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="nx" And opt_arch="arm64"),0 )	
+		
 	' new compiler
 	env.InsertDecl New TConstDecl.Create( "bmxng",New TIntType,New TConstExpr.Create( New TIntType, True ),0 )
 

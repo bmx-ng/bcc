@@ -25,7 +25,7 @@ SuperStrict
 
 Import "base.configmap.bmx"
 
-Const version:String = "0.97"
+Const version:String = "0.98"
 
 Const BUILDTYPE_APP:Int = 0
 Const BUILDTYPE_MODULE:Int = 1
@@ -61,6 +61,7 @@ Global opt_arch:String
 '    linux
 '    android
 '    raspberrypi
+'    nx
 Global opt_platform:String
 ' framework
 Global opt_framework:String
