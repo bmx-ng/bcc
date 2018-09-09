@@ -1012,6 +1012,9 @@ Type TIParser
 				Case Asc("R")
 					attrs:| DECL_PROTECTED
 					parsed = True
+				Case Asc("E")
+					attrs:| DECL_EXPORT
+					parsed = True
 			End Select
 		Next
 

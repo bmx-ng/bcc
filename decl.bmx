@@ -39,6 +39,7 @@ Const DECL_INITONLY:Int=     $1000000
 
 Const DECL_NODEBUG:Int=      $2000000
 Const DECL_PROTECTED:Int=    $4000000
+Const DECL_EXPORT:Int=       $8000000
 
 Const DECL_API_CDECL:Int=   $00000000
 Const DECL_API_STDCALL:Int= $10000000
@@ -1800,6 +1801,7 @@ Type TFuncDecl Extends TBlockDecl
 	
 	Field mangled:String
 	Field noMangle:Int
+	Field exported:Int
 	
 	Field equalsBuiltIn:Int = -1
 	
@@ -1838,6 +1840,7 @@ Type TFuncDecl Extends TBlockDecl
 		t.metadata = metadata
 		t.mangled = mangled
 		t.noMangle = noMangle
+		t.exported = exported
 		t.blockType = blockType
 		Return  t
 	End Method
@@ -2043,6 +2046,15 @@ Type TFuncDecl Extends TBlockDecl
 							Err "You cannot apply NoMangle to the function, as another function with no arguments exists."
 						Else If decl.NoMangle Then
 							Err "Another function is already declared with NoMangle."
+						End If
+					End If
+				End If
+				If exported Then
+					If decl<>Self Then
+						If decl.argDecls.Length = 0 Then
+							Err "You cannot apply Export to the function, as another function with no arguments exists."
+						Else If decl.exported Then
+							Err "Another function is already declared with Export."
 						End If
 					End If
 				End If

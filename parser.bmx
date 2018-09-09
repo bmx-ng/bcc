@@ -2672,6 +2672,7 @@ End Rem
 		Local meth:Int = attrs & FUNC_METHOD
 		Local meta:TMetadata
 		Local noMangle:Int
+		Local exported:Int
 
 		Local classDecl:TClassDecl = TClassDecl(parent)
 
@@ -2791,6 +2792,15 @@ End Rem
 			End If
 		End If
 		
+		If CParse("export") Then
+			attrs :| DECL_EXPORT
+			If attrs & FUNC_METHOD Then
+				Err "Only functions can specify Export"
+			Else
+				exported = True
+			End If
+		End If
+		
 		attrs :| ParseCallConvention(attrs & DECL_API_STDCALL)
 		
 		If CParse( "nodebug" ) Then
@@ -2809,6 +2819,7 @@ End Rem
 				funcDecl=New TFuncDecl.CreateF( id,ty,args,attrs )
 			'End If
 			funcDecl.noMangle = noMangle
+			funcDecl.exported = exported
 		End If
 		If meta Then
 			funcDecl.metadata = meta

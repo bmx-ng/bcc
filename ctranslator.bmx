@@ -4928,6 +4928,10 @@ End Rem
 		If funcDecl.attrs & DECL_API_STDCALL Then
 			func :+ "W"
 		End If
+		
+		If funcDecl.attrs & DECL_EXPORT Then
+			func :+ "E"
+		End If
 
 		func :+ "="
 

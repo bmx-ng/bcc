@@ -493,6 +493,10 @@ Type TTranslator
 '				munged=decl.ModuleScope().munged+"_"+id
 '			EndIf
 '		Case "cpp"
+		If Not munged And TFuncDecl(decl) And TFuncDecl(decl).exported Then
+			munged = id
+		Else
+
 			If TModuleDecl( decl.scope )
 				munged=decl.ModuleScope().munged+"_"+id
 				
@@ -506,7 +510,7 @@ Type TTranslator
 			If TModuleDecl( decl )
 				munged=decl.ModuleScope().munged+"_"+id
 			EndIf
-
+		End If
 '		End Select
 'DebugStop
 
@@ -542,6 +546,10 @@ Type TTranslator
 
 		'add an increasing number to identifier if already used  
 		If mungScope.Contains( munged )
+			If TFuncDecl(decl) And TFuncDecl(decl).exported Then
+				Err "Cannot export duplicate identifiers : " + decl.ident 
+			End If
+		
 			Local i:Int=1
 			Repeat
 				i:+1
