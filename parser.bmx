@@ -505,7 +505,13 @@ Type TParser Extends TGenProcessor
 		Case "@" NextToke
 		Case "string","object", "self"
 		Default
-			If _tokeType<>TOKE_IDENT Err "Syntax error - expecting identifier."
+			If _tokeType<>TOKE_IDENT Then
+				Local kw:String
+				If _tokeType = TOKE_KEYWORD Then
+					kw = " keyword"
+				End If
+				Err "Syntax error - expecting identifier, but found" + kw + " '" + _toke + "'"
+			End If
 		End Select
 		Local id$=_toke
 		NextToke
