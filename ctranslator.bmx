@@ -5034,6 +5034,14 @@ End Rem
 				Return "0"
 			Else
 				If TDecimalType(expr.exprType) Then
+					If s.StartsWith("1.#INF0000") Then
+						s = "inf"
+					Else If s.StartsWith("-1.#INF0000") Then
+						s = "-inf"
+					Else If s.StartsWith("-1.#IND0000") Then
+						s = "nan"
+					End If
+
 					Return s + TransIfcType(expr.exprType)
 				Else
 					Return s

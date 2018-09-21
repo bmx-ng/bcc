@@ -602,9 +602,16 @@ Type TIParser
 				NextToke
 			Case TOKE_IDENT
 				If _toke = "nan" Or _toke = "inf" Then
-					Local value:String = _toke
+					Local value:String
+					Select _toke
+						Case "inf"
+							value = "1.#INF0000"
+						Case "nan"
+							value = "-1.#IND0000"
+					End Select
 					NextToke
 					If CParse("!") Then
+						value :+ "00000000"
 						expr=New TConstExpr.Create( New TDoubleType,value )
 					Else
 						CParse("#")
