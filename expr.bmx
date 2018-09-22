@@ -1543,7 +1543,10 @@ Type TCastExpr Extends TExpr
 		EndIf
 
 		If TConstExpr( expr ) Then
-
+			If TDecimalType(TConstExpr( expr ).ty) And TDecimalType(ty) Then
+				Return New TConstExpr.Create(ty, TConstExpr( expr ).value).Semant()
+			End If
+			
 			Local ex:TExpr = EvalConst()
 			If flags & CAST_EXPLICIT Then
 				Return New TCastExpr.Create(exprType, ex, 1).Semant()
