@@ -76,7 +76,6 @@ Type TExpr
 	'semant and cast
 	Method SemantAndCast:TExpr( ty:TType,castFlags:Int=0 )
 		Local expr:TExpr=Semant()
-		If expr.exprType.EqualsType( ty ) Return expr
 		Return New TCastExpr.Create( ty,expr,castFlags ).Semant()
 	End Method
 
