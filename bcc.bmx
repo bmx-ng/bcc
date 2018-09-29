@@ -83,7 +83,7 @@ SaveInterface(opt_filepath, trans, mung)
 SaveHeader(opt_filepath, trans, mung)
 SaveSource(opt_filepath, trans, mung)
 SaveIncBinHeader(opt_filepath, trans, FileMung(False), app)
-
+SaveDef(opt_filepath, trans, mung, app)
 
 Function SaveInterface(file:String, trans:TCTranslator, mung:String)
 
@@ -161,4 +161,18 @@ Function SaveIncBinHeader(file:String, trans:TCTranslator, mung:String, app:TApp
 		SaveText(trans.JoinLines("incbin"), path)
 	End If
 
+End Function
+
+Function SaveDef(file:String, trans:TCTranslator, mung:String, app:TAppDecl)
+
+	If opt_def And opt_apptype And opt_platform = "win32" Then
+		If opt_verbose Then
+			Print "Generating def..."
+		End If
+	
+		Local path:String = ExtractDir(opt_filepath) + "/" + StripExt(StripDir(opt_filepath)) + ".def"
+	
+		SaveText(trans.JoinLines("def"), path)
+	End If
+	
 End Function

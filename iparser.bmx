@@ -1164,6 +1164,10 @@ Type TIParser
 		End If
 		
 		'If funcDecl.IsAbstract() Return funcDecl
+		If opt_def And funcDecl.attrs & DECL_EXPORT Then
+			_appInstance.exportDefs.AddLast(funcDecl)
+		End If
+		
 		Return funcDecl
 		
 	End Method

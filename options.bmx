@@ -105,6 +105,9 @@ Global opt_warnover:Int = False
 ' musl libc support
 '    
 Global opt_musl:Int = False
+' def
+'    generate .def files for dlls
+Global opt_def:Int = False
 
 Global opt_filepath:String
 
@@ -200,6 +203,8 @@ Function ParseArgs:String[](args:String[])
 				opt_warnover=True
 			Case "musl"
 				opt_musl=True
+			Case "def"
+				opt_def=True
 		End Select
 	
 		count:+ 1

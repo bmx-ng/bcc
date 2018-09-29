@@ -867,6 +867,21 @@ t:+"NULLNULLNULL"
 
 		Return glob
 	End Method
+	
+	Method TransExportDef:String(decl:TFuncDecl, withApi:Int = True)
+		Local t:String = decl.munged
+		
+		If withApi And decl.attrs & DECL_API_STDCALL Then
+			t :+ "@"
+			Local size:Int
+			For Local arg:TArgDecl = EachIn decl.argDecls
+				size :+ arg.ty.GetSize()
+			Next
+			t :+ size
+		End If
+		
+		Return t
+	End Method
 
 	Method CreateLocal2$( ty:TType, t$ )
 		Local tmp:TLocalDecl=New TLocalDecl.Create( "", ty,Null, True )
@@ -3073,12 +3088,18 @@ End Rem
 			opt_debug = False
 		End If
 
-		'PushMungScope
 		BeginLocalScope
-'DebugStop
+
 		decl.Semant
 
 		MungDecl decl
+		
+		' export defs?
+		If opt_apptype And opt_def And decl.attrs & DECL_EXPORT Then
+			If Not _appInstance.exportDefs.Contains(decl) Then
+				_appInstance.exportDefs.AddLast(decl)
+			End If
+		End If
 
 		' emit nested functions/classes
 		If Not proto Then
@@ -6169,6 +6190,20 @@ End If
 		Next
 
 	End Method
+	
+	Method TransDef(app:TAppDecl)
+
+		SetOutput("def")
+
+		Emit "LIBRARY " + StripExt(StripDir(opt_filepath))
+		Emit "EXPORTS"
+		
+		For Local decl:TFuncDecl=EachIn app.exportDefs
+			Emit "~t" + TransExportDef(decl, opt_arch = "x86")
+		Next
+
+		Emit "~n"
+	End Method
 
 	Method TransApp( app:TAppDecl )
 
@@ -6182,6 +6217,10 @@ End If
 
 		TransInterface(app)
 
+		If opt_def And opt_apptype Then
+			TransDef(app)
+		End If
+		
 	End Method
 	
 End Type

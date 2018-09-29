@@ -3668,6 +3668,8 @@ Type TAppDecl Extends TScopeDecl
 	Field dataDefs:TList = New TList
 	Field scopeDefs:TMap = New TMap
 	
+	Field exportDefs:TList = New TList
+	
 	Method GetPathPrefix:String()
 		If opt_buildtype = BUILDTYPE_MODULE Then
 			Local prefix:String
