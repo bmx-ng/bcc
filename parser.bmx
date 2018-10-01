@@ -1123,7 +1123,7 @@ Type TParser Extends TGenProcessor
 		Case "false"
 			NextToke
 			expr=New TConstExpr.Create( New TIntType,"" )
-		Case "int","long","float","double","object","short","byte","size_t","uint","ulong","int128","float64","float128","double128","lparam","wparam"
+		Case "int","long","float","double","object","short","byte","size_t","uint","ulong","int128","float64","float128","double128","lparam","wparam","string"
 			Local id$=_toke
 			Local ty:TType=ParseType()
 
@@ -1172,9 +1172,6 @@ Type TParser Extends TGenProcessor
 
 			' array
 			ty = ParseArrayType(ty)
-			'While CParse( "[]" )
-			'	ty=New TArrayType.Create( ty)
-			'Wend
 
 			' optional brackets
 			If CParse( "(" )
@@ -1182,16 +1179,21 @@ Type TParser Extends TGenProcessor
 				Parse ")"
 				expr=New TCastExpr.Create( ty,expr,CAST_EXPLICIT )
 			Else
-				expr=ParseExpr()
-				
-				If TBinaryExpr(expr) Then
-					' cast lhs and apply to rhs
-					Local cexpr:TCastExpr=New TCastExpr.Create( ty,TBinaryExpr(expr).lhs,CAST_EXPLICIT )
-					TBinaryExpr(expr).lhs = cexpr 
-				Else
-					expr=New TCastExpr.Create( ty,expr,CAST_EXPLICIT )
-				End If
+				Local tok:TToker=New TToker.Copy( _toker )
 
+				If id="string" And CParseToker(tok, ".") Then
+					expr=New TIdentExpr.Create( id )
+				Else
+					expr=ParseExpr()
+					
+					If TBinaryExpr(expr) Then
+						' cast lhs and apply to rhs
+						Local cexpr:TCastExpr=New TCastExpr.Create( ty,TBinaryExpr(expr).lhs,CAST_EXPLICIT )
+						TBinaryExpr(expr).lhs = cexpr 
+					Else
+						expr=New TCastExpr.Create( ty,expr,CAST_EXPLICIT )
+					End If
+				End If
 			EndIf
 		Case "sizeof"
 			NextToke
@@ -1319,28 +1321,6 @@ Type TParser Extends TGenProcessor
 				expr=ParseExpr()
 				expr=New TSgnExpr.Create( expr )
 			EndIf
-		Case "string"
-			Local id$=_toke
-			Local ty:TType=ParseType()
-
-			If CParse("ptr") Then
-				ty = TType.MapToPointerType(ty)
-			End If
-
-			' string array
-			ty = ParseArrayType(ty)
-			'While CParse( "[]" )
-			'	ty=New TArrayType.Create( ty)
-			'Wend
-
-			If CParse( "(" )
-				expr=ParseExpr()
-				Parse ")"
-				expr=New TCastExpr.Create( ty,expr,CAST_EXPLICIT )
-			Else
-				expr=New TIdentExpr.Create( id )
-			EndIf
-
 		Case "varptr"
 			NextToke
 			expr=ParseExpr()
