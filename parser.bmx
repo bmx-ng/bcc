@@ -907,11 +907,19 @@ Type TParser Extends TGenProcessor
 
 	' replaces While CParse( "[]" ) sections, with support for multi-dimension arrays
 	Method ParseArrayType:TType(ty:TType)
+
 		While True
 			Local dims:Int = 1
 			
 			If CParse("[]") Then
 				ty=New TArrayType.Create( ty )
+				
+				' test for array of arrays
+				Local toker:TToker=New TToker.Copy(_toker)
+				If CParseToker(toker, "[") Or CParseToker(toker, "[]") Then
+					Continue
+				End If
+				
 				Exit
 			End If
 			
@@ -926,6 +934,13 @@ Type TParser Extends TGenProcessor
 			Parse "]"
 			
 			ty=New TArrayType.Create( ty, dims )
+			
+			' test for array of arrays
+			Local toker:TToker=New TToker.Copy(_toker)
+			If CParseToker(toker, "[") Or CParseToker(toker, "[]") Then
+				Continue
+			End If
+			
 			Exit
 		Wend
 		Return ty
