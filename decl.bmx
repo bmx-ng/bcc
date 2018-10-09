@@ -728,6 +728,7 @@ Type TGlobalDecl Extends TVarDecl
 	Method CheckAccess:Int()
 		Local cd:TClassDecl = ClassScope()
 		If cd Then
+			If cd.modulescope() = _env.modulescope() Return True
 			If IsPrivate() And cd<>_env.ClassScope() Return False
 			If IsProtected() Then
 				Local ec:TClassDecl = _env.ClassScope()
@@ -775,6 +776,10 @@ Type TFieldDecl Extends TVarDecl
 	End Method
 
 	Method CheckAccess:Int()
+
+		If ModuleScope() = _env.ModuleScope() Then
+			Return True
+		End If
 
 		Local cs:TClassDecl = ClassScope()
 
@@ -2192,6 +2197,7 @@ Type TFuncDecl Extends TBlockDecl
 	End Method
 
 	Method CheckAccess:Int()
+		If ModuleScope() = _env.ModuleScope() Return True
 		Local cd:TClassDecl = ClassScope()
 		If cd Then
 			If IsPrivate() And cd<>_env.ClassScope() Return False
