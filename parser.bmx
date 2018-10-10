@@ -915,10 +915,7 @@ Type TParser Extends TGenProcessor
 				ty=New TArrayType.Create( ty )
 				
 				' test for array of arrays
-				Local toker:TToker=New TToker.Copy(_toker)
-				If CParseToker(toker, "[") Or CParseToker(toker, "[]") Then
-					Continue
-				End If
+				If IsArrayTypeNext(_toker) Continue
 				
 				Exit
 			End If
@@ -936,14 +933,23 @@ Type TParser Extends TGenProcessor
 			ty=New TArrayType.Create( ty, dims )
 			
 			' test for array of arrays
-			Local toker:TToker=New TToker.Copy(_toker)
-			If CParseToker(toker, "[") Or CParseToker(toker, "[]") Then
-				Continue
-			End If
+			If IsArrayTypeNext(_toker) Continue
 			
 			Exit
 		Wend
 		Return ty
+	End Method
+	
+	Method IsArrayTypeNext:Int(tok:TToker)
+		Local toker:TToker=New TToker.Copy(tok)
+		If CParseToker(toker, "[]") Return True
+		If CParseToker(toker, "[") Then
+			' look ahead to see if this is an array decl, or something else..
+			If CParseToker(toker, "]") Or CParseToker(toker, ",") Then
+				Return True
+			End If
+		End If
+		Return False
 	End Method
 	
 	Method IsArrayDef:Int()
