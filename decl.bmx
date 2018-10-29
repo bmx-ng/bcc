@@ -682,7 +682,22 @@ Type TArgDecl Extends TLocalDecl
 	Method GetDeclPrefix:String()
 		Return ""
 	End Method
-	
+
+	Method OnSemant()
+		Super.OnSemant()
+		If init And Not TConstExpr(init) Then
+			If TCastExpr(init) Then
+				If TConstExpr(TCastExpr(init).expr) Or TNullExpr(TCastExpr(init).expr) Then
+					Return
+				End If
+			End If
+			If TInvokeExpr(init) And TFunctionPtrType(TInvokeExpr(init).exprType) Then
+				Return
+			End If
+			Err "Function defaults must be constant"
+		End If
+	End Method
+
 	Method ToString$()
 		Return Super.ToString()
 	End Method
