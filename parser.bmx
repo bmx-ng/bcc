@@ -183,6 +183,11 @@ Type TForEachinStmt Extends TLoopStmt
 			
 			If TObjectType(expr.exprType).classDecl.ImplementsInterface("iiterable") Then
 				iterable = True
+			Else
+				Local declList:TFuncDeclList = TFuncDeclList(TObjectType(expr.exprType).classDecl.GetDecl("objectenumerator"))
+				If Not declList Then
+					Err "Use of EachIn requires enumerable Type with either ObjectEnumerator method or one which implements IIterable interface."
+				End If
 			End If
 
 			If TInvokeExpr(expr) Or TInvokeMemberExpr(expr) Then
