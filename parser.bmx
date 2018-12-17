@@ -4345,15 +4345,22 @@ End Rem
 
 	Local parser:TParser=New TParser.Create( toker,Null )
 
-	Local expr:TExpr=parser.ParseExpr()
-
-	expr=expr.Semant()
-
-	If ty expr=expr.Cast( ty )
-
-	Local val$=expr.Eval()
-
+	Local val:String
+	Try
+		Local expr:TExpr=parser.ParseExpr()
+	
+		expr=expr.Semant()
+	
+		If ty expr=expr.Cast( ty )
+	
+		val=expr.Eval()
+	Catch error:String
+		val = "0"
+	End Try
+	
 	PopEnv
+	
+	PopPPEnv
 
 	Return val
 End Function
