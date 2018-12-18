@@ -4360,8 +4360,6 @@ End Rem
 	
 	PopEnv
 	
-	PopPPEnv
-
 	Return val
 End Function
 
