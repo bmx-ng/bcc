@@ -2474,6 +2474,7 @@ Type TIdentExpr Extends TExpr
 	Field fixedScope:Int
 	
 	Field _identLower:String
+	Field unknownIdentsEvalFalse:Int
 
 	Method IdentLower:String()
 		If Not _identLower Then
@@ -2482,10 +2483,11 @@ Type TIdentExpr Extends TExpr
 		Return _identLower
 	End Method
 
-	Method Create:TIdentExpr( ident$,expr:TExpr=Null, _identLower:String = Null )
+	Method Create:TIdentExpr( ident$,expr:TExpr=Null, _identLower:String = Null, unknownIdentsEvalFalse:Int = False )
 		Self.ident=ident
 		Self.expr=expr
 		Self._identLower = _identLower
+		Self.unknownIdentsEvalFalse = unknownIdentsEvalFalse
 		Return Self
 	End Method
 
@@ -2706,6 +2708,10 @@ Type TIdentExpr Extends TExpr
 		
 		If ddecl Then
 			Return New TDataLabelExpr.Create(ddecl)
+		End If
+		
+		If unknownIdentsEvalFalse Then
+			Return New TConstExpr.Create( New TIntType, 0 ).Semant()
 		End If
 		
 		IdentErr

@@ -356,6 +356,8 @@ Type TParser Extends TGenProcessor
 
 	Field _externCasts:TMap = New TMap
 
+	
+	Field unknownIdentsEvalFalse:Int
 	Method SetErr(toker:TToker = Null)
 		Local t:TToker = _toker
 		If toker Then
@@ -1381,7 +1383,7 @@ Type TParser Extends TGenProcessor
 					_toker=tok
 					_toke=_toker.Toke()
 					_tokeType=_toker.TokeType()
-					expr=New TIdentExpr.Create( ParseIdent() )
+					expr=New TIdentExpr.Create( ParseIdent(),,,unknownIdentsEvalFalse )
 					ty = ParseConstNumberType()
 					
 					If TArrayType(ty) Then
@@ -3978,12 +3980,13 @@ End Rem
 	End Method
 
 
-	Method Create:TParser( toker:TToker,app:TAppDecl )
+	Method Create:TParser( toker:TToker,app:TAppDecl, unknownIdentsEvalFalse:Int = False )
 		_toke="~n"
 		_toker=toker
 		_app=app
 		SetErr
 		NextToke
+		Self.unknownIdentsEvalFalse = unknownIdentsEvalFalse
 		Return Self
 	End Method
 End Type
@@ -4343,7 +4346,7 @@ End Rem
 
 	Local toker:TToker=New TToker.Create( "",source )
 
-	Local parser:TParser=New TParser.Create( toker,Null )
+	Local parser:TParser=New TParser.Create( toker,Null,True )
 
 	Local val:String
 	Try
