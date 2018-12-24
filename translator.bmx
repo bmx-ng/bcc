@@ -447,8 +447,14 @@ Type TTranslator
 				Return "_shl"
 			Case "shr"
 				Return "_shr"
+			Case ":mod"
+				Return "_modeq"
+			Case ":shl"
+				Return "_shleq"
+			Case ":shr"
+				Return "_shreq"
 		End Select
-		Return "?? unknown symbol ?? : " + sym
+		Err "?? unknown symbol ?? : " + sym
 	End Method
 	
 	Method MungDecl( decl:TDecl, addIfNotInScope:Int = False )
