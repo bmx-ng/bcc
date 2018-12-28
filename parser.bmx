@@ -3309,8 +3309,6 @@ End Rem
 				If attrs & CLASS_STRUCT Then
 					If (attrs & DECL_EXTERN) Then
 						Err "Structs can only contain fields."
-					Else
-						Err "Structs can only contain fields and methods."
 					End If
 				EndIf
 				If attrs & DECL_EXTERN Then
