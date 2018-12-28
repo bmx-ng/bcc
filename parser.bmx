@@ -92,6 +92,8 @@ Type TForEachinStmt Extends TLoopStmt
 							Or (TObjectType(TArrayType( expr.exprType ).elemType).classdecl.IsExtern() ..
 							And IsPointerType(TArrayType( expr.exprType ).elemType))) Then
 
+					Local isStruct:Int = TObjectType(TArrayType( expr.exprType ).elemType).classdecl.IsStruct()
+
 					Local cExpr:TExpr
 					
 					If TIdentType(varty) And TIdentType(varty).ident = "Object" Then
@@ -106,16 +108,18 @@ Type TForEachinStmt Extends TLoopStmt
 					' local var as expression
 					Local expr:TExpr=New TVarExpr.Create( varTmp )
 
-					' var = Null
-					expr=New TBinaryCompareExpr.Create( "=",expr, New TNullExpr.Create(TType.nullObjectType))
-
-					' then continue
-					Local thenBlock:TBlockDecl=New TBlockDecl.Create( block.scope, , BLOCK_IF )
-					Local elseBlock:TBlockDecl=New TBlockDecl.Create( block.scope, , BLOCK_ELSE )
-					cont = New TContinueStmt
-					thenBlock.AddStmt cont
-
-					block.stmts.AddFirst New TIfStmt.Create( expr,thenBlock,elseBlock )
+					If Not isStruct Then
+						' var = Null
+						expr=New TBinaryCompareExpr.Create( "=",expr, New TNullExpr.Create(TType.nullObjectType))
+	
+						' then continue
+						Local thenBlock:TBlockDecl=New TBlockDecl.Create( block.scope, , BLOCK_IF )
+						Local elseBlock:TBlockDecl=New TBlockDecl.Create( block.scope, , BLOCK_ELSE )
+						cont = New TContinueStmt
+						thenBlock.AddStmt cont
+	
+						block.stmts.AddFirst New TIfStmt.Create( expr,thenBlock,elseBlock )
+					End If
 					block.stmts.AddFirst New TAssignStmt.Create( "=",New TVarExpr.Create( indexTmp ),addExpr )
 					block.stmts.AddFirst New TDeclStmt.Create( varTmp )
 
@@ -140,16 +144,21 @@ Type TForEachinStmt Extends TLoopStmt
 						'End If
 					End If
 
+					Local isStruct:Int = TObjectType(TArrayType( expr.exprType ).elemType).classdecl.IsStruct()
+
 '					expr=New TBinaryCompareExpr.Create( "=",New TIdentExpr.Create( varid ), New TNullExpr.Create(TType.nullObjectType))
-					expr=New TBinaryCompareExpr.Create( "=",varExpr, New TNullExpr.Create(TType.nullObjectType))
 
-					' then continue
-					Local thenBlock:TBlockDecl=New TBlockDecl.Create( block.scope, , BLOCK_IF )
-					Local elseBlock:TBlockDecl=New TBlockDecl.Create( block.scope, , BLOCK_ELSE )
-					cont = New TContinueStmt
-					thenBlock.AddStmt cont
-
-					block.stmts.AddFirst New TIfStmt.Create( expr,thenBlock,elseBlock )
+					If Not isStruct Then
+						expr=New TBinaryCompareExpr.Create( "=",varExpr, New TNullExpr.Create(TType.nullObjectType))
+		
+						' then continue
+						Local thenBlock:TBlockDecl=New TBlockDecl.Create( block.scope, , BLOCK_IF )
+						Local elseBlock:TBlockDecl=New TBlockDecl.Create( block.scope, , BLOCK_ELSE )
+						cont = New TContinueStmt
+						thenBlock.AddStmt cont
+		
+						block.stmts.AddFirst New TIfStmt.Create( expr,thenBlock,elseBlock )
+					End If
 					'block.stmts.AddFirst New TDeclStmt.Create( varTmp )
 
 					block.stmts.AddFirst New TAssignStmt.Create( "=",New TVarExpr.Create( indexTmp ),addExpr, True )
