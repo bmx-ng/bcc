@@ -4195,6 +4195,22 @@ Function ParseModule:TModuleDecl( path$,app:TAppDecl )
 	Return parser._module
 End Function
 
+Function AppendLibInit:String(source:String)
+
+	Local sb:TStringBuffer = TStringBuffer.Create(source)
+	
+	sb.Append("~n")
+	sb.Append("Extern~n")
+	sb.Append("Function bbLibInit()~n")
+	sb.Append("End Extern~n")
+
+	sb.Append("Function InitBRL() Export~n")
+	sb.Append("bbLibInit()~n")
+	sb.Append("End Function~n")
+	
+	Return sb.ToString()
+End Function
+
 '***** PUBLIC API ******
 
 Function ParseApp:TAppDecl( path$ )
@@ -4205,6 +4221,10 @@ Function ParseApp:TAppDecl( path$ )
 
 	Local source$=PreProcess( path )
 	'Local source:String = LoadString(path)
+	
+	If opt_def Then
+		source = AppendLibInit(source)
+	End If
 
 	Local toker:TToker=New TToker.Create( path,source )
 
