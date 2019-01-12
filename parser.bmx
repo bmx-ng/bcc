@@ -1270,17 +1270,6 @@ Type TParser Extends TGenProcessor
 				expr=ParseExpr()
 				expr=New TLenExpr.Create( expr )
 			EndIf
-		Case "abs"
-			NextToke
-			' optional brackets
-			If CParse( "(" )
-				expr=ParseExpr()
-				Parse ")"
-				expr=New TAbsExpr.Create( expr )
-			Else
-				expr=ParseExpr()
-				expr=New TAbsExpr.Create( expr )
-			EndIf
 		Case "asc"
 			NextToke
 
@@ -1318,17 +1307,6 @@ Type TParser Extends TGenProcessor
 			Else
 				expr=ParseExpr()
 				expr=New TChrExpr.Create( expr )
-			EndIf
-		Case "sgn"
-			NextToke
-			' optional brackets
-			If CParse( "(" )
-				expr=ParseExpr()
-				Parse ")"
-				expr=New TSgnExpr.Create( expr )
-			Else
-				expr=ParseExpr()
-				expr=New TSgnExpr.Create( expr )
 			EndIf
 		Case "varptr"
 			NextToke

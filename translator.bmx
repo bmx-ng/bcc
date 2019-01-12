@@ -1312,25 +1312,17 @@ End Rem
 	End Method
 
 	Method TransBuiltinExpr$( expr:TBuiltinExpr )
-		If TAbsExpr(expr) Return TransAbsExpr(TAbsExpr(expr))
 		If TAscExpr(expr) Return TransAscExpr(TAscExpr(expr))
 		If TChrExpr(expr) Return TransChrExpr(TChrExpr(expr))
-		If TSgnExpr(expr) Return TransSgnExpr(TSgnExpr(expr))
 		If TLenExpr(expr) Return TransLenExpr(TLenExpr(expr))
 		If TSizeOfExpr(expr) Return TransSizeOfExpr(TSizeOfExpr(expr))
 		Err "TODO : TransBuiltinExpr()"
 	End Method
 	
-	Method TransAbsExpr:String(expr:TAbsExpr)
-	End Method
-
 	Method TransAscExpr:String(expr:TAscExpr)
 	End Method
 
 	Method TransChrExpr:String(expr:TChrExpr)
-	End Method
-
-	Method TransSgnExpr:String(expr:TSgnExpr)
 	End Method
 
 	Method TransLenExpr:String(expr:TLenExpr)

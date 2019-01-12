@@ -301,7 +301,6 @@ Function MakeKeywords:String()
 	
 	keywords :+ "import brl.classes~n"
 	keywords :+ "Asc%(v$)=~qbrl_blitz_keywords_asc~q~n"
-	keywords :+ "Sgn#(v#)=~qbrl_blitz_keywords_sgn~q~n"
 	keywords :+ "Chr$(v%)=~qbrl_blitz_keywords_chr~q~n"
 	keywords :+ "Len%(v:Object)=~qbrl_blitz_keywords_len~q~n"
 	keywords :+ "IncbinPtr@*(v$)=~qbbIncbinPtr~q~n"

@@ -1391,43 +1391,6 @@ t:+"NULLNULLNULL"
 		Return "bbStringFromChar" + Bra(expr.expr.Trans())
 	End Method
 
-	Method TransSgnExpr:String(expr:TSgnExpr)
-		Local s:String
-		If TFloatType(expr.expr.exprType) Or TDoubleType(expr.expr.exprType)
-			'decl.ident contains "sgn", same like "bbFloatSng"
-			s = "bbFloatSgn"
-		Else If TLongType(expr.expr.exprType) Then
-			s = "bbLongSgn"
-		Else If TSizeTType(expr.expr.exprType) Then
-			s = "bbSizetSgn"
-		Else If TUIntType(expr.expr.exprType) Then
-			s = "bbUIntSgn"
-		Else If TULongType(expr.expr.exprType) Then
-			s = "bbULongSgn"
-		Else
-			s = "bbIntSgn"
-		End If
-		Return s + Bra(expr.expr.Trans())
-	End Method
-
-	Method TransAbsExpr:String(expr:TAbsExpr)
-		Local s:String
-		If TDecimalType(expr.exprType) Then
-			s = "bbFloatAbs"
-		Else If TLongType(expr.exprType)
-			s = "bbLongAbs"
-		Else If TSizeTType(expr.exprType)
-			s = "bbSizetAbs"
-		Else If TUIntType(expr.exprType)
-			s = "bbUIntAbs"
-		Else If TULongType(expr.exprType)
-			s = "bbULongAbs"
-		Else
-			s = "bbIntAbs"
-		End If
-		Return s + Bra(expr.expr.Trans())
-	End Method
-
 	Method TransLenExpr:String(expr:TLenExpr)
 		'constant strings do not have "->length", so we use the
 		'precalculated value

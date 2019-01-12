@@ -2935,49 +2935,6 @@ Type TLenExpr Extends TBuiltinExpr
 
 End Type
 
-Type TAbsExpr Extends TBuiltinExpr
-
-	Method Create:TAbsExpr( expr:TExpr )
-		Self.id="abs"
-		Self.expr=expr
-		Return Self
-	End Method
-
-	Method Semant:TExpr()
-
-		If exprType Return Self
-
-		expr=expr.Semant()
-
-		If TNumericType(expr.exprType) Or TBoolType(expr.exprType) Then
-
-			If TInt128Type(expr.exprType) Err "'Abs' does not support Int128 type. Use specific intrinsic function instead."
-			If TFloat64Type(expr.exprType) Err "'Abs' does not support Float64 type. Use specific intrinsic function instead."
-			If TFloat128Type(expr.exprType) Err "'Abs' does not support Float128 type. Use specific intrinsic function instead."
-			If TDouble128Type(expr.exprType) Err "'Abs' does not support Double128 type. Use specific intrinsic function instead."
-
-			If TIntType(expr.exprType) Or TByteType(expr.exprType) Or TShortType(expr.exprType) Then
-				exprType=New TIntType
-			Else
-				exprType=expr.exprType
-			End If
-		Else
-			Err "Subexpression for 'Abs' must be of numeric type"
-		End If
-
-		Return Self
-	End Method
-
-	Method Copy:TExpr()
-		Return New TAbsExpr.Create( CopyExpr(expr) )
-	End Method
-
-	Method ToString$()
-		Return "TAbsExpr("+expr.ToString()+")"
-	End Method
-
-End Type
-
 Type TAscExpr Extends TBuiltinExpr
 
 	Method Create:TAscExpr( expr:TExpr )
@@ -3007,58 +2964,6 @@ Type TAscExpr Extends TBuiltinExpr
 
 	Method ToString$()
 		Return "TAscExpr("+expr.ToString()+")"
-	End Method
-
-End Type
-
-Type TSgnExpr Extends TBuiltinExpr
-
-	Method Create:TSgnExpr( expr:TExpr )
-		Self.id="sgn"
-		Self.expr=expr
-		Return Self
-	End Method
-
-	Method Semant:TExpr()
-		If exprType Return Self
-
-		If TConstExpr(expr) Then
-			'use different calls to only return a "float sgn"
-			'when param is a float
-			Local val:String = TConstExpr(expr).value
-			Local cexpr:TExpr
-			If String(Int(val)) = val
-				cexpr = New TConstExpr.Create(New TIntType, Sgn(Int(TConstExpr(expr).value)))
-			Else
-				cexpr = New TConstExpr.Create(New TFloatType, Sgn(Float(TConstExpr(expr).value)))
-			End If
-			
-			_appInstance.removeStringConst(TConstExpr(expr).value)
-			cexpr.Semant()
-			Return cexpr
-		End If
-		
-		expr = expr.Semant()
-		
-		If Not TNumericType(expr.exprType) Then
-			Err "Subexpression for 'Sgn' must be of numeric type"
-		End If
-
-		If TInt128Type(expr.exprType) Err "'Sgn' does not support Int128 type. Use specific intrinsic function instead."
-		If TFloat64Type(expr.exprType) Err "'Sgn' does not support Float64 type. Use specific intrinsic function instead."
-		If TFloat128Type(expr.exprType) Err "'Sgn' does not support Float128 type. Use specific intrinsic function instead."
-		If TDouble128Type(expr.exprType) Err "'Sgn' does not support Double128 type. Use specific intrinsic function instead."
-		
-		exprType=expr.exprType
-		Return Self
-	End Method
-
-	Method Copy:TExpr()
-		Return New TSgnExpr.Create( CopyExpr(expr) )
-	End Method
-
-	Method ToString$()
-		Return "TSgnExpr("+expr.ToString()+")"
 	End Method
 
 End Type
