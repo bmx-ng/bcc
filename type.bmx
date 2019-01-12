@@ -461,7 +461,7 @@ Type TIntType Extends TIntegralType
 		End If
 		
 		If WORD_SIZE = 4 And TLParamType(ty)<>Null Then
-			Return 0
+			Return 1
 		End If
 		
 		If TLongType(ty)<>Null Then
@@ -469,7 +469,7 @@ Type TIntType Extends TIntegralType
 		End If
 
 		If WORD_SIZE = 8 And TLParamType(ty)<>Null Then
-			Return 2
+			Return 3
 		End If
 		
 		If TFloatType(ty)<>Null Then
@@ -527,32 +527,32 @@ Type TUIntType Extends TIntegralType
 			End If
 		End If
 
-		If WORD_SIZE = 4 And (TSizeTType(ty)<>Null Or TWParamType(ty)<>Null) Then
-			Return 0
-		End If
-		
 		If TUIntType(ty)<>Null Then
 			Return 0
 		End If
 
-		If TIntType(ty)<>Null Then
+		If WORD_SIZE = 4 And (TSizeTType(ty)<>Null Or TWParamType(ty)<>Null) Then
 			Return 1
 		End If
 		
-		If WORD_SIZE = 8 And (TSizeTType(ty)<>Null Or TWParamType(ty)<>Null) Then
+		If TIntType(ty)<>Null Then
 			Return 2
 		End If
 		
-		If TULongType(ty)<>Null Then
-			Return 2
+		If WORD_SIZE = 8 And (TSizeTType(ty)<>Null Or TWParamType(ty)<>Null) Then
+			Return 3
 		End If
-
-		If TLongType(ty)<>Null Then
+		
+		If TULongType(ty)<>Null Then
 			Return 3
 		End If
 
-		If TFloatType(ty)<>Null Then
+		If TLongType(ty)<>Null Then
 			Return 4
+		End If
+
+		If TFloatType(ty)<>Null Then
+			Return 5
 		End If
 
 		If TDoubleType(ty)<>Null Then
@@ -615,12 +615,12 @@ Type TSizeTType Extends TIntegralType
 		End If
 
 		If TWParamType(ty)<>Null Then
-			Return 0
+			Return 1
 		End If
 
 		If WORD_SIZE = 4 Then
 			If TUIntType(ty)<>Null Then
-				Return 0
+				Return 1
 			End If
 
 			If TIntType(ty)<>Null Then
@@ -649,7 +649,7 @@ Type TSizeTType Extends TIntegralType
 			
 		Else
 			If TULongType(ty)<>Null Then
-				Return 0
+				Return 1
 			End If
 
 			If TLongType(ty)<>Null Then
@@ -912,7 +912,7 @@ Type TLongType Extends TIntegralType ' BaH Long
 		End If
 		
 		If WORD_SIZE = 8 And TLParamType(ty)<>Null Then
-			Return 0
+			Return 1
 		End If
 
 		If TFloatType(ty)<>Null Then
@@ -974,15 +974,15 @@ Type TULongType Extends TIntegralType
 		End If
 
 		If WORD_SIZE = 8 And (TSizeTType(ty)<>Null Or TWParamType(ty)<>Null) Then
-			Return 0
+			Return 1
 		End If
 		
 		If TLongType(ty)<>Null Then
-			Return 1
+			Return 2
 		End If
 
 		If TFloatType(ty)<>Null Then
-			Return 2
+			Return 3
 		End If
 
 		If TDoubleType(ty)<>Null Then
