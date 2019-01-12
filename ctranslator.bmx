@@ -1383,43 +1383,6 @@ t:+"NULLNULLNULL"
 '		End If
 	End Method
 
-	Method TransMinExpr:String(expr:TMinExpr)
-		Local s:String
-		If TDecimalType(expr.exprType) Then
-			s = "bbFloatMin"
-		Else If TLongType(expr.exprType) Then
-			s = "bbLongMin"
-		Else If TSizeTType(expr.exprType) Then
-			s = "bbSizetMin"
-		Else If TUIntType(expr.exprType) Then
-			s = "bbUIntMin"
-		Else If TULongType(expr.exprType) Then
-			s = "bbULongMin"
-		Else
-			s = "bbIntMin"
-		End If
-
-		Return s + Bra(expr.expr.trans() + "," + expr.expr2.Trans())
-	End Method
-
-	Method TransMaxExpr:String(expr:TMaxExpr)
-		Local s:String
-		If TDecimalType(expr.exprType) Then
-			s = "bbFloatMax"
-		Else If TLongType(expr.exprType) Then
-			s = "bbLongMax"
-		Else If TSizeTType(expr.exprType) Then
-			s = "bbSizetMax"
-		Else If TUIntType(expr.exprType) Then
-			s = "bbUIntMax"
-		Else If TULongType(expr.exprType) Then
-			s = "bbULongMax"
-		Else
-			s = "bbIntMax"
-		End If
-		Return s + Bra(expr.expr.trans() + "," + expr.expr2.Trans())
-	End Method
-
 	Method TransAscExpr:String(expr:TAscExpr)
 		Return "bbStringAsc" + Bra(expr.expr.Trans())
 	End Method

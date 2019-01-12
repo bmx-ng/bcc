@@ -1312,8 +1312,6 @@ End Rem
 	End Method
 
 	Method TransBuiltinExpr$( expr:TBuiltinExpr )
-		If TMinExpr(expr) Return TransMinExpr(TMinExpr(expr))
-		If TMaxExpr(expr) Return TransMaxExpr(TMaxExpr(expr))
 		If TAbsExpr(expr) Return TransAbsExpr(TAbsExpr(expr))
 		If TAscExpr(expr) Return TransAscExpr(TAscExpr(expr))
 		If TChrExpr(expr) Return TransChrExpr(TChrExpr(expr))
@@ -1323,12 +1321,6 @@ End Rem
 		Err "TODO : TransBuiltinExpr()"
 	End Method
 	
-	Method TransMinExpr:String(expr:TMinExpr)
-	End Method
-
-	Method TransMaxExpr:String(expr:TMaxExpr)
-	End Method
-
 	Method TransAbsExpr:String(expr:TAbsExpr)
 	End Method
 

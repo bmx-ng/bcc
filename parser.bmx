@@ -1281,34 +1281,6 @@ Type TParser Extends TGenProcessor
 				expr=ParseExpr()
 				expr=New TAbsExpr.Create( expr )
 			EndIf
-		Case "min"
-			NextToke
-			' optional brackets
-			Local b:Int = CParse( "(" )
-
-			expr=ParseExpr()
-			Parse ","
-			Local expr2:TExpr=ParseExpr()
-
-			If b Then
-				Parse ")"
-			End If
-
-			expr=New TMinExpr.Create( expr, expr2 )
-		Case "max"
-			NextToke
-			' optional brackets
-			Local b:Int = CParse( "(" )
-
-			expr=ParseExpr()
-			Parse ","
-			Local expr2:TExpr=ParseExpr()
-
-			If b Then
-				Parse ")"
-			End If
-
-			expr=New TMaxExpr.Create( expr, expr2 )
 		Case "asc"
 			NextToke
 
