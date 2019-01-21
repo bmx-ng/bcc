@@ -883,7 +883,7 @@ Type TParser Extends TGenProcessor
 			' for Strict code, void will be converted to Int during semanting.
 			ty=New TVoidType
 		Default
-			If _module.IsSuperStrict() Err "Illegal type expression."
+			If _module.IsSuperStrict() Err "Missing type specifier."
 			ty=New TIntType
 
 			While CParse("ptr")
