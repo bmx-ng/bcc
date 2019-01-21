@@ -6157,8 +6157,10 @@ End If
 
 		TransInterface(app)
 
-		If opt_def And opt_apptype Then
-			TransDef(app)
+		If opt_makelib Then
+			If opt_def And opt_apptype Then
+				TransDef(app)
+			End If
 		End If
 		
 	End Method

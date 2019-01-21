@@ -108,6 +108,14 @@ Global opt_musl:Int = False
 ' def
 '    generate .def files for dlls
 Global opt_def:Int = False
+'    don't generate .def files for dlls
+Global opt_nodef:Int = False
+'    generate header for dlls
+Global opt_head:Int = False
+'    don't generate header for dlls
+Global opt_nohead:Int = False
+' makelib
+Global opt_makelib:Int = False
 
 Global opt_filepath:String
 
@@ -203,8 +211,12 @@ Function ParseArgs:String[](args:String[])
 				opt_warnover=True
 			Case "musl"
 				opt_musl=True
-			Case "def"
-				opt_def=True
+			Case "nodef"
+				opt_nodef=True
+			Case "nohead"
+				opt_nohead=True
+			Case "makelib"
+				opt_makelib=True
 		End Select
 	
 		count:+ 1
@@ -216,6 +228,15 @@ Function ParseArgs:String[](args:String[])
 	
 	If opt_arch = "x64" Or opt_arch = "arm64v8a" Or opt_arch = "arm64" Then
 		WORD_SIZE = 8
+	End If
+
+	If opt_makelib Then
+		If Not opt_nodef Then
+			opt_def = True
+		End If
+		If Not opt_nohead Then
+			opt_head = True
+		End If
 	End If
 
 	Return args[count..]
