@@ -4172,7 +4172,7 @@ Function ParseApp:TAppDecl( path$ )
 	Local source$=PreProcess( path )
 	'Local source:String = LoadString(path)
 	
-	If opt_def Then
+	If opt_makelib And opt_apptype Then
 		source = AppendLibInit(source)
 	End If
 
