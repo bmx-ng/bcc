@@ -1661,7 +1661,7 @@ Type TUnaryExpr Extends TExpr
 				If error.StartsWith("Compile Error") Then
 					Throw error
 				Else
-					Err "Operator " + op + " cannot be used with Objects."
+					Err "Operator " + op + " is not defined for type '" + expr.exprType.ToString() + "'"
 				End If
 			End Try
 		End If
@@ -1775,7 +1775,7 @@ Type TBinaryMathExpr Extends TBinaryExpr
 				If error.StartsWith("Compile Error") Then
 					Throw error
 				Else
-					Err "Operator " + op + " cannot be used with Objects."
+					Err "Operator " + op + " is not defined between types '" + lhs.exprType.ToString() + "' and '" + rhs.exprType.ToString() + "'"
 				End If
 			End Try
 		End If
