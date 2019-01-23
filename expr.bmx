@@ -153,7 +153,7 @@ Type TExpr
 
 					If TConstExpr(argExpr) Or TBinaryExpr(argExpr) Or (TIndexExpr(argExpr) And TStringType(TIndexExpr(argExpr).expr.exprType)) Or ..
 							TInvokeExpr(argExpr) Or TInvokeMemberExpr(argExpr) Then
-						Err "Expression for 'Var' parameter must be a variable"
+						Err "Expression for 'Var' parameter must be a variable or an element of an array or pointer"
 					End If
 
 					' Passing a "new" object into a Var, requires us to create a local variable and pass its address instead.
@@ -2103,7 +2103,7 @@ Type TIndexExpr Extends TExpr
 		Return New TIndexExpr.Create( CopyExpr(expr),ind )
 	End Method
 
-	Method Semant:TExpr()
+	Method _Semant:TExpr(set:Int, rhs:TExpr)
 		If exprType Return Self
 
 		expr=expr.Semant()
@@ -2117,13 +2117,49 @@ Type TIndexExpr Extends TExpr
 		End If
 
 		For Local i:Int = 0 Until index.length
-			If Not(TNumericType(expr.exprType) And IsPointerType( expr.exprType, 0 , TType.T_POINTER | TType.T_VARPTR)) Then
+			If Not TObjectType(expr.exprType) And Not (TNumericType(expr.exprType) And IsPointerType( expr.exprType, 0 , TType.T_POINTER | TType.T_VARPTR)) Then
 				index[i]=index[i].SemantAndCast( New TUIntType, True )
 			Else
 				index[i]=index[i].Semant()
 			End If
 		Next
-
+		
+		' operator overload?
+		If TObjectType(expr.exprType) Then
+			Local args:TExpr[]
+			Local op:String
+			If set Then
+				args = index + [rhs]
+				op = "[]="
+			Else
+				args = index
+				op = "[]"
+			End If
+			Try
+				Local decl:TFuncDecl = TFuncDecl(TObjectType(expr.exprType).classDecl.FindFuncDecl(op, args,,,,True,SCOPE_CLASS_HEIRARCHY))
+				If decl Then
+					Return New TInvokeMemberExpr.Create( expr, decl, args ).Semant()
+				End If
+			Catch error:String
+				If error.StartsWith("Compile Error") Then
+					Throw error
+				Else
+					Local istr:String
+					Local vstr:String
+					If index.length = 1 Then
+						istr = " with '" + index[0].exprType.ToString() + "' index"
+					Else
+						For Local i:TExpr = EachIn index
+							istr :+ ", '" + i.exprType.ToString() + "'"
+						Next
+						istr = " with " + istr[1..] + " indices"
+					End If
+					If set Then vstr = " and '" + rhs.exprType.ToString() + "' value"
+					Err "Operator " + op + istr + vstr + " is not defined for type '" + expr.exprType.ToString() + "'"
+				End If
+			End Try
+		End If
+		
 		If TStringType( expr.exprType )
 			exprType=New TIntType
 			If index.length > 1 Then
@@ -2136,17 +2172,12 @@ Type TIndexExpr Extends TExpr
 
 				' a multi-dimensional array of arrays is slightly more complex
 				If TArrayType(exprType) Then
-
-				'	Local tmpArr:TLocalDecl=New TLocalDecl.Create( "", NewPointerType(TType.T_ARRAY), expr )
-				'	Local stmt:TExpr = New TStmtExpr.Create( New TDeclStmt.Create( tmp ), Self ).Semant()
-
 					Local sizeExpr:TExpr = New TArraySizeExpr.Create(expr, Null, index)
 					index = [sizeExpr]
 					Local tmp:TLocalDecl=New TLocalDecl.Create( "", NewPointerType(TType.T_UINT), sizeExpr,,True )
 					TArraySizeExpr(sizeExpr).val = tmp
 					Local stmt:TExpr = New TStmtExpr.Create( New TDeclStmt.Create( tmp ), Self ).Semant()
 					stmt.exprType = exprType
-
 					Return stmt
 				Else
 					Local sizeExpr:TExpr = New TArraySizeExpr.Create(expr, Null, index).Semant()
@@ -2158,27 +2189,23 @@ Type TIndexExpr Extends TExpr
 					Return stmt
 				End If
 			End If
-			'If TObjectType(exprType) And Not TStringType(exprType) And Not TArrayType(exprType) Then
-			'	Local tmp:TLocalDecl=New TLocalDecl.Create( "", exprType,expr )
-			'	Local stmt:TExpr = New TStmtExpr.Create( New TDeclStmt.Create( tmp ),New TVarExpr.Create( tmp ) ).Semant()
-			'	stmt.exprType = exprType
-			'	Return stmt
-			'End If
 		Else If TNumericType(expr.exprType) And IsPointerType( expr.exprType, 0 , TType.T_POINTER | TType.T_VARPTR)' And Not TFunctionPtrType( expr.exprType )
 			exprType=TType.MapPointerToPrim(TNumericType(expr.exprType))
-			'exprType=TType.intType
 		Else If TObjectType(expr.exprType) And TObjectType(expr.exprType).classDecl.IsStruct() And IsPointerType( expr.exprType, 0 , TType.T_POINTER | TType.T_VARPTR)' And Not TFunctionPtrType( expr.exprType )
 			exprType = expr.exprType
 		Else
-			Err "Only strings, arrays and pointers may be indexed."
+			Err "Expression of type '" + expr.exprType.ToString() + "' cannot be indexed"
 		EndIf
 
 		Return Self
 	End Method
+	
+	Method Semant:TExpr()
+		Return _Semant(False, Null)
+	End Method
 
 	Method SemantSet:TExpr( op$,rhs:TExpr )
-		Return Semant()
-		'Return Self
+		Return _Semant(True, rhs)
 	End Method
 	
 	Method SemantFunc:TExpr( args:TExpr[] , throwError:Int = True, funcCall:Int = False )
