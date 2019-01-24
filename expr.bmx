@@ -1462,11 +1462,11 @@ Type TCastExpr Extends TExpr
 			End If
 		End If
 		
-		If TArrayType(ty) And TObjectType(src) 
+		If TArrayType(ty) And TObjectType(src)
 			If TObjectType(src).classDecl.ident = "___Array" Then
 				exprType = ty
 				Return expr
-			Else If  TObjectType(src).classDecl.ident = "Object" Then
+			Else If TObjectType(src).classDecl.ident = "Object" And flags & CAST_EXPLICIT Then
 				exprType = ty
 				Return Self
 			End If
