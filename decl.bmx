@@ -2057,7 +2057,7 @@ Type TFuncDecl Extends TBlockDecl
 		'check for duplicate decl
 		If ident Then
 			For Local decl:TFuncDecl=EachIn scope.SemantedFuncs( ident )
-				If decl<>Self And EqualsArgs( decl ) And Not decl.IsCTOR()
+				If decl<>Self And EqualsArgs( decl, True ) And Not decl.IsCTOR()
 					Err "Duplicate declaration "+ToString()
 				EndIf
 				If noMangle Then
