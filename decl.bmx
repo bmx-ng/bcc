@@ -2871,9 +2871,12 @@ End Rem
 		If superTy
 			Local cb:TClassDeclCallback = New TClassDeclCallback
 			cb.decl = Self
-			
+
 			attrs :| DECL_CYCLIC
 			superClass=superTy.SemantClass(cb)
+			If superClass.attrs & DECL_CYCLIC Then
+				Err "Cyclic type dependency"
+			End If
 			attrs :~ DECL_CYCLIC
 			If superClass.IsInterface() Then
 				If Not IsExtern() Or Not superClass.IsExtern() Err superClass.ToString()+" is an interface, not a class."
