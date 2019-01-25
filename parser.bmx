@@ -2684,8 +2684,11 @@ End Rem
 						id = t
 					Case ":mod", ":shl", ":shr"
 						id = t
+					Case "[]"
+						If CParse("=") Then t :+ "="
+						id = t
 					Default
-						DoErr "Operator must be one of: * / + - & | ~~ :* :/ :+ :- :& :| :~~ < > <= >= = <> mod shl shr :mod :shl :shr"
+						DoErr "Operator must be one of: * / + - & | ~~ :* :/ :+ :- :& :| :~~ < > <= >= = <> mod shl shr :mod :shl :shr [] []="
 				End Select
 				ty=ParseDeclType()
 			Else

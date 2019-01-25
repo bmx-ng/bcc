@@ -453,6 +453,10 @@ Type TTranslator
 				Return "_shleq"
 			Case ":shr"
 				Return "_shreq"
+			Case "[]"
+				Return "_iget"
+			Case "[]="
+				Return "_iset"
 		End Select
 		Err "?? unknown symbol ?? : " + sym
 	End Method
