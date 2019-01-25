@@ -1513,7 +1513,7 @@ Type TCastExpr Extends TExpr
 		If TVarPtrType(ty) Then
 			If Not TVarExpr(expr) And Not TMemberVarExpr(expr) And Not (TStmtExpr(expr) And TIndexExpr(TStmtExpr(expr).expr)) Then
 				If Not TIndexExpr(expr) Or (TIndexExpr(expr) And Not TVarExpr(TIndexExpr(expr).expr) And Not TMemberVarExpr(TIndexExpr(expr).expr))  Then
-					Err "Subexpression for 'Ptr' must be a variable"
+					Err "Subexpression for 'Varptr' must be a variable or an element of an array, pointer or string"
 				End If
 			End If
 			exprType = src.Copy()
