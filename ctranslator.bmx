@@ -917,7 +917,7 @@ t:+"NULLNULLNULL"
 			Return decl.munged
 		Else If _env And decl.scope And decl.scope=_env.ClassScope()
 			' calling a class function from a method?
-			If TFuncDecl(decl) And _env.ClassScope() And _env.FuncScope() And _env.FuncScope().IsMethod() And Not (decl.attrs & FUNC_PTR) Then
+			If TFuncDecl(decl) And _env.ClassScope() And _env.FuncScope() And _env.FuncScope().IsMethod() And Not (decl.attrs & FUNC_PTR) And Not _env.ClassScope().IsStruct() Then
 				Local scope:TScopeDecl = _env.ClassScope()
 				Local obj:String = Bra("struct " + scope.munged + "_obj*")
 				Local class:String = "o->clas"
