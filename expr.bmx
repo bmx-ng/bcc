@@ -1746,7 +1746,7 @@ Type TBinaryExpr Extends TExpr
 
 End Type
 
-' * / + / & ~ | ^ shl shr
+' * / + / & ~ | ^ shl shr sar
 Type TBinaryMathExpr Extends TBinaryExpr
 
 	Method Create:TBinaryMathExpr( op$,lhs:TExpr,rhs:TExpr )
@@ -1789,7 +1789,7 @@ Type TBinaryMathExpr Extends TBinaryExpr
 		End If
 
 		Select op
-		Case "&","~~","|","shl","shr"
+		Case "&","~~","|","shl","shr","sar"
 			If TFloat128Type(lhs.exprType) Then
 				exprType=New TInt128Type
 			Else If TDouble128Type(lhs.exprType) Then
@@ -1875,6 +1875,7 @@ Type TBinaryMathExpr Extends TBinaryExpr
 				Return x Mod y
 			Case "shl" Return x Shl y
 			Case "shr" Return x Shr y
+			Case "sar" Return x Sar y
 			Case "+" Return x + y
 			Case "-" Return x - y
 			Case "&" Return x & y
@@ -1898,6 +1899,7 @@ Type TBinaryMathExpr Extends TBinaryExpr
 				Return x Mod y
 			Case "shl" Return x Shl y
 			Case "shr" Return x Shr y
+			Case "sar" Return x Sar y
 			Case "+" Return x + y
 			Case "-" Return x - y
 			Case "&" Return x & y
