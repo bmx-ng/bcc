@@ -2103,8 +2103,14 @@ t:+"NULLNULLNULL"
 			End If
 		End If
 		
-		If (expr.op = "shr" Or expr.op = "&" Or expr.op = "|") And TIntType(expr.exprType) Then
-			t_lhs = "(unsigned int)(" + t_lhs + ")"
+		If (expr.op = "shr" Or expr.op = "&" Or expr.op = "|") Then
+			If TIntType(expr.exprType) Then
+				t_lhs = "(unsigned int)(" + t_lhs + ")"
+				t_rhs = "(unsigned int)(" + t_rhs + ")"
+			Else If TLongType(expr.exprType) Then
+				t_lhs = "(unsigned long long)(" + t_lhs + ")"
+				t_rhs = "(unsigned long long)(" + t_rhs + ")"
+			End If
 		End If
 
 		If TBinaryCompareExpr(expr) Then
