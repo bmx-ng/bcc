@@ -1480,12 +1480,14 @@ Type TCastExpr Extends TExpr
 
 		If IsPointerType(ty, 0, TType.T_POINTER | TType.T_CHAR_PTR | TType.T_SHORT_PTR) Then
 			If IsNumericType(src) And Not (src._flags & TType.T_VARPTR) Then
-				'If IsPointerType(ty,0,TType.T_POINTER) Then
-				'	exprType = TNumericType(src).ToPointer()
-				'Else
+			
+				' no decimal casts to pointers
+				If TDecimalType(src) Then
+					exprType = Null
+				Else
 					exprType = ty
-				'End If
-				Return Self
+					Return Self
+				End If
 			Else If TNumericType(src) And (src._flags & TType.T_VARPTR) Then
 				exprType = expr.exprType
 			Else If TArrayType(src) Then
