@@ -24,6 +24,7 @@
 
 Type TExpr
 	Field exprType:TType
+	Field static:Int
 
 	Method ToString$()
 		Return "<TExpr>"
@@ -1142,13 +1143,18 @@ End Type
 Type TSelfExpr Extends TExpr
 
 	Method Copy:TExpr()
-		Return New TSelfExpr
+		Local expr:TExpr = New TSelfExpr
+		expr.static = static
+		Return expr
 	End Method
 
 	Method Semant:TExpr()
 		If exprType Return Self
 
-		'If _env.FuncScope().IsStatic() Err "Illegal use of Self within static scope."
+		If _env.FuncScope().IsStatic() Then
+			static = True
+		End If
+		
 		Local scope:TClassDecl = _env.ClassScope()
 		If Not scope Then
 			Err "'Self' can only be used within methods."
@@ -2543,6 +2549,7 @@ Type TIdentExpr Extends TExpr
 				static=True
 			Else
 				expr=expr.Semant()
+				static = expr.static
 				scope=expr.exprType.GetClass()
 				If Not scope Then
 					Err "Expression has no scope"
