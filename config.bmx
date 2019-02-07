@@ -82,7 +82,7 @@ Function InternalErr()
 	If DEBUGSTOP_ON_ERROR Then
 		DebugStop ' useful for debugging!
 	End If
-	Throw "Internal Error.~n" + _errInfo + "~n"
+	Throw "Compile Error. Internal Error : Please report the issue, with an example if possible, to https://github.com/bmx-ng/bcc/issues/new~n" + _errInfo + "~n"
 End Function
 
 Function IsSpace:Int( ch:Int )
