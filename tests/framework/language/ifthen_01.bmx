@@ -1,4 +1,5 @@
 SuperStrict
+Framework BRL.StandardIO
 
 Local i:Int = 0
 If i = 0 Then
