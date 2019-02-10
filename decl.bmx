@@ -351,7 +351,7 @@ Type TDecl
 	End Method
 	
 	Method GenInstance:TDecl()
-		InternalErr
+		InternalErr "TDecl.GenInstance"
 	End Method
 	
 	Method OnSemant() Abstract
@@ -430,7 +430,7 @@ Type TValDecl Extends TDecl
 				SemantInit()
 			End If
 		Else
-			InternalErr
+			InternalErr "TValDecl.OnSemant"
 		EndIf
 		
 	End Method
@@ -869,7 +869,7 @@ Type TScopeDecl Extends TDecl
 'Public
 
 	Method OnCopy:TDecl(deep:Int = True)
-		InternalErr
+		InternalErr "TScopeDecl.OnCopy"
 	End Method
 
 	Method Decls:TList()
@@ -927,7 +927,7 @@ Type TScopeDecl Extends TDecl
 	
 	Method InsertDecl( decl:TDecl, isCopy:Int = False )
 
-		If decl.scope And Not (decl.attrs & DECL_INITONLY) And Not isCopy InternalErr
+		If decl.scope And Not (decl.attrs & DECL_INITONLY) And Not isCopy InternalErr "TScopeDecl.InsertDecl"
 		
 		'Local ident$=decl.ident
 		If Not decl.ident Return
@@ -2340,7 +2340,7 @@ Type TClassDecl Extends TScopeDecl
 	End Method
 	
 	Method OnCopy:TDecl(deep:Int = True)
-		InternalErr
+		InternalErr "TClassDecl.OnCopy"
 	End Method
 	
 	Method ToString$()
@@ -2429,7 +2429,7 @@ Rem
 End Rem
 	Method GenClassInstance:TClassDecl( instArgs:TType[], declImported:Int = False, callback:TCallback = Null, templateDets:TTemplateDets = Null )
 
-		If instanceof InternalErr
+		If instanceof InternalErr "TClassDecl.GenClassInstance"
 		
 		'no args
 		If Not instArgs

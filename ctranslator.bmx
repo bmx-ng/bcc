@@ -285,7 +285,7 @@ Type TCTranslator Extends TTranslator
 
 		If TExternObjectType( ty ) Return "struct " + TExternObjectType( ty ).classDecl.munged + p
 
-		InternalErr
+		InternalErr "TCTranslator.TransType"
 	End Method
 
 	Method TransIfcType$( ty:TType, isSuperStrict:Int = False )
@@ -363,7 +363,7 @@ Type TCTranslator Extends TTranslator
 			Return t
 		End If
 		If TExternObjectType( ty ) Return ":" + TExternObjectType(ty).classDecl.ident + p
-		InternalErr
+		InternalErr "TCTranslator.TransIfcType"
 	End Method
 
 	Method TransRefType$( ty:TType, ident:String )
@@ -448,7 +448,7 @@ Type TCTranslator Extends TTranslator
 			End If
 			If TFunctionPtrType( ty) Return "&brl_blitz_NullFunctionError" ' todo ??
 		EndIf
-		InternalErr
+		InternalErr "TCTranslator.TransValue"
 	End Method
 	
 	Method TransArgs$( args:TExpr[],decl:TFuncDecl, objParam:String = Null )
@@ -667,8 +667,7 @@ t:+"NULLNULLNULL"
 		End If
 
 		If Not TObjectType(ty) Or Not TObjectType(src) Then
-			DebugStop
-			InternalErr
+			InternalErr "TCTranslator.TransPtrCast"
 		End If
 
 		Local t$=TransType(ty, "TODO: TransPtrCast")
@@ -937,7 +936,7 @@ t:+"NULLNULLNULL"
 		Else If TBlockDecl(decl.scope)
 			Return decl.munged
 		EndIf
-		InternalErr
+		InternalErr "TCTranslator.TransStatic"
 	End Method
 
 	Method TransTemplateCast$( ty:TType,src:TType,expr$ )
@@ -1267,7 +1266,7 @@ t:+"NULLNULLNULL"
 						End If
 					End If
 				Else
-					InternalErr
+					InternalErr "TCTranslator.TransFunc"
 				End If
 				'Return TransSubExpr( lhs )+"->"+decl.munged+TransArgs( args,decl )
 				'Return decl.munged+TransArgs( args,decl, TransSubExpr( lhs ) )
@@ -1487,7 +1486,7 @@ t:+"NULLNULLNULL"
 			End If
 		End If
 
-		InternalErr
+		InternalErr "TCTranslator.TransSizeOfExpr"
 	End Method
 
 	'***** Expressions *****
@@ -2332,7 +2331,7 @@ t:+"NULLNULLNULL"
 		Case "pow" Return "(float)bbFloatPow"+Bra( arg0+","+arg1 )
 		'
 		End Select
-		InternalErr
+		InternalErr "TCTranslator.TransIntrinsicExpr"
 	End Method
 
 	'***** Statements *****
@@ -3613,9 +3612,9 @@ End Rem
 		If TObjectType( ty )
 
 			If id.EndsWith( ".p" )
-				If ty.GetClass().IsInterface() id=id[..-2] Else InternalErr
+				If ty.GetClass().IsInterface() id=id[..-2] Else InternalErr "TCTranslator.EmitMark"
 			Else
-				If ty.GetClass().IsInterface() InternalErr
+				If ty.GetClass().IsInterface() InternalErr "TCTranslator.EmitMark"
 			EndIf
 
 			If queue
@@ -4963,7 +4962,7 @@ End Rem
 				End If
 			End If
 
-			InternalErr
+			InternalErr "TCTranslator.TransIfcConstExpr"
 		End If
 
 		If TObjectType(expr.exprType) Then

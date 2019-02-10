@@ -302,7 +302,7 @@ Type TForEachinStmt Extends TLoopStmt
 			End If
 
 		Else
-			InternalErr
+			InternalErr "TForEachinStmt.OnSemant"
 		EndIf
 
 		block.Semant

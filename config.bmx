@@ -37,6 +37,7 @@ Const DEBUG:Int = False
 Const ABORT_ON_NULL:Int = True
 Const PROFILER:Int = False
 Const DEBUGSTOP_ON_ERROR:Int = False
+Const SHOW_INTERNALERR_LOCATION:Int = True
 
 Global ENV_LANG$
 
@@ -78,11 +79,13 @@ Function FormatError:String(path:String, line:Int, char:Int)
 	Return "[" + path + ";" + line + ";" + char + "]"
 End Function
 
-Function InternalErr()
+Function InternalErr(errorLocation:String)
 	If DEBUGSTOP_ON_ERROR Then
 		DebugStop ' useful for debugging!
 	End If
-	Throw "Compile Error. Internal Error : Please report the issue, with an example if possible, to https://github.com/bmx-ng/bcc/issues/new~n" + _errInfo + "~n"
+	Local locationMsg:String
+	If SHOW_INTERNALERR_LOCATION And errorLocation Then locationMsg = " in " + errorLocation
+	Throw "Compile Error: Internal Error" + locationMsg + ".~nPlease report the issue, with an example if possible, to https://github.com/bmx-ng/bcc/issues/new~n" + _errInfo + "~n"
 End Function
 
 Function IsSpace:Int( ch:Int )

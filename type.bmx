@@ -1522,15 +1522,15 @@ Type TIdentType Extends TType
 	End Method
 	
 	Method ActualType:TType()
-		InternalErr
+		InternalErr "TIdentType.ActualType"
 	End Method
 	
 	Method EqualsType:Int( ty:TType )
-		InternalErr
+		InternalErr "TIdentType.EqualsType"
 	End Method
 	
 	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
-		InternalErr
+		InternalErr "TIdentType.ExtendsType"
 	End Method
 	
 	'Method Semant:TType()
