@@ -31,11 +31,11 @@ Type TExpr
 	End Method
 
 	Method Copy:TExpr()
-		InternalErr
+		InternalErr "TExpr.Copy"
 	End Method
 
 	Method Semant:TExpr()
-		InternalErr
+		InternalErr "TExpr.Semant"
 	End Method
 
 	Method SemantSet:TExpr( op$,rhs:TExpr )
@@ -71,7 +71,7 @@ Type TExpr
 	End Method
 
 	Method TransVar$()
-		InternalErr
+		InternalErr "TExpr.TransVar"
 	End Method
 
 	'semant and cast
@@ -629,7 +629,7 @@ Type TVarExpr Extends TExpr
 
 	Method Semant:TExpr()
 		If exprType Return Self
-		If Not decl.IsSemanted() InternalErr
+		If Not decl.IsSemanted() InternalErr "TVarExpr.Semant"
 		exprType=decl.ty
 		Return Self
 	End Method
@@ -670,7 +670,7 @@ Type TMemberVarExpr Extends TExpr
 
 	Method Semant:TExpr()
 		If exprType Return Self
-		If Not decl.IsSemanted() InternalErr
+		If Not decl.IsSemanted() InternalErr "TMemberVarExpr.Semant"
 		exprType=decl.ty
 		Return Self
 	End Method
@@ -1265,7 +1265,7 @@ Type TCastExpr Extends TExpr
 						End If
 					End If
 				Else
-					InternalErr
+					InternalErr "TCastExpr.Semant"
 				EndIf
 				Local fdecl:TFuncDecl=src.GetClass().FindFuncDecl( op,,,,,,SCOPE_ALL )
 				expr=New TInvokeMemberExpr.Create( expr,fdecl ).Semant()
@@ -1701,7 +1701,7 @@ Type TUnaryExpr Extends TExpr
 			expr=expr.SemantAndCast( New TBoolType,CAST_EXPLICIT )
 			exprType=New TBoolType
 		Default
-			InternalErr
+			InternalErr "TUnaryExpr.Semant"
 		End Select
 
 		If TConstExpr( expr ) Return EvalConst()
@@ -1722,7 +1722,7 @@ Type TUnaryExpr Extends TExpr
 			If val Return ""
 			Return "1"
 		End Select
-		InternalErr
+		InternalErr "TUnaryExpr.Eval"
 	End Method
 
 	Method Trans$()
@@ -1934,7 +1934,7 @@ Type TBinaryMathExpr Extends TBinaryExpr
 				Return lhs+rhs
 			End Select
 		EndIf
-		InternalErr
+		InternalErr "TBinaryMathExpr.Eval"
 	End Method
 
 End Type
@@ -2053,7 +2053,7 @@ Type TBinaryCompareExpr Extends TBinaryExpr
 		EndIf
 		If r=1 Return "1"
 		If r=0 Return ""
-		InternalErr
+		InternalErr "TBinaryCompareExpr.Eval"
 	End Method
 End Type
 
@@ -2089,7 +2089,7 @@ Type TBinaryLogicExpr Extends TBinaryExpr
 		Case "and" If lhs.Eval() And rhs.Eval() Return "1" Else Return ""
 		Case "or"  If lhs.Eval() Or rhs.Eval() Return "1" Else Return ""
 		End Select
-		InternalErr
+		InternalErr "TBinaryLogicExpr.Eval"
 	End Method
 End Type
 
@@ -2466,7 +2466,7 @@ Type TIdentTypeExpr Extends TExpr
 		Else
 			cdecl=exprType.GetClass()
 		End If
-		If Not cdecl InternalErr
+		If Not cdecl InternalErr "TIdentTypeExpr.Semant"
 	End Method
 
 	Method Semant:TExpr()
@@ -2599,7 +2599,7 @@ Type TIdentExpr Extends TExpr
 	End Method
 
 	Method IsVar()
-		InternalErr
+		InternalErr "TIdentExpr.IsVar"
 	End Method
 
 	Method Semant:TExpr()
@@ -2692,7 +2692,7 @@ Type TIdentExpr Extends TExpr
 			Case "*","/","shl","shr","+","-","&","|","~~"
 				rhs=New TBinaryMathExpr.Create( bop,lhs,rhs )
 			Default
-				InternalErr
+				InternalErr "TIdentExpr.SemantSet"
 			End Select
 			rhs=rhs.Semant()
 		EndIf
