@@ -27,6 +27,7 @@ Const DECL_PRIVATE:Int=       $020000
 Const DECL_ABSTRACT:Int=      $040000
 Const DECL_FINAL:Int=         $080000
 Const DECL_READ_ONLY:Int=     $000100
+Const DECL_OVERRIDE:Int=    $40000000
 
 Const DECL_SEMANTED:Int=      $100000
 Const DECL_SEMANTING:Int=     $200000
@@ -52,6 +53,7 @@ Const CLASS_INTERFACE:Int=    $002000
 Const CLASS_THROWABLE:Int=    $004000
 Const CLASS_STRUCT:Int=       $008000
 Const CLASS_GENERIC:Int=      $001000
+Const CLASS_FLAGS:Int = CLASS_INTERFACE | CLASS_THROWABLE | CLASS_STRUCT | CLASS_GENERIC
 
 Const SCOPE_FUNC:Int = 0
 Const SCOPE_CLASS_LOCAL:Int = 1
@@ -994,9 +996,9 @@ Type TScopeDecl Extends TDecl
 	End Method
 	
 
-	Method FindDecl:Object( ident$, override:Int = False )
+	Method FindDecl:Object( ident$, _override:Int = False )
 	
-		If Not override And _env<>Self Return GetDecl( ident )
+		If Not _override And _env<>Self Return GetDecl( ident )
 		
 		Local tscope:TScopeDecl=Self
 		While tscope
@@ -1049,13 +1051,13 @@ Type TScopeDecl Extends TDecl
 	End Method
 	
 	' returns a list of all matching named decls in scope
-	Method FindDeclList:Object(ident:String, override:Int = False, declList:TFuncDeclList = Null, maxSearchDepth:Int = SCOPE_ALL, skipMultipleClassScopes:Int = False )
+	Method FindDeclList:Object(ident:String, _override:Int = False, declList:TFuncDeclList = Null, maxSearchDepth:Int = SCOPE_ALL, skipMultipleClassScopes:Int = False )
 
 		If Not declList Then
 			declList = New TFuncDeclList
 		End If
 	
-		If Not override And _env<>Self Return GetDeclList( ident, declList, maxSearchDepth )
+		If Not _override And _env<>Self Return GetDeclList( ident, declList, maxSearchDepth )
 		
 		Local hadClassScope:Int
 		Local tscope:TScopeDecl=Self
@@ -2101,89 +2103,35 @@ Type TFuncDecl Extends TBlockDecl
 		'check we exactly match an override
 		If sclass 'And IsMethod()
 
+			Local found:Int
+
 			While sclass
 				Local errorDetails:String = ""
 
-				Local found:Int
-				For Local decl:TFuncDecl=EachIn sclass.FuncDecls( )
-					
-					If decl.IdentLower() = IdentLower() Then
+				found = MatchesFunction(sclass, strictVoidToInt, errorDetails)
 
-						If IdentLower() = "new" Continue
-						If IdentLower() = "delete" Continue
-
-						found=True
-
-						If Not decl.IsSemanted() Then
-							decl.Semant
-						End If
-
-						' check void return type strictness, and fail if appropriate.
-						Local voidReturnTypeFail:Int = False
-						' super has void return type... so it is superstrict (or inherited from)
-						If TVoidType(decl.retType) And TIntType(retType) Then
-							' if we are only strict, we may fail on type mismatch
-							If Not ModuleScope().IsSuperStrict() Then
-								' we have the option of upgrading our return type to match superstrict parent
-								If opt_strictupgrade And strictVoidToInt Then
-									retType = TType.voidType
-								Else
-									' otherwise...
-									voidReturnTypeFail = True
-								End If
-							End If
-						End If
-
-						If EqualsFunc( decl ) And Not voidReturnTypeFail
-
-							' check we aren't attempting to assign weaker access modifiers
-							If (IsProtected() And decl.IsPublic()) Or (IsPrivate() And (decl.IsProtected() Or decl.IsPublic())) Then
-							
-								Err PrivilegeError(Self, decl)
-							
-							End If
-						
-							If (TObjectType(retType) And TObjectType(decl.retType )) Or (TArrayType(retType) And TArrayType(decl.retType)) Then
-								If Not retType.EqualsType( decl.retType ) And retType.ExtendsType( decl.retType ) Then
-									returnTypeSubclassed = True
-								End If
-							End If
-							
-							overrides=TFuncDecl( decl.actual )
-						Else
-							' method overloading?
-							If Not EqualsArgs(decl) Then
-								found = False
-								Continue
-							End If
-							
-							'prepare a more detailed error message
-							If (Not retType.EqualsType( decl.retType ) Or Not retType.ExtendsType( decl.retType )) Or (decl.retType And Not decl.retType.EqualsType( retType )) Or voidReturnTypeFail
-								errorDetails :+ "Return type is ~q"+retType.ToString()+"~q, expected ~q"+decl.retType.ToString()+"~q. "
-								If voidReturnTypeFail Then
-									errorDetails :+ "You may have Strict type overriding SuperStrict type. "
-								End If
-							Else
-								found = False
-								Continue
-							End If
-
-							Local argCount:Int = Min(argDecls.Length, decl.argDecls.Length)
-							If argCount > 0
-								For Local i:Int=0 Until argCount
-									If Not argDecls[i].ty.EqualsType( decl.argDecls[i].ty )
-										errorDetails :+ "Argument #"+(i+1)+" is ~q" + argDecls[i].ty.ToString()+"~q, expected ~q"+decl.argDecls[i].ty.ToString()+"~q. "
-									End If
-								Next
-							EndIf
-							'remove last space
-							errorDetails = errorDetails.Trim()
-						EndIf
+				' check interfaces?
+				If Not found Then
+					If sclass = cdecl.superClass Then
+						found = MatchesInterfaceFunction(cdecl, strictVoidToInt, errorDetails)
 					End If
-				Next
+
+					If Not found Then
+						found = MatchesInterfaceFunction(sclass, strictVoidToInt, errorDetails)
+					End If
+				End If
+				
 				If found
 					If Not overrides Err "Overriding method does not match any overridden method. (Detail: " + errorDetails+")"
 					If overrides.IsFinal() Err "Final methods cannot be overridden."
+					If Not (attrs & DECL_OVERRIDE) And opt_require_override And Not declImported Then
+						Local msg:String = "Overriding method '" + ident + "' should specify 'Override' property."
+						If Not opt_override_error Then
+							Warn msg
+						Else
+							Err msg
+						End If
+					End If
 					' for overrides, make the ident match that of the superclass
 					ident = overrides.ident
 					
@@ -2191,6 +2139,10 @@ Type TFuncDecl Extends TBlockDecl
 				EndIf
 				sclass=sclass.superClass
 			Wend
+			
+			If Not found And attrs & DECL_OVERRIDE Then
+				Err "Method does not override method from its super type."
+			End If
 		EndIf
 
 		'append a return statement if necessary
@@ -2209,6 +2161,106 @@ Type TFuncDecl Extends TBlockDecl
 		attrs:|DECL_SEMANTED
 		
 		Super.OnSemant()
+	End Method
+	
+	Method MatchesInterfaceFunction:Int(cdecl:TClassDecl, strictVoidToInt:Int, errorDetails:String Var)
+		Local found:Int
+
+		If Not found Then
+			For Local idecl:TClassDecl = EachIn cdecl.implments
+				found = MatchesFunction(idecl, strictVoidToInt, errorDetails)
+			
+				If Not found Then
+					found = MatchesInterfaceFunction(idecl, strictVoidToInt, errorDetails)
+				End If
+				
+				If found Then
+					Exit
+				End If
+			Next
+		End If
+		Return found
+	End Method
+
+	Method MatchesFunction:Int(sclass:TClassDecl, strictVoidToInt:Int, errorDetails:String Var)
+		Local found:Int
+		For Local decl:TFuncDecl=EachIn sclass.FuncDecls( )
+			
+			If decl.IdentLower() = IdentLower() Then
+
+				If IdentLower() = "new" Continue
+				If IdentLower() = "delete" Continue
+
+				found=True
+
+				If Not decl.IsSemanted() Then
+					decl.Semant
+				End If
+
+				' check void return type strictness, and fail if appropriate.
+				Local voidReturnTypeFail:Int = False
+				' super has void return type... so it is superstrict (or inherited from)
+				If TVoidType(decl.retType) And TIntType(retType) Then
+					' if we are only strict, we may fail on type mismatch
+					If Not ModuleScope().IsSuperStrict() Then
+						' we have the option of upgrading our return type to match superstrict parent
+						If opt_strictupgrade And strictVoidToInt Then
+							retType = TType.voidType
+						Else
+							' otherwise...
+							voidReturnTypeFail = True
+						End If
+					End If
+				End If
+
+				If EqualsFunc( decl ) And Not voidReturnTypeFail
+
+					' check we aren't attempting to assign weaker access modifiers
+					If (IsProtected() And decl.IsPublic()) Or (IsPrivate() And (decl.IsProtected() Or decl.IsPublic())) Then
+					
+						Err PrivilegeError(Self, decl)
+					
+					End If
+				
+					If (TObjectType(retType) And TObjectType(decl.retType )) Or (TArrayType(retType) And TArrayType(decl.retType)) Then
+						If Not retType.EqualsType( decl.retType ) And retType.ExtendsType( decl.retType ) Then
+							returnTypeSubclassed = True
+						End If
+					End If
+					
+					overrides=TFuncDecl( decl.actual )
+				Else
+					' method overloading?
+					If Not EqualsArgs(decl) Then
+						found = False
+						Continue
+					End If
+					
+					'prepare a more detailed error message
+					If (Not retType.EqualsType( decl.retType ) Or Not retType.ExtendsType( decl.retType )) Or (decl.retType And Not decl.retType.EqualsType( retType )) Or voidReturnTypeFail
+						errorDetails :+ "Return type is ~q"+retType.ToString()+"~q, expected ~q"+decl.retType.ToString()+"~q. "
+						If voidReturnTypeFail Then
+							errorDetails :+ "You may have Strict type overriding SuperStrict type. "
+						End If
+					Else
+						found = False
+						Continue
+					End If
+
+					Local argCount:Int = Min(argDecls.Length, decl.argDecls.Length)
+					If argCount > 0
+						For Local i:Int=0 Until argCount
+							If Not argDecls[i].ty.EqualsType( decl.argDecls[i].ty )
+								errorDetails :+ "Argument #"+(i+1)+" is ~q" + argDecls[i].ty.ToString()+"~q, expected ~q"+decl.argDecls[i].ty.ToString()+"~q. "
+							End If
+						Next
+					EndIf
+					'remove last space
+					errorDetails = errorDetails.Trim()
+				EndIf
+			End If
+		Next
+		Return found
 	End Method
 
 	Method CheckAccess:Int()

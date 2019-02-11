@@ -2751,6 +2751,13 @@ End Rem
 			
 			attrs:|DECL_ABSTRACT
 		End If
+		
+		If CParse("override") Then
+			If Not classDecl Then
+				Err "Override cannot be used with global functions"
+			End If
+			attrs :| DECL_OVERRIDE
+		End If
 			
 		If CParse( "nodebug" ) Then
 			attrs :| DECL_NODEBUG

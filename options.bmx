@@ -25,7 +25,7 @@ SuperStrict
 
 Import "base.configmap.bmx"
 
-Const version:String = "0.100"
+Const version:String = "0.101"
 
 Const BUILDTYPE_APP:Int = 0
 Const BUILDTYPE_MODULE:Int = 1
@@ -116,6 +116,12 @@ Global opt_head:Int = False
 Global opt_nohead:Int = False
 ' makelib
 Global opt_makelib:Int = False
+' override
+'    require override keyword
+Global opt_require_override:Int = False
+' overerr
+'    missing override is error
+Global opt_override_error:Int = False
 
 Global opt_filepath:String
 
@@ -217,6 +223,10 @@ Function ParseArgs:String[](args:String[])
 				opt_nohead=True
 			Case "makelib"
 				opt_makelib=True
+			Case "override"
+				opt_require_override=True
+			Case "overerr"
+				opt_override_error=True
 		End Select
 	
 		count:+ 1
