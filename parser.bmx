@@ -2731,38 +2731,43 @@ End Rem
 			attrs :| (fdecl.attrs & DECL_API_FLAGS)
 		End If
 		
-		If CParse( "nodebug" ) Then
-			attrs :| DECL_NODEBUG
-		End If
-			
-		If CParse( "final" )
-			If Not classDecl Then
-				Err "Final cannot be used with global functions"
+		While True
+			If CParse( "nodebug" ) Then
+				attrs :| DECL_NODEBUG
+				Continue
 			End If
-			attrs:|DECL_FINAL
-		Else If CParse( "abstract" )
-			If Not classDecl Then
-				Err "Abstract cannot be used with global functions"
-			End If
-			
-			If classDecl And classDecl.attrs & DECL_FINAL Then
-				Err "Abstract methods cannot appear in final types"
+				
+			If CParse( "final" )
+				If Not classDecl Then
+					Err "Final cannot be used with global functions"
+				End If
+				attrs:|DECL_FINAL
+				Continue
 			End If
 			
-			attrs:|DECL_ABSTRACT
-		End If
-		
-		If CParse("override") Then
-			If Not classDecl Then
-				Err "Override cannot be used with global functions"
+			If CParse( "abstract" )
+				If Not classDecl Then
+					Err "Abstract cannot be used with global functions"
+				End If
+				
+				If classDecl And classDecl.attrs & DECL_FINAL Then
+					Err "Abstract methods cannot appear in final types"
+				End If
+				
+				attrs:|DECL_ABSTRACT
+				Continue
 			End If
-			attrs :| DECL_OVERRIDE
-		End If
 			
-		If CParse( "nodebug" ) Then
-			attrs :| DECL_NODEBUG
-		End If
-
+			If CParse("override") Then
+				If Not classDecl Then
+					Err "Override cannot be used with global functions"
+				End If
+				attrs :| DECL_OVERRIDE
+				Continue
+			End If
+				
+			Exit
+		Wend
 
 		'meta data for functions/methods
 		meta = ParseMetaData()
