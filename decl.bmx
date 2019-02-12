@@ -2259,6 +2259,8 @@ Type TFuncDecl Extends TBlockDecl
 					errorDetails = errorDetails.Trim()
 				EndIf
 			End If
+			
+			If found Exit
 		Next
 		Return found
 	End Method
