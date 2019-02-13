@@ -2125,7 +2125,7 @@ Type TFuncDecl Extends TBlockDecl
 					If Not overrides Err "Overriding method does not match any overridden method. (Detail: " + errorDetails+")"
 					If overrides.IsFinal() Err "Final methods cannot be overridden."
 					If Not (attrs & DECL_OVERRIDE) And opt_require_override And Not declImported Then
-						Local msg:String = "Overriding method '" + ident + "' should specify 'Override' property."
+						Local msg:String = "Overriding method '" + ident + "' must be declared with 'Override'."
 						If Not opt_override_error Then
 							Warn msg
 						Else
