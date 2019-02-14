@@ -81,7 +81,7 @@ Type TTranslator
 		End If
 		ind :- 1
 		If ind < 0 Then
-			InternalErr
+			InternalErr "TTranslator.PopLoopLocalStack"
 		End If
 		localScope.Pop
 	End Method
@@ -705,7 +705,7 @@ End Rem
 		Case "~~" Return op
 		Case "not" Return "!"
 		End Select
-		InternalErr
+		InternalErr "TTranslator.TransUnaryOp"
 	End Method
 	
 	Method TransBinaryOp$( op$,rhs$ )
@@ -732,7 +732,7 @@ op = mapSymbol(op)
 		Case "<<", ">>" Return Op
 		Case "%" Return Op
 		End Select
-		InternalErr
+		InternalErr "TTranslator.TransBinaryOp"
 	End Method
 	
 	Method TransAssignOp$( op$ )
@@ -758,7 +758,7 @@ op = mapSymbol(op)
 			Select TUnaryExpr( expr ).op
 			Case "+","-","~~","not" Return 3
 			End Select
-			InternalErr
+			InternalErr "TTranslator.ExprPri"
 		Else If TBinaryExpr( expr )
 			Select TBinaryExpr( expr ).op
 			Case "^" Return 4
@@ -773,7 +773,7 @@ op = mapSymbol(op)
 			Case "and" Return 13
 			Case "or" Return 14
 			End Select
-			InternalErr
+			InternalErr "TTranslator.ExprPri"
 		EndIf
 		Return 2
 	End Method
@@ -953,7 +953,7 @@ End Rem
 		
 		If TGlobalDecl( decl ) Return TransGlobal( TGlobalDecl( decl ) )
 		
-		InternalErr
+		InternalErr "TTranslator.TransVarExpr"
 	End Method
 	
 	Method TransMemberVarExpr$( expr:TMemberVarExpr )
@@ -965,7 +965,7 @@ End Rem
 
 		If TGlobalDecl( decl ) Return TransGlobal( TGlobalDecl( decl ) )
 
-		InternalErr
+		InternalErr "TTranslator.TransMemberVarExpr"
 	End Method
 	
 	Method TransInvokeExpr$( expr:TInvokeExpr )
@@ -996,7 +996,7 @@ End Rem
 			Return TransFunc( TFuncDecl(decl),expr.args,Null )
 		End If
 		
-		InternalErr
+		InternalErr "TTranslator.TransInvokeExpr"
 	End Method
 	
 	Method TransInvokeMemberExpr$( expr:TInvokeMemberExpr )
@@ -1013,7 +1013,7 @@ End Rem
 			Return TransFunc( TFuncDecl(decl),expr.args,expr.expr )	
 		End If
 		
-		InternalErr
+		InternalErr "TTranslator.TransInvokeMemberExpr"
 	End Method
 	
 	Method TransInvokeSuperExpr$( expr:TInvokeSuperExpr )
@@ -1030,7 +1030,7 @@ End Rem
 			If decl Return TransSuperFunc( TFuncDecl( expr.funcDecl ),expr.args, expr.classScope )
 		End If
 		
-		InternalErr
+		InternalErr "TTranslator.TransInvokeSuperExpr"
 	End Method
 	
 	Method TransFuncCallExpr:String( expr:TFuncCallExpr )
@@ -1050,7 +1050,7 @@ End Rem
 			Return expr.expr.Trans() + TransArgs(expr.args, TFuncDecl(decl))
 		End If
 		
-		InternalErr
+		InternalErr "TTranslator.TransFuncCallExpr"
 	End Method
 	
 	Method TransExprStmt$( stmt:TExprStmt )
@@ -1183,7 +1183,7 @@ End Rem
 				Next
 				Emit "goto " + TransLabelCont(bc, False)
 			Else
-				InternalErr
+				InternalErr "TTranslator.TransContinueStmt"
 			End If
 		Else
 		 	' For debug builds, we need to rollback the local scope stack correctly
@@ -1202,7 +1202,7 @@ End Rem
 					Next
 					Emit "goto " + TransLabelCont(bc, False)
 				Else
-					InternalErr
+					InternalErr "TTranslator.TransContinueStmt"
 				End If
 			Else
 				If opt_debug And stmt.loop And Not stmt.loop.block.IsNoDebug() Then
@@ -1264,7 +1264,7 @@ End Rem
 				Next
 				Emit "goto " + TransLabelExit(bc, False)
 			Else
-				InternalErr
+				InternalErr "TTranslator.TransBreakStmt"
 			End If
 		Else
 		 	' For debug builds, we need to rollback the local scope stack correctly
@@ -1283,7 +1283,7 @@ End Rem
 					Next
 					Emit "goto " + TransLabelExit(bc, False)
 				Else
-					InternalErr
+					InternalErr "TTranslator.TransBreakStmt"
 				End If
 			Else
 				If opt_debug And stmt.loop And Not stmt.loop.block.IsNoDebug() Then
@@ -1551,7 +1551,7 @@ End Rem
 			If gdecl.inited Return Null
 			Return TransGlobalDecl( gdecl )
 		End If
-		InternalErr
+		InternalErr "TTranslator.TransDeclStmt"
 	End Method
 	
 	Method TransIfStmt$( stmt:TIfStmt )
