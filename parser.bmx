@@ -2646,6 +2646,7 @@ End Rem
 		Local meta:TMetadata
 		Local noMangle:Int
 		Local exported:Int
+		Local inInterface:Int = attrs & DECL_ABSTRACT
 
 		Local classDecl:TClassDecl = TClassDecl(parent)
 
@@ -2743,6 +2744,13 @@ End Rem
 				If Not classDecl Then
 					Err "Final cannot be used with global functions"
 				End If
+				If inInterface Then
+					If attrs & FUNC_METHOD Then
+						Err "Final methods cannot appear in interfaces"
+					Else
+						Err "Final functions cannot appear in interfaces"
+					End If
+				End If
 				If declaredAttrs & DECL_FINAL Then Err "Duplicate modifier 'Final'"
 				declaredAttrs :| DECL_FINAL
 				Continue
@@ -2752,11 +2760,16 @@ End Rem
 				If Not classDecl Then
 					Err "Abstract cannot be used with global functions"
 				End If
-				
 				If classDecl And classDecl.attrs & DECL_FINAL Then
 					Err "Abstract methods cannot appear in final types"
 				End If
-				
+				If inInterface Then
+					If attrs & FUNC_METHOD Then
+						Err "Abstract cannot be used in interfaces (interface methods are automatically abstract)"
+					Else
+						Err "Abstract cannot be used in interfaces (interface functions are automatically abstract)"
+					End If
+				End If
 				If declaredAttrs & DECL_ABSTRACT Then Err "Duplicate modifier 'Abstract'"
 				declaredAttrs :| DECL_ABSTRACT
 				Continue
