@@ -2110,11 +2110,14 @@ End Rem
 		Parse "select"
 
 		Local block:TBlockDecl=_block
-
-		Local tmpVar:TLocalDecl=New TLocalDecl.Create( "",Null,ParseExpr(),,True )
-
-		block.AddStmt New TDeclStmt.Create( tmpVar )
-
+		
+		Local tmpVar:TLocalDecl
+		Local selectExpr:TExpr = ParseExpr()
+		If Not TNullType(selectExpr.exprType)
+			tmpVar = New TLocalDecl.Create("", Null, selectExpr, , True)
+			block.AddStmt New TDeclStmt.Create(tmpVar)
+		End If
+		
 		While _toke<>"end" And _toke<>"default" And _toke<>"endselect"
 			SetErr
 			Select _toke
@@ -2124,7 +2127,12 @@ End Rem
 				NextToke
 				Local comp:TExpr
 				Repeat
-					Local expr:TExpr=New TVarExpr.Create( tmpVar )
+					Local expr:TExpr
+					If TNullType(selectExpr.exprType)
+						expr = New TNullExpr.Create(TType.nullObjectType)
+					Else
+						expr = New TVarExpr.Create(tmpVar)
+					End If
 					expr=New TBinaryCompareExpr.Create( "=",expr,ParseExpr() )
 					If comp
 						comp=New TBinaryLogicExpr.Create( "or",comp,expr )
