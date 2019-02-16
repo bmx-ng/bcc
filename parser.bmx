@@ -2654,6 +2654,7 @@ End Rem
 		Local meta:TMetadata
 		Local noMangle:Int
 		Local exported:Int
+		Local inInterface:Int = attrs & DECL_ABSTRACT
 
 		Local classDecl:TClassDecl = TClassDecl(parent)
 
@@ -2739,9 +2740,11 @@ End Rem
 			attrs :| (fdecl.attrs & DECL_API_FLAGS)
 		End If
 		
+		Local declaredAttrs:Int
 		While True
 			If CParse( "nodebug" ) Then
-				attrs :| DECL_NODEBUG
+				If declaredAttrs & DECL_NODEBUG Then Err "Duplicate modifier 'NoDebug'"
+				declaredAttrs :| DECL_NODEBUG
 				Continue
 			End If
 				
@@ -2749,7 +2752,15 @@ End Rem
 				If Not classDecl Then
 					Err "Final cannot be used with global functions"
 				End If
-				attrs:|DECL_FINAL
+				If inInterface Then
+					If attrs & FUNC_METHOD Then
+						Err "Final methods cannot appear in interfaces"
+					Else
+						Err "Final functions cannot appear in interfaces"
+					End If
+				End If
+				If declaredAttrs & DECL_FINAL Then Err "Duplicate modifier 'Final'"
+				declaredAttrs :| DECL_FINAL
 				Continue
 			End If
 			
@@ -2757,12 +2768,18 @@ End Rem
 				If Not classDecl Then
 					Err "Abstract cannot be used with global functions"
 				End If
-				
 				If classDecl And classDecl.attrs & DECL_FINAL Then
 					Err "Abstract methods cannot appear in final types"
 				End If
-				
-				attrs:|DECL_ABSTRACT
+				If inInterface Then
+					If attrs & FUNC_METHOD Then
+						Err "Abstract cannot be used in interfaces (interface methods are automatically abstract)"
+					Else
+						Err "Abstract cannot be used in interfaces (interface functions are automatically abstract)"
+					End If
+				End If
+				If declaredAttrs & DECL_ABSTRACT Then Err "Duplicate modifier 'Abstract'"
+				declaredAttrs :| DECL_ABSTRACT
 				Continue
 			End If
 			
@@ -2770,12 +2787,14 @@ End Rem
 				If Not classDecl Then
 					Err "Override cannot be used with global functions"
 				End If
-				attrs :| DECL_OVERRIDE
+				If declaredAttrs & DECL_OVERRIDE Then Err "Duplicate modifier 'Override'"
+				declaredAttrs :| DECL_OVERRIDE
 				Continue
 			End If
 				
 			Exit
 		Wend
+		attrs :| declaredAttrs
 
 		'meta data for functions/methods
 		meta = ParseMetaData()
@@ -3140,7 +3159,7 @@ End Rem
 				End If
 				
 				If attrs & DECL_FINAL
-					Err "Duplicate type attribute."
+					Err "Duplicate modifier 'Final'."
 				End If
 
 				If attrs & DECL_ABSTRACT
@@ -3160,7 +3179,7 @@ End Rem
 				EndIf
 				
 				If attrs & DECL_ABSTRACT
-					Err "Duplicate type attribute."
+					Err "Duplicate modifier 'Abstract'."
 				End If
 				
 				If attrs & DECL_FINAL
