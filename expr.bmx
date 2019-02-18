@@ -263,6 +263,10 @@ Type TExpr
 		If TLongType( lhs ) Or TLongType( rhs ) Return New TLongType
 		If TUIntType( lhs ) Or TUIntType( rhs ) Return New TUIntType
 		If TIntType( lhs ) Or TIntType( rhs ) Return New TIntType
+		If TEnumType( lhs ) Or TEnumType( rhs ) Then
+			If TEnumType( lhs ) Return lhs
+			If TEnumType( rhs ) Return rhs
+		End If
 		If TObjectType( lhs ) And TNullDecl(TObjectType( lhs ).classDecl) Then
 			Return rhs
 		End If
@@ -1545,6 +1549,20 @@ Type TCastExpr Extends TExpr
 			Return Self
 		End If
 
+		If TStringType(ty) And TEnumType(src) Then
+			exprType = ty
+			Return Self
+		End If
+
+		If TEnumType(src) And TEnumType(ty) And (ty._flags & TType.T_VAR) Then
+			Return expr
+		End If
+		
+		If TIntegralType(ty) And TEnumType(src) And flags & CAST_EXPLICIT Then
+			exprType = ty
+			Return Self
+		End If
+
 		If Not exprType
 			Err "Unable to convert from "+src.ToString()+" to "+ty.ToString()+"."
 		EndIf
@@ -2722,14 +2740,21 @@ Type TIdentExpr Extends TExpr
 
 			Return New TInvokeExpr.Create( fdecl,args, False, isArg, isRhs ).Semant()
 		End If
-		
+
+		Local decl:TDecl = TDecl(scope.FindDecl(IdentLower()))
 		' maybe it's a classdecl?
-		Local cdecl:TClassDecl = TClassDecl(scope.FindDecl(IdentLower()))
+		Local cdecl:TClassDecl = TClassDecl(decl)
 		
 		If cdecl Then
 			Local e:TIdentTypeExpr = New TIdentTypeExpr.Create(cdecl.objectType)
 			e.cdecl = cdecl
 			Return e
+		End If
+		
+		' maybe it's an enum?
+		Local edecl:TEnumValueDecl = TEnumValueDecl(decl)
+		If edecl Then
+			Return New TIdentEnumExpr.Create(edecl)
 		End If
 
 		Local loopLabel:String = "#" + IdentLower()
@@ -3292,6 +3317,33 @@ Type TDataLabelExpr Extends TExpr
 
 	Method Eval$()
 		Return ""
+	End Method
+
+End Type
+
+Type TIdentEnumExpr Extends TExpr
+	Field value:TEnumValueDecl
+
+	Method Create:TIdentEnumExpr( value:TEnumValueDecl )
+		Self.exprType=New TEnumType.Create(TEnumDecl(value.scope))
+		Self.value = value
+		Return Self
+	End Method
+
+	Method Copy:TExpr()
+		Return New TIdentEnumExpr.Create( value )
+	End Method
+
+	Method Semant:TExpr()
+		Return Self
+	End Method
+
+	Method Trans$()
+		Return value.Value()
+	End Method
+
+	Method Eval$()
+		Return value.Value()
 	End Method
 
 End Type

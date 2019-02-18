@@ -1203,6 +1203,10 @@ Type TScopeDecl Extends TDecl
 				End If
 				Return cdecl.objectType
 			EndIf
+			Local edecl:TEnumDecl = TEnumDecl(decl)
+			If edecl Then
+				Return New TEnumType.Create(edecl)
+			End If
 		EndIf
 		If scope Return scope.FindType( ident,args, callback )
 	End Method
@@ -3430,6 +3434,100 @@ Type TTryStmtDecl Extends TBlockDecl
 	
 	Method ToString:String()
 		Return "TTryStmtDecl"
+	End Method
+End Type
+
+Type TEnumDecl Extends TScopeDecl
+	Field ty:TType
+	Field isFlags:Int
+	Field values:TEnumValueDecl[]
+	
+	Method Create:TEnumDecl(id:String, ty:TType, isFlags:Int, values:TEnumValueDecl[])
+		Self.ident = id
+		Self.ty = ty
+		Self.isFlags = isFlags
+		Self.values = values
+		Return Self
+	End Method
+	
+	Method OnSemant()
+		' validate type
+		If Not TIntegralType(ty) Then
+			Err "Invalid type '" + ty.ToString() + "'. Enums can only be declared with integral types."
+		End If
+		
+		For Local val:TEnumValueDecl = EachIn values
+			val.scope = Self
+			val.Semant()
+		Next
+	End Method
+
+	Method OnCopy:TDecl(deep:Int = True)
+		Return New TEnumDecl.Create(ident, ty, isFlags, values)
+	End Method
+	
+	Method GetDecl:Object( ident$ )
+		For Local val:TEnumValueDecl = EachIn values
+			If val.IdentLower() = ident And val.IsSemanted() Then
+				Return val
+			End If
+		Next
+	End Method
+	
+	Method ToString:String()
+		Return ident
+	End Method
+End Type
+
+Type TEnumValueDecl Extends TDecl
+
+	Field expr:TExpr
+	Field ordinal:Int
+	
+	Field generatedValue:Int
+	
+	Method Create:TEnumValueDecl(id:String, ordinal:Int, expr:TExpr)
+		Self.ident = id
+		Self.ordinal = ordinal
+		Self.expr = expr
+		Return Self
+	End Method
+
+	Method OnSemant()
+		Local parent:TEnumDecl = TEnumDecl(scope)
+		Local previous:TEnumValueDecl
+		If ordinal > 0 Then
+			previous = parent.values[ordinal - 1]
+		End If
+
+		If expr Then
+			expr = expr.Semant()
+			
+			If Not TConstExpr(expr) Or Not TIntegralType(TConstExpr(expr).ty) Then
+				Err "Enum values must be integral constants."
+			End If
+		Else
+			Local val:Long = ordinal
+			If previous Then
+				val = TConstExpr(previous.expr).value.ToLong() + 1
+			End If
+
+			expr = New TConstExpr.Create( parent.ty.Copy(), val).Semant()
+			generatedValue = True
+		
+		End If
+	End Method
+
+	Method OnCopy:TDecl(deep:Int = True)
+		Return New TEnumValueDecl.Create(ident, ordinal, expr)
+	End Method
+	
+	Method Value:String()
+		Return TConstExpr(expr).value
+	End Method
+	
+	Method ToString:String()
+		Return "TEnumValueDecl"
 	End Method
 End Type
 

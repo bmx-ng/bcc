@@ -2973,6 +2973,66 @@ End Rem
 		Return args
 	End Method
 	
+	Method ParseEnumDecl:TEnumDecl( toke:String )
+		SetErr
+
+		If toke Parse toke
+
+		Local id:String = ParseIdent()
+		Local ty:TType = ParseConstNumberType()
+
+		If Not ty Then
+			ty = New TIntType
+		End If
+
+		Local isFlags:Int = 0
+		Local values:TEnumValueDecl[0]
+		
+		If CParse("flags")
+			isFlags = True
+		End If
+		
+		Local decl:TEnumDecl = New TEnumDecl.Create(id, ty, isFlags, values)
+
+		Local nValues:Int
+		
+		Repeat
+		
+			SkipEols
+
+			If CParse("end") Then
+				Parse("enum")
+				Exit
+			End If
+			
+			If CParse("endenum") Then
+				Exit
+			End If
+			
+			Local valId:String = ParseIdent()
+			Local value:TExpr
+			
+			If CParse( "=" ) Then
+				value = ParseExpr()
+			End If
+			
+			Local v:TEnumValueDecl = New TEnumValueDecl.Create(valId, nValues, value)
+			If decl.values.Length = nValues Then
+				decl.values = decl.values + New TEnumValueDecl[10]
+			End If
+
+			decl.values[nValues] = v
+			nValues :+ 1
+			
+			CParse(",")
+		
+		Forever
+
+		decl.values = decl.values[..nValues]
+
+		Return decl
+		
+	End Method
 
 	Method ParseClassDecl:TClassDecl( toke$,attrs:Int, templateDets:TTemplateDets = Null )
 		SetErr
@@ -3686,6 +3746,8 @@ End Rem
 				_module.InsertDecl ParseClassDecl( _toke,attrs)
 			Case "interface"
 				_module.InsertDecl ParseClassDecl( _toke,attrs|CLASS_INTERFACE|DECL_ABSTRACT )
+			Case "enum"
+				_module.InsertDecl ParseEnumDecl( _toke )
 			Case "function"
 				_module.InsertDecl ParseFuncDecl( _toke,attrs )
 			Case "incbin"

@@ -284,6 +284,7 @@ Type TCTranslator Extends TTranslator
 		End If
 
 		If TExternObjectType( ty ) Return "struct " + TExternObjectType( ty ).classDecl.munged + p
+		If TEnumType( ty ) Return TransType( TEnumType( ty ).decl.ty, ident ) + p
 
 		InternalErr "TCTranslator.TransType"
 	End Method
@@ -363,6 +364,9 @@ Type TCTranslator Extends TTranslator
 			Return t
 		End If
 		If TExternObjectType( ty ) Return ":" + TExternObjectType(ty).classDecl.ident + p
+		If TEnumType( ty ) Then
+			Return "/" + TEnumType( ty ).decl.ident + p
+		End If
 		InternalErr "TCTranslator.TransIfcType"
 	End Method
 
@@ -423,6 +427,7 @@ Type TCTranslator Extends TTranslator
 			End If
 			If TStringType( ty ) Return TransStringConst(value )
 			If TByteType( ty ) Return value
+			If TEnumType( ty ) Return value
 		Else
 			If TBoolType( ty ) Return "0"
 			If TIntrinsicType( ty) Then
@@ -447,6 +452,7 @@ Type TCTranslator Extends TTranslator
 				End If
 			End If
 			If TFunctionPtrType( ty) Return "&brl_blitz_NullFunctionError" ' todo ??
+			If TEnumType( ty ) Return TEnumType( ty ).decl.values[0].Value()
 		EndIf
 		InternalErr "TCTranslator.TransValue"
 	End Method
@@ -555,6 +561,10 @@ Type TCTranslator Extends TTranslator
 					err "NULL"
 						t:+ "0"
 						Continue
+					End If
+				Else If TEnumType(ty) And (ty._flags & TType.T_VAR) Then
+					If (TVarExpr(arg) Or TMemberVarExpr(arg)) And TEnumType(arg.exprType) And Not (arg.exprType._flags & TType.T_VAR) Then
+						t:+ "&"
 					End If
 				End If
 				
@@ -1794,6 +1804,7 @@ t:+"NULLNULLNULL"
 			If TWParamType( src ) Return Bra("(BBINT)"+t)
 			If TLParamType( src ) Return Bra("(BBINT)"+t)
 			If TStringType( src ) Return "bbStringToInt" + Bra(t)
+			If TEnumType( src) Return Bra("(BBINT)"+t)
 			'If TIntVarPtrType( src ) Return Bra("*" + t)
 			If IsPointerType(src,0,TType.T_POINTER) Return Bra("(BBINT)"+t)
 			'If TPointerType( src ) Return Bra("(BBINT)"+t)
@@ -1813,6 +1824,7 @@ t:+"NULLNULLNULL"
 			If TStringType( src ) Return "bbStringToLong" + Bra(t)
 			If IsPointerType(src,0,TType.T_POINTER) Return Bra("(BBLONG)"+t)
 			If TFloat64Type( src ) Return Bra("(BBLONG)"+t)
+			If TEnumType( src) Return Bra("(BBLONG)"+t)
 			'If TPointerType( src ) Return Bra("(BBLONG)"+t)
 		 Else If TSizeTType( dst )
 			If TBoolType( src ) Return Bra( t )
@@ -1830,6 +1842,7 @@ t:+"NULLNULLNULL"
 			If TStringType( src ) Return "bbStringToSizet" + Bra(t)
 			If IsPointerType(src,0,TType.T_POINTER) Return Bra("(BBSIZET)"+t)
 			If TFloat64Type( src ) Return Bra("(BBSIZET)"+t)
+			If TEnumType( src) Return Bra("(BBSIZET)"+t)
 			'If TPointerType( src ) Return Bra("(BBLONG)"+t)
 		Else If TFloatType( dst )
 			If TBoolType( src ) Return Bra( t )
@@ -1892,6 +1905,16 @@ t:+"NULLNULLNULL"
 				End If
 				Return t
 			End If
+			If TEnumType( src ) Then
+				Local ty:TType = TEnumType( src ).decl.ty
+				If TByteType( ty ) Return "bbStringFromInt"+Bra( t )
+				If TShortType( ty ) Return "bbStringFromInt"+Bra( t )
+				If TIntType( ty ) Return "bbStringFromInt"+Bra( t )
+				If TUIntType( ty ) Return "bbStringFromUInt"+Bra( t )
+				If TLongType( ty ) Return "bbStringFromLong"+Bra( t )
+				If TULongType( ty ) Return "bbStringFromULong"+Bra( t )
+				If TSizeTType( ty ) Return "bbStringFromSizet"+Bra( t )
+			End If
 			'If TStringVarPtrType( src ) Then
 			'	If TSliceExpr( expr.expr ) Then
 			'		Return t
@@ -1915,6 +1938,7 @@ t:+"NULLNULLNULL"
 			If TWParamType( src ) Return Bra("(BBBYTE)"+t)
 			If TLParamType( src ) Return Bra("(BBBYTE)"+t)
 			If TStringType( src ) Return "bbStringToInt" + Bra(t)
+			If TEnumType( src) Return Bra("(BBYTE)"+t)
 			'If TByteVarPtrType( src ) Return Bra("*" + t)
 		Else If TShortType( dst )
 			If TBoolType( src ) Return Bra( t )
@@ -1930,6 +1954,7 @@ t:+"NULLNULLNULL"
 			If TWParamType( src ) Return Bra("(BBSHORT)"+t)
 			If TLParamType( src ) Return Bra("(BBSHORT)"+t)
 			If TStringType( src ) Return "bbStringToInt" + Bra(t)
+			If TEnumType( src) Return Bra("(BBSHORT)"+t)
 			'If TShortVarPtrType( src ) Return Bra("*" + t)
 		Else If TUIntType( dst )
 			If TBoolType( src ) Return Bra( t )
@@ -1945,6 +1970,7 @@ t:+"NULLNULLNULL"
 			If TWParamType( src ) Return Bra("(BBUINT)"+t)
 			If TLParamType( src ) Return Bra("(BBUINT)"+t)
 			If TStringType( src ) Return "bbStringToUInt" + Bra(t)
+			If TEnumType( src) Return Bra("(BBUINT)"+t)
 		Else If TULongType( dst )
 			If TBoolType( src ) Return Bra( t )
 			If TShortType( src ) Return Bra("(BBULONG)"+t)
@@ -1960,6 +1986,7 @@ t:+"NULLNULLNULL"
 			If TLParamType( src ) Return Bra("(BBULONG)"+t)
 			If TStringType( src ) Return "bbStringToULong" + Bra(t)
 			If TFloat64Type( src ) Return Bra("(BBULONG)"+t)
+			If TEnumType( src) Return Bra("(BBULONG)"+t)
 		Else If TFloat64Type( dst )
 			If TFloat64Type( src) Return t
 			If TLongType( src ) Return Bra("(BBFLOAT64)"+t)
@@ -2044,6 +2071,8 @@ t:+"NULLNULLNULL"
 					Return "" ' TODO??
 				End If
 			End If
+		Else If TEnumType( dst )
+			If TEnumType( src) Return t			
 		End If
 
 		Return TransPtrCast( dst,src,t,"dynamic" )
@@ -4806,6 +4835,8 @@ End Rem
 		Else If TFunctionPtrType(decl.ty) Then
 			s = variable + ind + decl.munged + " "
 		Else If TArrayType(decl.ty) Then
+			s = variable + ind + decl.munged + " "
+		Else If TEnumType(decl.ty) Then
 			s = variable + ind + decl.munged + " "
 		End If
 

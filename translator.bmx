@@ -268,6 +268,7 @@ Type TTranslator
 '			Next
 			Return s + "_" + TransMangleType(func.retType) + "_"
 		End If
+		If TEnumType( ty ) Return p + "e" + TEnumType( ty ).decl.ident
 		
 		Err "Unsupported type for name mangling : " + ty.ToString()
 	End Method
