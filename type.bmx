@@ -60,6 +60,10 @@ Type TType
 		Return Null
 	End Method
 	
+	Method GetClassScope:TScopeDecl()
+		Return GetClass()
+	End Method
+	
 	Method ToString$()
 		Return "??Type??"
 	End Method
@@ -2018,7 +2022,7 @@ Type TLParamType Extends TParamType
 	Method GetSize:Int()
 		Return WORD_SIZE
 	End Method
-
+	
 End Type
 
 Type TEnumType Extends TType
@@ -2061,6 +2065,10 @@ Type TEnumType Extends TType
 
 	Method ToString$()
 		Return "Enum " + decl.ident + " " + ToStringParts()
+	End Method
+
+	Method GetClassScope:TScopeDecl()
+		Return decl
 	End Method
 
 End Type

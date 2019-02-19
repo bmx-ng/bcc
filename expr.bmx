@@ -2572,7 +2572,7 @@ Type TIdentExpr Extends TExpr
 			Else
 				expr=expr.Semant()
 				static = expr.static
-				scope=expr.exprType.GetClass()
+				scope=expr.exprType.GetClassScope()
 				If Not scope Then
 					Err "Expression has no scope"
 				End If

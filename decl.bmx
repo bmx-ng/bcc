@@ -3460,6 +3460,8 @@ Type TEnumDecl Extends TScopeDecl
 			val.scope = Self
 			val.Semant()
 		Next
+
+		GenerateFuncs()
 	End Method
 
 	Method OnCopy:TDecl(deep:Int = True)
@@ -3472,6 +3474,22 @@ Type TEnumDecl Extends TScopeDecl
 				Return val
 			End If
 		Next
+		
+		Return Super.GetDecl(ident)
+	End Method
+	
+	Method GenerateFuncs()
+		Local fdecl:TFuncDecl = New TFuncDecl.CreateF("ToString", New TStringType, Null, FUNC_METHOD)
+		InsertDecl fdecl
+		fdecl.Semant()
+		
+		fdecl = New TFuncDecl.CreateF("Ordinal", ty, Null, FUNC_METHOD)
+		InsertDecl fdecl
+		fdecl.Semant()
+		
+		fdecl = New TFuncDecl.CreateF("Values", New TArrayType.Create(New TEnumType.Create(Self), 1), Null, 0)
+		InsertDecl fdecl
+		fdecl.Semant()
 	End Method
 	
 	Method ToString:String()
