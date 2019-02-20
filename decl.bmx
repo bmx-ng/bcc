@@ -3537,6 +3537,11 @@ Type TEnumValueDecl Extends TDecl
 			End If
 		Else
 			Local val:Long
+			
+			' initial flags value
+			If index = 0 And parent.isFlags Then
+				val = 1
+			End If
 
 			If previous Then
 				'
@@ -3550,7 +3555,8 @@ Type TEnumValueDecl Extends TDecl
 						Else If (val & (val - 1)) = 0 Then ' power of 2 ?
 							val :Shl 1
 						Else
-							val :+ 1
+							' find next power of 2
+							val = 2 ^ Ceil(Log(val)/Log(2))
 						End If
 					Else
 						val :+ 1

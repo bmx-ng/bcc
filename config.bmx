@@ -27,6 +27,7 @@ Import BRL.LinkedList
 Import BRL.Map
 Import BRL.FileSystem
 Import Pub.zlib
+Import BRL.Math
 
 Import "options.bmx"
 Import "base.stringhelper.bmx"
