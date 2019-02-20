@@ -1558,8 +1558,13 @@ Type TCastExpr Extends TExpr
 			Return expr
 		End If
 		
-		If TIntegralType(ty) And TEnumType(src) And flags & CAST_EXPLICIT Then
+		If TIntegralType(ty) And TEnumType(src) And (flags & CAST_EXPLICIT Or flags & 2) Then
 			exprType = ty
+			Return Self
+		End If
+		
+		If TIntegralType(src) And TEnumType(ty) And flags & 2 Then
+			exprType = src
 			Return Self
 		End If
 
@@ -1806,6 +1811,7 @@ Type TBinaryMathExpr Extends TBinaryExpr
 			End Try
 		End If
 
+		Local bitEnumOp:Int
 		Select op
 		Case "&","~~","|","shl","shr","sar"
 			If TFloat128Type(lhs.exprType) Then
@@ -1830,6 +1836,12 @@ Type TBinaryMathExpr Extends TBinaryExpr
 				exprType=New TWParamType
 			Else If TLParamType(lhs.exprType) Then
 				exprType=New TLParamType
+			Else If TEnumType(lhs.exprType) And TEnumType(lhs.exprType).decl.isFlags Then
+				exprType = lhs.exprType.Copy()
+				bitEnumOp = 2
+			Else If TEnumType(rhs.exprType) And TEnumType(rhs.exprType).decl.isFlags Then
+				exprType = rhs.exprType.Copy()
+				bitEnumOp = 2
 			Else
 				exprType=New TIntType
 			End If
@@ -1855,13 +1867,13 @@ Type TBinaryMathExpr Extends TBinaryExpr
 		If (op = "+" Or op = "-") And IsPointerType(exprType, 0, TType.T_POINTER) And TNumericType(lhs.exprType) Then
 			' with pointer addition we don't cast the numeric to a pointer
 		Else
-			lhs=lhs.Cast( exprType )
+			lhs=lhs.Cast( exprType, bitEnumOp )
 		End If
 		
 		If (op = "+" Or op = "-") And IsPointerType(exprType, 0, TType.T_POINTER) And TNumericType(rhs.exprType) Then
 			' with pointer addition we don't cast the numeric to a pointer
 		Else
-			rhs=rhs.Cast( exprType )
+			rhs=rhs.Cast( exprType, bitEnumOp )
 		End If
 		
 		If IsPointerType( lhs.exprType, 0, TType.T_POINTER ) And IsPointerType( rhs.exprType, 0, TType.T_POINTER ) And op = "-" Then
@@ -1876,7 +1888,7 @@ Type TBinaryMathExpr Extends TBinaryExpr
 	Method Eval$()
 		Local lhs$=Self.lhs.Eval()
 		Local rhs$=Self.rhs.Eval()
-		If TIntType( exprType )
+		If TIntType( exprType ) Or TByteType( exprType ) Or TShortType( exprType )
 			Local x:Int=Int(lhs),y:Int=Int(rhs)
 			Select op
 			Case "^" Return x^y
@@ -1950,6 +1962,18 @@ Type TBinaryMathExpr Extends TBinaryExpr
 				_appInstance.removeStringConst(lhs)
 				_appInstance.removeStringConst(rhs)
 				Return lhs+rhs
+			End Select
+		Else If TEnumType( exprType )
+			Local x:Long=Long(lhs),y:Long=Long(rhs)
+			Select op
+			Case "shl" Return x Shl y
+			Case "shr" Return x Shr y
+			Case "sar" Return x Sar y
+			Case "+" Return x + y
+			Case "-" Return x - y
+			Case "&" Return x & y
+			Case "~~" Return x ~ y
+			Case "|" Return x | y
 			End Select
 		EndIf
 		InternalErr "TBinaryMathExpr.Eval"

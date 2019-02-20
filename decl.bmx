@@ -3453,7 +3453,7 @@ Type TEnumDecl Extends TScopeDecl
 	Method OnSemant()
 		' validate type
 		If Not TIntegralType(ty) Then
-			Err "Invalid type '" + ty.ToString() + "'. Enums can only be declared with integral types."
+			Err "Invalid type '" + ty.ToString() + "'. Enums can only be declared as integral types."
 		End If
 		
 		For Local val:TEnumValueDecl = EachIn values
@@ -3486,7 +3486,7 @@ Type TEnumDecl Extends TScopeDecl
 		fdecl = New TFuncDecl.CreateF("Ordinal", ty, Null, FUNC_METHOD)
 		InsertDecl fdecl
 		fdecl.Semant()
-		
+
 		fdecl = New TFuncDecl.CreateF("Values", New TArrayType.Create(New TEnumType.Create(Self), 1), Null, 0)
 		InsertDecl fdecl
 		fdecl.Semant()
@@ -3500,13 +3500,12 @@ End Type
 Type TEnumValueDecl Extends TDecl
 
 	Field expr:TExpr
-	Field ordinal:Int
+	Field index:Int
 	
-	Field generatedValue:Int
 	
-	Method Create:TEnumValueDecl(id:String, ordinal:Int, expr:TExpr)
+	Method Create:TEnumValueDecl(id:String, index:Int, expr:TExpr)
 		Self.ident = id
-		Self.ordinal = ordinal
+		Self.index = index
 		Self.expr = expr
 		Return Self
 	End Method
@@ -3514,30 +3513,60 @@ Type TEnumValueDecl Extends TDecl
 	Method OnSemant()
 		Local parent:TEnumDecl = TEnumDecl(scope)
 		Local previous:TEnumValueDecl
-		If ordinal > 0 Then
-			previous = parent.values[ordinal - 1]
+		If index > 0 Then
+			previous = parent.values[index - 1]
 		End If
 
 		If expr Then
+
 			expr = expr.Semant()
+
+			' 			
+			If TIdentEnumExpr(expr) Then
+				If TIdentEnumExpr(expr).value.scope = parent Then
+					expr = New TConstExpr.Create(parent.ty, TIdentEnumExpr(expr).value.Value()).Semant()
+				End If
+			End If
+			
+			If parent.isFlags And TBinaryMathExpr(expr) Then
+				expr = New TConstExpr.Create(parent.ty, TBinaryMathExpr(expr).Eval())
+			End If
 			
 			If Not TConstExpr(expr) Or Not TIntegralType(TConstExpr(expr).ty) Then
 				Err "Enum values must be integral constants."
 			End If
 		Else
-			Local val:Long = ordinal
+			Local val:Long
+
 			If previous Then
-				val = TConstExpr(previous.expr).value.ToLong() + 1
+				'
+				If TConstExpr(previous.expr)
+
+					val = TConstExpr(previous.expr).value.ToLong()
+
+					If parent.isFlags Then
+						If val = 0 Then
+							val = 1 
+						Else If (val & (val - 1)) = 0 Then ' power of 2 ?
+							val :Shl 1
+						Else
+							val :+ 1
+						End If
+					Else
+						val :+ 1
+					End If
+				Else
+					InternalErr "TEnumValueDecl.OnSemant"
+				End If
 			End If
 
 			expr = New TConstExpr.Create( parent.ty.Copy(), val).Semant()
-			generatedValue = True
 		
 		End If
 	End Method
 
 	Method OnCopy:TDecl(deep:Int = True)
-		Return New TEnumValueDecl.Create(ident, ordinal, expr)
+		Return New TEnumValueDecl.Create(ident, index, expr)
 	End Method
 	
 	Method Value:String()
