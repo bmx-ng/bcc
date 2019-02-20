@@ -5379,6 +5379,26 @@ End Rem
 		Emit g
 	End Method
 
+	Method EmitIfcEnumDecl(enumdecl:TEnumDecl)
+		enumDecl.Semant
+		
+		Local e:String = enumDecl.ident + "/" + TransIfcType(enumDecl.ty)
+
+		Emit e + "{", False
+		
+		For Local val:TEnumValueDecl = EachIn enumDecl.values
+			Emit val.ident + "=" + val.Value()
+		Next
+		
+		Local flags:String
+		If enumDecl.isFlags Then
+			flags = "F"
+		End If
+		
+		Emit "}" + flags + "=" + Enquote(enumDecl.munged), False
+
+	End Method
+	
 	Method EmitModuleInclude(moduleDecl:TModuleDecl, included:TMap = Null)
 		If moduleDecl.filepath Then
 			' a module import
@@ -6298,7 +6318,16 @@ End If
 				EmitIfcGlobalDecl(gdecl)
 			End If
 		Next
-
+		
+		' enums
+		For Local decl:TDecl=EachIn app.Semanted()
+			If decl.IsPrivate() Continue
+			
+			Local edecl:TEnumDecl=TEnumDecl( decl )
+			If edecl And Not edecl.declImported
+				EmitIfcEnumDecl(edecl)
+			End If
+		Next
 	End Method
 	
 	Method TransDef(app:TAppDecl)
