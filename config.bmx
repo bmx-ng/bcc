@@ -36,6 +36,7 @@ Const DEBUG:Int = False
 Const ABORT_ON_NULL:Int = True
 Const PROFILER:Int = False
 Const DEBUGSTOP_ON_ERROR:Int = False
+Const SHOW_INTERNALERR_LOCATION:Int = True
 
 Global ENV_LANG$
 
@@ -77,11 +78,15 @@ Function FormatError:String(path:String, line:Int, char:Int)
 	Return "[" + path + ";" + line + ";" + char + "]"
 End Function
 
-Function InternalErr()
+Function InternalErr(errorLocation:String = Null)
 	If DEBUGSTOP_ON_ERROR Then
 		DebugStop ' useful for debugging!
 	End If
-	Throw "Internal Error.~n" + _errInfo + "~n"
+	If SHOW_INTERNALERR_LOCATION And errorLocation Then
+		Throw "Internal Error in " + errorLocation + ".~n" + _errInfo + "~n"
+	Else
+		Throw "Internal Error.~n" + _errInfo + "~n"
+	End If
 End Function
 
 Function IsSpace:Int( ch:Int )

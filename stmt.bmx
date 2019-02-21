@@ -194,7 +194,7 @@ Type TExprStmt Extends TStmt
 		
 	Method OnSemant()
 		expr=expr.Semant()
-		If Not expr InternalErr
+		If Not expr InternalErr "TExprStmt.OnSemant"
 	End Method
 
 	Method Trans$()

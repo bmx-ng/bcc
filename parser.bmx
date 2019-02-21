@@ -258,7 +258,7 @@ Type TForEachinStmt Extends TLoopStmt
 			End If
 
 		Else
-			InternalErr
+			InternalErr "TForEachinStmt.OnSemant"
 		EndIf
 
 		block.Semant
@@ -2357,7 +2357,6 @@ End Rem
 		Local ty:TType
 		Local init:TExpr
 		
-		
 		If attrs & DECL_EXTERN
 			ty=ParseDeclType(attrs & DECL_API_STDCALL)
 			
@@ -2409,6 +2408,7 @@ End Rem
 		Case "const"  decl=New TConstDecl.Create( id,ty,init,attrs )
 		Case "local"  decl=New TLocalDecl.Create( id,ty,init,attrs )
 		End Select
+		If toke = "field" And TFunctionPtrType(ty) Then TFunctionPtrType(ty).func.attrs :| FUNC_FIELD
 
 		If decl.IsExtern()
 			Local cdets:TCastDets
@@ -3071,10 +3071,6 @@ End Rem
 		Local classDecl:TClassDecl=New TClassDecl.Create( id,String[](args.ToArray()),superTy,imps,attrs )
 		
 		If meta Then
-			If attrs & CLASS_STRUCT
-				Err "Structs cannot store metadata."
-			EndIf
-
 			classDecl.metadata = meta
 		End If
 
@@ -3157,12 +3153,12 @@ End Rem
 					Err "Interfaces can only contain constants and methods."
 				EndIf
 				If (attrs & CLASS_STRUCT) And _toke<>"field"
-					Err "Structs can only contain fields."
+					Err "Structs can only contain fields and methods."
 				EndIf
 				classDecl.InsertDecls ParseDecls( _toke,decl_attrs )
 			Case "method"
 				If (attrs & CLASS_STRUCT) And (attrs & DECL_EXTERN) Then
-					Err "Structs can only contain fields."
+					Err "Extern Structs can only contain fields."
 				EndIf
 				Local decl:TFuncDecl=ParseFuncDecl( _toke,method_attrs,classDecl )
 				If decl.IsCtor() decl.retTypeExpr=New TObjectType.Create( classDecl )
@@ -3173,7 +3169,7 @@ End Rem
 				EndIf
 				If attrs & CLASS_STRUCT Then
 					If (attrs & DECL_EXTERN) Then
-						Err "Structs can only contain fields."
+						Err "Extern Structs can only contain fields."
 					Else
 						Err "Structs can only contain fields and methods."
 					End If

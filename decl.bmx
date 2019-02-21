@@ -299,7 +299,7 @@ Type TDecl
 	End Method
 	
 	Method GenInstance:TDecl()
-		InternalErr
+		InternalErr "TDecl.GenInstance"
 	End Method
 	
 	Method OnSemant() Abstract
@@ -375,7 +375,7 @@ Type TValDecl Extends TDecl
 				SemantInit()
 			End If
 		Else
-			InternalErr
+			InternalErr "TValDecl.OnSemant"
 		EndIf
 		
 	End Method
@@ -732,7 +732,7 @@ Type TScopeDecl Extends TDecl
 'Public
 
 	Method OnCopy:TDecl(deep:Int = True)
-		InternalErr
+		InternalErr "TScopeDecl.OnCopy"
 	End Method
 
 	Method Decls:TList()
@@ -790,7 +790,7 @@ Type TScopeDecl Extends TDecl
 	
 	Method InsertDecl( decl:TDecl )
 
-		If decl.scope And Not (decl.attrs & DECL_INITONLY) InternalErr
+		If decl.scope And Not (decl.attrs & DECL_INITONLY) InternalErr "TScopeDecl.InsertDecl"
 		
 		'Local ident$=decl.ident
 		If Not decl.ident Return
@@ -1268,7 +1268,7 @@ End Rem
 			End If
 		
 			errorDetails = ""
-		
+			
 			If n Then
 				noExtendString = False
 			End If
@@ -1366,7 +1366,7 @@ End Rem
 									' but passes non-widen test
 									If exprTy.ExtendsType( declTy, noExtendString, False ) Then
 										' generate a warning, and accept it
-										Warn "In call to " + func.ToString()+ ". Argument #"+(i+1)+" is ~q" + exprTy.ToString()+"~q but declaration is ~q"+declTy.ToString()+"~q. "
+										Warn "In call to " + func.ToString()+ ": Argument #"+(i+1)+" is ~q" + exprTy.ToString()+"~q but declaration is ~q"+declTy.ToString()+"~q. "
 										Continue
 									End If
 								Else
@@ -1376,7 +1376,7 @@ End Rem
 						End If
 	
 						' make a more helpful error message
-						errorDetails :+ "Argument #"+(i+1)+" is ~q" + exprTy.ToString()+"~q but declaration is ~q"+declTy.ToString()+"~q. "
+						errorDetails :+ "~nArgument #"+(i+1)+" is ~q" + exprTy.ToString() + "~q but declaration is ~q" + declTy.ToString() + "~q."
 
 					Else If Not argDecls[i].init
 	
@@ -1454,14 +1454,14 @@ End Rem
 		If Not match
 			Local t$
 			For Local i:Int=0 Until argExprs.Length
-				If t t:+","
+				If t t:+", "
 				If argExprs[i] t:+argExprs[i].exprType.ToString()
 			Next
 			If foundIdentMatch Then
 				If throwOnNotMatched Then
-					Throw "Unable to find overload for "+ident+"("+t+"). " + errorDetails
+					Throw "Unable to find overload for "+ident+"("+t+")." + errorDetails
 				Else
-					Err "Unable to find overload for "+ident+"("+t+"). " + errorDetails
+					Err "Unable to find overload for "+ident+"("+t+")." + errorDetails
 				End If
 			Else
 				If throwOnNotMatched Then
@@ -1556,6 +1556,9 @@ Const FUNC_PTR:Int=      $0100
 Const FUNC_INIT:Int =    $0200
 Const FUNC_NESTED:Int =  $0400
 Const FUNC_OPERATOR:Int= $0800
+Const FUNC_FIELD:Int =   $1000
+' important: ^ make sure none of these constants collide with the ones declared at the top of this file
+
 
 'Fix! A func is NOT a block/scope!
 '
@@ -1697,6 +1700,10 @@ Type TFuncDecl Extends TBlockDecl
 	
 	Method IsProperty:Int()
 		Return (attrs & FUNC_PROPERTY)<>0
+	End Method
+	
+	Method IsField:Int()
+		Return (attrs & FUNC_FIELD)<>0
 	End Method
 	
 	Method EqualsArgs:Int( decl:TFuncDecl ) ' careful, this is not commutative!
@@ -1879,8 +1886,8 @@ Type TFuncDecl Extends TBlockDecl
 								Err ToString() + " clashes with " + decl.ToString() + ". Attempt to assign weaker access privileges ('" + p + "'), was '" + dp + "'."
 							
 							End If
-						
-							If TObjectType(retType) And TObjectType(decl.retType ) Then
+							
+							If (TObjectType(retType) And TObjectType(decl.retType)) Or (TArrayType(retType) And TArrayType(decl.retType)) Then
 								If Not retType.EqualsType( decl.retType ) And retType.ExtendsType( decl.retType ) Then
 									returnTypeSubclassed = True
 								End If
@@ -2022,7 +2029,7 @@ Type TClassDecl Extends TScopeDecl
 	End Method
 	
 	Method OnCopy:TDecl(deep:Int = True)
-		InternalErr
+		InternalErr "TClassDecl.OnCopy"
 	End Method
 	
 	Method ToString$()
@@ -2102,7 +2109,7 @@ Rem
 End Rem
 	Method GenClassInstance:TClassDecl( instArgs:TType[] )
 
-		If instanceof InternalErr
+		If instanceof InternalErr "TClassDecl.GenClassInstance"
 		
 		'no args
 		If Not instArgs
@@ -2277,7 +2284,7 @@ End Rem
 		Return Super.FindFuncDecl( ident,args,explicit,,isIdentExpr,0,0 )
 	End Method
 	
-	Method GetAllFuncDecls:TFuncDecl[](funcs:TFuncDecl[] = Null, includeSuper:Int = True)
+	Method GetAllFuncDecls:TFuncDecl[](funcs:TFuncDecl[] = Null, includeSuper:Int = True, includeImplicitConstructors:Int = False)
 
 		If Not funcs Then
 			funcs = New TFuncDecl[0]
@@ -2285,6 +2292,20 @@ End Rem
 		
 		If superClass And includeSuper Then
 			funcs = superClass.GetAllFuncDecls(funcs)
+		Else If includeImplicitConstructors Then
+			' find all parameterized constructors from base class that havent been explicitly
+			' overridden and add a synthetic override for each of them to the collection of decls
+			#AddImplicitConstructors
+			For Local constrDecl:TFuncDecl = EachIn TFuncDeclList(FindDeclList("new"))
+				For Local f:TFuncDecl = EachIn funcs
+					If constrDecl = f Then Continue AddImplicitConstructors
+				Next
+				' not yet in array -> add
+				Local constrDeclImplicitCopy:TFuncDecl = TFuncDecl(constrDecl.Copy(False))
+				constrDeclImplicitCopy.attrs :& ~(DECL_ABSTRACT | DECL_FINAL)
+				constrDeclImplicitCopy.metadata = New TMetaData
+				funcs :+ [constrDeclImplicitCopy]
+			Next
 		End If
 
 		' interface methods
@@ -2701,7 +2722,7 @@ End Rem
 				For Local decl2:TFuncDecl=EachIn impls
 					If decl.IdentLower() = decl2.IdentLower()
 						If Not decl2.EqualsFunc( decl )
-							Err "Cannot mix incompatible method signatures." + decl2.ToString() + " vs " + decl.ToString() + "."
+							Err "Cannot mix incompatible method signatures. " + decl2.ToString() + " vs " + decl.ToString() + "."
 						Else
 							found = True
 						End If
