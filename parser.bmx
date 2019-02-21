@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2017 Bruce A Henderson
+' Copyright (c) 2013-2019 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -25,7 +25,8 @@ SuperStrict
 
 Import BRL.MaxUtil
 Import "toker.bmx"
-Import "iparser.bmx"
+
+Include "iparser.bmx"
 
 
 Global FILE_EXT$="bmx"
@@ -35,11 +36,8 @@ Type TForEachinStmt Extends TLoopStmt
 	Field varty:TType
 	Field varlocal:Int
 	Field expr:TExpr
-	Field block:TBlockDecl
 	Field varExpr:TExpr
 	
-	Field stmts:TList=New TList
-
 	Method Create:TForEachinStmt( varid$,varty:TType,varlocal:Int,expr:TExpr,block:TBlockDecl,loopLabel:TLoopLabelDecl,varExpr:TExpr )
 		Self.varid=varid
 		Self.varty=varty
@@ -53,10 +51,23 @@ Type TForEachinStmt Extends TLoopStmt
 	End Method
 
 	Method OnCopy:TStmt( scope:TScopeDecl )
+		If loopLabel Then
+			If varExpr Then
 		Return New TForEachinStmt.Create( varid,varty,varlocal,expr.Copy(),block.CopyBlock( scope ),TLoopLabelDecl(loopLabel.Copy()), varExpr.Copy() )
+			Else
+				Return New TForEachinStmt.Create( varid,varty,varlocal,expr.Copy(),block.CopyBlock( scope ),TLoopLabelDecl(loopLabel.Copy()), Null )
+			End If
+		Else
+			If varExpr Then
+				Return New TForEachinStmt.Create( varid,varty,varlocal,expr.Copy(),block.CopyBlock( scope ),Null, varExpr.Copy() )
+			Else
+				Return New TForEachinStmt.Create( varid,varty,varlocal,expr.Copy(),block.CopyBlock( scope ),Null, Null )
+			End If
+		End If
 	End Method
 
 	Method OnSemant()
+
 		expr=expr.Semant()
 
 		If TArrayType( expr.exprType ) Or TStringType( expr.exprType )
@@ -81,6 +92,8 @@ Type TForEachinStmt Extends TLoopStmt
 							Or (TObjectType(TArrayType( expr.exprType ).elemType).classdecl.IsExtern() ..
 							And IsPointerType(TArrayType( expr.exprType ).elemType))) Then
 
+					Local isStruct:Int = TObjectType(TArrayType( expr.exprType ).elemType).classdecl.IsStruct()
+
 					Local cExpr:TExpr
 					
 					If TIdentType(varty) And TIdentType(varty).ident = "Object" Then
@@ -95,16 +108,18 @@ Type TForEachinStmt Extends TLoopStmt
 					' local var as expression
 					Local expr:TExpr=New TVarExpr.Create( varTmp )
 
+					If Not isStruct Then
 					' var = Null
 					expr=New TBinaryCompareExpr.Create( "=",expr, New TNullExpr.Create(TType.nullObjectType))
-
+	
 					' then continue
-					Local thenBlock:TBlockDecl=New TBlockDecl.Create( block.scope )
-					Local elseBlock:TBlockDecl=New TBlockDecl.Create( block.scope )
+						Local thenBlock:TBlockDecl=New TBlockDecl.Create( block.scope, , BLOCK_IF )
+						Local elseBlock:TBlockDecl=New TBlockDecl.Create( block.scope, , BLOCK_ELSE )
 					cont = New TContinueStmt
 					thenBlock.AddStmt cont
-
+	
 					block.stmts.AddFirst New TIfStmt.Create( expr,thenBlock,elseBlock )
+					End If
 					block.stmts.AddFirst New TAssignStmt.Create( "=",New TVarExpr.Create( indexTmp ),addExpr )
 					block.stmts.AddFirst New TDeclStmt.Create( varTmp )
 
@@ -129,16 +144,21 @@ Type TForEachinStmt Extends TLoopStmt
 						'End If
 					End If
 
-'					expr=New TBinaryCompareExpr.Create( "=",New TIdentExpr.Create( varid ), New TNullExpr.Create(TType.nullObjectType))
-					expr=New TBinaryCompareExpr.Create( "=",varExpr, New TNullExpr.Create(TType.nullObjectType))
+					Local isStruct:Int = TObjectType(TArrayType( expr.exprType ).elemType).classdecl.IsStruct()
 
+'					expr=New TBinaryCompareExpr.Create( "=",New TIdentExpr.Create( varid ), New TNullExpr.Create(TType.nullObjectType))
+
+					If Not isStruct Then
+					expr=New TBinaryCompareExpr.Create( "=",varExpr, New TNullExpr.Create(TType.nullObjectType))
+		
 					' then continue
-					Local thenBlock:TBlockDecl=New TBlockDecl.Create( block.scope )
-					Local elseBlock:TBlockDecl=New TBlockDecl.Create( block.scope )
+						Local thenBlock:TBlockDecl=New TBlockDecl.Create( block.scope, , BLOCK_IF )
+						Local elseBlock:TBlockDecl=New TBlockDecl.Create( block.scope, , BLOCK_ELSE )
 					cont = New TContinueStmt
 					thenBlock.AddStmt cont
-
+		
 					block.stmts.AddFirst New TIfStmt.Create( expr,thenBlock,elseBlock )
+					End If
 					'block.stmts.AddFirst New TDeclStmt.Create( varTmp )
 
 					block.stmts.AddFirst New TAssignStmt.Create( "=",New TVarExpr.Create( indexTmp ),addExpr, True )
@@ -154,7 +174,7 @@ Type TForEachinStmt Extends TLoopStmt
 
 			Local whileStmt:TWhileStmt=New TWhileStmt.Create( cmpExpr,block,loopLabel, True )
 
-			block=New TBlockDecl.Create( block.scope, True )
+			block=New TBlockDecl.Create( block.scope, True, BLOCK_LOOP )
 			block.AddStmt New TDeclStmt.Create( exprTmp, True )
 			block.AddStmt New TDeclStmt.Create( indexTmp, True )
 			block.AddStmt whileStmt
@@ -165,6 +185,19 @@ Type TForEachinStmt Extends TLoopStmt
 
 		Else If TObjectType( expr.exprType )
 			Local tmpDecl:TDeclStmt
+			Local iterable:Int
+
+			' ensure semanted
+			TObjectType(expr.exprType).classDecl.Semant()
+			
+			If TObjectType(expr.exprType).classDecl.ImplementsInterface("iiterable") Then
+				iterable = True
+			Else
+				Local declList:TFuncDeclList = TFuncDeclList(TObjectType(expr.exprType).classDecl.GetDecl("objectenumerator"))
+				If Not declList Then
+					Err "Use of EachIn requires enumerable Type with either ObjectEnumerator method or one which implements IIterable interface."
+				End If
+			End If
 
 			If TInvokeExpr(expr) Or TInvokeMemberExpr(expr) Then
 				Local tmpVar:TLocalDecl=New TLocalDecl.Create( "",expr.exprType,expr,,True )
@@ -173,11 +206,22 @@ Type TForEachinStmt Extends TLoopStmt
 				expr = New TVarExpr.Create( tmpVar )
 			End If
 
-			Local enumerInit:TExpr=New TFuncCallExpr.Create( New TIdentExpr.Create( "ObjectEnumerator",expr ) )
+			Local enumerInit:TExpr
+			If iterable Then
+				enumerInit = New TFuncCallExpr.Create( New TIdentExpr.Create( "Iterator",expr ) )
+			Else
+				enumerInit = New TFuncCallExpr.Create( New TIdentExpr.Create( "ObjectEnumerator",expr ) )
+			End If
 			Local enumerTmp:TLocalDecl=New TLocalDecl.Create( "",Null,enumerInit,,True )
 
 			Local hasNextExpr:TExpr=New TFuncCallExpr.Create( New TIdentExpr.Create( "HasNext",New TVarExpr.Create( enumerTmp ) ) )
-			Local nextObjExpr:TExpr=New TFuncCallExpr.Create( New TIdentExpr.Create( "NextObject",New TVarExpr.Create( enumerTmp ) ) )
+			
+			Local nextObjExpr:TExpr
+			If iterable Then
+				nextObjExpr = New TFuncCallExpr.Create( New TIdentExpr.Create( "NextElement",New TVarExpr.Create( enumerTmp ) ) )
+			Else
+				nextObjExpr = New TFuncCallExpr.Create( New TIdentExpr.Create( "NextObject",New TVarExpr.Create( enumerTmp ) ) )
+			End If
 
 			Local cont:TContinueStmt
 			
@@ -187,7 +231,7 @@ Type TForEachinStmt Extends TLoopStmt
 
 				Local cExpr:TExpr
 				
-				If TIdentType(varty) And TIdentType(varty).ident = "Object" Then
+				If iterable Or (TIdentType(varty) And TIdentType(varty).ident = "Object") Then
 					cExpr = nextObjExpr
 				Else
 					cExpr = New TCastExpr.Create( varty, nextObjExpr,CAST_EXPLICIT )
@@ -203,8 +247,8 @@ Type TForEachinStmt Extends TLoopStmt
 				expr=New TBinaryCompareExpr.Create( "=",expr, New TNullExpr.Create(TType.nullObjectType))
 
 				' then continue
-				Local thenBlock:TBlockDecl=New TBlockDecl.Create( block.scope, True )
-				Local elseBlock:TBlockDecl=New TBlockDecl.Create( block.scope, True )
+				Local thenBlock:TBlockDecl=New TBlockDecl.Create( block.scope, True, BLOCK_IF )
+				Local elseBlock:TBlockDecl=New TBlockDecl.Create( block.scope, True, BLOCK_ELSE )
 				cont = New TContinueStmt.Create(Null, True)
 				thenBlock.AddStmt cont
 
@@ -232,8 +276,8 @@ Type TForEachinStmt Extends TLoopStmt
 				Local expr:TExpr=New TBinaryCompareExpr.Create( "=",varExpr, New TNullExpr.Create(TType.nullObjectType))
 
 				' then continue
-				Local thenBlock:TBlockDecl=New TBlockDecl.Create( block.scope )
-				Local elseBlock:TBlockDecl=New TBlockDecl.Create( block.scope )
+				Local thenBlock:TBlockDecl=New TBlockDecl.Create( block.scope, ,BLOCK_IF )
+				Local elseBlock:TBlockDecl=New TBlockDecl.Create( block.scope, ,BLOCK_ELSE )
 				cont = New TContinueStmt
 				thenBlock.AddStmt cont
 
@@ -246,7 +290,7 @@ Type TForEachinStmt Extends TLoopStmt
 
 			Local whileStmt:TWhileStmt=New TWhileStmt.Create( hasNextExpr,block, loopLabel, True )
 
-			block=New TBlockDecl.Create( block.scope, True )
+			block=New TBlockDecl.Create( block.scope, True, BLOCK_LOOP )
 			If tmpDecl Then
 				block.AddStmt tmpDecl
 			End If
@@ -306,13 +350,11 @@ Type TIncbin
 End Type
 
 '***** Parser *****
-Type TParser
+Type TParser Extends TGenProcessor
 
 	Field _toker:TToker
 	Field _toke:String
 	Field _tokeType:Int
-	'Ronny: _tokerStack is unused
-	'Field _tokerStack:TList=New TList'<TToker>
 
 	Field _block:TBlockDecl
 	Field _blockStack:TList=New TList'<TBlockDecl>
@@ -323,6 +365,8 @@ Type TParser
 
 	Field _externCasts:TMap = New TMap
 
+	
+	Field unknownIdentsEvalFalse:Int
 	Method SetErr(toker:TToker = Null)
 		Local t:TToker = _toker
 		If toker Then
@@ -418,7 +462,7 @@ Type TParser
 			Case "~n"
 				Return "end-of-line"
 		End Select
-		Return toke
+		Return "'" + toke + "'"
 	End Method
 
 	Method CParse:Int( toke$ )
@@ -477,7 +521,13 @@ Type TParser
 		Case "@" NextToke
 		Case "string","object", "self"
 		Default
-			If _tokeType<>TOKE_IDENT Err "Syntax error - expecting identifier."
+			If _tokeType<>TOKE_IDENT Then
+				Local kw:String
+				If _tokeType = TOKE_KEYWORD Then
+					kw = " keyword"
+				End If
+				Err "Syntax error - expecting identifier, but found" + kw + " '" + _toke + "'"
+			End If
 		End Select
 		Local id$=_toke
 		NextToke
@@ -486,16 +536,28 @@ Type TParser
 
 	Method ParseIdentType:TIdentType()
 		Local id$=ParseIdent()
-'DebugLog "ParseIdentType : " + id
+
 		If CParse( "." ) id:+"."+ParseIdent()
 		If CParse( "." ) id:+"."+ParseIdent()
 
-		Local args:TIdentType[]
+		Local args:TType[]
 		If CParse( "<" )
 			Local nargs:Int
 			Repeat
-				Local arg:TIdentType=ParseIdentType()
-				If args.Length=nargs args=args+ New TIdentType[10]
+				Local arg:TType = ParseType()
+				
+				Repeat
+					If (_toke = "[" Or _toke = "[]") And IsArrayDef()
+						arg = ParseArrayType(arg)
+					Else If _toke = "(" Then
+						Local argDecls:TArgDecl[] = ParseFuncParamDecl()
+						arg = New TFunctionPtrType.Create(New TFuncDecl.CreateF("", arg, argDecls, FUNC_PTR))
+					Else
+						Exit
+					End If
+				Forever
+				
+				If args.Length=nargs args=args+ New TType[10]
 				args[nargs]=arg
 				nargs:+1
 			Until Not CParse(",")
@@ -821,7 +883,7 @@ Type TParser
 			' for Strict code, void will be converted to Int during semanting.
 			ty=New TVoidType
 		Default
-			If _module.IsSuperStrict() Err "Illegal type expression."
+			If _module.IsSuperStrict() Err "Missing type specifier."
 			ty=New TIntType
 
 			While CParse("ptr")
@@ -861,11 +923,16 @@ Type TParser
 
 	' replaces While CParse( "[]" ) sections, with support for multi-dimension arrays
 	Method ParseArrayType:TType(ty:TType)
+
 		While True
 			Local dims:Int = 1
 			
 			If CParse("[]") Then
 				ty=New TArrayType.Create( ty )
+				
+				' test for array of arrays
+				If IsArrayTypeNext(_toker) Continue
+				
 				Exit
 			End If
 			
@@ -880,9 +947,25 @@ Type TParser
 			Parse "]"
 			
 			ty=New TArrayType.Create( ty, dims )
+			
+			' test for array of arrays
+			If IsArrayTypeNext(_toker) Continue
+			
 			Exit
 		Wend
 		Return ty
+	End Method
+	
+	Method IsArrayTypeNext:Int(tok:TToker)
+		Local toker:TToker=New TToker.Copy(tok)
+		If CParseToker(toker, "[]") Return True
+		If CParseToker(toker, "[") Then
+			' look ahead to see if this is an array decl, or something else..
+			If CParseToker(toker, "]") Or CParseToker(toker, ",") Then
+				Return True
+			End If
+		End If
+		Return False
 	End Method
 	
 	Method IsArrayDef:Int()
@@ -1077,7 +1160,7 @@ Type TParser
 		Case "false"
 			NextToke
 			expr=New TConstExpr.Create( New TIntType,"" )
-		Case "int","long","float","double","object","short","byte","size_t","uint","ulong","int128","float64","float128","double128","lparam","wparam"
+		Case "int","long","float","double","object","short","byte","size_t","uint","ulong","int128","float64","float128","double128","lparam","wparam","string"
 			Local id$=_toke
 			Local ty:TType=ParseType()
 
@@ -1126,9 +1209,6 @@ Type TParser
 
 			' array
 			ty = ParseArrayType(ty)
-			'While CParse( "[]" )
-			'	ty=New TArrayType.Create( ty)
-			'Wend
 
 			' optional brackets
 			If CParse( "(" )
@@ -1136,6 +1216,11 @@ Type TParser
 				Parse ")"
 				expr=New TCastExpr.Create( ty,expr,CAST_EXPLICIT )
 			Else
+				Local tok:TToker=New TToker.Copy( _toker )
+
+				If id="string" And CParseToker(tok, ".") Then
+					expr=New TIdentExpr.Create( id )
+				Else
 				expr=ParseExpr()
 				
 				If TBinaryExpr(expr) Then
@@ -1145,7 +1230,7 @@ Type TParser
 				Else
 					expr=New TCastExpr.Create( ty,expr,CAST_EXPLICIT )
 				End If
-
+				End If
 			EndIf
 		Case "sizeof"
 			NextToke
@@ -1185,45 +1270,6 @@ Type TParser
 				expr=ParseExpr()
 				expr=New TLenExpr.Create( expr )
 			EndIf
-		Case "abs"
-			NextToke
-			' optional brackets
-			If CParse( "(" )
-				expr=ParseExpr()
-				Parse ")"
-				expr=New TAbsExpr.Create( expr )
-			Else
-				expr=ParseExpr()
-				expr=New TAbsExpr.Create( expr )
-			EndIf
-		Case "min"
-			NextToke
-			' optional brackets
-			Local b:Int = CParse( "(" )
-
-			expr=ParseExpr()
-			Parse ","
-			Local expr2:TExpr=ParseExpr()
-
-			If b Then
-				Parse ")"
-			End If
-
-			expr=New TMinExpr.Create( expr, expr2 )
-		Case "max"
-			NextToke
-			' optional brackets
-			Local b:Int = CParse( "(" )
-
-			expr=ParseExpr()
-			Parse ","
-			Local expr2:TExpr=ParseExpr()
-
-			If b Then
-				Parse ")"
-			End If
-
-			expr=New TMaxExpr.Create( expr, expr2 )
 		Case "asc"
 			NextToke
 
@@ -1262,39 +1308,6 @@ Type TParser
 				expr=ParseExpr()
 				expr=New TChrExpr.Create( expr )
 			EndIf
-		Case "sgn"
-			NextToke
-			' optional brackets
-			If CParse( "(" )
-				expr=ParseExpr()
-				Parse ")"
-				expr=New TSgnExpr.Create( expr )
-			Else
-				expr=ParseExpr()
-				expr=New TSgnExpr.Create( expr )
-			EndIf
-		Case "string"
-			Local id$=_toke
-			Local ty:TType=ParseType()
-
-			If CParse("ptr") Then
-				ty = TType.MapToPointerType(ty)
-			End If
-
-			' string array
-			ty = ParseArrayType(ty)
-			'While CParse( "[]" )
-			'	ty=New TArrayType.Create( ty)
-			'Wend
-
-			If CParse( "(" )
-				expr=ParseExpr()
-				Parse ")"
-				expr=New TCastExpr.Create( ty,expr,CAST_EXPLICIT )
-			Else
-				expr=New TIdentExpr.Create( id )
-			EndIf
-
 		Case "varptr"
 			NextToke
 			expr=ParseExpr()
@@ -1329,7 +1342,7 @@ Type TParser
 					_toker=tok
 					_toke=_toker.Toke()
 					_tokeType=_toker.TokeType()
-					expr=New TIdentExpr.Create( ParseIdent() )
+					expr=New TIdentExpr.Create( ParseIdent(),,,unknownIdentsEvalFalse )
 					ty = ParseConstNumberType()
 					
 					If TArrayType(ty) Then
@@ -1372,7 +1385,7 @@ Type TParser
 				_app.mapStringConsts(BmxUnquote( _toke ))
 				NextToke
 			Default
-				Err "Expecting expression but encountered '"+_toke+"'"
+				Err "Expecting expression but encountered "+DescribeToke(_toke)
 			End Select
 		End Select
 
@@ -1437,8 +1450,6 @@ Type TParser
 	End Method
 
 	Method ParseUnaryExpr:TExpr()
-
-		SkipEols
 
 		Local op$=_toke
 		Select op
@@ -1613,8 +1624,8 @@ End Rem
 		CParse "then"
 
 		'create empty blocks for then/else
-		Local thenBlock:TBlockDecl=New TBlockDecl.Create( _block )
-		Local elseBlock:TBlockDecl=New TBlockDecl.Create( _block )
+		Local thenBlock:TBlockDecl=New TBlockDecl.Create( _block, ,BLOCK_IF )
+		Local elseBlock:TBlockDecl=New TBlockDecl.Create( _block, ,BLOCK_ELSE )
 
 		'define if the current if is a "singleline if"
 		'"singleline ifs" are not allowed to contain "endif" "end if"
@@ -1754,7 +1765,7 @@ End Rem
 		Parse "while"
 
 		Local expr:TExpr=ParseExpr()
-		Local block:TBlockDecl=New TBlockDecl.Create( _block )
+		Local block:TBlockDecl=New TBlockDecl.Create( _block, , BLOCK_LOOP )
 
 		PushBlock block
 		While Not CParse( "wend" ) And Not CParse( "endwhile" )
@@ -1786,7 +1797,7 @@ End Rem
 
 		Parse "repeat"
 
-		Local block:TBlockDecl=New TBlockDecl.Create( _block )
+		Local block:TBlockDecl=New TBlockDecl.Create( _block, , BLOCK_LOOP )
 
 		PushBlock block
 		While _toke<>"until" And _toke<>"forever"
@@ -1819,48 +1830,32 @@ End Rem
 		If CParse( "local" )
 			varlocal=True
 			varid=ParseIdent()
-			'If Not CParse( ":=" )
+
 				varty=ParseDeclType()
 				If varty._flags & (TType.T_CHAR_PTR | TType.T_SHORT_PTR) Then
 					DoErr "Illegal variable type"
 				End If
 				
 				Parse( "=" )
-			'EndIf
+			
+			' use an ident expr to pass the variable to different parts of the statement.
+			' the original implementation passed decl references, which cause problems if we wanted to
+			' copy the statement later.
+			varExpr = New TIdentExpr.Create(varid)
 		Else
 			varlocal=False
-			
+
 			varExpr=ParsePrimaryExpr( False )
-			
-			'varExpr = New TIdentExpr.Create( ParseIdent(),varExpr )
-
-			'ParseConstNumberType()
-			
-'			varid=ParseIdent()
-
-			'While Cparse(".")
-				'NextToke
-				
-			'	varExpr = New TIdentExpr.Create( ParseIdent(),varExpr )
-				
-			'	ParseConstNumberType()
-			'Wend
-			' eat any type stuff
-'			ParseConstNumberType()
 
 			Parse "="
 		EndIf
 
 		If CParse( "eachin" )
 			Local expr:TExpr=ParseExpr()
-			Local block:TBlockDecl=New TBlockDecl.Create( _block )
+			Local block:TBlockDecl=New TBlockDecl.Create( _block, , BLOCK_LOOP )
 
 			PushBlock block
 			While Not CParse( "next" )
-				'If CParse( "end" )
-				'	CParse "for"
-				'	Exit
-				'EndIf
 				ParseStmt
 			Wend
 			PopBlock
@@ -1898,8 +1893,10 @@ End Rem
 		If varlocal
 			Local indexVar:TLocalDecl=New TLocalDecl.Create( varid,varty,New TCastExpr.Create( varty,from,1 ),0 )
 			init=New TDeclStmt.Create( indexVar )
-			expr=New TBinaryCompareExpr.Create( op,New TVarExpr.Create( indexVar ),New TCastExpr.Create( varty,term,1 ) )
-			incr=New TAssignStmt.Create( "=",New TVarExpr.Create( indexVar ),New TBinaryMathExpr.Create( "+",New TVarExpr.Create( indexVar ),New TCastExpr.Create( varty,stp,1 ) ) )
+'			expr=New TBinaryCompareExpr.Create( op,New TVarExpr.Create( indexVar ),New TCastExpr.Create( varty,term,1 ) )
+'			incr=New TAssignStmt.Create( "=",New TVarExpr.Create( indexVar ),New TBinaryMathExpr.Create( "+",New TVarExpr.Create( indexVar ),New TCastExpr.Create( varty,stp,1 ) ) )
+			expr=New TBinaryCompareExpr.Create( op, varExpr,New TCastExpr.Create( varty,term,1 ) )
+			incr=New TAssignStmt.Create( "=",varExpr,New TBinaryMathExpr.Create( "+",varExpr,New TCastExpr.Create( varty,stp,1 ) ) )
 		Else
 			' varty is NULL here for the casts. We will back-populate it later.
 '			init=New TAssignStmt.Create( "=",New TIdentExpr.Create( varid ),from )
@@ -1910,14 +1907,10 @@ End Rem
 			incr=New TAssignStmt.Create( "=",varExpr,New TBinaryMathExpr.Create( "+",varExpr,New TCastExpr.Create( varty,stp,1 ) ) )
 		EndIf
 
-		Local block:TBlockDecl=New TBlockDecl.Create( _block )
+		Local block:TBlockDecl=New TBlockDecl.Create( _block, , BLOCK_LOOP )
 
 		PushBlock block
 		While Not CParse( "next" )
-			'If CParse( "end" )
-			'	CParse "for"
-			'	Exit
-			'EndIf
 			ParseStmt
 		Wend
 		PopBlock
@@ -2011,12 +2004,18 @@ End Rem
 	Method ParseTryStmt()
 		Parse "try"
 
-		Local block:TBlockDecl=New TBlockDecl.Create( _block )
+		Local tryStmtDecl:TTryStmtDecl = TTryStmtDecl(New TTryStmtDecl.Create( _block ))
+		
+		PushBlock tryStmtDecl
+
+		Local block:TBlockDecl=New TBlockDecl.Create( tryStmtDecl, , BLOCK_TRY )
 		Local catches:TList=New TList
+		Local finallyStmt:TFinallyStmt = Null
 
 		PushBlock block
 		While _toke<>"end" And _toke<>"endtry"
 			If CParse( "catch" )
+				If finallyStmt Then Err "'Catch' can not appear after 'Finally'."
 				Local id:String=ParseIdent()
 				Local ty:TType
 				If Not CParse(":") Then
@@ -2024,10 +2023,19 @@ End Rem
 					ty= TType.stringType
 				Else
 					ty=ParseType()
+					While IsArrayDef()
+						ty=ParseArrayType(ty)
+					Wend
 				End If
 				Local init:TLocalDecl=New TLocalDecl.Create( id,ty,Null,0 )
-				Local block:TBlockDecl=New TBlockDecl.Create( _block )
+				Local block:TBlockDecl=New TBlockDecl.Create( _block, , BLOCK_CATCH )
 				catches.AddLast(New TCatchStmt.Create( init,block ))
+				PopBlock
+				PushBlock block
+			Else If CParse("finally") Then
+				If finallyStmt Then Err "Try statement cannot have more than one Finally block."
+				Local block:TBlockDecl = New TBlockDecl.Create(_block, , BLOCK_FINALLY)
+				finallyStmt = New TFinallyStmt.Create(block)
 				PopBlock
 				PushBlock block
 			Else
@@ -2046,16 +2054,23 @@ End Rem
 			End If
 		Wend
 
-		PopBlock
+		If catches.Count() = 0 And Not finallyStmt Then Err "Expecting 'Catch' or 'Finally'."
+		
+		PopBlock ' try block
 		
 		If Not CParse("endtry") Then
-			' TODO : handle case of no catch - perhaps throw the exception again.
-			'If Not catches.Length() Err "Try block must have at least one catch block"
 			NextToke
 			CParse "try"
 		End If
 
-		_block.AddStmt New TTryStmt.Create( block,TCatchStmt[](catches.ToArray()) )
+		PopBlock ' tryStmtDecl
+		
+		Local tryStmt:TTryStmt = New TTryStmt.Create(block,TCatchStmt[](catches.ToArray()), finallyStmt)
+
+		tryStmtDecl.tryStmt = tryStmt
+
+		_block.AddStmt tryStmt
+		
 	End Method
 
 	Method ParseThrowStmt()
@@ -2118,8 +2133,8 @@ End Rem
 					EndIf
 				Until Not CParse(",")
 
-				Local thenBlock:TBlockDecl=New TBlockDecl.Create( _block )
-				Local elseBlock:TBlockDecl=New TBlockDecl.Create( _block )
+				Local thenBlock:TBlockDecl=New TBlockDecl.Create( _block, , BLOCK_IF )
+				Local elseBlock:TBlockDecl=New TBlockDecl.Create( _block, , BLOCK_ELSE )
 
 				Local ifstmt:TIfStmt=New TIfStmt.Create( comp,thenBlock,elseBlock )
 				block.AddStmt ifstmt
@@ -2157,9 +2172,9 @@ End Rem
 				SetErr
 				Select _toke
 				Case "case"
-					Err "Case can not appear after default."
+					Err "Case can not appear after Default."
 				Case "default"
-					Err "Select statement can have only one default block."
+					Err "Select statement can have only one Default block."
 				End Select
 				ParseStmt
 
@@ -2238,6 +2253,8 @@ End Rem
 			' nested function - needs to get added to the "module"
 			Case "function"
 				_block.InsertDecl ParseFuncDecl( _toke,FUNC_NESTED)
+			Case "type"
+				_block.InsertDecl ParseClassDecl( _toke,DECL_NESTED)
 			Case "return"
 				ParseReturnStmt()
 			Case "exit"
@@ -2365,9 +2382,9 @@ End Rem
 					init=ParseExpr()
 				End If
 			End If
-		Else If CParse( ":=" )
-			init=ParseExpr()
-			ty = init.exprType
+'		Else If CParse( ":=" )
+'			init=ParseExpr()
+'			ty = init.exprType
 		Else
 			ty=ParseDeclType(attrs & DECL_API_STDCALL)
 
@@ -2397,6 +2414,7 @@ End Rem
 			Else
 				Err "Constants must be initialized."
 			EndIf
+			
 		EndIf
 		
 
@@ -2404,11 +2422,16 @@ End Rem
 
 		Select toke
 		Case "global" decl=New TGlobalDecl.Create( id,ty,init,attrs )
-		Case "field"  decl=New TFieldDecl.Create( id,ty,init,attrs )
+		Case "field"
+			decl=New TFieldDecl.Create( id,ty,init,attrs )
+
+			If TFunctionPtrType(ty) Then
+				TFunctionPtrType(ty).func.attrs :| FUNC_FIELD
+			End If
+
 		Case "const"  decl=New TConstDecl.Create( id,ty,init,attrs )
 		Case "local"  decl=New TLocalDecl.Create( id,ty,init,attrs )
 		End Select
-		If toke = "field" And TFunctionPtrType(ty) Then TFunctionPtrType(ty).func.attrs :| FUNC_FIELD
 
 		If decl.IsExtern()
 			Local cdets:TCastDets
@@ -2467,8 +2490,14 @@ End Rem
 		Return decl
 	End Method
 
-	Method ParseDecls:TList( toke$,attrs:Int )
+	Method ParseDecls:TList( toke$,attrs:Int, isField:Int = False )
 		If toke Parse toke
+
+		If isField Then
+			If CParse("readonly") Then
+				attrs :| DECL_READ_ONLY
+			End If
+		End If
 
 		Local decls:TList=New TList'<Decl>
 		Repeat
@@ -2615,6 +2644,7 @@ End Rem
 		Local meth:Int = attrs & FUNC_METHOD
 		Local meta:TMetadata
 		Local noMangle:Int
+		Local exported:Int
 
 		Local classDecl:TClassDecl = TClassDecl(parent)
 
@@ -2636,9 +2666,9 @@ End Rem
 				NextToke
 				
 				Select t
-					Case "*","/","+","-","&","|","~~"
+					Case "*","/","+","-","&","|","~~","^"
 						id = t
-					Case ":*",":/",":+",":-",":&",":|",":~~"
+					Case ":*",":/",":+",":-",":&",":|",":~~",":^"
 						id = t
 					Case "<",">"',"="',"<=",">=","=","<>"
 						If CParse("=") Then
@@ -2653,8 +2683,11 @@ End Rem
 						id = t
 					Case ":mod", ":shl", ":shr"
 						id = t
+					Case "[]"
+						If CParse("=") Then t :+ "="
+						id = t
 					Default
-						DoErr "Operator must be one of: * / + - & | ~~ :* :/ :+ :- :& :| :~~ < > <= >= = <> mod shl shr :mod :shl :shr"
+						DoErr "Operator must be one of: * / + - & | ~~ :* :/ :+ :- :& :| :~~ < > <= >= = <> mod shl shr :mod :shl :shr [] []="
 				End Select
 				ty=ParseDeclType()
 			Else
@@ -2683,7 +2716,7 @@ End Rem
 				End If
 			'End If
 		EndIf
-		
+
 		' every branch in that nested If block up there contains the line "ty=ParseDeclType()";
 		' this already consumed all sets of parentheses and brackets belonging to this function declaration
 		' so we will now extract our actual return type and args from the result
@@ -2694,8 +2727,8 @@ End Rem
 			Local fdecl:TFuncDecl = TFunctionPtrType(ty).func
 			ty = fdecl.retTypeExpr
 			args = fdecl.argDecls
+			attrs :| (fdecl.attrs & DECL_API_FLAGS)
 		End If
-		
 		
 		If CParse( "nodebug" ) Then
 			attrs :| DECL_NODEBUG
@@ -2734,6 +2767,15 @@ End Rem
 			End If
 		End If
 		
+		If CParse("export") Then
+			attrs :| DECL_EXPORT
+			If attrs & FUNC_METHOD Then
+				Err "Only functions can specify Export"
+			Else
+				exported = True
+			End If
+		End If
+		
 		attrs :| ParseCallConvention(attrs & DECL_API_STDCALL)
 		
 		If CParse( "nodebug" ) Then
@@ -2743,6 +2785,7 @@ End Rem
 		Local funcDecl:TFuncDecl
 		If attrs & FUNC_CTOR Then
 			funcDecl=New TNewDecl.CreateF( id,ty,args,attrs )
+			TNewDecl(funcDecl).cdecl = classdecl
 		Else
 			'If fdecl Then
 			'	funcDecl = fdecl
@@ -2751,6 +2794,7 @@ End Rem
 				funcDecl=New TFuncDecl.CreateF( id,ty,args,attrs )
 			'End If
 			funcDecl.noMangle = noMangle
+			funcDecl.exported = exported
 		End If
 		If meta Then
 			funcDecl.metadata = meta
@@ -2859,17 +2903,20 @@ End Rem
 		Local api:String = ParseStringLit().ToLower()
 		
 		If api = "os" Then
-?win32
-			api = "win32"
-?macos
+			Select opt_platform
+				Case "macos", "osx", "ios"
 			api = "macos"
-?linux
+				Case "linux", "android", "raspberrypi"
 			api = "linux"
-?
+				Case "win32"
+					api = "win32"
+				Case "nx"
+					api = "nx"
+			End Select
 		End If
 
 		Select api
-			Case "c", "blitz", "macos", "linux"
+			Case "c", "blitz", "macos", "linux", "nx"
 				Return DECL_API_CDECL
 			Case "win32"
 				Return DECL_API_STDCALL
@@ -2914,13 +2961,17 @@ End Rem
 	End Method
 	
 
-	Method ParseClassDecl:TClassDecl( toke$,attrs:Int )
+	Method ParseClassDecl:TClassDecl( toke$,attrs:Int, templateDets:TTemplateDets = Null )
 		SetErr
+
+		Local calculatedStartLine:Int = _toker.Line()
+		Local startLine:Int = _toker._line
 
 		If toke Parse toke
 
 		Local id$=ParseIdent()
-		Local args:TStack = New TStack
+
+		Local args:TList = New TList
 		Local superTy:TIdentType
 		Local imps:TIdentType[]
 		Local meta:TMetadata
@@ -2949,11 +3000,47 @@ End Rem
 				'If args.Length=nargs args=args + New TClassDecl[10]
 				'args[nargs]=decl
 				'nargs:+1
-				args.Push ParseIdent()
+				Local arg:TTemplateArg = New TTemplateArg
+				arg.ident = ParseIdent()
+				
+'				If CParse("extends") Then
+'					arg.superTy = ParseIdentType()
+'				End If
+				
+				args.AddLast arg
+
 			Until Not CParse(",")
 			'args=args[..nargs]
 
 			Parse ">"
+
+			If CParse( "where" ) Then
+'DebugStop
+				Repeat
+					Local argIdent:String = ParseIdent()
+					
+					Parse("extends")
+					
+					Local found:Int
+					For Local arg:TTemplateArg = EachIn args
+						If arg.ident = argIdent Then
+						
+							Repeat
+							
+								arg.ExtendsType(ParseIdentType())
+							
+							Until Not CParse("and")
+						
+							found = True
+							Exit
+		EndIf
+					Next
+					If Not found Then
+						Err "Use of undeclared type '" + argIdent + "'."
+					End If
+					
+				Until Not CParse(",")
+			End If
 		EndIf
 
 		If CParse( "extends" )
@@ -3068,7 +3155,15 @@ End Rem
 		'check for metadata
 		meta = ParseMetaData()
 
-		Local classDecl:TClassDecl=New TClassDecl.Create( id,String[](args.ToArray()),superTy,imps,attrs )
+		
+		Local sargs:TTemplateArg[] = New TTemplateArg[args.Count()]
+		Local i:Int = 0
+		For Local arg:TTemplateArg = EachIn args
+			sargs[i] = arg
+			i :+ 1
+		Next
+
+		Local classDecl:TClassDecl=New TClassDecl.Create( id,sargs,superTy,imps,attrs )
 		
 		If meta Then
 			classDecl.metadata = meta
@@ -3085,7 +3180,8 @@ End Rem
 
 		Repeat
 			Local method_attrs:Int=decl_attrs|FUNC_METHOD | (attrs & DECL_NODEBUG)
-			If attrs & CLASS_INTERFACE method_attrs:|DECL_ABSTRACT
+			Local abst_attrs:Int = 0
+			If attrs & CLASS_INTERFACE abst_attrs:|DECL_ABSTRACT
 		
 			SkipEols
 			Select _toke
@@ -3155,34 +3251,45 @@ End Rem
 				If (attrs & CLASS_STRUCT) And _toke<>"field"
 					Err "Structs can only contain fields and methods."
 				EndIf
-				classDecl.InsertDecls ParseDecls( _toke,decl_attrs )
+				
+				classDecl.InsertDecls ParseDecls( _toke,decl_attrs, _toke = "field")
 			Case "method"
 				If (attrs & CLASS_STRUCT) And (attrs & DECL_EXTERN) Then
 					Err "Extern Structs can only contain fields."
 				EndIf
-				Local decl:TFuncDecl=ParseFuncDecl( _toke,method_attrs,classDecl )
-				If decl.IsCtor() decl.retTypeExpr=New TObjectType.Create( classDecl )
+				Local decl:TFuncDecl=ParseFuncDecl( _toke,method_attrs | abst_attrs,classDecl )
 				classDecl.InsertDecl decl
 			Case "function"
-				If (attrs & CLASS_INTERFACE)
-					Err "Interfaces can only contain constants and methods."
-				EndIf
+				'If (attrs & CLASS_INTERFACE)
+				'	Err "Interfaces can only contain constants and methods."
+				'EndIf
 				If attrs & CLASS_STRUCT Then
 					If (attrs & DECL_EXTERN) Then
 						Err "Extern Structs can only contain fields."
-					Else
-						Err "Structs can only contain fields and methods."
 					End If
 				EndIf
 				If attrs & DECL_EXTERN Then
 					Err "Extern Types can only contain methods."
 				End If
-				Local decl:TFuncDecl=ParseFuncDecl( _toke,decl_attrs,classDecl )
+				Local decl:TFuncDecl=ParseFuncDecl( _toke,decl_attrs | abst_attrs,classDecl )
 				classDecl.InsertDecl decl
+			Case "type"
+				If templateDets Then
+					Local cdecl:TClassDecl = ParseClassDecl( _toke,DECL_NESTED, templateDets)
+					cdecl = cdecl.GenClassInstance(templateDets.instArgs, False, Null, templateDets)
+					classDecl.InsertDecl cdecl, True
+				Else
+					classDecl.InsertDecl ParseClassDecl( _toke,DECL_NESTED)
+				End If
 			Default
 				Err "Syntax error - expecting class member declaration, not '" + _toke + "'"
 			End Select
 		Forever
+		
+		If Not args.IsEmpty() Then
+			Local endline:Int = _toker._line
+			classDecl.templateSource = New TTemplateRecord.Create(calculatedStartLine - 1, _toker._path, _toker.Join(startLine, endLine, "~n"))
+		End If
 
 		If toke Parse toke
 
@@ -3559,7 +3666,7 @@ End Rem
 			Case "struct"
 				_module.InsertDecl ParseClassDecl( _toke,attrs | CLASS_STRUCT )
 			Case "type"
-				_module.InsertDecl ParseClassDecl( _toke,attrs )
+				_module.InsertDecl ParseClassDecl( _toke,attrs)
 			Case "interface"
 				_module.InsertDecl ParseClassDecl( _toke,attrs|CLASS_INTERFACE|DECL_ABSTRACT )
 			Case "function"
@@ -3626,6 +3733,24 @@ End Rem
 		Return attrs
 	End Method
 
+	Method ParseGeneric:Object(templateSource:TTemplateRecord, templateDets:TTemplateDets)
+		Local toker:TToker = New TToker.Create(templateSource.file, templateSource.source, False, templateSource.start)
+		Local parser:TParser = New TParser.Create( toker, _appInstance )
+		
+		Local m:TModuleDecl = New TModuleDecl
+		parser._module = m
+		
+		Local cdecl:TClassDecl = Null
+		
+		Select parser._toke
+		Case "type"
+			cdecl = parser.ParseClassDecl(parser._toke,0, templateDets )
+		Case "interface"
+			cdecl = parser.ParseClassDecl(parser._toke, CLASS_INTERFACE|DECL_ABSTRACT, templateDets )
+		End Select
+		
+		Return cdecl
+	End Method
 
 	Method ParseMain()
 
@@ -3810,12 +3935,13 @@ End Rem
 	End Method
 
 
-	Method Create:TParser( toker:TToker,app:TAppDecl )
+	Method Create:TParser( toker:TToker,app:TAppDecl, unknownIdentsEvalFalse:Int = False )
 		_toke="~n"
 		_toker=toker
 		_app=app
 		SetErr
 		NextToke
+		Self.unknownIdentsEvalFalse = unknownIdentsEvalFalse
 		Return Self
 	End Method
 End Type
@@ -3932,7 +4058,7 @@ End Rem
 			con = 0
 			Try
 				If Eval( toker,New TIntType ) = "1" con = 1
-			Catch error:String
+			Catch Error:String
 				con = 0
 			End Try
 
@@ -4017,6 +4143,22 @@ Function ParseModule:TModuleDecl( path$,app:TAppDecl )
 	Return parser._module
 End Function
 
+Function AppendLibInit:String(source:String)
+
+	Local sb:TStringBuffer = TStringBuffer.Create(source)
+	
+	sb.Append("~n")
+	sb.Append("Extern~n")
+	sb.Append("Function bbLibInit()~n")
+	sb.Append("End Extern~n")
+
+	sb.Append("Function InitBRL() Export~n")
+	sb.Append("bbLibInit()~n")
+	sb.Append("End Function~n")
+	
+	Return sb.ToString()
+End Function
+
 '***** PUBLIC API ******
 
 Function ParseApp:TAppDecl( path$ )
@@ -4027,6 +4169,10 @@ Function ParseApp:TAppDecl( path$ )
 
 	Local source$=PreProcess( path )
 	'Local source:String = LoadString(path)
+	
+	If opt_makelib And opt_apptype Then
+		source = AppendLibInit(source)
+	End If
 
 	Local toker:TToker=New TToker.Create( path,source )
 
@@ -4115,6 +4261,7 @@ End Rem
 	env.InsertDecl New TConstDecl.Create( "linuxx86",New TIntType,New TConstExpr.Create( New TIntType,(opt_platform="linux" Or opt_platform="android") And opt_arch="x86"),0 )
 	env.InsertDecl New TConstDecl.Create( "linuxx64",New TIntType,New TConstExpr.Create( New TIntType,(opt_platform="linux" Or opt_platform="android") And opt_arch="x64"),0 )
 	env.InsertDecl New TConstDecl.Create( "linuxarm",New TIntType,New TConstExpr.Create( New TIntType, ((opt_platform="android" Or opt_platform="linux") And (opt_arch="arm" Or opt_arch="armeabi" Or opt_arch="armeabiv7a" Or opt_arch="arm64v8a")) Or (opt_platform="raspberrypi" And opt_arch="arm")),0 )
+	env.InsertDecl New TConstDecl.Create( "linuxarm64",New TIntType,New TConstExpr.Create( New TIntType, (opt_platform="android" And opt_arch="arm64v8a") Or ((opt_platform="linux" Or opt_platform="raspberrypi") And opt_arch="arm64")),0 )
 
 	' android
 	env.InsertDecl New TConstDecl.Create( "android",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="android" ),0 )
@@ -4128,6 +4275,7 @@ End Rem
 	' raspberrypi - ARM only
 	env.InsertDecl New TConstDecl.Create( "raspberrypi",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="raspberrypi" And opt_arch="arm"),0 )
 	env.InsertDecl New TConstDecl.Create( "raspberrypiARM",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="raspberrypi" And opt_arch="arm"),0 )
+	env.InsertDecl New TConstDecl.Create( "raspberrypiARM64",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="raspberrypi" And opt_arch="arm64"),0 )
 
 	' emscripten
 	env.InsertDecl New TConstDecl.Create( "emscripten",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="emscripten" ),0 )
@@ -4157,6 +4305,10 @@ End Rem
 
 	' musl - linux only
 	env.InsertDecl New TConstDecl.Create( "musl",New TIntType,New TConstExpr.Create( New TIntType,(opt_musl And (opt_platform="linux" Or opt_platform="android" Or opt_platform="raspberrypi"))),0 )
+
+	' nx / switch
+	env.InsertDecl New TConstDecl.Create( "nx",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="nx" ),0 )
+	env.InsertDecl New TConstDecl.Create( "nxARM64",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="nx" And opt_arch="arm64"),0 )	
 	
 	' new compiler
 	env.InsertDecl New TConstDecl.Create( "bmxng",New TIntType,New TConstExpr.Create( New TIntType, True ),0 )
@@ -4169,18 +4321,23 @@ End Rem
 
 	Local toker:TToker=New TToker.Create( "",source )
 
-	Local parser:TParser=New TParser.Create( toker,Null )
+	Local parser:TParser=New TParser.Create( toker,Null,True )
 
+	Local val:String
+	Try
 	Local expr:TExpr=parser.ParseExpr()
-
+	
 	expr=expr.Semant()
-
+	
 	If ty expr=expr.Cast( ty )
-
-	Local val$=expr.Eval()
-
+	
+		val=expr.Eval()
+	Catch error:String
+		val = "0"
+	End Try
+	
 	PopEnv
-
+	
 	Return val
 End Function
 
@@ -4193,4 +4350,3 @@ Type TCastDets
 	Field api:String
 	
 End Type
-

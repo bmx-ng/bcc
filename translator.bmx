@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2017 Bruce A Henderson
+' Copyright (c) 2013-2019 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -103,6 +103,13 @@ Type TTranslator
 		Return count
 	End Method
 
+	Method DumpLocalScope:Int()
+		Print "DumpLocalScope:"
+		For Local stmt:Object = EachIn localScope
+			Print "    " + stmt.ToString()
+		Next
+	End Method
+	
 	Method GetTopLocalLoop:TTryBreakCheck(findStmt:TStmt)
 		For Local tbc:TTryBreakCheck = EachIn localScope
 			If findStmt And findStmt <> tbc.stmt Then
@@ -122,6 +129,30 @@ Type TTranslator
 			loopTryStack.Push stmt
 		End If
 	End Method
+	
+	Method TryDownToBlockScopeCount:Int(endBlockType:Int)
+		Local lastTry:Int
+		Local firstBlock:Int
+		Local count:Int
+		For Local stmt:Object = EachIn localScope
+			If TBlockDecl(stmt) Then
+				If TBlockDecl(stmt).blockType & BLOCK_TRY_CATCH Then
+					lastTry = count
+				Else If TBlockDecl(stmt).blockType = endBlockType Then
+					firstBlock = count
+					Exit
+				End If
+			End If
+			
+			If TTryBreakCheck(stmt) Then
+				Continue
+			End If
+			
+			count :+ 1
+		Next
+		
+		Return firstBlock - lastTry
+	End Method
 
 	Method PopLoopTryStack()
 		loopTryStack.Pop
@@ -138,13 +169,30 @@ Type TTranslator
 				
 				Exit
 			End If
-
 			count :+ 1
 		Next
 		
 		Return count
 	End Method
 
+	Method LoopTryStmts:TTryStmt[](findStmt:TStmt)
+		Local stmts:TTryStmt[]
+		
+		For Local stmt:Object = EachIn loopTryStack
+			If TTryStmt(stmt) Then
+				stmts :+ [TTryStmt(stmt)]
+			Else
+				If findStmt And findStmt <> stmt Then
+					Continue
+				End If
+				
+				Exit
+			End If
+		Next
+		
+		Return stmts
+	End Method
+	
 	Method GetTopLoop:TTryBreakCheck(findStmt:TStmt)
 		For Local tbc:TTryBreakCheck = EachIn loopTryStack
 			If findStmt And findStmt <> tbc.stmt Then
@@ -329,7 +377,7 @@ Type TTranslator
 				id = MungSymbol(id)
 			End If
 			
-			fdecl.munged = fdecl.scope.munged + "_" + id
+			fdecl.munged = fdecl.ParentScope().munged + "_" + id
 			
 			If Not equalsBuiltInFunc(fdecl.classScope(), fdecl) And Not fdecl.noMangle Then
 				fdecl.munged :+ MangleMethod(fdecl)
@@ -363,6 +411,8 @@ Type TTranslator
 				Return "_or"
 			Case "~~"
 				Return "_xor"
+			Case "^"
+				Return "_pow"
 			Case ":*"
 				Return "_muleq"
 			Case ":/"
@@ -377,6 +427,8 @@ Type TTranslator
 				Return "_oreq"
 			Case ":~~"
 				Return "_xoreq"
+			Case ":^"
+				Return "_poweq"
 			Case "<"
 				Return "_lt"
 			Case "<="
@@ -395,8 +447,18 @@ Type TTranslator
 				Return "_shl"
 			Case "shr"
 				Return "_shr"
+			Case ":mod"
+				Return "_modeq"
+			Case ":shl"
+				Return "_shleq"
+			Case ":shr"
+				Return "_shreq"
+			Case "[]"
+				Return "_iget"
+			Case "[]="
+				Return "_iset"
 		End Select
-		Return "?? unknown symbol ?? : " + sym
+		Err "?? unknown symbol ?? : " + sym
 	End Method
 	
 	Method MungDecl( decl:TDecl, addIfNotInScope:Int = False )
@@ -441,23 +503,41 @@ Type TTranslator
 '				munged=decl.ModuleScope().munged+"_"+id
 '			EndIf
 '		Case "cpp"
+		If Not munged And TFuncDecl(decl) And TFuncDecl(decl).exported Then
+			munged = id
+		Else
+
 			If TModuleDecl( decl.scope )
 				munged=decl.ModuleScope().munged+"_"+id
+				
+				If TClassDecl(decl) And TClassDecl(decl).instArgs Then
+					For Local ty:TType = EachIn TClassDecl(decl).instArgs
+						munged :+ TransMangleType(ty)
+					Next
+				End If
 			EndIf
 
 			If TModuleDecl( decl )
 				munged=decl.ModuleScope().munged+"_"+id
 			EndIf
-
+		End If
 '		End Select
 'DebugStop
 
 		If Not munged
 			If TLocalDecl( decl )
 				munged="bbt_"+id
+			Else If TLoopLabelDecl(decl)
+				munged = "_" + TLoopLabelDecl(decl).realIdent
 			Else
 				If decl.scope Then
 					munged = decl.scope.munged + "_" + id
+					
+					If TClassDecl(decl) And TClassDecl(decl).instArgs Then
+						For Local ty:TType = EachIn TClassDecl(decl).instArgs
+							munged :+ TransMangleType(ty)
+						Next
+					End If
 					
 					' fields are lowercase with underscore prefix.
 					' a function pointer with FUNC_METHOD is a field function pointer.
@@ -476,6 +556,10 @@ Type TTranslator
 
 		'add an increasing number to identifier if already used  
 		If mungScope.Contains( munged )
+			If TFuncDecl(decl) And TFuncDecl(decl).exported Then
+				Err "Cannot export duplicate identifiers : " + decl.ident 
+			End If
+		
 			Local i:Int=1
 			Repeat
 				i:+1
@@ -674,7 +758,7 @@ op = mapSymbol(op)
 			Select TUnaryExpr( expr ).op
 			Case "+","-","~~","not" Return 3
 			End Select
-			InternalErr "TTranslator.TransAssignOp"
+			InternalErr "TTranslator.ExprPri"
 		Else If TBinaryExpr( expr )
 			Select TBinaryExpr( expr ).op
 			Case "^" Return 4
@@ -778,6 +862,8 @@ op = mapSymbol(op)
 	Method EmitLocalDeclarations(decl:TScopeDecl, v:TValDecl = Null) Abstract
 	
 	Method TransType$( ty:TType, ident:String, fpReturnTypeFunctionArgs:String = Null, fpReturnTypeClassFunc:Int = False) Abstract
+
+	Method TransObject:String(decl:TScopeDecl, this:Int = False) Abstract
 	
 	Method BeginLocalScope()
 		mungStack.Push mungScope
@@ -884,7 +970,7 @@ End Rem
 	
 	Method TransInvokeExpr$( expr:TInvokeExpr )
 		Local decl:TFuncDecl=TFuncDecl( expr.decl.actual ),t$
-'If decl.ident = "OnDebugStop" DebugStop	
+
 		If Not decl.munged Then
 			MungDecl decl
 		End If
@@ -907,7 +993,7 @@ End Rem
 				Return CreateLocal(expr)
 			End If
 		Else
-			If decl Return TransFunc( TFuncDecl(decl),expr.args,Null )
+			Return TransFunc( TFuncDecl(decl),expr.args,Null )
 		End If
 		
 		InternalErr "TTranslator.TransInvokeExpr"
@@ -924,10 +1010,10 @@ End Rem
 				Return CreateLocal(expr)
 			End If
 		Else
-			If decl Return TransFunc( TFuncDecl(decl),expr.args,expr.expr )	
+			Return TransFunc( TFuncDecl(decl),expr.args,expr.expr )	
 		End If
 		
-		InternalErr "TTranslator.TransInvokeMember"
+		InternalErr "TTranslator.TransInvokeMemberExpr"
 	End Method
 	
 	Method TransInvokeSuperExpr$( expr:TInvokeSuperExpr )
@@ -995,13 +1081,19 @@ End Rem
 
 			Else
 				
-				If TSelfExpr(stmt.expr) And TObjectType(TSelfExpr(stmt.expr).exprType).classDecl And TObjectType(TSelfExpr(stmt.expr).exprType).classDecl.IsStruct() Then
-					t :+ Bra("*" + stmt.expr.Trans())
-				Else If TObjectType(stmt.expr.exprType) And TObjectType(stmt.expr.exprType).classDecl.IsStruct() And TConstExpr(stmt.expr) And Not TConstExpr(stmt.expr).value Then
+				If TObjectType(stmt.expr.exprType) And TObjectType(stmt.expr.exprType).classDecl.IsStruct() And TConstExpr(stmt.expr) And Not TConstExpr(stmt.expr).value Then
 					Local lvar:String = CreateLocal(stmt.expr)
 					t :+ " " + lvar
 				Else
-					Local s:String = stmt.expr.Trans()
+
+					Local s:String
+					
+					' cast to function return type
+					If TObjectType(stmt.fRetType) Then
+						s :+ Bra(transObject(TObjectType(stmt.fRetType).classDecl))
+					End If
+
+					s :+ stmt.expr.Trans()
 					
 					' we have some temp variables that need to be freed before we can return
 					' put the results into a new variable, and return that.
@@ -1051,25 +1143,42 @@ End Rem
 		
 		Return bc.contId
 	End Method
-
+	
 	Method TransContinueStmt$( stmt:TContinueStmt )
-		unreachable=True
-
+		Local returnStr:String
+		
 		Local contLoop:TStmt
 		' if we are continuing with a loop label, we'll need to find it in the stack
 		If stmt.label And TLoopLabelExpr(stmt.label) Then
 			contLoop = TLoopLabelExpr(stmt.label).loop
 		End If
-		' get count of Try statements in the stack in this loop
-		Local count:Int = LoopTryDepth(contLoop)
+		' get Try statements in the stack in this loop
+		Local tryStmts:TTryStmt[] = LoopTryStmts(contLoop)
+		Local count:Int = tryStmts.length
+		Local nowUnreachable:Int = False
 		If count > 0 Then
 			Local bc:TTryBreakCheck = GetTopLoop(contLoop)
 			If bc Then
 				NextContId(bc)
 				For Local i:Int = 0 Until count
 					Emit "bbExLeave();"
-					If opt_debug Then
-						Emit "bbOnDebugPopExState();"
+					If opt_debug Then Emit "bbOnDebugPopExState();"
+					
+					' in debug we also roll back scope from first Try in scope down to the loop scope itself
+					If opt_debug And (i = count - 1) And stmt.loop And Not stmt.loop.block.IsNoDebug() Then
+
+						Local loopCount:Int = TryDownToBlockScopeCount(BLOCK_LOOP)
+
+						For Local n:Int = 0 Until loopCount
+							Emit "bbOnDebugLeaveScope();"
+						Next
+					End If
+
+					If tryStmts[i].finallyStmt Then
+						Local returnLabelDecl:TLoopLabelDecl = New TLoopLabelDecl.Create("continue")
+						MungDecl returnLabelDecl
+						EmitFinallyJmp tryStmts[i].finallyStmt, returnLabelDecl
+						Emit TransLabel(returnLabelDecl)
 					End If
 				Next
 				Emit "goto " + TransLabelCont(bc, False)
@@ -1096,43 +1205,61 @@ End Rem
 					InternalErr "TTranslator.TransContinueStmt"
 				End If
 			Else
-
 				If opt_debug And stmt.loop And Not stmt.loop.block.IsNoDebug() Then
 					count = LoopLocalScopeDepth(Null)
 				End If
 				For Local i:Int = 0 Until count
 					Emit "bbOnDebugLeaveScope();"
 				Next
-
+				
 				' No Try statements in the stack here..
 				If stmt.label And TLoopLabelExpr(stmt.label) Then
 					Emit "goto " + TransLoopLabelCont(TLoopLabelExpr(stmt.label).loop.loopLabel.realIdent, False)
 				Else
-					Return "continue"
+					returnStr = "continue"
 				End If
 			End If
 		End If
+		
+		unreachable = True
+		Return returnStr
 	End Method
 	
 	Method TransBreakStmt$( stmt:TBreakStmt )
-		unreachable=True
-		broken:+1
-
+		Local returnStr:String
+		
 		Local brkLoop:TStmt
 		' if we are exiting with a loop label, we'll need to find it in the stack
 		If stmt.label And TLoopLabelExpr(stmt.label) Then
 			brkLoop = TLoopLabelExpr(stmt.label).loop
 		End If
-		' get count of Try statements in the stack in this loop
-		Local count:Int = LoopTryDepth(brkLoop)
+		' get Try statements in the stack in this loop
+		Local tryStmts:TTryStmt[] = LoopTryStmts(brkLoop)
+		Local count:Int = tryStmts.length
+		Local nowUnreachable:Int = False
 		If count > 0 Then
 			Local bc:TTryBreakCheck = GetTopLoop(brkLoop)
 			If bc Then
 				NextExitId(bc)
 				For Local i:Int = 0 Until count
 					Emit "bbExLeave();"
-					If opt_debug Then
-						Emit "bbOnDebugPopExState();"
+					If opt_debug Then Emit "bbOnDebugPopExState();"
+					
+					' in debug we also roll back scope from first Try in scope down to the loop scope itself
+					If opt_debug And (i = count - 1) And stmt.loop And Not stmt.loop.block.IsNoDebug() Then
+
+						Local loopCount:Int = TryDownToBlockScopeCount(BLOCK_LOOP)
+
+						For Local n:Int = 0 Until loopCount
+							Emit "bbOnDebugLeaveScope();"
+						Next
+					End If
+					
+					If tryStmts[i].finallyStmt Then
+						Local returnLabelDecl:TLoopLabelDecl = New TLoopLabelDecl.Create("break")
+						MungDecl returnLabelDecl
+						EmitFinallyJmp tryStmts[i].finallyStmt, returnLabelDecl
+						Emit TransLabel(returnLabelDecl)
 					End If
 				Next
 				Emit "goto " + TransLabelExit(bc, False)
@@ -1159,7 +1286,6 @@ End Rem
 					InternalErr "TTranslator.TransBreakStmt"
 				End If
 			Else
-
 				If opt_debug And stmt.loop And Not stmt.loop.block.IsNoDebug() Then
 					count = LoopLocalScopeDepth(Null)
 				End If
@@ -1171,49 +1297,36 @@ End Rem
 				If stmt.label And TLoopLabelExpr(stmt.label) Then
 					Emit "goto " + TransLoopLabelExit(TLoopLabelExpr(stmt.label).loop.loopLabel.realIdent, False)
 				Else
-					Return "break"
+					returnStr = "break"
 				End If
 			End If
 		End If
+		
+		unreachable = True
+		broken :+ 1
+		Return returnStr
 	End Method
 	
 	Method TransTryStmt$( stmt:TTryStmt )
 	End Method
 	
-	Method EmitTryStack() Abstract
-
+	Method EmitFinallyJmp(stmt:TFinallyStmt, returnLabel:TLoopLabelDecl) Abstract
+	
 	Method TransThrowStmt$( stmt:TThrowStmt )
 	End Method
-	
 
 	Method TransBuiltinExpr$( expr:TBuiltinExpr )
-		If TMinExpr(expr) Return TransMinExpr(TMinExpr(expr))
-		If TMaxExpr(expr) Return TransMaxExpr(TMaxExpr(expr))
-		If TAbsExpr(expr) Return TransAbsExpr(TAbsExpr(expr))
 		If TAscExpr(expr) Return TransAscExpr(TAscExpr(expr))
 		If TChrExpr(expr) Return TransChrExpr(TChrExpr(expr))
-		If TSgnExpr(expr) Return TransSgnExpr(TSgnExpr(expr))
 		If TLenExpr(expr) Return TransLenExpr(TLenExpr(expr))
 		If TSizeOfExpr(expr) Return TransSizeOfExpr(TSizeOfExpr(expr))
 		Err "TODO : TransBuiltinExpr()"
 	End Method
 	
-	Method TransMinExpr:String(expr:TMinExpr)
-	End Method
-
-	Method TransMaxExpr:String(expr:TMaxExpr)
-	End Method
-
-	Method TransAbsExpr:String(expr:TAbsExpr)
-	End Method
-
 	Method TransAscExpr:String(expr:TAscExpr)
 	End Method
 
 	Method TransChrExpr:String(expr:TChrExpr)
-	End Method
-
-	Method TransSgnExpr:String(expr:TSgnExpr)
 	End Method
 
 	Method TransLenExpr:String(expr:TLenExpr)
@@ -1255,6 +1368,10 @@ End Rem
 			Return "_loopexit_" + id.ToLower() + ";"
 		End If
 	End Method
+	
+	Method TransLabel:String(labelDecl:TLoopLabelDecl)
+		Return labelDecl.munged + ":;"
+	End Method
 
 	'***** Block statements - all very C like! *****
 	
@@ -1282,7 +1399,7 @@ End Rem
 		Return code
 	End Method
 	
-	'returns unreachable status!
+	'returns and resets unreachable status
 	Method EmitBlock:Int( block:TBlockDecl )
 		Local stmtCount:Int
 'DebugStop
@@ -1340,23 +1457,46 @@ End Rem
 			EmitGDBDebug(stmt)
 			
 			If TReturnStmt(stmt) And Not tryStack.IsEmpty() Then
-				processingReturnStatement = True
+				processingReturnStatement = 1
 			End If
 			
 			Local t$=stmt.Trans()
 			
-			processingReturnStatement = False
+			processingReturnStatement = 0
 			
+			If TReturnStmt(stmt) Then
+				Local stackSize:Int = tryStack.Count()
+				Local count:Int
+				
+				If stackSize Then
+					For Local tryStmt:TTryStmt = EachIn tryStack
+						Emit "bbExLeave();"
+						If opt_debug Then Emit "bbOnDebugPopExState();"
+						
+						' in debug we need to roll back scope from first Try in scope down to the function scope
+						If opt_debug And (count = stackSize - 1) And Not block.IsNoDebug() Then
+							Local loopCount:Int = TryDownToBlockScopeCount(BLOCK_FUNCTION)
+							For Local n:Int = 0 Until loopCount
+								Emit "bbOnDebugLeaveScope();"
+							Next
+						End If
+	
+						If tryStmt.finallyStmt Then
+							Local returnLabelDecl:TLoopLabelDecl = New TLoopLabelDecl.Create("return")
+							MungDecl returnLabelDecl
+							EmitFinallyJmp tryStmt.finallyStmt, returnLabelDecl
+							Emit TransLabel(returnLabelDecl)
+						End If
+						
+						count :+ 1
+					Next
+				Else
 			If opt_debug And Not block.IsNoDebug() Then
-				If TReturnStmt(stmt) Then
 					For Local b:TBlockDecl = EachIn localScope
 						Emit "bbOnDebugLeaveScope();"
 					Next
 				End If
 			End If
-
-			If TReturnStmt(stmt) Then
-				EmitTryStack()
 			End If
 			
 			If t Emit t+";"
@@ -1515,6 +1655,7 @@ End Rem
 		End If
 
 		If stmt.loopLabel Then
+			MungDecl stmt.loopLabel
 			Emit TransLoopLabelCont(stmt.loopLabel.realIdent, True)
 		End If
 		
@@ -1557,6 +1698,7 @@ End Rem
 		End If
 
 		If stmt.loopLabel Then
+			MungDecl stmt.loopLabel
 			Emit TransLoopLabelCont(stmt.loopLabel.realIdent, True)
 		End If
 		
@@ -1591,7 +1733,7 @@ End Rem
 			decl = True
 			Emit "{"
 			Emit TransDeclStmt(TDeclStmt(stmt.init), True) + ";"
-			init = TDeclStmt(stmt.init).decl.munged
+			'init = TDeclStmt(stmt.init).decl.munged
 			vdecl = TValDecl(TDeclStmt(stmt.init).decl)
 		Else
 			init=stmt.init.Trans()
@@ -1619,6 +1761,7 @@ End Rem
 		End If
 
 		If stmt.loopLabel Then
+			MungDecl stmt.loopLabel
 			Emit TransLoopLabelCont(stmt.loopLabel.realIdent, True)
 		End If
 		
@@ -1836,4 +1979,7 @@ Type TTryBreakCheck
 
 	Field stmt:TStmt
 	
+	Method ToString:String()
+		Return "TTryBreakCheck"
+	End Method
 End Type

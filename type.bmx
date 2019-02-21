@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2017 Bruce A Henderson
+' Copyright (c) 2013-2019 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -52,7 +52,7 @@ Type TType
 		Return T_MAX_DISTANCE
 	End Method
 	
-	Method Semant:TType(option:Int = False)
+	Method Semant:TType(option:Int = False, callback:TCallback = Null)
 		Return Self
 	End Method
 
@@ -461,7 +461,7 @@ Type TIntType Extends TIntegralType
 		End If
 		
 		If WORD_SIZE = 4 And TLParamType(ty)<>Null Then
-			Return 0
+			Return 1
 		End If
 		
 		If TLongType(ty)<>Null Then
@@ -469,7 +469,7 @@ Type TIntType Extends TIntegralType
 		End If
 
 		If WORD_SIZE = 8 And TLParamType(ty)<>Null Then
-			Return 2
+			Return 3
 		End If
 		
 		If TFloatType(ty)<>Null Then
@@ -527,32 +527,32 @@ Type TUIntType Extends TIntegralType
 			End If
 		End If
 
-		If WORD_SIZE = 4 And (TSizeTType(ty)<>Null Or TWParamType(ty)<>Null) Then
-			Return 0
-		End If
-		
 		If TUIntType(ty)<>Null Then
 			Return 0
 		End If
 
-		If TIntType(ty)<>Null Then
+		If WORD_SIZE = 4 And (TSizeTType(ty)<>Null Or TWParamType(ty)<>Null) Then
 			Return 1
 		End If
 		
-		If WORD_SIZE = 8 And (TSizeTType(ty)<>Null Or TWParamType(ty)<>Null) Then
+		If TIntType(ty)<>Null Then
 			Return 2
 		End If
 		
-		If TULongType(ty)<>Null Then
-			Return 2
+		If WORD_SIZE = 8 And (TSizeTType(ty)<>Null Or TWParamType(ty)<>Null) Then
+			Return 3
 		End If
-
-		If TLongType(ty)<>Null Then
+		
+		If TULongType(ty)<>Null Then
 			Return 3
 		End If
 
-		If TFloatType(ty)<>Null Then
+		If TLongType(ty)<>Null Then
 			Return 4
+		End If
+
+		If TFloatType(ty)<>Null Then
+			Return 5
 		End If
 
 		If TDoubleType(ty)<>Null Then
@@ -615,12 +615,12 @@ Type TSizeTType Extends TIntegralType
 		End If
 
 		If TWParamType(ty)<>Null Then
-			Return 0
+			Return 1
 		End If
 
 		If WORD_SIZE = 4 Then
 			If TUIntType(ty)<>Null Then
-				Return 0
+				Return 1
 			End If
 
 			If TIntType(ty)<>Null Then
@@ -649,7 +649,7 @@ Type TSizeTType Extends TIntegralType
 			
 		Else
 			If TULongType(ty)<>Null Then
-				Return 0
+				Return 1
 			End If
 
 			If TLongType(ty)<>Null Then
@@ -912,7 +912,7 @@ Type TLongType Extends TIntegralType ' BaH Long
 		End If
 		
 		If WORD_SIZE = 8 And TLParamType(ty)<>Null Then
-			Return 0
+			Return 1
 		End If
 
 		If TFloatType(ty)<>Null Then
@@ -974,15 +974,15 @@ Type TULongType Extends TIntegralType
 		End If
 
 		If WORD_SIZE = 8 And (TSizeTType(ty)<>Null Or TWParamType(ty)<>Null) Then
-			Return 0
+			Return 1
 		End If
 		
 		If TLongType(ty)<>Null Then
-			Return 1
+			Return 2
 		End If
 
 		If TFloatType(ty)<>Null Then
-			Return 2
+			Return 3
 		End If
 
 		If TDoubleType(ty)<>Null Then
@@ -1352,7 +1352,7 @@ Type TStringType Extends TType
 		Return cdecl
 	End Method
 	
-	Method Semant:TType(option:Int = 0)
+	Method Semant:TType(option:Int = 0, callback:TCallback = Null)
 		GetClass()
 		Return Self
 	End Method
@@ -1378,9 +1378,10 @@ Type TArrayType Extends TType
 	Field elemType:TType
 	Field dims:Int
 	
-	Method Create:TArrayType( elemType:TType, dims:Int = 1 )
+	Method Create:TArrayType( elemType:TType, dims:Int = 1, flags:Int = 0 )
 		Self.elemType=elemType
 		Self.dims = dims
+		Self._flags = flags
 		Return Self
 	End Method
 	
@@ -1400,9 +1401,9 @@ Type TArrayType Extends TType
 		Return (arrayType And dims = arrayType.dims And ( TVoidType( elemType ) Or (TObjectType(elemType) And elemType.EqualsType( arrayType.elemType ) Or elemType.ExtendsType( arrayType.elemType )))) Or IsPointerType(ty, 0, TType.T_POINTER) <> Null Or (TObjectType( ty ) And TObjectType( ty ).classDecl.ident="Object")
 	End Method
 	
-	Method Semant:TType(option:Int = False)
-		Local ty:TType=elemType.Semant()
-		If ty<>elemType Return New TArrayType.Create( ty, dims )
+	Method Semant:TType(option:Int = False, callback:TCallback = Null)
+		Local ty:TType=elemType.Semant(option, callback)
+		If ty<>elemType Return New TArrayType.Create( ty, dims, _flags )
 		Return Self
 	End Method
 	
@@ -1538,13 +1539,13 @@ Type TIdentType Extends TType
 	'End Method
 	
 	
-	Method Semant:TType(ignoreNotFoundError:Int = 0)
-'If ident="obj" DebugStop
+	Method Semant:TType(ignoreNotFoundError:Int = 0, callback:TCallback = Null)
+'If ident="IPair" DebugStop
 		If Not ident Return TType.nullObjectType
 
 		Local targs:TType[args.Length]
 		For Local i:Int=0 Until args.Length
-			targs[i]=args[i].Semant()
+			targs[i]=args[i].Semant(ignoreNotFoundError, callback)
 		Next
 		
 		Local tyid$,ty:TType
@@ -1571,13 +1572,13 @@ Type TIdentType Extends TType
 			End If
 			
 			If Not ty Then
-				ty=_env.FindType( tyid,targs )
+				ty=_env.FindType( tyid,targs, callback )
 			End If
 
 			' finally scan all modules for it
 			If Not ty Then
 				For Local mdecl:TModuleDecl = EachIn _appInstance.globalImports.Values()
-					ty=mdecl.FindType( tyid,targs )
+					ty=mdecl.FindType( tyid,targs, callback )
 					If ty Exit
 				Next
 			End If
@@ -1606,7 +1607,7 @@ Type TIdentType Extends TType
 			End If
 			
 			If Not ty Then
-				ty=_env.FindType( tyid,targs )
+				ty=_env.FindType( tyid,targs, callback )
 			End If
 			
 			If Not ty Then
@@ -1614,7 +1615,7 @@ Type TIdentType Extends TType
 		
 				' try scope search first
 				tyid=id[..i]
-				ty=_env.FindType( tyid,targs )				
+				ty=_env.FindType( tyid,targs, callback )				
 
 				If Not ty Then
 					' no? now try module search
@@ -1622,7 +1623,7 @@ Type TIdentType Extends TType
 					Local mdecl:TModuleDecl=_env.FindModuleDecl( modid )
 					If Not mdecl Err "Module '"+modid+"' not found"
 					tyid=id[i+1..]
-					ty=mdecl.FindType( tyid,targs )
+					ty=mdecl.FindType( tyid,targs, callback )
 				End If
 			End If
 		EndIf
@@ -1650,8 +1651,8 @@ Type TIdentType Extends TType
 		Return ty
 	End Method
 
-	Method SemantClass:TClassDecl()
-		Local ty:TObjectType=TObjectType( Semant() )
+	Method SemantClass:TClassDecl(callback:TCallback = Null)
+		Local ty:TObjectType=TObjectType( Semant(False, callback) )
 		If Not ty Err "Type is not a class"
 		Return ty.classDecl
 	End Method
@@ -1804,7 +1805,7 @@ Type TFunctionPtrType Extends TType
 		Return ty
 	End Method
 
-	Method Semant:TType(option:Int = False)
+	Method Semant:TType(option:Int = False, callback:TCallback = Null)
 		func.Semant()
 		Return Self
 	End Method
@@ -2009,3 +2010,30 @@ Type TLParamType Extends TParamType
 	End Method
 
 End Type
+
+Type TTemplateArg
+	Field ident:String
+	Field superTy:TType[]
+	
+	Method ExtendsType(ty:TType)
+		If Not superTy Then
+			superTy = New TType[0]
+		End If
+		
+		superTy :+ [ty]
+	End Method
+	
+	Method ToString:String()
+		Local s:String = ident
+		If superTy Then
+			s :+ " Extends "
+			For Local i:Int = 0 Until superTy.length
+				If i Then
+					s:+ " And "
+				End If
+				s :+ superTy[i].ToString()
+			Next
+		End If
+	End Method
+End Type
+

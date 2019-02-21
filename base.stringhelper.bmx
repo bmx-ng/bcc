@@ -1,4 +1,4 @@
-' Copyright (c) 2014-2017 Bruce A Henderson
+' Copyright (c) 2014-2019 Bruce A Henderson
 ' Copyright (c) 2014-2017 Ronny Otto
 '
 ' This software is provided 'as-is', without any express or implied

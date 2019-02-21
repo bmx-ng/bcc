@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2016-2017 Bruce A Henderson
+  Copyright (c) 2016-2019 Bruce A Henderson
  
   Permission is hereby granted, free of charge, to any person obtaining a copy
   of this software and associated documentation files (the "Software"), to deal
@@ -499,6 +499,16 @@ void bmx_stringbuffer_append_utf8string(struct MaxStringBuffer * buf, const char
 
 		buf->count += count;
 	}
+}
+
+void bmx_stringbuffer_append_shorts(struct MaxStringBuffer * buf, short * shorts, int length) {
+	if (length > 0) {
+		bmx_stringbuffer_resize(buf, buf->count + length);
+		BBChar * p = buf->buffer + buf->count;
+		memcpy(p, shorts, length * sizeof(BBChar));
+		
+		buf->count += length;
+	}	
 }
 
 /* ----------------------------------------------------- */

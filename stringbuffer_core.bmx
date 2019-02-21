@@ -1,4 +1,4 @@
-' Copyright (c) 2016-2017 Bruce A Henderson
+' Copyright (c) 2016-2019 Bruce A Henderson
 ' 
 ' Permission is hereby granted, free of charge, to any person obtaining a copy
 ' of this software and associated documentation files (the "Software"), to deal
@@ -137,7 +137,15 @@ Type TStringBuffer
 		bmx_stringbuffer_append_utf8string(buffer, chars)
 		Return Self
 	End Method
-	
+
+	Rem
+	bbdoc: Appends an array of shorts onto the string builder.
+	End Rem
+	Method AppendShorts:TStringBuffer(shorts:Short Ptr, length:Int)
+		bmx_stringbuffer_append_shorts(buffer, shorts, length)
+		Return Self
+	End Method
+
 	Rem
 	bbdoc: Finds first occurance of a sub string.
 	returns: -1 if @subString not found.

@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2017 Bruce A Henderson
+' Copyright (c) 2013-2019 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -25,7 +25,7 @@ SuperStrict
 
 Import "base.configmap.bmx"
 
-Const version:String = "0.88"
+Const version:String = "0.100"
 
 Const BUILDTYPE_APP:Int = 0
 Const BUILDTYPE_MODULE:Int = 1
@@ -61,6 +61,7 @@ Global opt_arch:String
 '    linux
 '    android
 '    raspberrypi
+'    nx
 Global opt_platform:String
 ' framework
 Global opt_framework:String
@@ -77,7 +78,7 @@ Global opt_apptype:Int = APPTYPE_NONE
 ' debug
 Global opt_debug:Int = True
 ' threaded
-Global opt_threaded:Int = False
+Global opt_threaded:Int = True
 ' release
 Global opt_release:Int = False
 ' quiet
@@ -104,6 +105,17 @@ Global opt_warnover:Int = False
 ' musl libc support
 '    
 Global opt_musl:Int = False
+' def
+'    generate .def files for dlls
+Global opt_def:Int = False
+'    don't generate .def files for dlls
+Global opt_nodef:Int = False
+'    generate header for dlls
+Global opt_head:Int = False
+'    don't generate header for dlls
+Global opt_nohead:Int = False
+' makelib
+Global opt_makelib:Int = False
 
 Global opt_filepath:String
 
@@ -199,6 +211,12 @@ Function ParseArgs:String[](args:String[])
 				opt_warnover=True
 			Case "musl"
 				opt_musl=True
+			Case "nodef"
+				opt_nodef=True
+			Case "nohead"
+				opt_nohead=True
+			Case "makelib"
+				opt_makelib=True
 		End Select
 	
 		count:+ 1
@@ -210,6 +228,15 @@ Function ParseArgs:String[](args:String[])
 	
 	If opt_arch = "x64" Or opt_arch = "arm64v8a" Or opt_arch = "arm64" Then
 		WORD_SIZE = 8
+	End If
+
+	If opt_makelib Then
+		If Not opt_nodef Then
+			opt_def = True
+		End If
+		If Not opt_nohead Then
+			opt_head = True
+		End If
 	End If
 
 	Return args[count..]

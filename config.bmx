@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2017 Bruce A Henderson
+' Copyright (c) 2013-2019 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -26,10 +26,11 @@ SuperStrict
 Import BRL.LinkedList
 Import BRL.Map
 Import BRL.FileSystem
+Import Pub.zlib
 
 Import "options.bmx"
 Import "base.stringhelper.bmx"
-
+Import "base64.bmx"
 
 ' debugging help
 Const DEBUG:Int = False
@@ -78,15 +79,13 @@ Function FormatError:String(path:String, line:Int, char:Int)
 	Return "[" + path + ";" + line + ";" + char + "]"
 End Function
 
-Function InternalErr(errorLocation:String = Null)
+Function InternalErr(errorLocation:String)
 	If DEBUGSTOP_ON_ERROR Then
 		DebugStop ' useful for debugging!
 	End If
-	If SHOW_INTERNALERR_LOCATION And errorLocation Then
-		Throw "Internal Error in " + errorLocation + ".~n" + _errInfo + "~n"
-	Else
-		Throw "Internal Error.~n" + _errInfo + "~n"
-	End If
+	Local locationMsg:String
+	If SHOW_INTERNALERR_LOCATION And errorLocation Then locationMsg = " in " + errorLocation
+	Throw "Compile Error: Internal Error" + locationMsg + ".~nPlease report the issue, with an example if possible, to https://github.com/bmx-ng/bcc/issues/new~n" + _errInfo + "~n"
 End Function
 
 Function IsSpace:Int( ch:Int )
@@ -305,13 +304,8 @@ Function MakeKeywords:String()
 	
 	keywords :+ "import brl.classes~n"
 	keywords :+ "Asc%(v$)=~qbrl_blitz_keywords_asc~q~n"
-	keywords :+ "Sgn#(v#)=~qbrl_blitz_keywords_sgn~q~n"
 	keywords :+ "Chr$(v%)=~qbrl_blitz_keywords_chr~q~n"
 	keywords :+ "Len%(v:Object)=~qbrl_blitz_keywords_len~q~n"
-	keywords :+ "Min%(v1%,v2%)=~qbrl_blitz_keywords_min~q~n"
-	keywords :+ "Max%(v1%,v2%)=~qbrl_blitz_keywords_max~q~n"
-	'keywords :+ "SizeOf%(v%)=~qbrl_blitz_keywords_sizeof~q~n"
-	'keywords :+ "Incbin(v$)=~qbrl_blitz_keywords_incbin~q~n"
 	keywords :+ "IncbinPtr@*(v$)=~qbbIncbinPtr~q~n"
 	keywords :+ "IncbinLen%(v$)=~qbbIncbinLen~q~n"
  
@@ -396,9 +390,9 @@ Function FileMung:String(makeApp:Int = False)
 		m :+ "debug"
 	End If
 	
-	If opt_threaded Then
-		m :+ ".mt"
-	End If
+'	If opt_threaded Then
+'		m :+ ".mt"
+'	End If
 	
 	m :+ "." + opt_platform
 	
@@ -410,3 +404,76 @@ End Function
 Function HeaderComment:String()
 	' TODO
 End Function
+
+
+Type TTemplateRecord
+
+	Field start:Int
+	Field file:String
+	Field source:String
+	
+	Method Create:TTemplateRecord(start:Int, file:String, source:String)
+		Self.start = start
+		Self.file = file
+		Self.source = source
+		Return Self
+	End Method
+	
+	Method ToString:String()
+
+		Local s:Byte Ptr = source.ToUTF8String()
+?Not bmxng
+		Local slen:Int = strlen_(s)
+?bmxng
+		Local slen:UInt = strlen_(s)
+?
+
+?Not bmxng		
+		Local dlen:Int = slen + 12
+?bmxng And (win32 Or ptr32)
+		Local dlen:UInt = slen + 12
+?bmxng And ptr64 And Not win32
+		Local dlen:ULong = slen + 12
+?
+		Local data:Byte[dlen]
+		
+		compress2(data, dlen, s, slen, 9)
+		
+		MemFree(s)
+		
+		Local t:String = "{" + start +","+ slen +","+ LangEnquote(file) + ","
+		
+		t :+ LangEnquote(TBase64.Encode(data, Int(dlen), 0, TBase64.DONT_BREAK_LINES))
+
+		Return t + "}"
+
+	End Method
+	
+	Function Load:TTemplateRecord(start:Int, file:String, size:Int, source:String)
+		
+?Not bmxng		
+		Local dlen:Int = size + 1
+?bmxng And (win32 Or ptr32)
+		Local dlen:UInt = size + 1
+?bmxng And ptr64 And Not win32
+		Local dlen:ULong = size + 1
+?
+		Local data:Byte[dlen]
+		
+		Local s:Byte[] = TBase64.Decode(source)
+?Not bmxng
+		uncompress(data, dlen, s, s.length)
+?bmxng
+		uncompress(data, dlen, s, UInt(s.length))
+?	
+		Return New TTemplateRecord.Create(start, file, String.FromUTF8String(data))
+	End Function
+End Type
+
+Type TCallback
+	Method Callback(obj:Object) Abstract
+End Type
+
+Extern
+	Function strlen_:Int(s:Byte Ptr)="strlen"
+End Extern

@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2017 Bruce A Henderson
+' Copyright (c) 2013-2019 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -47,9 +47,9 @@ Type TToker
 		"mod,continue,exit,include,import,module,extern,framework,new,self,super,eachin,true,false," + ..
 		"null,not,extends,abstract,select,case,default,const,local,global,field,method,function,type," + ..
 		"and,or,shl,shr,sar,end,if,then,else,elseif,endif,while,wend,repeat,until,forever,for,to,step," + ..
-		"next,return,alias,rem,endrem,throw,assert,try,catch,nodebug,incbin,endselect,endmethod," + ..
+		"next,return,alias,rem,endrem,throw,assert,try,catch,finally,nodebug,incbin,endselect,endmethod," + ..
 		"endfunction,endtype,endextern,endtry,endwhile,pi,release,defdata,readdata,restoredata,interface," + ..
-		"endinterface,implements,size_t,uint,ulong,struct,endstruct,operator"
+		"endinterface,implements,size_t,uint,ulong,struct,endstruct,operator,where,readonly,export"
 	Global _keywords:TMap
 
 	Field _path$
@@ -63,8 +63,9 @@ Type TToker
 	
 	Field _lookingForEndRem:Int
 	Field _preprocess:Int
+	Field _lineOffset:Int
 	
-	Method Create:TToker( path$,source$, preprocess:Int = False )
+	Method Create:TToker( path$,source$, preprocess:Int = False, lineOffset:Int = 0 )
 		_path=path
 		_line=1
 		_source=source
@@ -73,6 +74,7 @@ Type TToker
 		_tokePos=0
 		_lines = source.split("~n")
 		_preprocess = preprocess
+		_lineOffset = lineOffset
 		If Not _keywords Then
 			initKeywords()
 		End If
@@ -104,6 +106,7 @@ Type TToker
 		_lines=toker._lines
 		_lookingForEndRem=toker._lookingForEndRem
 		_preprocess=toker._preprocess
+		_lineOffset=toker._lineOffset
 		Return Self
 	End Method
 	
@@ -112,7 +115,7 @@ Type TToker
 	End Method
 	
 	Method Line:Int()
-		Return _line
+		Return _line + _lineOffset
 	End Method
 	
 	Method NextToke$()
@@ -397,6 +400,15 @@ Type TToker
 			End If
 		End If
 		Return _lastTSTR
+	End Method
+	
+	Method Join:String(startLine:Int, endLine:Int, s:String)
+		Local sb:TStringBuffer = New TStringBuffer
+		For Local i:Int = startLine - 1 To endLine
+			sb.Append(_lines[i])
+			sb.Append(s)
+		Next
+		Return sb.ToString()
 	End Method
 	
 	Field _lastTSTR:String

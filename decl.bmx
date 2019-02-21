@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2017 Bruce A Henderson
+' Copyright (c) 2013-2019 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -26,9 +26,11 @@ Const DECL_EXTERN:Int=      $010000
 Const DECL_PRIVATE:Int=     $020000
 Const DECL_ABSTRACT:Int=    $040000
 Const DECL_FINAL:Int=       $080000
+Const DECL_READ_ONLY:Int=     $000100
 
 Const DECL_SEMANTED:Int=    $100000
 Const DECL_SEMANTING:Int=   $200000
+Const DECL_CYCLIC:Int=       $8000000
 
 Const DECL_POINTER:Int=     $400000
 
@@ -37,20 +39,37 @@ Const DECL_INITONLY:Int=   $1000000
 
 Const DECL_NODEBUG:Int=    $2000000
 Const DECL_PROTECTED:Int=  $4000000
+Const DECL_EXPORT:Int=       $8000000
 
 Const DECL_API_CDECL:Int=   $00000000
 Const DECL_API_STDCALL:Int= $10000000
-Const DECL_API_DEFAULT:Int= DECL_API_CDECL
+Const DECL_API_DEFAULT:Int=DECL_API_CDECL
+Const DECL_API_FLAGS:Int=   DECL_API_CDECL | DECL_API_STDCALL
 
-Const CLASS_INTERFACE:Int=  $001000
-Const CLASS_THROWABLE:Int=  $002000
-Const CLASS_STRUCT:Int=     $004000
+Const DECL_NESTED:Int=      $20000000
+
+Const CLASS_INTERFACE:Int=    $002000
+Const CLASS_THROWABLE:Int=    $004000
+Const CLASS_STRUCT:Int=       $008000
+Const CLASS_GENERIC:Int=      $001000
 
 Const SCOPE_FUNC:Int = 0
 Const SCOPE_CLASS_LOCAL:Int = 1
 Const SCOPE_CLASS_HEIRARCHY:Int = 2
 Const SCOPE_MODULE:Int = 3
 Const SCOPE_ALL:Int = 4
+
+Const BLOCK_OTHER:Int =     $000
+Const BLOCK_LOOP:Int =      $001
+Const BLOCK_TRY:Int =       $002
+Const BLOCK_CATCH:Int =     $004
+Const BLOCK_FINALLY:Int =   $008
+Const BLOCK_IF:Int =        $010
+Const BLOCK_ELSE:Int =      $020
+Const BLOCK_FUNCTION:Int =  $040
+
+Const BLOCK_TRY_CATCH:Int = BLOCK_TRY | BLOCK_CATCH
+Const BLOCK_IF_ELSE:Int =   BLOCK_IF | BLOCK_ELSE
 
 'Const CALL_CONV_CDECL:Int = 0
 'Const CALL_CONV_STDCALL:Int = 1
@@ -161,6 +180,10 @@ Type TDecl
 		Return Not (IsPrivate() Or IsProtected())
 	End Method
 	
+	Method IsReadOnly:Int()
+		Return (attrs & DECL_READ_ONLY)<>0
+	End Method
+	
 	Method IsAbstract:Int()
 		Return (attrs & DECL_ABSTRACT)<>0
 	End Method
@@ -199,6 +222,20 @@ Type TDecl
 		If scope Return scope.AppScope()
 	End Method
 	
+	' find an owning scope of function, class or module
+	Method ParentScope:TScopeDecl()
+		If scope Then
+			' func scope
+			If TFuncDecl( scope ) Return TFuncDecl( scope )
+			' class scope
+			If TClassDecl( scope ) Return TClassDecl( scope )
+			' module scope
+			If TModuleDecl( scope ) Return TModuleDecl( scope )
+
+			Return scope.ParentScope()
+		End If
+	End Method
+	
 	Method CheckAccess:Int()
 		If IsPrivate() And ModuleScope()<>_env.ModuleScope() Return False
 		Return True
@@ -225,7 +262,12 @@ Type TDecl
 
 		If IsSemanted() Return
 
-		If IsSemanting() Err "Cyclic declaration of '"+ident+"'."
+		If IsSemanting() Then
+			If attrs & DECL_CYCLIC Then
+				Return
+			End If
+			Err "Cyclic declaration of '"+ident+"'."
+		End If
 		
 		If actual<>Self
 			actual.Semant
@@ -252,6 +294,17 @@ Type TDecl
 			If TFuncDecl(Self) And attrs & FUNC_PTR
 				'DebugLog "**** " + ident
 			Else
+			
+				' a nested function/class needs to be scoped to another function, class or module.
+				If attrs & FUNC_NESTED Or attrs & DECL_NESTED Then
+					Local sc:TScopeDecl = ParentScope()
+					
+					' if our scope isn't one of the above, let it be so.
+					If sc <> scope Then
+						scope = Null
+						sc.InsertDecl(Self)
+					End If
+				End If
 
 				scope._semanted.AddLast Self
 				
@@ -263,7 +316,6 @@ Type TDecl
 				EndIf
 				
 				If TModuleDecl( scope )
-'DebugStop
 					' FIXME
 					Local app:TAppDecl = AppScope()
 					If app Then
@@ -303,6 +355,9 @@ Type TDecl
 	End Method
 	
 	Method OnSemant() Abstract
+	
+	Method Clear()
+	End Method
 
 End Type
 
@@ -333,7 +388,7 @@ Type TValDecl Extends TDecl
 	End Method
 	
 	Method OnSemant()
-	
+'DebugStop	
 		If declTy
 
 			Local at:TType = TArrayType(declTy)
@@ -363,7 +418,7 @@ Type TValDecl Extends TDecl
 					End If
 				End If
 			End If
-			
+
 			ty=declTy.Semant()
 
 			If Not deferInit Then
@@ -493,6 +548,9 @@ Type TValDecl Extends TDecl
 		End If
 	End Method
 	
+	Method Clear()
+	End Method
+	
 End Type
 
 Type TConstDecl Extends TValDecl
@@ -516,7 +574,11 @@ Type TConstDecl Extends TValDecl
 	End Method
 
 	Method OnCopy:TDecl(deep:Int = True)
+		If IsSemanted() Then
 		Return New TConstDecl.Create( ident,ty,CopyInit(), attrs )
+		Else
+			Return New TConstDecl.Create( ident, declTy, declInit, attrs)
+		End If
 	End Method
 	
 	Method OnSemant()
@@ -543,9 +605,10 @@ End Type
 Type TLocalDecl Extends TVarDecl
 
 	Field done:Int
-	Field volatile:Int = True
+	Field volatile:Int = False
+	Field declaredInTry:TTryStmtDecl
 
-	Method Create:TLocalDecl( ident$,ty:TType,init:TExpr,attrs:Int=0, generated:Int = False, volatile:Int = True )
+	Method Create:TLocalDecl( ident$,ty:TType,init:TExpr,attrs:Int=0, generated:Int = False, volatile:Int = False )
 		Self.ident=ident
 		Self.declTy=ty
 		Self.declInit=init
@@ -556,15 +619,33 @@ Type TLocalDecl Extends TVarDecl
 	End Method
 	
 	Method OnCopy:TDecl(deep:Int = True)
-		Return New TLocalDecl.Create( ident,ty,CopyInit(),attrs, generated, volatile )
+		Local decl:TLocalDecl = New TLocalDecl.Create( ident,declTy,declInit,attrs &~ DECL_SEMANTED, generated, volatile )
+		decl.scope = scope
+		decl.ty = ty
+		decl.init = init
+		decl.declaredInTry = declaredInTry
+		Return decl
 	End Method
 
 	Method GetDeclPrefix:String()
 		Return "Local "
 	End Method
+
+	Method OnSemant()
+		If declTy Then
+			If TObjectType(declTy) Or TArrayType(declTy) Then
+				volatile = True
+			End If
+		End If
+		Super.OnSemant()
+	End Method
 	
 	Method ToString$()
 		Return GetDeclPrefix() + Super.ToString()
+	End Method
+
+	Method Clear()
+		done = False
 	End Method
 
 End Type
@@ -592,16 +673,31 @@ Type TArgDecl Extends TLocalDecl
 	End Method
 	
 	Method OnCopy:TDecl(deep:Int = True)
-		Local d:TArgDecl = New TArgDecl.Create( ident,ty,CopyInit(),attrs,generated,volatile )
-		d.ty = d.declTy
-		d.init = d.declInit
+		Local d:TArgDecl = New TArgDecl.Create( ident,declTy,declInit,attrs,generated,volatile )
+		d.ty = ty
+		d.init = init
 		Return d
 	End Method
 
 	Method GetDeclPrefix:String()
 		Return ""
 	End Method
-	
+
+	Method OnSemant()
+		Super.OnSemant()
+		If init And Not TConstExpr(init) Then
+			If TCastExpr(init) Then
+				If TConstExpr(TCastExpr(init).expr) Or TNullExpr(TCastExpr(init).expr) Then
+					Return
+				End If
+			End If
+			If TInvokeExpr(init) And TFunctionPtrType(TInvokeExpr(init).exprType) Then
+				Return
+			End If
+			Err "Function defaults must be constant"
+		End If
+	End Method
+
 	Method ToString$()
 		Return Super.ToString()
 	End Method
@@ -624,7 +720,10 @@ Type TGlobalDecl Extends TVarDecl
 	End Method
 
 	Method OnCopy:TDecl(deep:Int = True)
-		Return New TGlobalDecl.Create( ident,ty,CopyInit(),attrs,funcGlobal )
+		Local g:TGlobalDecl = New TGlobalDecl.Create( ident,declTy,declInit,attrs,funcGlobal )
+		g.ty = ty
+		g.init = init
+		Return g
 	End Method
 	
 	Method ToString$()
@@ -644,6 +743,7 @@ Type TGlobalDecl Extends TVarDecl
 	Method CheckAccess:Int()
 		Local cd:TClassDecl = ClassScope()
 		If cd Then
+			If cd.modulescope() = _env.modulescope() Return True
 			If IsPrivate() And cd<>_env.ClassScope() Return False
 			If IsProtected() Then
 				Local ec:TClassDecl = _env.ClassScope()
@@ -671,7 +771,9 @@ Type TFieldDecl Extends TVarDecl
 	End Method
 
 	Method OnCopy:TDecl(deep:Int = True)
-		Local f:TFieldDecl = New TFieldDecl.Create( ident,ty,CopyInit(),attrs )
+		Local f:TFieldDecl = New TFieldDecl.Create( ident,declTy,declInit,attrs )
+		f.ty = ty
+		f.init = init
 		f.metadata = metadata
 		Return f
 	End Method
@@ -689,11 +791,43 @@ Type TFieldDecl Extends TVarDecl
 	End Method
 
 	Method CheckAccess:Int()
-		If IsPrivate() And ClassScope()<>_env.ClassScope() Return False
-		If IsProtected() And ClassScope() Then
+
+		If ModuleScope() = _env.ModuleScope() Then
+			Return True
+		End If
+
+		Local cs:TClassDecl = ClassScope()
+
+		If IsPrivate() And cs Then
 			Local ec:TClassDecl = _env.ClassScope()
-			If Not ec Return False
-			If Not ec.ExtendsClass(ClassScope()) Return False
+
+			While ec
+
+				If cs = ec Then
+					Return True
+		End If
+				
+				ec = ec.scope.ClassScope()
+			Wend
+			
+			If Not ec Then
+				Return False
+			End If
+		End If
+		If IsProtected() And cs Then
+			Local ec:TClassDecl = _env.ClassScope()
+			
+			While ec
+				If ec.ExtendsClass(cs) Then
+		Return True
+				End If
+				
+				ec = ec.scope.ClassScope()
+			Wend
+			
+			If Not ec Then
+				Return False
+			End If
 		End If
 		Return True
 	End Method
@@ -716,6 +850,9 @@ Type TAliasDecl Extends TDecl
 	End Method
 	
 	Method OnSemant()
+	End Method
+	
+	Method Clear()
 	End Method
 	
 End Type
@@ -788,14 +925,14 @@ Type TScopeDecl Extends TDecl
 		Return fdecls
 	End Method
 	
-	Method InsertDecl( decl:TDecl )
+	Method InsertDecl( decl:TDecl, isCopy:Int = False )
 
-		If decl.scope And Not (decl.attrs & DECL_INITONLY) InternalErr "TScopeDecl.InsertDecl"
+		If decl.scope And Not (decl.attrs & DECL_INITONLY) And Not isCopy InternalErr "TScopeDecl.InsertDecl"
 		
 		'Local ident$=decl.ident
 		If Not decl.ident Return
 		
-		If Not decl.scope Then
+		If Not decl.scope Or isCopy Then
 			decl.scope=Self
 		End If
 		_decls.AddLast decl
@@ -887,8 +1024,11 @@ Type TScopeDecl Extends TDecl
 				End If
 				
 				Local found:Int
+				' remove matching functions from decl list.
+				' a match should match exactly. If an arg is a subclass of another
+				' then that is not a match, and we will distance test later..
 				For Local func:TFuncDecl = EachIn declList
-					If func.equalsFunc(fdecl) Then
+					If func.equalsFunc(fdecl, True) Then
 						found = True
 						Exit
 'Else
@@ -909,16 +1049,27 @@ Type TScopeDecl Extends TDecl
 	End Method
 	
 	' returns a list of all matching named decls in scope
-	Method FindDeclList:Object(ident:String, override:Int = False, declList:TFuncDeclList = Null, maxSearchDepth:Int = SCOPE_ALL )
-	
+	Method FindDeclList:Object(ident:String, override:Int = False, declList:TFuncDeclList = Null, maxSearchDepth:Int = SCOPE_ALL, skipMultipleClassScopes:Int = False )
+
 		If Not declList Then
 			declList = New TFuncDeclList
 		End If
 	
 		If Not override And _env<>Self Return GetDeclList( ident, declList, maxSearchDepth )
 		
+		Local hadClassScope:Int
 		Local tscope:TScopeDecl=Self
 		While tscope
+			If TClassDecl(tscope) Then
+			
+				If skipMultipleClassScopes And hadClassScope Then
+					tscope=tscope.scope
+					Continue
+				End If
+			
+				hadClassScope = True
+			End If
+		
 			Local decl:Object=tscope.GetDeclList( ident, declList, maxSearchDepth )
 			'If decl And (Not TFuncDeclList(decl) And declList.IsEmpty()) Return decl
 			If decl Then
@@ -934,7 +1085,7 @@ Type TScopeDecl Extends TDecl
 			End If
 
 			' if scope is an interface, also check implemented/extended interfaces?
-			If TClassDecl(tscope) And TClassDecl(tscope).IsInterface() Then
+			If TClassDecl(tscope) Then'And TClassDecl(tscope).IsInterface() Then
 				If TClassDecl(tscope).implments Then
 					For Local idecl:TScopeDecl = EachIn TClassDecl(tscope).implments
 						Local decl:Object=idecl.GetDeclList( ident, declList, maxSearchDepth )
@@ -1029,7 +1180,7 @@ Type TScopeDecl Extends TDecl
 		Return decl
 	End Method
 
-	Method FindType:TType( ident$,args:TType[] )
+	Method FindType:TType( ident$,args:TType[], callback:TCallback = Null )
 'DebugLog Self.ident + "::FindType::" + ident
 		Local decl:Object=(GetDecl( ident ))
 		If decl Then
@@ -1044,12 +1195,14 @@ Type TScopeDecl Extends TDecl
 			Local cdecl:TClassDecl=TClassDecl( decl )
 			If cdecl
 				cdecl.AssertAccess
-				cdecl=cdecl.GenClassInstance( args )
+				If Not cdecl.instanceof Then
+					cdecl=cdecl.GenClassInstance( args, False, callback, Null )
 				cdecl.Semant
+				End If
 				Return cdecl.objectType
 			EndIf
 		EndIf
-		If scope Return scope.FindType( ident,args )
+		If scope Return scope.FindType( ident,args, callback )
 	End Method
 	
 	Method FindScopeDecl:TScopeDecl( ident$ )
@@ -1496,19 +1649,37 @@ End Rem
 		
 		If scope Return scope.FindLoop( ident )
 	End Method
+
+	Method FindTry:TTryStmtDecl()
+
+		If TTryStmtDecl(Self) Then
+			Return TTryStmtDecl(Self)
+		End If
+
+		If TFuncDecl(scope) Or TModuleDecl(scope)
+			Return Null
+		End If
 	
+		If scope Return scope.FindTry()
+	End Method
+
 	Method OnSemant()
 	End Method
 	
+	Method Clear()
+	End Method
+
 End Type
 
 Type TBlockDecl Extends TScopeDecl
 	Field stmts:TList=New TList
 	Field extra:Object
+	Field blockType:Int
 	
-	Method Create:TBlockDecl( scope:TScopeDecl, generated:Int = False )
-		Self.scope=scope
+	Method Create:TBlockDecl( scope:TScopeDecl, generated:Int = False, blockType:Int = BLOCK_OTHER )
+		Self.scope = scope
 		Self.generated = generated
+		Self.blockType = blockType
 		
 		attrs :| (scope.attrs & DECL_NODEBUG)
 		
@@ -1521,6 +1692,7 @@ Type TBlockDecl Extends TScopeDecl
 	
 	Method OnCopy:TDecl(deep:Int = True)
 		Local t:TBlockDecl=New TBlockDecl
+		t.scope = scope
 		If deep Then
 			For Local stmt:TStmt=EachIn stmts
 				t.AddStmt stmt.Copy( t )
@@ -1528,13 +1700,56 @@ Type TBlockDecl Extends TScopeDecl
 		End If
 		t.extra = extra
 		t.generated = generated
+		t.blockType = blockType
 		Return t
 	End Method
 
 	Method OnSemant()
 		PushEnv Self
+		
+		' any nested functions?
+		For Local fdecl:TFuncDecl = EachIn _decls
+			fdecl.Semant
+		Next
+
+		' any nested classes?
+		For Local cdecl:TClassDecl = EachIn _decls
+			cdecl.Semant
+		Next
+		
 		For Local stmt:TStmt=EachIn stmts
 			stmt.Semant
+			
+			If TReturnStmt(stmt) Then
+				If SurroundingFinallyBlock(Self) Then PushErr stmt.errInfo; Err "Return cannot be used inside a Finally block."
+			Else If TBreakStmt(stmt) Then
+				Local loop:TLoopStmt
+				If TLoopLabelExpr(TBreakStmt(stmt).label) Then
+					loop = TLoopLabelExpr(TBreakStmt(stmt).label).loop
+				Else
+					loop = TLoopStmt(Self.FindLoop())
+				End If
+				Local f:TBlockDecl = SurroundingFinallyBlock(Self)
+				If f And f <> SurroundingFinallyBlock(loop.block) Then PushErr stmt.errInfo; Err "Exit cannot be used to leave a Finally block."
+			Else If TContinueStmt(stmt) Then
+				Local loop:TLoopStmt
+				If TLoopLabelExpr(TContinueStmt(stmt).label) Then
+					loop = TLoopLabelExpr(TContinueStmt(stmt).label).loop
+				Else
+					loop = TLoopStmt(Self.FindLoop())
+				End If
+				Local f:TBlockDecl = SurroundingFinallyBlock(Self)
+				If f And f <> SurroundingFinallyBlock(loop.block) Then PushErr stmt.errInfo; Err "Continue cannot be used to leave a Finally block."
+			End If
+			
+			Function SurroundingFinallyBlock:TBlockDecl(block:TBlockDecl)
+				' get the innermost Finally block surrounding the current statement
+				While block And Not TFuncDecl(block)
+					If block.blockType = BLOCK_FINALLY Then Return block
+					block = TBlockDecl(block.scope)
+				Wend
+				Return Null
+			End Function
 		Next
 		PopEnv
 	End Method
@@ -1545,6 +1760,34 @@ Type TBlockDecl Extends TScopeDecl
 		Return t
 	End Method
 
+	Method Clear()
+		For Local stmt:TStmt=EachIn stmts
+			stmt.Clear
+		Next
+	End Method
+
+	Method ToString:String()
+		Select blockType
+			Case BLOCK_FUNCTION
+				Return Super.ToString()
+			Case BLOCK_OTHER
+				Return "TBlockDecl:Other"
+			Case BLOCK_LOOP
+				Return "TBlockDecl:Loop"
+			Case BLOCK_TRY
+				Return "TBlockDecl:Try"
+			Case BLOCK_CATCH
+				Return "TBlockDecl:Catch"
+			Case BLOCK_FINALLY
+				Return "TBlockDecl:Finally"
+			Case BLOCK_IF
+				Return "TBlockDecl:If"
+			Case BLOCK_ELSE
+				Return "TBlockDecl:Else"
+			Default
+				Return "TBlockDecl:Unknown"
+		End Select
+	End Method
 End Type
 
 Const FUNC_METHOD:Int=   $0001			'mutually exclusive with ctor
@@ -1556,8 +1799,8 @@ Const FUNC_PTR:Int=      $0100
 Const FUNC_INIT:Int =    $0200
 Const FUNC_NESTED:Int =  $0400
 Const FUNC_OPERATOR:Int= $0800
-Const FUNC_FIELD:Int =   $1000
-' important: ^ make sure none of these constants collide with the ones declared at the top of this file
+Const FUNC_FIELD:Int=    $1000
+' ^ beware of collisions between these constants and the ones declared at the top of this file
 
 
 'Fix! A func is NOT a block/scope!
@@ -1580,6 +1823,7 @@ Type TFuncDecl Extends TBlockDecl
 	
 	Field mangled:String
 	Field noMangle:Int
+	Field exported:Int
 	
 	Field equalsBuiltIn:Int = -1
 	
@@ -1592,6 +1836,7 @@ Type TFuncDecl Extends TBlockDecl
 			Self.argDecls = New TArgDecl[0]
 		End If
 		Self.attrs=attrs
+		Self.blockType = BLOCK_FUNCTION
 		Return Self
 	End Method
 	
@@ -1607,6 +1852,7 @@ Type TFuncDecl Extends TBlockDecl
 			Next
 		End If
 		t.retType = retType
+		t.retTypeExpr = retTypeExpr
 		t.scope = scope
 		t.overrides = overrides
 		t.superCtor = superCtor
@@ -1616,6 +1862,8 @@ Type TFuncDecl Extends TBlockDecl
 		t.metadata = metadata
 		t.mangled = mangled
 		t.noMangle = noMangle
+		t.exported = exported
+		t.blockType = blockType
 		Return  t
 	End Method
 
@@ -1701,17 +1949,22 @@ Type TFuncDecl Extends TBlockDecl
 	Method IsProperty:Int()
 		Return (attrs & FUNC_PROPERTY)<>0
 	End Method
-	
+
 	Method IsField:Int()
 		Return (attrs & FUNC_FIELD)<>0
 	End Method
 	
-	Method EqualsArgs:Int( decl:TFuncDecl ) ' careful, this is not commutative!
+	' exactMatch requires args to be equal. If an arg is a subclass, that is not a match.
+	Method EqualsArgs:Int( decl:TFuncDecl, exactMatch:Int = False ) ' careful, this is not commutative!
 		If argDecls.Length<>decl.argDecls.Length Return False
 		For Local i:Int=0 Until argDecls.Length
+			' ensure arg decls have been semanted
+			decl.argDecls[i].Semant()
+			argDecls[i].Semant()
+			
 			' objects can be subclasses as well as the same.
 			If TObjectType(decl.argDecls[i].ty) Then
-				If Not decl.argDecls[i].ty.EqualsType( argDecls[i].ty ) And Not decl.argDecls[i].ty.ExtendsType( argDecls[i].ty ) Return False
+				If Not decl.argDecls[i].ty.EqualsType( argDecls[i].ty ) And (exactMatch Or Not decl.argDecls[i].ty.ExtendsType( argDecls[i].ty )) Return False
 			Else
 				If Not decl.argDecls[i].ty.EqualsType( argDecls[i].ty ) Return False
 			End If
@@ -1719,12 +1972,13 @@ Type TFuncDecl Extends TBlockDecl
 		Return True
 	End Method
 
-	Method EqualsFunc:Int( decl:TFuncDecl ) ' careful, this is not commutative!
+	' exactMatch requires args to be equal. If an arg is a subclass, that is not a match.
+	Method EqualsFunc:Int( decl:TFuncDecl, exactMatch:Int = False) ' careful, this is not commutative!
 		If IsCtor() Then
-			Return EqualsArgs( decl )
+			Return EqualsArgs( decl, exactMatch )
 		Else
 			' matching args?
-			If EqualsArgs( decl ) Then
+			If EqualsArgs( decl, exactMatch ) Then
 				' matching return type?
 				If TObjectType(retType) Or TArrayType(retType) Or TStringType(retType) Then
 					Return retType.EqualsType( decl.retType ) Or retType.ExtendsType( decl.retType )' Or decl.retType.EqualsType( retType )) And EqualsArgs( decl )
@@ -1739,6 +1993,16 @@ Type TFuncDecl Extends TBlockDecl
 	Method OnSemant()
 
 		Local strictVoidToInt:Int = False
+
+		If isCtor() Or isDtor() Then
+			If retTypeExpr And Not TVoidType(retTypeExpr) Then
+				Err ident + "() cannot specify a return type"
+			End If
+			If ClassScope() And ClassScope().IsInterface() Then
+				Err ident + "() cannot be declared in an Interface."
+			End If
+			If IsCtor() retTypeExpr=New TObjectType.Create( TNewDecl(Self).cDecl )
+		End If
 
 		'semant ret type
 		If Not retTypeExpr Then
@@ -1768,7 +2032,6 @@ Type TFuncDecl Extends TBlockDecl
 					End If
 				End If
 			End If
-		
 			retType=retTypeExpr.Semant()
 			
 			' for Strict code, a void return type becomes Int
@@ -1781,7 +2044,7 @@ Type TFuncDecl Extends TBlockDecl
 		If TArrayType( retType ) And Not retType.EqualsType( retType.ActualType() )
 '			Err "Return type cannot be an array of generic objects."
 		EndIf
-		
+
 		'semant args
 		For Local arg:TArgDecl=EachIn argDecls
 			InsertDecl arg
@@ -1796,7 +2059,7 @@ Type TFuncDecl Extends TBlockDecl
 		'check for duplicate decl
 		If ident Then
 			For Local decl:TFuncDecl=EachIn scope.SemantedFuncs( ident )
-				If decl<>Self And EqualsArgs( decl )
+				If decl<>Self And EqualsArgs( decl, True ) And Not decl.IsCTOR()
 					Err "Duplicate declaration "+ToString()
 				EndIf
 				If noMangle Then
@@ -1805,6 +2068,15 @@ Type TFuncDecl Extends TBlockDecl
 							Err "You cannot apply NoMangle to the function, as another function with no arguments exists."
 						Else If decl.NoMangle Then
 							Err "Another function is already declared with NoMangle."
+						End If
+					End If
+				End If
+				If exported Then
+					If decl<>Self Then
+						If decl.argDecls.Length = 0 Then
+							Err "You cannot apply Export to the function, as another function with no arguments exists."
+						Else If decl.exported Then
+							Err "Another function is already declared with Export."
 						End If
 					End If
 				End If
@@ -1869,25 +2141,11 @@ Type TFuncDecl Extends TBlockDecl
 							' check we aren't attempting to assign weaker access modifiers
 							If (IsProtected() And decl.IsPublic()) Or (IsPrivate() And (decl.IsProtected() Or decl.IsPublic())) Then
 							
-								Local p:String
-								If IsProtected() Then
-									p = "Protected"
-								Else
-									p = "Private"
-								End If
+								Err PrivilegeError(Self, decl)
 								
-								Local dp:String
-								If decl.IsPublic() Then
-									dp = "Public"
-								Else
-									dp = "Protected"
-								End If
-							
-								Err ToString() + " clashes with " + decl.ToString() + ". Attempt to assign weaker access privileges ('" + p + "'), was '" + dp + "'."
-							
 							End If
-							
-							If (TObjectType(retType) And TObjectType(decl.retType)) Or (TArrayType(retType) And TArrayType(decl.retType)) Then
+						
+							If (TObjectType(retType) And TObjectType(decl.retType )) Or (TArrayType(retType) And TArrayType(decl.retType)) Then
 								If Not retType.EqualsType( decl.retType ) And retType.ExtendsType( decl.retType ) Then
 									returnTypeSubclassed = True
 								End If
@@ -1956,6 +2214,7 @@ Type TFuncDecl Extends TBlockDecl
 	End Method
 
 	Method CheckAccess:Int()
+		If ModuleScope() = _env.ModuleScope() Return True
 		Local cd:TClassDecl = ClassScope()
 		If cd Then
 			If IsPrivate() And cd<>_env.ClassScope() Return False
@@ -1969,13 +2228,57 @@ Type TFuncDecl Extends TBlockDecl
 		Return Super.CheckAccess()
 	End Method
 
+	Function PrivilegeError:String(decl:TFuncDecl, decl2:TFuncDecl)
+		Local p:String
+		If decl.IsProtected() Then
+			p = "Protected"
+		Else
+			p = "Private"
+		End If
+		
+		Local dp:String
+		If decl2.IsPublic() Then
+			dp = "Public"
+		Else
+			dp = "Protected"
+		End If
+	
+		Return decl.ToString() + " clashes with " + decl2.ToString() + ". Attempt to assign weaker access privileges ('" + p + "'), was '" + dp + "'."
+	End Function
+	
 End Type
 
 Type TNewDecl Extends TFuncDecl
 
 	Field chainedCtor:TNewExpr
+	Field cdecl:TClassDecl
 	
-	
+	Method OnCopy:TDecl(deep:Int = True)
+		Local args:TArgDecl[]=argDecls[..]
+		For Local i:Int=0 Until args.Length
+			args[i]=TArgDecl( args[i].Copy() )
+		Next
+		Local t:TNewDecl = TNewDecl(New TNewDecl.CreateF( ident,retType,args,attrs &~DECL_SEMANTED ))
+		If deep Then
+			For Local stmt:TStmt=EachIn stmts
+				t.AddStmt stmt.Copy(t)
+			Next
+		End If
+		t.retType = retType
+		t.scope = scope
+		t.overrides = overrides
+		t.superCtor = superCtor
+		t.castTo = castTo
+		t.noCastGen = noCastGen
+		t.munged = munged
+		t.metadata = metadata
+		t.mangled = mangled
+		t.noMangle = noMangle
+		t.chainedCtor = chainedCtor
+
+		Return  t
+	End Method
+
 
 End Type
 
@@ -1992,11 +2295,21 @@ Type TNullDecl Extends TClassDecl
 
 End Type
 
+' used to handle recursive generics
+' by setting the superclass as soon as we know it,
+' which allows the semanting of the instance to complete.
+Type TClassDeclCallback Extends TCallback
+	Field decl:TClassDecl
+	Method callback(obj:Object)
+		decl.superClass = TClassDecl(obj)
+	End Method
+End Type
+
 Type TClassDecl Extends TScopeDecl
 
 	Field lastOffset:Int
 
-	Field args:String[]
+	Field args:TTemplateArg[]
 	Field superTy:TIdentType
 	Field impltys:TIdentType[]
 
@@ -2011,10 +2324,11 @@ Type TClassDecl Extends TScopeDecl
 
 	Field objectType:TObjectType '"canned" objectType
 	Field globInit:Int
+	Field templateSource:TTemplateRecord
 
 	'Global nullObjectClass:TClassDecl=New TNullDecl.Create( "{NULL}",Null,Null,Null,DECL_ABSTRACT|DECL_EXTERN )
 	
-	Method Create:TClassDecl( ident$,args:String[],superTy:TIdentType,impls:TIdentType[],attrs:Int )
+	Method Create:TClassDecl( ident$,args:TTemplateArg[],superTy:TIdentType,impls:TIdentType[],attrs:Int )
 		Self.ident=ident
 		Self.args=args
 		Self.superTy=superTy
@@ -2023,7 +2337,6 @@ Type TClassDecl Extends TScopeDecl
 		Self.objectType=New TObjectType.Create( Self )
 		If args
 			instances=New TList
-			instances.AddLast Self
 		EndIf
 		Return Self
 	End Method
@@ -2034,19 +2347,28 @@ Type TClassDecl Extends TScopeDecl
 	
 	Method ToString$()
 		Local t$
+
 		If args Then
 				For Local i:Int=0 Until args.Length
-				If i t:+","
+				If i Then
+					t :+ ","
+				End If
 				t:+args[i].ToString()
 			Next
 		ElseIf instargs
+			For Local i:Int=0 Until instargs.Length
+				If i Then
+					t :+ ","
+		End If
+				t :+ instargs[i].ToString()
+			Next
 		End If
 		If t t="<"+t+">"
 		Return ident+t
 	End Method
 
 	Method ToTypeString:String()
-		Return ident
+		Return ToString()
 	End Method
 Rem
 	Method GenClassInstance:TClassDecl( instArgs:TClassDecl[] )
@@ -2107,7 +2429,7 @@ Rem
 		Return inst
 	End Method
 End Rem
-	Method GenClassInstance:TClassDecl( instArgs:TType[] )
+	Method GenClassInstance:TClassDecl( instArgs:TType[], declImported:Int = False, callback:TCallback = Null, templateDets:TTemplateDets = Null )
 
 		If instanceof InternalErr "TClassDecl.GenClassInstance"
 		
@@ -2119,9 +2441,34 @@ End Rem
 			Next
 		EndIf
 		
+		Local originalInstArgs:TType[] = instArgs
+		
 		'check number of args
-		If args.Length<>instArgs.Length
+		If args.Length<>instArgs.Length Then
+			If Not templateDets Or args.Length > instArgs.Length Then
 			Err "Wrong number of type arguments for class "+ToString()
+			Else
+				' create new instArgs with matched aliases
+				Local newInstArgs:TType[] = New TType[args.length]
+				For Local i:Int = 0 Until args.length
+					Local arg:TTemplateArg = args[i]
+					Local instArg:TType
+					' find match
+					For Local n:Int = 0 Until templateDets.args.length
+						Local templateArg:TTemplateArg = templateDets.args[n]
+						If templateArg.ident.ToLower() = arg.ident.ToLower() Then
+							instArg = instArgs[n]
+							Exit
+						End If
+					Next
+					If Not instArg Then
+						Err "Cannot find argument type '" + arg.ident + "' for class " + ToString()
+					End If
+					newInstArgs[i] = instArg
+				Next
+				
+				instArgs = newInstArgs
+			End If
 		EndIf
 		
 		'look for existing instance
@@ -2136,23 +2483,81 @@ End Rem
 			If equal Return inst
 		Next
 		
-		Local inst:TClassDecl=New TClassDecl.Create( ident,Null,superTy,impltys, attrs )
+		If Not templateDets Then
+			' pass in the original instargs, as an inner-inner type will be able to see all of the originals
+			templateDets = New TTemplateDets.Create(originalInstArgs, args)
+		End If
+
+		Local inst:TClassDecl = TClassDecl(TGenProcessor.processor.ParseGeneric(templateSource, templateDets))
+		inst.ident=ident
+		inst.args=Null
+		inst.instances = Null
+		inst.superTy=superTy
+		inst.impltys=impltys
+		inst.attrs=attrs
 
 		inst.attrs:&~DECL_SEMANTED
+
 		inst.munged=munged
 		inst.errInfo=errInfo
 		inst.scope=scope
 		inst.instanceof=Self
 		inst.instArgs=instArgs
+		inst.templateSource = templateSource
 		instances.AddLast inst
 		
+		inst.declImported = declImported
+
+		If callback Then
+			callback.callback(inst)
+		End If
+
+		PushEnv inst
+		
+		' install aliases
 		For Local i:Int=0 Until args.Length
-			inst.InsertDecl New TAliasDecl.Create( args[i].ToString(),instArgs[i],0 )
+			inst.InsertDecl New TAliasDecl.Create( args[i].ident,instArgs[i],0 )
+		Next
+
+		' process parameter types
+		For Local i:Int=0 Until args.Length
+		
+			Local arg:TTemplateArg = args[i]
+
+			' ensure parameter types are compatible
+			If arg.superTy Then
+
+				'If Not instArgs[i].IsSemanted() Then
+				If TObjectType(instArgs[i]) Then
+					TObjectType(instArgs[i]).classDecl.Semant()
+				End If
+				'End If
+			
+				For Local n:Int = 0 Until arg.superTy.length
+
+					arg.superTy[n] = arg.superTy[n].Semant()
+
+					If Not instArgs[i].EqualsType(arg.superTy[n]) And Not instArgs[i].ExtendsType(arg.superTy[n]) Then
+						Err "Type parameter '" + instArgs[i].ToString() + "' is not within its bound; should extend '" + arg.superTy[n].ToString() + "'"
+					End If
+		Next
+			End If
+		
 		Next
 		
-		For Local decl:TDecl=EachIn _decls
-			inst.InsertDecl decl.Copy()
-		Next
+		PopEnv
+
+'		For Local decl:TDecl=EachIn _decls
+'			If TClassDecl(decl) Then
+'				inst.InsertDecl TClassDecl(decl).GenClassInstance(instArgs, declImported), True
+'			Else
+'				inst.InsertDecl decl.Copy(), True
+'			End If
+'		Next
+
+		If Not declImported Then
+			inst.scope = _env.ModuleScope()
+		End If
 
 		Return inst
 	End Method
@@ -2293,14 +2698,15 @@ End Rem
 		If superClass And includeSuper Then
 			funcs = superClass.GetAllFuncDecls(funcs)
 		Else If includeImplicitConstructors Then
-			' find all parameterized constructors from base class that havent been explicitly
+			' find all (parameterized) constructors from base class that haven't been explicitly
 			' overridden and add a synthetic override for each of them to the collection of decls
 			#AddImplicitConstructors
 			For Local constrDecl:TFuncDecl = EachIn TFuncDeclList(FindDeclList("new"))
+				' if constructor is already in funcs, skip it
 				For Local f:TFuncDecl = EachIn funcs
 					If constrDecl = f Then Continue AddImplicitConstructors
 				Next
-				' not yet in array -> add
+				' otherwise, add a copy of it
 				Local constrDeclImplicitCopy:TFuncDecl = TFuncDecl(constrDecl.Copy(False))
 				constrDeclImplicitCopy.attrs :& ~(DECL_ABSTRACT | DECL_FINAL)
 				constrDeclImplicitCopy.metadata = New TMetaData
@@ -2394,6 +2800,53 @@ End Rem
 		
 		Return funcs
 	End Method
+
+	Method GetOriginalFuncDecl:TFuncDecl(fdecl:TFuncDecl)
+		If Not TClassDecl(Self) Then
+			Return fdecl
+		End If
+	
+		If superClass Then
+			Local decl:TFuncDecl = superClass.GetOriginalFuncDecl(fdecl)
+			If decl <> fdecl Then
+				Return decl
+			End If
+		End If
+		
+		For Local func:TFuncDecl = EachIn _decls
+		
+			If func.IdentLower() = fdecl.IdentLower() And func.EqualsArgs(fdecl) Then
+				Return func
+			End If
+		
+		Next
+		
+		Return fdecl
+	End Method
+
+	Method GetLatestFuncDecl:TFuncDecl(fdecl:TFuncDecl)
+		If Not TClassDecl(Self) Then
+			Return fdecl
+		End If
+		
+		For Local func:TFuncDecl = EachIn _decls
+		
+			If func.IdentLower() = fdecl.IdentLower() And func.EqualsArgs(fdecl) Then
+				Return func
+			End If
+		
+		Next
+		
+		If superClass Then
+			Local decl:TFuncDecl = superClass.GetLatestFuncDecl(fdecl)
+			If decl <> fdecl Then
+				Return decl
+			End If
+		End If
+		
+
+		Return fdecl
+	End Method
 	
 	Method ExtendsClass:Int( cdecl:TClassDecl )
 		'If Self=nullObjectClass Return True
@@ -2418,6 +2871,10 @@ End Rem
 	
 	Method OnSemant()
 
+		If args Then
+			Return
+		End If
+
 		PushEnv Self
 
 		'If Not IsTemplateInst()
@@ -2429,20 +2886,29 @@ End Rem
 
 		'Semant superclass		
 		If superTy
-			'superClass=superTy.FindClass()
-			superClass=superTy.SemantClass()
+			Local cb:TClassDeclCallback = New TClassDeclCallback
+			cb.decl = Self
+
+			attrs :| DECL_CYCLIC
+			superClass=superTy.SemantClass(cb)
+			If superClass.attrs & DECL_CYCLIC Then
+				Err "Cyclic type dependency"
+			End If
+			attrs :~ DECL_CYCLIC
 			If superClass.IsInterface() Then
 				If Not IsExtern() Or Not superClass.IsExtern() Err superClass.ToString()+" is an interface, not a class."
 				If (IsExtern() And Not superClass.IsExtern()) Or (superClass.IsExtern() And Not IsExtern()) Err "Extern and non extern types cannot be mixed."
 			End If
 			If superClass.IsFinal() Err "Final types cannot be extended."
 		EndIf
-		
+
 		'Semant implemented interfaces
 		Local impls:TClassDecl[]=New TClassDecl[impltys.Length]
 		Local implsall:TStack=New TStack
 		For Local i:Int=0 Until impltys.Length
+			attrs :| DECL_CYCLIC
 			Local cdecl:TClassDecl=impltys[i].SemantClass()
+			attrs :~ DECL_CYCLIC
 			If Not cdecl.IsInterface()
 				Err cdecl.ToString()+" is a type, not an interface."
 			EndIf
@@ -2488,17 +2954,6 @@ End Rem
 		'	Return
 		'EndIf
 		
-		'Are we abstract?
-		If Not IsAbstract()
-			For Local decl:TDecl=EachIn _decls
-				Local fdecl:TFuncDecl=TFuncDecl( decl )
-				If fdecl And fdecl.IsAbstract()
-					attrs:|DECL_ABSTRACT
-					Exit
-				EndIf
-			Next
-		EndIf
-		
 		If Not lastOffset And superClass Then
 			lastOffset = superClass.LastOffset
 		End If
@@ -2529,7 +2984,14 @@ End Rem
 			'EndIf
 		EndIf
 
+		For Local decl:TDecl=EachIn _decls
+			If TClassDecl(decl) Then
+				TClassDecl(decl).Semant
+			End If
+		Next
+
 		'NOTE: do this AFTER super semant so UpdateAttrs order is cool.
+
 		If AppScope() Then
 			AppScope().semantedClasses.AddLast Self
 		End If
@@ -2539,6 +3001,9 @@ End Rem
 '		If IsSemanted() Return
 		
 '		Super.Semant()
+		If args Then
+			Return
+		End If
 		
 		For Local decl:TConstDecl = EachIn Decls()
 			decl.Semant()
@@ -2554,6 +3019,11 @@ End Rem
 		Next
 
 		For Local decl:TFieldDecl = EachIn Decls()
+			decl.Semant()
+		Next
+
+		' nested classes
+		For Local decl:TClassDecl = EachIn Decls()
 			decl.Semant()
 		Next
 
@@ -2625,46 +3095,24 @@ End Rem
 		PushErr errInfo
 		
 		If Not IsInterface()
-			'
-			'check for duplicate fields! - BlitzMax supports fields with the same name in subclasses..
-			'
-			'For Local decl:TDecl=EachIn Semanted()
-			'	Local fdecl:TFieldDecl=TFieldDecl( decl )
-			'	If Not fdecl Continue
-			'	Local cdecl:TClassDecl=superClass
-			'	While cdecl
-			'		For Local decl:TDecl=EachIn cdecl.Semanted()
-			'			If decl.ident=fdecl.ident Err "Field '"+fdecl.ident+"' in class "+ToString()+" overrides existing declaration in class "+cdecl.ToString()
-			'		Next
-			'		cdecl=cdecl.superClass
-			'	Wend
-			'Next
-			'
-			'Check we implement all abstract methods!
-			'
+
+			' BlitzMax types are promoted to Abstract if they have an abstract method
+			If Not IsAbstract()
+				For Local fdecl:TFuncDecl = EachIn GetAllFuncDecls()
+					If fdecl.IsMethod() And fdecl.IsAbstract()
+						attrs:|DECL_ABSTRACT
+					End If
+				Next
+			End If
+
+			' Check we implement all abstract methods!
 			If IsInstanced()
-				Local cdecl:TClassDecl=Self
-				Local impls:TList=New TList'<TFuncDecl>
-				While cdecl
-					For Local decl:TFuncDecl=EachIn cdecl.SemantedMethods()
-						If decl.IsAbstract()
-							Local found:Int
-							For Local decl2:TFuncDecl=EachIn impls
-								If decl.IdentLower() = decl2.IdentLower() And decl2.EqualsFunc( decl )
-									found=True
-									Exit
-								EndIf
+				For Local fdecl:TFuncDecl = EachIn GetAllFuncDecls()
+					If fdecl.IsAbstract() Then
+						Err "Can't create instance of type "+ToString()+" due to abstract "+fdecl.ToString()+"."
+					End If
 							Next
-							If Not found
-								Err "Can't create instance of type "+ToString()+" due to abstract method "+decl.ToString()+"."
 							EndIf
-						Else
-							impls.AddLast decl
-						EndIf
-					Next
-					cdecl=cdecl.superClass
-				Wend
-			EndIf
 			'
 			'Check we implement all interface methods!
 			'
@@ -2681,14 +3129,33 @@ End Rem
 					For Local decl:TFuncDecl=EachIn iface.SemantedMethods()
 						Local found:Int
 
+						Local voidReturnTypeFail:Int
 						Local cdecl:TClassDecl=Self
 						
 						While cdecl And Not found
 							For Local decl2:TFuncDecl=EachIn cdecl.SemantedMethods( decl.ident )
 								' equals (or extends - for object types)
 								If decl2.EqualsFunc( decl )
+									If Not decl2.IsPublic() Then
+										' error on function decl
+										PushErr decl2.errInfo
+										Err TFuncDecl.PrivilegeError(decl2, decl)
+									End If
 									found=True
 									Exit
+								Else
+									If decl2.EqualsArgs( decl, False ) Then
+										If TVoidType(decl.retType) And TIntType(decl2.retType) Then
+											' if we are only strict, we may fail on type mismatch
+											If Not ModuleScope().IsSuperStrict() Then
+												' we have the option of upgrading our return type to match superstrict parent
+												If Not opt_strictupgrade Then
+													voidReturnTypeFail = True
+												End If
+											End If
+										End If
+
+									End If
 								EndIf
 							Next
 						
@@ -2696,7 +3163,11 @@ End Rem
 						Wend
 
 						If Not found
-							Err decl.ToString() + " must be implemented by type " + ToString()
+							Local errorDetails:String = decl.ToString() + " must be implemented by type " + ToString()
+							If voidReturnTypeFail Then
+								errorDetails :+ " You may have Strict type overriding SuperStrict type. "
+							End If
+							Err errorDetails
 						EndIf
 					Next
 				Next
@@ -2716,13 +3187,12 @@ End Rem
 	
 	Method CheckInterface(cdecl:TClassDecl, impls:TList)
 		While cdecl
-		
 			For Local decl:TFuncDecl=EachIn cdecl.SemantedMethods()
 				Local found:Int
 				For Local decl2:TFuncDecl=EachIn impls
 					If decl.IdentLower() = decl2.IdentLower()
-						If Not decl2.EqualsFunc( decl )
-							Err "Cannot mix incompatible method signatures. " + decl2.ToString() + " vs " + decl.ToString() + "."
+						If decl2.argDecls.Length = decl.argDecls.Length And Not decl2.EqualsFunc( decl )
+						'	Err "Cannot mix incompatible method signatures. " + decl2.ToString() + " vs " + decl.ToString() + "."
 						Else
 							found = True
 						End If
@@ -2767,6 +3237,22 @@ End Rem
 		decl.offset = lastOffset
 		
 		lastOffset :+ modifier
+	End Method
+	
+	Method ImplementsInterface:Int(ident:String)
+		ident = ident.ToLower()
+		For Local iface:TClassDecl = EachIn implmentsAll
+			If iface.IdentLower() = ident Then
+				Return True
+			End If
+		Next
+		
+		' check hierarchy
+		If superClass Then
+			Return superClass.ImplementsInterface(ident)
+		End If
+		
+		Return False
 	End Method
 	
 	' returns a map of all interfaces implemented in this hierarchy
@@ -2821,7 +3307,7 @@ End Rem
 	
 End Type
 
-Type TLoopLabelDecl Extends TDecl
+Type TLoopLabelDecl Extends TDecl ' also used internally for Try constructs
 
 	Field realIdent:String
 
@@ -2902,6 +3388,14 @@ Type TDefDataDecl Extends TDecl
 	
 End Type
 
+Type TTryStmtDecl Extends TBlockDecl
+	Field tryStmt:TTryStmt
+	
+	Method ToString:String()
+		Return "TTryStmtDecl"
+	End Method
+End Type
+
 Const MODULE_STRICT:Int=1
 Const MODULE_SUPERSTRICT:Int=2
 Const MODULE_ACTUALMOD:Int=4
@@ -2951,7 +3445,7 @@ Type TModuleDecl Extends TScopeDecl
 		Self.filepath=filepath
 		Self.attrs=attrs
 
-		If ident.Find(".") <> -1 Then
+		If ident.Find(".") <> -1 And ident.find("/") = -1 And ident.find("\") = -1 Then
 			Local m:String = ident[..ident.Find(".")]
 			Local ns:TNamespaceDecl = TNamespaceDecl(_appInstance.GetDecl(m.ToLower()))
 			If Not ns Then
@@ -3011,7 +3505,7 @@ Type TModuleDecl Extends TScopeDecl
 		
 			For Local mdecl:TModuleDecl = EachIn _getDeclTreeCache
 
-				If ident = mdecl.ident
+				If ident = mdecl.ident And mdecl <> Self
 					_getDeclCache.Insert(ident, mdecl)
 					Return mdecl
 				End If
@@ -3168,7 +3662,16 @@ Type TModuleDecl Extends TScopeDecl
 		Next
 
 		For Local cdecl:TClassDecl=EachIn _decls
+			If cdecl.args Then
+				For Local inst:TClassDecl = EachIn cdecl.instances
+					For Local idecl:TDecl = EachIn inst.Decls()
+						If TAliasDecl( idecl ) Continue
+						idecl.Semant()
+					Next
+				Next
+			Else
 			cdecl.Semant
+			End If
 		Next
 
 		For Local fdecl:TFuncDecl=EachIn _decls
@@ -3205,6 +3708,8 @@ Type TAppDecl Extends TScopeDecl
 	
 	Field dataDefs:TList = New TList
 	Field scopeDefs:TMap = New TMap
+	
+	Field exportDefs:TList = New TList
 	
 	Method GetPathPrefix:String()
 		If opt_buildtype = BUILDTYPE_MODULE Then
@@ -3374,4 +3879,26 @@ Type TStringConst
 	Field id:String
 	Field count:Int
 
+End Type
+
+Type TTemplateDets
+
+	Field instArgs:TType[]
+	Field args:TTemplateArg[]
+
+	Method Create:TTemplateDets(instArgs:TType[], args:TTemplateArg[])
+		Self.instArgs = instArgs
+		Self.args = args
+		Return Self
+	End Method
+
+End Type
+
+Type TGenProcessor Abstract
+
+	Global processor:TGenProcessor
+
+	Method ParseGeneric:Object(templ:TTemplateRecord, dets:TTemplateDets)
+	End Method
+	
 End Type

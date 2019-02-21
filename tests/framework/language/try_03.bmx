@@ -1,4 +1,4 @@
-' Tests whether exceptions are caught correctly in simple Try-Catch constructs.
+' Tests whether exceptions are caught and Finally blocks are executed correctly in simple Try-Catch-Finally constructs.
 
 SuperStrict
 Framework BRL.StandardIO
@@ -9,6 +9,8 @@ Try
 	Print "try"
 Catch e:String
 	Print "catch " + e
+Finally
+	Print "finally"
 End Try
 
 
@@ -18,6 +20,8 @@ Try
 	Throw "ex"
 Catch e:String
 	Print "catch " + e
+Finally
+	Print "finally"
 End Try
 
 
@@ -26,8 +30,8 @@ Try
 	Try
 		Print "try"
 		Throw "ex"
-	Catch e:String
-		Print "catch " + e
+	Finally
+		Print "finally"
 	End Try
 Catch e:String
 	Print "catch2 " + e
@@ -41,6 +45,23 @@ Try
 		Throw "ex"
 	Catch e:TStream
 		Print "this should not happen"
+	Finally
+		Print "finally"
+	End Try
+Catch e:String
+	Print "catch2 " + e
+End Try
+
+Print; Print 5
+Try
+	Try
+		Print "try"
+		Throw "ex"
+	Catch e:String
+		Print "catch " + e
+		Throw "ex2"
+	Finally
+		Print "finally"
 	End Try
 Catch e:String
 	Print "catch2 " + e

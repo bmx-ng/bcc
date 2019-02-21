@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2017 Bruce A Henderson
+' Copyright (c) 2013-2019 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -47,6 +47,8 @@ If opt_buildtype = BUILDTYPE_MODULE Then
 	End If
 End If
 
+TGenProcessor.processor = New TParser
+
 Local app:TAppDecl 
 Local trans:TCTranslator 
 Try
@@ -81,7 +83,7 @@ SaveInterface(opt_filepath, trans, mung)
 SaveHeader(opt_filepath, trans, mung)
 SaveSource(opt_filepath, trans, mung)
 SaveIncBinHeader(opt_filepath, trans, FileMung(False), app)
-
+SaveDef(opt_filepath, trans, mung, app)
 
 Function SaveInterface(file:String, trans:TCTranslator, mung:String)
 
@@ -154,9 +156,23 @@ End Function
 Function SaveIncBinHeader(file:String, trans:TCTranslator, mung:String, app:TAppDecl)
 
 	If app.genIncBinHeader Then
-		Local path:String = OutputFilePath(file, mung, "incbin.h")
+		Local path:String = OutputFilePath(file, mung, "incbin.c")
 
 		SaveText(trans.JoinLines("incbin"), path)
 	End If
 
+End Function
+
+Function SaveDef(file:String, trans:TCTranslator, mung:String, app:TAppDecl)
+
+	If opt_def And opt_apptype And opt_platform = "win32" Then
+		If opt_verbose Then
+			Print "Generating def..."
+		End If
+	
+		Local path:String = ExtractDir(opt_filepath) + "/" + StripExt(StripDir(opt_filepath)) + ".def"
+	
+		SaveText(trans.JoinLines("def"), path)
+	End If
+	
 End Function
