@@ -456,7 +456,13 @@ Type TCTranslator Extends TTranslator
 				End If
 			End If
 			If TFunctionPtrType( ty) Return "&brl_blitz_NullFunctionError" ' todo ??
-			If TEnumType( ty ) Return TEnumType( ty ).decl.values[0].Value()
+			If TEnumType( ty ) Then
+				If TEnumType( ty ).decl.isFlags Then
+					Return "0"
+				Else
+					Return TEnumType( ty ).decl.values[0].Value()
+				End If
+			End If
 		EndIf
 		InternalErr "TCTranslator.TransValue"
 	End Method
@@ -1103,27 +1109,43 @@ t:+"NULLNULLNULL"
 						End If
 					End If
 				Else If TCastExpr(lhs) Then
-					' create a local variable of the inner invocation
-					Local lvar:String = CreateLocal(lhs, False, False)
-					Local lvarInit:String = Bra(lvar + " = " + lhs.Trans())
 
-					Local cdecl:TClassDecl = TObjectType(TCastExpr(lhs).ty).classDecl
-					Local obj:String = Bra(TransObject(cdecl))
-					If decl.attrs & FUNC_PTR Then
-						Return "(" + obj + TransSubExpr( lhs ) + ")->" + decl.munged+TransArgs( args,decl, Null)
-					Else
-						' Null test
-						If opt_debug Then
-							lvarInit = TransDebugNullObjectError(lvarInit, cdecl)
-						End If
+					Local ty:TType = TCastExpr(lhs).ty
 
-						If cdecl.IsInterface() And Not equalsBuiltInFunc(cdecl, decl) Then
-							Local ifc:String = Bra("(struct " + cdecl.munged + "_methods*)" + Bra("bbObjectInterface(" + obj + lvarInit + ", " + "&" + cdecl.munged + "_ifc)"))
-							Return ifc + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, lvar )
+					If TObjectType(ty) Then
+						' create a local variable of the inner invocation
+						Local lvar:String = CreateLocal(lhs, False, False)
+						Local lvarInit:String = Bra(lvar + " = " + lhs.Trans())
+
+						Local cdecl:TClassDecl = TObjectType(ty).classDecl
+						Local obj:String = Bra(TransObject(cdecl))
+						If decl.attrs & FUNC_PTR Then
+							Return "(" + obj + TransSubExpr( lhs ) + ")->" + decl.munged+TransArgs( args,decl, Null)
 						Else
-							Local class:String = Bra("(" + obj + lvarInit + ")->clas" + tSuper)
-							Return class + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, lvar )
+							' Null test
+							If opt_debug Then
+								lvarInit = TransDebugNullObjectError(lvarInit, cdecl)
+							End If
+	
+							If cdecl.IsInterface() And Not equalsBuiltInFunc(cdecl, decl) Then
+								Local ifc:String = Bra("(struct " + cdecl.munged + "_methods*)" + Bra("bbObjectInterface(" + obj + lvarInit + ", " + "&" + cdecl.munged + "_ifc)"))
+								Return ifc + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, lvar )
+							Else
+								Local class:String = Bra("(" + obj + lvarInit + ")->clas" + tSuper)
+								Return class + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, lvar )
+							End If
 						End If
+					Else If TEnumType(ty) Then
+
+						If TEnumDecl(decl.scope) Then
+							' since we already have the ordinal, we can simply output that
+							If decl.ident = "Ordinal" Then
+								Return Bra(TransSubExpr( lhs ))
+							Else
+								Return decl.munged + Bra(TransSubExpr( lhs ))
+							End If
+						End If
+
 					End If
 
 				Else If TMemberVarExpr(lhs) Then
@@ -1296,6 +1318,14 @@ t:+"NULLNULLNULL"
 							End If
 						End If
 					End If
+				Else If TEnumType(lhs.exprType) Then
+
+					If decl.ident = "Ordinal" Then
+						Return Bra(TransSubExpr( lhs ))
+					Else
+						Return decl.munged + Bra(TransSubExpr( lhs ))
+					End If
+
 				Else
 					InternalErr "TCTranslator.TransFunc"
 				End If
@@ -5952,6 +5982,11 @@ End If
 			Next
 		Next
 
+		' initialise enums
+		For Local decl:TEnumDecl = EachIn app.Semanted()
+			Emit decl.munged + "_BBEnum_impl = &" + decl.munged + "_BBEnum;"
+		Next
+
 		' register types
 		For Local decl:TDecl=EachIn app.Semanted()
 
@@ -5972,7 +6007,7 @@ End If
 			EndIf
 			Local edecl:TEnumDecl = TEnumDecl( decl )
 			If edecl Then
-				Emit "bbObjectRegisterEnum(&" + edecl.munged + "_scope);"
+				Emit "bbEnumRegister(" + decl.munged + "_BBEnum_impl, &" + edecl.munged + "_scope);"
 			End If
 		Next
 		'
@@ -5981,11 +6016,6 @@ End If
 		If Not app.dataDefs.IsEmpty() Then
 			Emit "_defDataOffset = &_defData;"
 		End If
-
-		' initialise enums
-		For Local decl:TEnumDecl = EachIn app.Semanted()
-			Emit decl.munged + "_BBEnum_impl = &" + decl.munged + "_BBEnum;"
-		Next
 
 		' initialise globals
 		For Local decl:TGlobalDecl=EachIn app.semantedGlobals

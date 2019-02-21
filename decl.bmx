@@ -3552,11 +3552,21 @@ Type TEnumValueDecl Extends TDecl
 					If parent.isFlags Then
 						If val = 0 Then
 							val = 1 
-						Else If (val & (val - 1)) = 0 Then ' power of 2 ?
-							val :Shl 1
 						Else
+							If (val & (val - 1)) = 0 Then
+								val :+ 1
+							End If
 							' find next power of 2
-							val = 2 ^ Ceil(Log(val)/Log(2))
+
+							Local res:Long
+							bmx_enum_next_power(Asc(TypeCode(parent.ty)), val, res)
+
+							If Not res Then
+								Err "Flags out of bounds at '" + ident + "'."
+							End If
+							
+							val = res
+							
 						End If
 					Else
 						val :+ 1
@@ -3577,6 +3587,16 @@ Type TEnumValueDecl Extends TDecl
 	
 	Method Value:String()
 		Return TConstExpr(expr).value
+	End Method
+
+	Method TypeCode:String(ty:TType)
+		If TByteType( ty ) Return "b"
+		If TShortType( ty ) Return "s"
+		If TIntType( ty ) Return "i"
+		If TUIntType( ty ) Return "u"
+		If TLongType( ty ) Return "l"
+		If TULongType( ty ) Return "y"
+		If TSizeTType( ty ) Return "z"
 	End Method
 	
 	Method ToString:String()
