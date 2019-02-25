@@ -2258,7 +2258,13 @@ Type TNewDecl Extends TFuncDecl
 		For Local i:Int=0 Until args.Length
 			args[i]=TArgDecl( args[i].Copy() )
 		Next
-		Local t:TNewDecl = TNewDecl(New TNewDecl.CreateF( ident,retType,args,attrs &~DECL_SEMANTED ))
+		Local retTypeCopy:TType
+		If IsSemanted() Then
+			retTypeCopy = Null
+		Else
+			retTypeCopy = retType
+		End If
+		Local t:TNewDecl = TNewDecl(New TNewDecl.CreateF( ident,retTypeCopy,args,attrs &~DECL_SEMANTED ))
 		If deep Then
 			For Local stmt:TStmt=EachIn stmts
 				t.AddStmt stmt.Copy(t)
