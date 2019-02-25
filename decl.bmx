@@ -1483,10 +1483,15 @@ End Rem
 	
 					If i<argExprs.Length And argExprs[i]
 					
-						Local arg:TExpr = argExprs[i]
+						' ensure arg is semanted
+						Local arg:TExpr = argExprs[i].Semant()
 					
 						Local declTy:TType=argDecls[i].ty
 						Local exprTy:TType=arg.exprType
+						
+						If Not exprTy Then
+							InternalErr "TScopeDecl.FindFuncDecl"
+						End If
 						
 						Local widensTest:Int = True
 						
