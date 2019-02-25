@@ -2556,7 +2556,13 @@ Type TIdentExpr Extends TExpr
 				static = expr.static
 				scope=expr.exprType.GetClass()
 				If Not scope Then
-					Err "Expression has no scope"
+					Local e:String = "Member '" + ident + "' Not found in "
+					If expr.exprType Then
+						e :+ "type '" + expr.exprType.ToString() + "'"
+					Else
+						e :+ "'" + expr.ToString() + "'"
+					End If
+					Err e
 				End If
 			End If
 			fixedScope = True
