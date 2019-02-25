@@ -526,7 +526,7 @@ Type TParser Extends TGenProcessor
 				If _tokeType = TOKE_KEYWORD Then
 					kw = " keyword"
 				End If
-				Err "Syntax error - expecting identifier, but found" + kw + " '" + _toke + "'"
+				Err "Syntax error - expecting identifier, but found" + kw + " '" + EscapeLines(_toke) + "'"
 			End If
 		End Select
 		Local id$=_toke
