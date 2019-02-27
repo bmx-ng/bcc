@@ -3960,23 +3960,25 @@ End Rem
 	
 			EmitClassDeclNewList(classDecl)
 			
-			' process nested functions for delete
-			decl = classDecl.FindFuncDecl("delete",,,,,,SCOPE_CLASS_HEIRARCHY)
-			If decl Then
-				decl.Semant
-				' emit nested protos
-				For Local fdecl:TFuncDecl = EachIn decl._decls
-					EmitFuncDecl(fdecl, True, False)
-				Next
-				
-				' emit nested bodies
-				For Local fdecl:TFuncDecl = EachIn decl._decls
-					EmitFuncDecl(fdecl, False, False)
-				Next
-			End If
-	
-			If classHierarchyHasFunction(classDecl, "Delete") Then
-				EmitClassDeclDelete(classDecl)
+			If Not (classDecl.attrs & CLASS_STRUCT) Then
+				' process nested functions for delete
+				decl = classDecl.FindFuncDecl("delete",,,,,,SCOPE_CLASS_HEIRARCHY)
+				If decl Then
+					decl.Semant
+					' emit nested protos
+					For Local fdecl:TFuncDecl = EachIn decl._decls
+						EmitFuncDecl(fdecl, True, False)
+					Next
+					
+					' emit nested bodies
+					For Local fdecl:TFuncDecl = EachIn decl._decls
+						EmitFuncDecl(fdecl, False, False)
+					Next
+				End If
+		
+				If classHierarchyHasFunction(classDecl, "Delete") Then
+					EmitClassDeclDelete(classDecl)
+				End If
 			End If
 	
 			Rem
@@ -4304,7 +4306,10 @@ End Rem
 	
 	Method EmitClassDeclNew( classDecl:TClassDecl, fdecl:TFuncDecl )
 		Local classid$=classDecl.munged
-		Local superid$=classDecl.superClass.actual.munged
+		Local superid$
+		If classDecl.superClass Then
+			superid = classDecl.superClass.actual.munged
+		End If
 
 		Local t:String = "void _" 
 		
@@ -4447,7 +4452,6 @@ End Rem
 
 	Method EmitClassDeclNewList( classDecl:TClassDecl )
 		Local classid$=classDecl.munged
-		Local superid$=classDecl.superClass.actual.munged
 
 		Local newDecls:TFuncDeclList = TFuncDeclList(classdecl.FindDeclList("new", True,,,True))
 		

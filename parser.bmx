@@ -3115,7 +3115,7 @@ End Rem
 				superTy=ParseIdentType()
 			EndIf
 		Else
-			If Not (attrs & DECL_EXTERN) Then
+			If Not (attrs & DECL_EXTERN) And Not (attrs & CLASS_STRUCT) Then
 				superTy=New TIdentType.Create( "brl.classes.object" )
 			End If
 		EndIf

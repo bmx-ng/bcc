@@ -3032,6 +3032,17 @@ End Rem
 			End If
 		Next
 
+		' structs have a default New
+		' if we haven't defined one, create one
+		If attrs & CLASS_STRUCT Then
+			Local func:TFuncDecl = FindFuncDecl("new", Null,True,,,,0)
+			If Not func Then
+				func = New TNewDecl.CreateF("New", Null, Null, FUNC_CTOR | FUNC_METHOD)
+				TNewDecl(func).cdecl = Self
+				InsertDecl(func)
+			End If
+		End If
+		
 		'NOTE: do this AFTER super semant so UpdateAttrs order is cool.
 
 		If AppScope() Then
