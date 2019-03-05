@@ -6138,19 +6138,9 @@ End If
 		Emit "EXPORTS"
 		
 		For Local decl:TFuncDecl=EachIn app.exportDefs
-			Emit "~t" + TransExportDef(decl, False)
+			Emit "~t" + TransExportDef(decl, opt_arch = "x86")
 		Next
 
-		If opt_arch = "x86" Then
-			Emit "~n"
-			
-			For Local decl:TFuncDecl=EachIn app.exportDefs
-				If decl.attrs & DECL_API_STDCALL Then
-					Emit "~t" + TransExportDef(decl, True) + " = " + TransExportDef(decl, False)
-				End If
-			Next
-		End If
-		
 		Emit "~n"
 	End Method
 
