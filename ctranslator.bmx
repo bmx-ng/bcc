@@ -433,8 +433,8 @@ Type TCTranslator Extends TTranslator
 				End If
 			End If
 			If TNumericType( ty ) Return "0" ' numeric and pointers
-			If TStringType( ty ) Return "&bbEmptyString"
-			If TArrayType( ty ) Return "&bbEmptyArray"
+			If TStringType( ty ) Return Bra("&bbEmptyString")
+			If TArrayType( ty ) Return Bra("&bbEmptyArray")
 			If TObjectType( ty ) Then
 				If TObjectType( ty ).classDecl.IsExtern() Or TObjectType( ty ).classDecl.IsStruct() Then
 					If TObjectType( ty ).classDecl.IsInterface() Or IsPointerType(ty) Or (Not TObjectType( ty ).classDecl.IsStruct()) Then
@@ -443,10 +443,10 @@ Type TCTranslator Extends TTranslator
 						Return "{}"
 					End If
 				Else
-					Return "&bbNullObject"
+					Return Bra("&bbNullObject")
 				End If
 			End If
-			If TFunctionPtrType( ty) Return "&brl_blitz_NullFunctionError" ' todo ??
+			If TFunctionPtrType( ty) Return Bra("&brl_blitz_NullFunctionError") ' todo ??
 		EndIf
 		InternalErr "TCTranslator.TransValue"
 	End Method
