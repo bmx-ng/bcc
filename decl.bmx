@@ -1148,7 +1148,9 @@ Type TScopeDecl Extends TDecl
 			End If
 		End If
 		
-		If Not decl Then
+		' if scope isn't static, and we didn't find it yet, look no further
+		' otherwise, look harder...
+		If Not decl And static Then
 			' try scope search
 			decl = TValDecl( FindDecl( ident, True ) )
 			
