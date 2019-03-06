@@ -60,6 +60,10 @@ Type TType
 		Return Null
 	End Method
 	
+	Method GetClassScope:TScopeDecl()
+		Return GetClass()
+	End Method
+	
 	Method ToString$()
 		Return "??Type??"
 	End Method
@@ -210,6 +214,7 @@ Type TType
 	Const T_DOUBLE128:Int   = $8000
 	Const T_LPARAM:Int      =$10000
 	Const T_WPARAM:Int      =$20000
+	Const T_ENUM:Int        =$40000
 
 	Const T_MAX_DISTANCE:Int = $FFFF
 
@@ -276,6 +281,8 @@ Function NewType:TType(kind:Int = 0)
 			ty = New TArrayType
 		Case TType.T_FUNCTIONPTR
 			ty = New TFunctionPtrType
+		Case TType.T_ENUM
+			ty = New TEnumType
 		Default
 			Err "Don't have a pointer type for " + kind
 	End Select
@@ -341,6 +348,8 @@ Function IsType:Int(ty:TType, kind:Int)
 			Return TArrayType(ty) <> Null
 		Case TType.T_FUNCTIONPTR
 			Return TFunctionPtrType(ty) <> Null
+		Case TType.T_ENUM
+			Return TEnumType(ty) <> Null
 	End Select
 
 	Return False
@@ -1634,9 +1643,14 @@ Type TIdentType Extends TType
 			Err "Type '"+tyid+"' not found"
 		End If
 		
-		If (_flags & T_VAR) And TObjectType(ty) Then
-			ty = New TObjectType.Create(TObjectType(ty).classDecl)
-			ty._flags :| T_VAR
+		If (_flags & T_VAR) Then
+			If TObjectType(ty) Then
+				ty = New TObjectType.Create(TObjectType(ty).classDecl)
+				ty._flags :| T_VAR
+			Else If TEnumType(ty) Then
+				ty = New TEnumType.Create(TEnumType(ty).decl)
+				ty._flags :| T_VAR
+			End If
 		End If
 
 		If (_flags & T_POINTER) And TObjectType(ty) Then
@@ -2007,6 +2021,53 @@ Type TLParamType Extends TParamType
 
 	Method GetSize:Int()
 		Return WORD_SIZE
+	End Method
+	
+End Type
+
+Type TEnumType Extends TType
+
+	Field decl:TEnumDecl
+	
+	Method Create:TEnumType(decl:TEnumDecl)
+		Self.decl = decl
+		Return Self
+	End Method
+
+	Method EqualsType:Int( ty:TType )
+		Local ety:TEnumType = TEnumType(ty)
+		Return ety And decl = ety.decl And(_flags = ty._flags Or ..
+			(_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR) Or (_flags & T_VAR))
+	End Method
+
+	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
+		If _flags & T_VARPTR And (TEnumType(ty) <> Null Or IsPointerType(ty, 0, T_POINTER)) Return True
+	End Method
+
+	Method WidensToType:Int( ty:TType )
+		Return (IsPointerType(ty, 0, T_POINTER) And IsPointerType(Self, 0, T_POINTER)) Or (TEnumType(ty)<>Null And (ty._flags & T_VAR))
+	End Method
+	
+	Method OnCopy:TType()
+		Local ty:TEnumType = New TEnumType
+		ty.decl = decl
+		Return ty
+	End Method
+	
+	Method IsFlags:Int()
+		Return decl.isFlags
+	End Method
+	
+	Method Value:String(ordinal:Int)
+		Return decl.values[ordinal].Value()
+	End Method
+
+	Method ToString$()
+		Return "Enum " + decl.ident + " " + ToStringParts()
+	End Method
+
+	Method GetClassScope:TScopeDecl()
+		Return decl
 	End Method
 
 End Type

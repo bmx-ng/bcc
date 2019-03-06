@@ -106,6 +106,7 @@ Type TCTranslator Extends TTranslator
 			End If
 		End If
 		If TFunctionPtrType( ty ) Return "~q(~q"
+		If TEnumType( ty ) Return "~q/" + TEnumType(ty).decl.ident + "~q"
 
 	End Method
 
@@ -203,6 +204,9 @@ Type TCTranslator Extends TTranslator
 			Next
 			Return s + ")" + TransDebugScopeType(func.retType)
 		End If
+		If TEnumType( ty ) Then
+			Return "/" + TEnumType( ty ).decl.ident
+		End If
 
 	End Method
 
@@ -284,6 +288,7 @@ Type TCTranslator Extends TTranslator
 		End If
 
 		If TExternObjectType( ty ) Return "struct " + TExternObjectType( ty ).classDecl.munged + p
+		If TEnumType( ty ) Return TransType( TEnumType( ty ).decl.ty, ident ) + p
 
 		InternalErr "TCTranslator.TransType"
 	End Method
@@ -363,6 +368,9 @@ Type TCTranslator Extends TTranslator
 			Return t
 		End If
 		If TExternObjectType( ty ) Return ":" + TExternObjectType(ty).classDecl.ident + p
+		If TEnumType( ty ) Then
+			Return "/" + TEnumType( ty ).decl.ident + p
+		End If
 		InternalErr "TCTranslator.TransIfcType"
 	End Method
 
@@ -423,6 +431,7 @@ Type TCTranslator Extends TTranslator
 			End If
 			If TStringType( ty ) Return TransStringConst(value )
 			If TByteType( ty ) Return value
+			If TEnumType( ty ) Return value
 		Else
 			If TBoolType( ty ) Return "0"
 			If TIntrinsicType( ty) Then
@@ -446,7 +455,14 @@ Type TCTranslator Extends TTranslator
 					Return Bra("&bbNullObject")
 				End If
 			End If
-			If TFunctionPtrType( ty) Return Bra("&brl_blitz_NullFunctionError") ' todo ??
+			If TFunctionPtrType( ty) Return "(&brl_blitz_NullFunctionError)" ' todo ??
+			If TEnumType( ty ) Then
+				If TEnumType( ty ).decl.isFlags Then
+					Return "0"
+				Else
+					Return TEnumType( ty ).decl.values[0].Value()
+				End If
+			End If
 		EndIf
 		InternalErr "TCTranslator.TransValue"
 	End Method
@@ -555,6 +571,10 @@ Type TCTranslator Extends TTranslator
 					err "NULL"
 						t:+ "0"
 						Continue
+					End If
+				Else If TEnumType(ty) And (ty._flags & TType.T_VAR) Then
+					If (TVarExpr(arg) Or TMemberVarExpr(arg)) And TEnumType(arg.exprType) And Not (arg.exprType._flags & TType.T_VAR) Then
+						t:+ "&"
 					End If
 				End If
 				
@@ -935,6 +955,12 @@ t:+"NULLNULLNULL"
 			Return decl.munged
 		Else If TBlockDecl(decl.scope)
 			Return decl.munged
+		Else If TEnumDecl(decl.scope)
+			If decl.ident = "Values" Then
+				Return "bbEnumValues"
+			Else
+				Return decl.munged
+			End If
 		EndIf
 		InternalErr "TCTranslator.TransStatic"
 	End Method
@@ -1028,28 +1054,39 @@ t:+"NULLNULLNULL"
 							End If
 							Err "TODO extern types not allowed methods"
 						Else
-							If cdecl.IsInterface() And Not equalsBuiltInFunc(cdecl, decl) Then
+							If cdecl And cdecl.IsInterface() And Not equalsBuiltInFunc(cdecl, decl) Then
 								Local ifc:String = Bra("(struct " + cdecl.munged + "_methods*)" + Bra("bbObjectInterface(" + TransSubExpr( lhs ) + ", " + "&" + cdecl.munged + "_ifc)"))
 								Return ifc + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, TransSubExpr( lhs ) )
 '								Local ifc:String = Bra("(struct " + cdecl.munged + "_methods*)" + Bra("bbObjectInterface(" + lvarInit + ", " + "&" + cdecl.munged + "_ifc)"))
 '								Return ifc + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, lvar )
 							Else
-								If cdecl.IsStruct() Then
+								If cdecl And cdecl.IsStruct() Then
 									If Not isPointerType(lhs.exprType) Then
 										Return "_" + decl.munged+TransArgs( args,decl, "&" + TransSubExpr( lhs ) )
 									Else
 										Return "_" + decl.munged+TransArgs( args,decl, TransSubExpr( lhs ) )
 									End If
 								Else
-									Local obj:String = TransSubExpr( lhs )
-									Local preObj:String = obj
-									
-									If opt_debug Then
-										preObj = TransDebugNullObjectError(obj, cdecl)
+									If cdecl Then
+										Local obj:String = TransSubExpr( lhs )
+										Local preObj:String = obj
+										
+										If opt_debug Then
+											preObj = TransDebugNullObjectError(obj, cdecl)
+										End If
+										
+										Local class:String = Bra(preObj) + "->clas" + tSuper
+										Return class + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, obj )
+									Else
+										If TEnumDecl(decl.scope) Then
+											' since we already have the ordinal, we can simply output that
+											If decl.ident = "Ordinal" Then
+												Return Bra(TransSubExpr( lhs ))
+											Else
+												Return decl.munged + Bra(TransSubExpr( lhs ))
+											End If
+										End If
 									End If
-									
-									Local class:String = Bra(preObj) + "->clas" + tSuper
-									Return class + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, obj )
 '									Local class:String = Bra(lvarInit) + "->clas" + tSuper
 '									Return class + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, lvar )
 								End If
@@ -1072,27 +1109,43 @@ t:+"NULLNULLNULL"
 						End If
 					End If
 				Else If TCastExpr(lhs) Then
-					' create a local variable of the inner invocation
-					Local lvar:String = CreateLocal(lhs, False, False)
-					Local lvarInit:String = Bra(lvar + " = " + lhs.Trans())
 
-					Local cdecl:TClassDecl = TObjectType(TCastExpr(lhs).ty).classDecl
-					Local obj:String = Bra(TransObject(cdecl))
-					If decl.attrs & FUNC_PTR Then
-						Return "(" + obj + TransSubExpr( lhs ) + ")->" + decl.munged+TransArgs( args,decl, Null)
-					Else
-						' Null test
-						If opt_debug Then
-							lvarInit = TransDebugNullObjectError(lvarInit, cdecl)
-						End If
+					Local ty:TType = TCastExpr(lhs).ty
 
-						If cdecl.IsInterface() And Not equalsBuiltInFunc(cdecl, decl) Then
-							Local ifc:String = Bra("(struct " + cdecl.munged + "_methods*)" + Bra("bbObjectInterface(" + obj + lvarInit + ", " + "&" + cdecl.munged + "_ifc)"))
-							Return ifc + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, lvar )
+					If TObjectType(ty) Then
+						' create a local variable of the inner invocation
+						Local lvar:String = CreateLocal(lhs, False, False)
+						Local lvarInit:String = Bra(lvar + " = " + lhs.Trans())
+
+						Local cdecl:TClassDecl = TObjectType(ty).classDecl
+						Local obj:String = Bra(TransObject(cdecl))
+						If decl.attrs & FUNC_PTR Then
+							Return "(" + obj + TransSubExpr( lhs ) + ")->" + decl.munged+TransArgs( args,decl, Null)
 						Else
-							Local class:String = Bra("(" + obj + lvarInit + ")->clas" + tSuper)
-							Return class + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, lvar )
+							' Null test
+							If opt_debug Then
+								lvarInit = TransDebugNullObjectError(lvarInit, cdecl)
+							End If
+	
+							If cdecl.IsInterface() And Not equalsBuiltInFunc(cdecl, decl) Then
+								Local ifc:String = Bra("(struct " + cdecl.munged + "_methods*)" + Bra("bbObjectInterface(" + obj + lvarInit + ", " + "&" + cdecl.munged + "_ifc)"))
+								Return ifc + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, lvar )
+							Else
+								Local class:String = Bra("(" + obj + lvarInit + ")->clas" + tSuper)
+								Return class + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, lvar )
+							End If
 						End If
+					Else If TEnumType(ty) Then
+
+						If TEnumDecl(decl.scope) Then
+							' since we already have the ordinal, we can simply output that
+							If decl.ident = "Ordinal" Then
+								Return Bra(TransSubExpr( lhs ))
+							Else
+								Return decl.munged + Bra(TransSubExpr( lhs ))
+							End If
+						End If
+
 					End If
 
 				Else If TMemberVarExpr(lhs) Then
@@ -1265,6 +1318,14 @@ t:+"NULLNULLNULL"
 							End If
 						End If
 					End If
+				Else If TEnumType(lhs.exprType) Then
+
+					If decl.ident = "Ordinal" Then
+						Return Bra(TransSubExpr( lhs ))
+					Else
+						Return decl.munged + Bra(TransSubExpr( lhs ))
+					End If
+
 				Else
 					InternalErr "TCTranslator.TransFunc"
 				End If
@@ -1316,6 +1377,12 @@ t:+"NULLNULLNULL"
 				End If
 				Return Bra(obj + "o") + "->" + decl.munged+TransArgs( args,decl )
 			End If
+		End If
+		
+		' for want of a better place to put it...
+		' It may be possible to have the generate via the TransStatic call below, but we'd need to inject a custom arg somewhere else then
+		If TEnumDecl(decl.scope) And decl.ident = "Values" Then
+			Return "bbEnumValues" + Bra(decl.scope.munged + "_BBEnum_impl")
 		End If
 		
 		Return TransStatic( decl )+TransArgs( args,decl )
@@ -1794,6 +1861,7 @@ t:+"NULLNULLNULL"
 			If TWParamType( src ) Return Bra("(BBINT)"+t)
 			If TLParamType( src ) Return Bra("(BBINT)"+t)
 			If TStringType( src ) Return "bbStringToInt" + Bra(t)
+			If TEnumType( src) Return Bra("(BBINT)"+t)
 			'If TIntVarPtrType( src ) Return Bra("*" + t)
 			If IsPointerType(src,0,TType.T_POINTER) Return Bra("(BBINT)"+t)
 			'If TPointerType( src ) Return Bra("(BBINT)"+t)
@@ -1813,6 +1881,7 @@ t:+"NULLNULLNULL"
 			If TStringType( src ) Return "bbStringToLong" + Bra(t)
 			If IsPointerType(src,0,TType.T_POINTER) Return Bra("(BBLONG)"+t)
 			If TFloat64Type( src ) Return Bra("(BBLONG)"+t)
+			If TEnumType( src) Return Bra("(BBLONG)"+t)
 			'If TPointerType( src ) Return Bra("(BBLONG)"+t)
 		 Else If TSizeTType( dst )
 			If TBoolType( src ) Return Bra( t )
@@ -1830,6 +1899,7 @@ t:+"NULLNULLNULL"
 			If TStringType( src ) Return "bbStringToSizet" + Bra(t)
 			If IsPointerType(src,0,TType.T_POINTER) Return Bra("(BBSIZET)"+t)
 			If TFloat64Type( src ) Return Bra("(BBSIZET)"+t)
+			If TEnumType( src) Return Bra("(BBSIZET)"+t)
 			'If TPointerType( src ) Return Bra("(BBLONG)"+t)
 		Else If TFloatType( dst )
 			If TBoolType( src ) Return Bra( t )
@@ -1892,6 +1962,16 @@ t:+"NULLNULLNULL"
 				End If
 				Return t
 			End If
+			If TEnumType( src ) Then
+				Local ty:TType = TEnumType( src ).decl.ty
+				If TByteType( ty ) Return "bbStringFromInt"+Bra( t )
+				If TShortType( ty ) Return "bbStringFromInt"+Bra( t )
+				If TIntType( ty ) Return "bbStringFromInt"+Bra( t )
+				If TUIntType( ty ) Return "bbStringFromUInt"+Bra( t )
+				If TLongType( ty ) Return "bbStringFromLong"+Bra( t )
+				If TULongType( ty ) Return "bbStringFromULong"+Bra( t )
+				If TSizeTType( ty ) Return "bbStringFromSizet"+Bra( t )
+			End If
 			'If TStringVarPtrType( src ) Then
 			'	If TSliceExpr( expr.expr ) Then
 			'		Return t
@@ -1915,6 +1995,7 @@ t:+"NULLNULLNULL"
 			If TWParamType( src ) Return Bra("(BBBYTE)"+t)
 			If TLParamType( src ) Return Bra("(BBBYTE)"+t)
 			If TStringType( src ) Return "bbStringToInt" + Bra(t)
+			If TEnumType( src) Return Bra("(BBYTE)"+t)
 			'If TByteVarPtrType( src ) Return Bra("*" + t)
 		Else If TShortType( dst )
 			If TBoolType( src ) Return Bra( t )
@@ -1930,6 +2011,7 @@ t:+"NULLNULLNULL"
 			If TWParamType( src ) Return Bra("(BBSHORT)"+t)
 			If TLParamType( src ) Return Bra("(BBSHORT)"+t)
 			If TStringType( src ) Return "bbStringToInt" + Bra(t)
+			If TEnumType( src) Return Bra("(BBSHORT)"+t)
 			'If TShortVarPtrType( src ) Return Bra("*" + t)
 		Else If TUIntType( dst )
 			If TBoolType( src ) Return Bra( t )
@@ -1945,6 +2027,7 @@ t:+"NULLNULLNULL"
 			If TWParamType( src ) Return Bra("(BBUINT)"+t)
 			If TLParamType( src ) Return Bra("(BBUINT)"+t)
 			If TStringType( src ) Return "bbStringToUInt" + Bra(t)
+			If TEnumType( src) Return Bra("(BBUINT)"+t)
 		Else If TULongType( dst )
 			If TBoolType( src ) Return Bra( t )
 			If TShortType( src ) Return Bra("(BBULONG)"+t)
@@ -1960,6 +2043,7 @@ t:+"NULLNULLNULL"
 			If TLParamType( src ) Return Bra("(BBULONG)"+t)
 			If TStringType( src ) Return "bbStringToULong" + Bra(t)
 			If TFloat64Type( src ) Return Bra("(BBULONG)"+t)
+			If TEnumType( src) Return Bra("(BBULONG)"+t)
 		Else If TFloat64Type( dst )
 			If TFloat64Type( src) Return t
 			If TLongType( src ) Return Bra("(BBFLOAT64)"+t)
@@ -2044,6 +2128,8 @@ t:+"NULLNULLNULL"
 					Return "" ' TODO??
 				End If
 			End If
+		Else If TEnumType( dst )
+			If TEnumType( src) Return t			
 		End If
 
 		Return TransPtrCast( dst,src,t,"dynamic" )
@@ -4285,6 +4371,101 @@ End Rem
 
 	End Method
 
+	Method EmitEnumDecl(decl:TEnumDecl)
+
+		Local id:String = decl.munged
+
+		Emit "struct BBEnum" + decl.munged + "{"
+		Emit "const char * name;"
+		Emit "char * type;"
+		Emit "char * atype;"
+		Emit "int flags;"
+		Emit "int length;"
+		Emit "void * values;"
+		Emit "BBString * names[" + decl.values.length + "];"
+		Emit "};"
+		
+		' debugscope
+		Emit "struct BBDebugScope " + id + "_scope ={"
+		Emit "BBDEBUGSCOPE_USERENUM,"
+
+		Emit EnQuote(decl.ident) + ","
+
+		Emit "{"
+
+		Local ty:TEnumType = New TEnumType.Create(decl)
+
+		For Local value:TEnumValueDecl = EachIn decl.values
+			Emit "{"
+			Emit "BBDEBUGDECL_GLOBAL,"
+			Emit Enquote(value.ident) + ","
+			Emit Enquote(TransDebugScopeType(ty) + TransDebugMetaData(decl.metadata.metadataString)) + ","
+
+			_appInstance.mapStringConsts(value.ident)
+			_appInstance.mapStringConsts(value.Value())
+
+			Emit ".const_value=&" + TStringConst(_appInstance.stringConsts.ValueForKey(value.Value())).id
+			Emit "},"
+		Next
+		
+		Emit "BBDEBUGDECL_END"
+		Emit "}"
+
+		Emit "};"
+		
+		Local t:String
+		Local n:String
+		For Local v:TEnumValueDecl = EachIn decl.values
+			If t Then
+				t :+ ","
+				n :+ ","
+			End If
+			t :+ v.Value()
+			n :+ "&" + TStringConst(_appInstance.stringConsts.ValueForKey(v.ident)).id
+		Next
+		
+		Emit TransType(decl.ty, "") + " " + decl.munged + "_values[" + decl.values.length + "] = {" + t + "};"
+		
+		Emit "struct BBEnum" + decl.munged + " " + decl.munged + "_BBEnum = {"
+		Emit EnQuote(decl.ident) + ","
+		Emit TransArrayType(decl.ty) + ","
+		Emit TransArrayType(New TEnumType.Create(decl)) + ","
+		Emit decl.isFlags + ","
+		Emit decl.values.length + ","
+		Emit "&" + decl.munged + "_values,"
+		Emit "{" + n + "}"
+		Emit "};"
+		
+		Emit "BBEnum * " + decl.munged + "_BBEnum_impl;"
+
+
+		For Local fdecl:TFuncDecl = EachIn decl.FuncDecls()
+			MungDecl fdecl
+			Select fdecl.ident
+				Case "ToString"
+					Emit "BBSTRING " + fdecl.munged + Bra(TransType(decl.ty, "") + " ordinal") + " {"
+					Emit "return bbEnumToString_" + TransDebugScopeType(decl.ty) + Bra(decl.munged + "_BBEnum_impl, ordinal") + ";"
+					Emit "}"
+			End Select
+		Next
+
+	End Method
+
+	Method EmitEnumProto(decl:TEnumDecl)
+
+		Emit "extern BBEnum* " + decl.munged + "_BBEnum_impl;"
+
+		For Local fdecl:TFuncDecl = EachIn decl.FuncDecls()
+			MungDecl fdecl
+			Select fdecl.ident
+				Case "ToString"
+					Emit "BBSTRING " + fdecl.munged + Bra(TransType(decl.ty, "")) + ";"
+				Case "Ordinal"
+					' nothing to generate
+			End Select
+		Next
+	End Method
+
 	Method TransObjectSize:String(classDecl:TClassDecl)
 		Local t:String
 		
@@ -4811,6 +4992,8 @@ End Rem
 			s = variable + ind + decl.munged + " "
 		Else If TArrayType(decl.ty) Then
 			s = variable + ind + decl.munged + " "
+		Else If TEnumType(decl.ty) Then
+			s = variable + ind + decl.munged + " "
 		End If
 
 		Return s
@@ -5230,6 +5413,26 @@ End Rem
 		Emit g
 	End Method
 
+	Method EmitIfcEnumDecl(enumdecl:TEnumDecl)
+		enumDecl.Semant
+		
+		Local e:String = enumDecl.ident + "/" + TransIfcType(enumDecl.ty)
+
+		Emit e + "{", False
+		
+		For Local val:TEnumValueDecl = EachIn enumDecl.values
+			Emit val.ident + "=" + val.Value()
+		Next
+		
+		Local flags:String
+		If enumDecl.isFlags Then
+			flags = "F"
+		End If
+		
+		Emit "}" + flags + "=" + Enquote(enumDecl.munged), False
+
+	End Method
+	
 	Method EmitModuleInclude(moduleDecl:TModuleDecl, included:TMap = Null)
 		If moduleDecl.filepath Then
 			' a module import
@@ -5461,6 +5664,12 @@ End If
 				End If
 				'Continue
 			EndIf
+
+			Local edecl:TEnumDecl = TEnumDecl( decl )
+			If edecl Then
+				EmitEnumProto edecl
+				Continue
+			End If
 		Next
 
 	End Method
@@ -5705,6 +5914,12 @@ End If
 				EmitClassDecl cdecl
 				Continue
 			EndIf
+			
+			Local edecl:TEnumDecl = TEnumDecl( decl )
+			If edecl Then
+				EmitEnumDecl edecl
+				Continue
+			End If
 		Next
 
 		' emit nested functions/classes for localmain
@@ -5771,6 +5986,11 @@ End If
 			Next
 		Next
 
+		' initialise enums
+		For Local decl:TEnumDecl = EachIn app.Semanted()
+			Emit decl.munged + "_BBEnum_impl = &" + decl.munged + "_BBEnum;"
+		Next
+
 		' register types
 		For Local decl:TDecl=EachIn app.Semanted()
 
@@ -5787,7 +6007,12 @@ End If
 				Else
 					Emit "bbObjectRegisterInterface(&" + cdecl.munged + "_ifc);"
 				End If
+				Continue
 			EndIf
+			Local edecl:TEnumDecl = TEnumDecl( decl )
+			If edecl Then
+				Emit "bbEnumRegister(" + decl.munged + "_BBEnum_impl, &" + edecl.munged + "_scope);"
+			End If
 		Next
 		'
 
@@ -6127,7 +6352,16 @@ End If
 				EmitIfcGlobalDecl(gdecl)
 			End If
 		Next
-
+		
+		' enums
+		For Local decl:TDecl=EachIn app.Semanted()
+			If decl.IsPrivate() Continue
+			
+			Local edecl:TEnumDecl=TEnumDecl( decl )
+			If edecl And Not edecl.declImported
+				EmitIfcEnumDecl(edecl)
+			End If
+		Next
 	End Method
 	
 	Method TransDef(app:TAppDecl)

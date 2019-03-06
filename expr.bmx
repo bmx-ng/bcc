@@ -263,6 +263,10 @@ Type TExpr
 		If TLongType( lhs ) Or TLongType( rhs ) Return New TLongType
 		If TUIntType( lhs ) Or TUIntType( rhs ) Return New TUIntType
 		If TIntType( lhs ) Or TIntType( rhs ) Return New TIntType
+		If TEnumType( lhs ) Or TEnumType( rhs ) Then
+			If TEnumType( lhs ) Return lhs
+			If TEnumType( rhs ) Return rhs
+		End If
 		If TObjectType( lhs ) And TNullDecl(TObjectType( lhs ).classDecl) Then
 			Return rhs
 		End If
@@ -1545,6 +1549,25 @@ Type TCastExpr Extends TExpr
 			Return Self
 		End If
 
+		If TStringType(ty) And TEnumType(src) Then
+			exprType = ty
+			Return Self
+		End If
+
+		If TEnumType(src) And TEnumType(ty) And (ty._flags & TType.T_VAR) Then
+			Return expr
+		End If
+		
+		If TIntegralType(ty) And TEnumType(src) And (flags & CAST_EXPLICIT Or flags & 2) Then
+			exprType = ty
+			Return Self
+		End If
+		
+		If TIntegralType(src) And TEnumType(ty) And flags & 2 Then
+			exprType = src
+			Return Self
+		End If
+
 		If Not exprType
 			Err "Unable to convert from "+src.ToString()+" to "+ty.ToString()+"."
 		EndIf
@@ -1788,6 +1811,7 @@ Type TBinaryMathExpr Extends TBinaryExpr
 			End Try
 		End If
 
+		Local bitEnumOp:Int
 		Select op
 		Case "&","~~","|","shl","shr","sar"
 			If TFloat128Type(lhs.exprType) Then
@@ -1812,6 +1836,12 @@ Type TBinaryMathExpr Extends TBinaryExpr
 				exprType=New TWParamType
 			Else If TLParamType(lhs.exprType) Then
 				exprType=New TLParamType
+			Else If TEnumType(lhs.exprType) And TEnumType(lhs.exprType).decl.isFlags Then
+				exprType = lhs.exprType.Copy()
+				bitEnumOp = 2
+			Else If TEnumType(rhs.exprType) And TEnumType(rhs.exprType).decl.isFlags Then
+				exprType = rhs.exprType.Copy()
+				bitEnumOp = 2
 			Else
 				exprType=New TIntType
 			End If
@@ -1837,13 +1867,13 @@ Type TBinaryMathExpr Extends TBinaryExpr
 		If (op = "+" Or op = "-") And IsPointerType(exprType, 0, TType.T_POINTER) And TNumericType(lhs.exprType) Then
 			' with pointer addition we don't cast the numeric to a pointer
 		Else
-			lhs=lhs.Cast( exprType )
+			lhs=lhs.Cast( exprType, bitEnumOp )
 		End If
 		
 		If (op = "+" Or op = "-") And IsPointerType(exprType, 0, TType.T_POINTER) And TNumericType(rhs.exprType) Then
 			' with pointer addition we don't cast the numeric to a pointer
 		Else
-			rhs=rhs.Cast( exprType )
+			rhs=rhs.Cast( exprType, bitEnumOp )
 		End If
 		
 		If IsPointerType( lhs.exprType, 0, TType.T_POINTER ) And IsPointerType( rhs.exprType, 0, TType.T_POINTER ) And op = "-" Then
@@ -1858,7 +1888,7 @@ Type TBinaryMathExpr Extends TBinaryExpr
 	Method Eval$()
 		Local lhs$=Self.lhs.Eval()
 		Local rhs$=Self.rhs.Eval()
-		If TIntType( exprType )
+		If TIntType( exprType ) Or TByteType( exprType ) Or TShortType( exprType )
 			Local x:Int=Int(lhs),y:Int=Int(rhs)
 			Select op
 			Case "^" Return x^y
@@ -1932,6 +1962,18 @@ Type TBinaryMathExpr Extends TBinaryExpr
 				_appInstance.removeStringConst(lhs)
 				_appInstance.removeStringConst(rhs)
 				Return lhs+rhs
+			End Select
+		Else If TEnumType( exprType )
+			Local x:Long=Long(lhs),y:Long=Long(rhs)
+			Select op
+			Case "shl" Return x Shl y
+			Case "shr" Return x Shr y
+			Case "sar" Return x Sar y
+			Case "+" Return x + y
+			Case "-" Return x - y
+			Case "&" Return x & y
+			Case "~~" Return x ~ y
+			Case "|" Return x | y
 			End Select
 		EndIf
 		InternalErr "TBinaryMathExpr.Eval"
@@ -2554,7 +2596,7 @@ Type TIdentExpr Extends TExpr
 			Else
 				expr=expr.Semant()
 				static = expr.static
-				scope=expr.exprType.GetClass()
+				scope=expr.exprType.GetClassScope()
 				If Not scope Then
 					Local e:String = "Member '" + ident + "' Not found in "
 					If expr.exprType Then
@@ -2728,14 +2770,21 @@ Type TIdentExpr Extends TExpr
 
 			Return New TInvokeExpr.Create( fdecl,args, False, isArg, isRhs ).Semant()
 		End If
-		
+
+		Local decl:TDecl = TDecl(scope.FindDecl(IdentLower()))
 		' maybe it's a classdecl?
-		Local cdecl:TClassDecl = TClassDecl(scope.FindDecl(IdentLower()))
+		Local cdecl:TClassDecl = TClassDecl(decl)
 		
 		If cdecl Then
 			Local e:TIdentTypeExpr = New TIdentTypeExpr.Create(cdecl.objectType)
 			e.cdecl = cdecl
 			Return e
+		End If
+		
+		' maybe it's an enum?
+		Local edecl:TEnumValueDecl = TEnumValueDecl(decl)
+		If edecl Then
+			Return New TIdentEnumExpr.Create(edecl)
 		End If
 
 		Local loopLabel:String = "#" + IdentLower()
@@ -3298,6 +3347,33 @@ Type TDataLabelExpr Extends TExpr
 
 	Method Eval$()
 		Return ""
+	End Method
+
+End Type
+
+Type TIdentEnumExpr Extends TExpr
+	Field value:TEnumValueDecl
+
+	Method Create:TIdentEnumExpr( value:TEnumValueDecl )
+		Self.exprType=New TEnumType.Create(TEnumDecl(value.scope))
+		Self.value = value
+		Return Self
+	End Method
+
+	Method Copy:TExpr()
+		Return New TIdentEnumExpr.Create( value )
+	End Method
+
+	Method Semant:TExpr()
+		Return Self
+	End Method
+
+	Method Trans$()
+		Return value.Value()
+	End Method
+
+	Method Eval$()
+		Return value.Value()
 	End Method
 
 End Type

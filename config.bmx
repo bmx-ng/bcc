@@ -27,10 +27,12 @@ Import BRL.LinkedList
 Import BRL.Map
 Import BRL.FileSystem
 Import Pub.zlib
+Import BRL.Math
 
 Import "options.bmx"
 Import "base.stringhelper.bmx"
 Import "base64.bmx"
+Import "enums.c"
 
 ' debugging help
 Const DEBUG:Int = False
@@ -481,4 +483,5 @@ End Type
 
 Extern
 	Function strlen_:Int(s:Byte Ptr)="strlen"
+	Function bmx_enum_next_power(char:Int, val:Long Var, ret:Long Var)
 End Extern

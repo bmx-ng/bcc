@@ -446,7 +446,27 @@ Type TIParser
 
 						'state = STATE_CLASS
 						'Exit
-				'	Case "%"
+				Case "/"
+					toker.rollback(pos)
+					toker.NextToke()
+
+					Local enumDecl:TEnumDecl = ParseEnumDecl( stm )
+					enumDecl.declImported = True
+					
+					If CParse("F") Then
+						enumDecl.isFlags = True
+					End If
+					
+					Parse("=")
+				
+					If _tokeType <> TOKE_STRINGLIT Then
+						Err "Syntax error - unexpected token '" + _toke + "'"
+					End If
+					
+					enumDecl.munged = BmxUnquote(_toke)
+					
+					_mod.InsertDecl(enumDecl)
+								
 				Default
 					If toker._tokeType = TOKE_EOF
 						Exit
@@ -763,6 +783,59 @@ Type TIParser
 
 	End Method
 
+	Method ParseEnumDecl:TEnumDecl( toke$ )
+		SetErr
+
+		Local id$=ParseIdent()
+		Local ty:TType
+		Local attrs:Int
+
+		Parse( "/" )
+		ty=ParseDeclType(attrs, False)
+
+		Local enumDecl:TEnumDecl=New TEnumDecl.Create( id, ty, False, Null )
+		
+		Local index:Int
+		Repeat
+			SkipEols
+			
+			Select _toker._toke
+			Case "{"
+				NextToke
+			Case "}"
+				NextToke
+				Exit
+			Default
+				
+				Local decl:TEnumValueDecl = ParseEnumValueDecl(_toke, index, ty)
+				enumDecl.InsertDecl decl
+				
+				enumDecl.values :+ [decl]
+				
+				index :+ 1
+			End Select
+			
+		Forever
+		
+		Return enumDecl
+
+	End Method
+	
+	Method ParseEnumValueDecl:TEnumValueDecl(toke:String, index:Int, enumTy:TType)
+
+		Local id:String = ParseIdent()
+		
+		Parse("=")
+
+		Local expr:TExpr = New TConstExpr.Create( enumTy.Copy(), _toke )
+
+		Local valDecl:TEnumValueDecl = New TEnumValueDecl.Create(id, index, expr)		
+		
+		NextToke
+		
+		Return valDecl
+	End Method
+	
 	Method Parse( toke$ )
 		If Not CParse( toke )
 			Err "Syntax error - expecting '"+toke+"'."

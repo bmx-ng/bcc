@@ -1203,6 +1203,10 @@ Type TScopeDecl Extends TDecl
 				End If
 				Return cdecl.objectType
 			EndIf
+			Local edecl:TEnumDecl = TEnumDecl(decl)
+			If edecl Then
+				Return New TEnumType.Create(edecl)
+			End If
 		EndIf
 		If scope Return scope.FindType( ident,args, callback )
 	End Method
@@ -3446,6 +3450,173 @@ Type TTryStmtDecl Extends TBlockDecl
 	
 	Method ToString:String()
 		Return "TTryStmtDecl"
+	End Method
+End Type
+
+Type TEnumDecl Extends TScopeDecl
+	Field ty:TType
+	Field isFlags:Int
+	Field values:TEnumValueDecl[]
+	
+	Method Create:TEnumDecl(id:String, ty:TType, isFlags:Int, values:TEnumValueDecl[])
+		Self.ident = id
+		Self.ty = ty
+		Self.isFlags = isFlags
+		Self.values = values
+		Return Self
+	End Method
+	
+	Method OnSemant()
+		' validate type
+		If Not TIntegralType(ty) Then
+			Err "Invalid type '" + ty.ToString() + "'. Enums can only be declared as integral types."
+		End If
+		
+		For Local val:TEnumValueDecl = EachIn values
+			val.scope = Self
+			val.Semant()
+		Next
+
+		GenerateFuncs()
+	End Method
+
+	Method OnCopy:TDecl(deep:Int = True)
+		Return New TEnumDecl.Create(ident, ty, isFlags, values)
+	End Method
+	
+	Method GetDecl:Object( ident$ )
+		For Local val:TEnumValueDecl = EachIn values
+			If val.IdentLower() = ident And val.IsSemanted() Then
+				Return val
+			End If
+		Next
+		
+		Return Super.GetDecl(ident)
+	End Method
+	
+	Method GenerateFuncs()
+		Local fdecl:TFuncDecl = New TFuncDecl.CreateF("ToString", New TStringType, Null, FUNC_METHOD)
+		InsertDecl fdecl
+		fdecl.Semant()
+		
+		fdecl = New TFuncDecl.CreateF("Ordinal", ty, Null, FUNC_METHOD)
+		InsertDecl fdecl
+		fdecl.Semant()
+
+		fdecl = New TFuncDecl.CreateF("Values", New TArrayType.Create(New TEnumType.Create(Self), 1), Null, 0)
+		InsertDecl fdecl
+		fdecl.Semant()
+	End Method
+	
+	Method ToString:String()
+		Return ident
+	End Method
+End Type
+
+Type TEnumValueDecl Extends TDecl
+
+	Field expr:TExpr
+	Field index:Int
+	
+	
+	Method Create:TEnumValueDecl(id:String, index:Int, expr:TExpr)
+		Self.ident = id
+		Self.index = index
+		Self.expr = expr
+		Return Self
+	End Method
+
+	Method OnSemant()
+		Local parent:TEnumDecl = TEnumDecl(scope)
+		Local previous:TEnumValueDecl
+		If index > 0 Then
+			previous = parent.values[index - 1]
+		End If
+
+		If expr Then
+
+			expr = expr.Semant()
+
+			' 			
+			If TIdentEnumExpr(expr) Then
+				If TIdentEnumExpr(expr).value.scope = parent Then
+					expr = New TConstExpr.Create(parent.ty, TIdentEnumExpr(expr).value.Value()).Semant()
+				End If
+			End If
+			
+			If parent.isFlags And TBinaryMathExpr(expr) Then
+				expr = New TConstExpr.Create(parent.ty, TBinaryMathExpr(expr).Eval())
+			End If
+			
+			If Not TConstExpr(expr) Or Not TIntegralType(TConstExpr(expr).ty) Then
+				Err "Enum values must be integral constants."
+			End If
+		Else
+			Local val:Long
+			
+			' initial flags value
+			If index = 0 And parent.isFlags Then
+				val = 1
+			End If
+
+			If previous Then
+				'
+				If TConstExpr(previous.expr)
+
+					val = TConstExpr(previous.expr).value.ToLong()
+
+					If parent.isFlags Then
+						If val = 0 Then
+							val = 1 
+						Else
+							If (val & (val - 1)) = 0 Then
+								val :+ 1
+							End If
+							' find next power of 2
+
+							Local res:Long
+							bmx_enum_next_power(Asc(TypeCode(parent.ty)), val, res)
+
+							If Not res Then
+								Err "Flags out of bounds at '" + ident + "'."
+							End If
+							
+							val = res
+							
+						End If
+					Else
+						val :+ 1
+					End If
+				Else
+					InternalErr "TEnumValueDecl.OnSemant"
+				End If
+			End If
+
+			expr = New TConstExpr.Create( parent.ty.Copy(), val).Semant()
+		
+		End If
+	End Method
+
+	Method OnCopy:TDecl(deep:Int = True)
+		Return New TEnumValueDecl.Create(ident, index, expr)
+	End Method
+	
+	Method Value:String()
+		Return TConstExpr(expr).value
+	End Method
+
+	Method TypeCode:String(ty:TType)
+		If TByteType( ty ) Return "b"
+		If TShortType( ty ) Return "s"
+		If TIntType( ty ) Return "i"
+		If TUIntType( ty ) Return "u"
+		If TLongType( ty ) Return "l"
+		If TULongType( ty ) Return "y"
+		If TSizeTType( ty ) Return "z"
+	End Method
+	
+	Method ToString:String()
+		Return "TEnumValueDecl"
 	End Method
 End Type
 
