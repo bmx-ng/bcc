@@ -635,7 +635,11 @@ Type TForStmt Extends TLoopStmt
 		Local updateCastTypes:Int
 		If TAssignStmt(init) And TIdentExpr(TAssignStmt(init).lhs) Then
 			updateCastTypes = True
+		Else
+			' semant right-hand side first, in case the loop variable is shadowing one from rhs
+			TBinaryCompareExpr(expr).rhs = TBinaryCompareExpr(expr).rhs.Semant()
 		End If
+
 		init.Semant
 
 		If updateCastTypes Then

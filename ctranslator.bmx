@@ -442,8 +442,8 @@ Type TCTranslator Extends TTranslator
 				End If
 			End If
 			If TNumericType( ty ) Return "0" ' numeric and pointers
-			If TStringType( ty ) Return "&bbEmptyString"
-			If TArrayType( ty ) Return "&bbEmptyArray"
+			If TStringType( ty ) Return Bra("&bbEmptyString")
+			If TArrayType( ty ) Return Bra("&bbEmptyArray")
 			If TObjectType( ty ) Then
 				If TObjectType( ty ).classDecl.IsExtern() Or TObjectType( ty ).classDecl.IsStruct() Then
 					If TObjectType( ty ).classDecl.IsInterface() Or IsPointerType(ty) Or (Not TObjectType( ty ).classDecl.IsStruct()) Then
@@ -452,10 +452,10 @@ Type TCTranslator Extends TTranslator
 						Return "{}"
 					End If
 				Else
-					Return "&bbNullObject"
+					Return Bra("&bbNullObject")
 				End If
 			End If
-			If TFunctionPtrType( ty) Return "&brl_blitz_NullFunctionError" ' todo ??
+			If TFunctionPtrType( ty) Return "(&brl_blitz_NullFunctionError)" ' todo ??
 			If TEnumType( ty ) Then
 				If TEnumType( ty ).decl.isFlags Then
 					Return "0"
@@ -4046,23 +4046,25 @@ End Rem
 	
 			EmitClassDeclNewList(classDecl)
 			
-			' process nested functions for delete
-			decl = classDecl.FindFuncDecl("delete",,,,,,SCOPE_CLASS_HEIRARCHY)
-			If decl Then
-				decl.Semant
-				' emit nested protos
-				For Local fdecl:TFuncDecl = EachIn decl._decls
-					EmitFuncDecl(fdecl, True, False)
-				Next
-				
-				' emit nested bodies
-				For Local fdecl:TFuncDecl = EachIn decl._decls
-					EmitFuncDecl(fdecl, False, False)
-				Next
-			End If
-	
-			If classHierarchyHasFunction(classDecl, "Delete") Then
-				EmitClassDeclDelete(classDecl)
+			If Not (classDecl.attrs & CLASS_STRUCT) Then
+				' process nested functions for delete
+				decl = classDecl.FindFuncDecl("delete",,,,,,SCOPE_CLASS_HEIRARCHY)
+				If decl Then
+					decl.Semant
+					' emit nested protos
+					For Local fdecl:TFuncDecl = EachIn decl._decls
+						EmitFuncDecl(fdecl, True, False)
+					Next
+					
+					' emit nested bodies
+					For Local fdecl:TFuncDecl = EachIn decl._decls
+						EmitFuncDecl(fdecl, False, False)
+					Next
+				End If
+		
+				If classHierarchyHasFunction(classDecl, "Delete") Then
+					EmitClassDeclDelete(classDecl)
+				End If
 			End If
 	
 			Rem
@@ -4485,7 +4487,10 @@ End Rem
 	
 	Method EmitClassDeclNew( classDecl:TClassDecl, fdecl:TFuncDecl )
 		Local classid$=classDecl.munged
-		Local superid$=classDecl.superClass.actual.munged
+		Local superid$
+		If classDecl.superClass Then
+			superid = classDecl.superClass.actual.munged
+		End If
 
 		Local t:String = "void _" 
 		
@@ -4628,7 +4633,6 @@ End Rem
 
 	Method EmitClassDeclNewList( classDecl:TClassDecl )
 		Local classid$=classDecl.munged
-		Local superid$=classDecl.superClass.actual.munged
 
 		Local newDecls:TFuncDeclList = TFuncDeclList(classdecl.FindDeclList("new", True,,,True))
 		
@@ -6368,19 +6372,9 @@ End If
 		Emit "EXPORTS"
 		
 		For Local decl:TFuncDecl=EachIn app.exportDefs
-			Emit "~t" + TransExportDef(decl, False)
+			Emit "~t" + TransExportDef(decl, opt_arch = "x86")
 		Next
 
-		If opt_arch = "x86" Then
-			Emit "~n"
-			
-			For Local decl:TFuncDecl=EachIn app.exportDefs
-				If decl.attrs & DECL_API_STDCALL Then
-					Emit "~t" + TransExportDef(decl, True) + " = " + TransExportDef(decl, False)
-				End If
-			Next
-		End If
-		
 		Emit "~n"
 	End Method
 

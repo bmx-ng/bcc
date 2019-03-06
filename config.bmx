@@ -171,6 +171,11 @@ Function EscapeString$(str$)
 	Return str
 End Function
 
+Function EscapeLines:String(str:String)
+	str=str.Replace("~n", "Newline")
+	Return str
+End Function
+
 Function BmxEnquote$( str$ )
 	str=str.Replace( "~~","~~~~" )
 	str=str.Replace( "~q","~~q" )

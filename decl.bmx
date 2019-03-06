@@ -1487,10 +1487,15 @@ End Rem
 	
 					If i<argExprs.Length And argExprs[i]
 					
-						Local arg:TExpr = argExprs[i]
+						' ensure arg is semanted
+						Local arg:TExpr = argExprs[i].Semant()
 					
 						Local declTy:TType=argDecls[i].ty
 						Local exprTy:TType=arg.exprType
+						
+						If Not exprTy Then
+							InternalErr "TScopeDecl.FindFuncDecl"
+						End If
 						
 						Local widensTest:Int = True
 						
@@ -3031,6 +3036,17 @@ End Rem
 			End If
 		Next
 
+		' structs have a default New
+		' if we haven't defined one, create one
+		If attrs & CLASS_STRUCT Then
+			Local func:TFuncDecl = FindFuncDecl("new", Null,True,,,,0)
+			If Not func Then
+				func = New TNewDecl.CreateF("New", Null, Null, FUNC_CTOR | FUNC_METHOD)
+				TNewDecl(func).cdecl = Self
+				InsertDecl(func)
+			End If
+		End If
+		
 		'NOTE: do this AFTER super semant so UpdateAttrs order is cool.
 
 		If AppScope() Then
