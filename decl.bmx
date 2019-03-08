@@ -2697,10 +2697,6 @@ End Rem
 	
 	Method GetAllFuncDecls:TFuncDecl[](funcs:TFuncDecl[] = Null, includeSuper:Int = True, includeImplicitConstructors:Int = False)
 
-		If Not funcs Then
-			funcs = New TFuncDecl[0]
-		End If
-		
 		If superClass And includeSuper Then
 			funcs = superClass.GetAllFuncDecls(funcs)
 		Else If includeImplicitConstructors Then
@@ -2721,9 +2717,11 @@ End Rem
 		End If
 
 		' interface methods
-		For Local iface:TClassDecl=EachIn implmentsAll
-			funcs = iface.GetAllFuncDecls(funcs)
-		Next
+		If includeSuper Then
+			For Local iface:TClassDecl=EachIn implmentsAll
+				funcs = iface.GetAllFuncDecls(funcs)
+			Next
+		End If
 		
 		For Local func:TFuncDecl = EachIn _decls
 		
