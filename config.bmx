@@ -27,10 +27,12 @@ Import BRL.LinkedList
 Import BRL.Map
 Import BRL.FileSystem
 Import Pub.zlib
+Import BRL.Math
 
 Import "options.bmx"
 Import "base.stringhelper.bmx"
 Import "base64.bmx"
+Import "enums.c"
 
 ' debugging help
 Const DEBUG:Int = False
@@ -166,6 +168,11 @@ Function EscapeString$(str$)
 	str=str.Replace( "~n","\n" )
 	str=str.Replace( "~r","\r" )
 	str=str.Replace( "~t","\t" )
+	Return str
+End Function
+
+Function EscapeLines:String(str:String)
+	str=str.Replace("~n", "Newline")
 	Return str
 End Function
 
@@ -476,4 +483,5 @@ End Type
 
 Extern
 	Function strlen_:Int(s:Byte Ptr)="strlen"
+	Function bmx_enum_next_power(char:Int, val:Long Var, ret:Long Var)
 End Extern

@@ -43,13 +43,14 @@ Const TOKE_NATIVE:Int=11
 '***** Tokenizer *****
 Type TToker
 
-	Const __keywords$="strict,superstrict,public,private,protected,short,int,float,double,long,string,object,ptr,var,varptr," + ..
-		"mod,continue,exit,include,import,module,extern,framework,new,self,super,eachin,true,false," + ..
-		"null,not,extends,abstract,select,case,default,const,local,global,field,method,function,type," + ..
-		"and,or,shl,shr,sar,end,if,then,else,elseif,endif,while,wend,repeat,until,forever,for,to,step," + ..
+	Const __keywords$="strict,superstrict,public,private,protected,byte,short,int,float,double,long,string,object,ptr,var,varptr," + ..
+		"mod,continue,exit,include,import,module,moduleinfo,extern,framework,new,self,super,eachin,true,false," + ..
+		"null,not,extends,abstract,final,select,case,default,const,local,global,field,method,function,type," + ..
+		"and,or,shl,shr,sar,end,if,then,else,elseif,endif,while,wend,repeat,until,forever,for,to,step,goto," + ..
 		"next,return,alias,rem,endrem,throw,assert,try,catch,finally,nodebug,incbin,endselect,endmethod," + ..
 		"endfunction,endtype,endextern,endtry,endwhile,pi,release,defdata,readdata,restoredata,interface," + ..
-		"endinterface,implements,size_t,uint,ulong,struct,endstruct,operator,where,readonly,export"
+		"endinterface,implements,size_t,uint,ulong,struct,endstruct,operator,where,readonly,export,override," + ..
+		"enum,endenum"
 	Global _keywords:TMap
 
 	Field _path$

@@ -27,6 +27,7 @@ Const DECL_PRIVATE:Int=     $020000
 Const DECL_ABSTRACT:Int=    $040000
 Const DECL_FINAL:Int=       $080000
 Const DECL_READ_ONLY:Int=     $000100
+Const DECL_OVERRIDE:Int=    $40000000
 
 Const DECL_SEMANTED:Int=    $100000
 Const DECL_SEMANTING:Int=   $200000
@@ -52,6 +53,7 @@ Const CLASS_INTERFACE:Int=    $002000
 Const CLASS_THROWABLE:Int=    $004000
 Const CLASS_STRUCT:Int=       $008000
 Const CLASS_GENERIC:Int=      $001000
+Const CLASS_FLAGS:Int = CLASS_INTERFACE | CLASS_THROWABLE | CLASS_STRUCT | CLASS_GENERIC
 
 Const SCOPE_FUNC:Int = 0
 Const SCOPE_CLASS_LOCAL:Int = 1
@@ -994,9 +996,9 @@ Type TScopeDecl Extends TDecl
 	End Method
 	
 
-	Method FindDecl:Object( ident$, override:Int = False )
+	Method FindDecl:Object( ident$, _override:Int = False )
 	
-		If Not override And _env<>Self Return GetDecl( ident )
+		If Not _override And _env<>Self Return GetDecl( ident )
 		
 		Local tscope:TScopeDecl=Self
 		While tscope
@@ -1049,13 +1051,13 @@ Type TScopeDecl Extends TDecl
 	End Method
 	
 	' returns a list of all matching named decls in scope
-	Method FindDeclList:Object(ident:String, override:Int = False, declList:TFuncDeclList = Null, maxSearchDepth:Int = SCOPE_ALL, skipMultipleClassScopes:Int = False )
+	Method FindDeclList:Object(ident:String, _override:Int = False, declList:TFuncDeclList = Null, maxSearchDepth:Int = SCOPE_ALL, skipMultipleClassScopes:Int = False )
 
 		If Not declList Then
 			declList = New TFuncDeclList
 		End If
 	
-		If Not override And _env<>Self Return GetDeclList( ident, declList, maxSearchDepth )
+		If Not _override And _env<>Self Return GetDeclList( ident, declList, maxSearchDepth )
 		
 		Local hadClassScope:Int
 		Local tscope:TScopeDecl=Self
@@ -1201,6 +1203,10 @@ Type TScopeDecl Extends TDecl
 				End If
 				Return cdecl.objectType
 			EndIf
+			Local edecl:TEnumDecl = TEnumDecl(decl)
+			If edecl Then
+				Return New TEnumType.Create(edecl)
+			End If
 		EndIf
 		If scope Return scope.FindType( ident,args, callback )
 	End Method
@@ -1481,10 +1487,15 @@ End Rem
 	
 					If i<argExprs.Length And argExprs[i]
 					
-						Local arg:TExpr = argExprs[i]
+						' ensure arg is semanted
+						Local arg:TExpr = argExprs[i].Semant()
 					
 						Local declTy:TType=argDecls[i].ty
 						Local exprTy:TType=arg.exprType
+						
+						If Not exprTy Then
+							InternalErr "TScopeDecl.FindFuncDecl"
+						End If
 						
 						Local widensTest:Int = True
 						
@@ -2103,89 +2114,35 @@ Type TFuncDecl Extends TBlockDecl
 		'check we exactly match an override
 		If sclass 'And IsMethod()
 
+			Local found:Int
+
 			While sclass
 				Local errorDetails:String = ""
 
-				Local found:Int
-				For Local decl:TFuncDecl=EachIn sclass.FuncDecls( )
-					
-					If decl.IdentLower() = IdentLower() Then
+				found = MatchesFunction(sclass, strictVoidToInt, errorDetails)
 
-						If IdentLower() = "new" Continue
-						If IdentLower() = "delete" Continue
-
-						found=True
-
-						If Not decl.IsSemanted() Then
-							decl.Semant
-						End If
-
-						' check void return type strictness, and fail if appropriate.
-						Local voidReturnTypeFail:Int = False
-						' super has void return type... so it is superstrict (or inherited from)
-						If TVoidType(decl.retType) And TIntType(retType) Then
-							' if we are only strict, we may fail on type mismatch
-							If Not ModuleScope().IsSuperStrict() Then
-								' we have the option of upgrading our return type to match superstrict parent
-								If opt_strictupgrade And strictVoidToInt Then
-									retType = TType.voidType
-								Else
-									' otherwise...
-									voidReturnTypeFail = True
-								End If
-							End If
-						End If
-
-						If EqualsFunc( decl ) And Not voidReturnTypeFail
-
-							' check we aren't attempting to assign weaker access modifiers
-							If (IsProtected() And decl.IsPublic()) Or (IsPrivate() And (decl.IsProtected() Or decl.IsPublic())) Then
-							
-								Err PrivilegeError(Self, decl)
-								
-							End If
-						
-							If (TObjectType(retType) And TObjectType(decl.retType )) Or (TArrayType(retType) And TArrayType(decl.retType)) Then
-								If Not retType.EqualsType( decl.retType ) And retType.ExtendsType( decl.retType ) Then
-									returnTypeSubclassed = True
-								End If
-							End If
-							
-							overrides=TFuncDecl( decl.actual )
-						Else
-							' method overloading?
-							If Not EqualsArgs(decl) Then
-								found = False
-								Continue
-							End If
-							
-							'prepare a more detailed error message
-							If (Not retType.EqualsType( decl.retType ) Or Not retType.ExtendsType( decl.retType )) Or (decl.retType And Not decl.retType.EqualsType( retType )) Or voidReturnTypeFail
-								errorDetails :+ "Return type is ~q"+retType.ToString()+"~q, expected ~q"+decl.retType.ToString()+"~q. "
-								If voidReturnTypeFail Then
-									errorDetails :+ "You may have Strict type overriding SuperStrict type. "
-								End If
-							Else
-								found = False
-								Continue
-							End If
-
-							Local argCount:Int = Min(argDecls.Length, decl.argDecls.Length)
-							If argCount > 0
-								For Local i:Int=0 Until argCount
-									If Not argDecls[i].ty.EqualsType( decl.argDecls[i].ty )
-										errorDetails :+ "Argument #"+(i+1)+" is ~q" + argDecls[i].ty.ToString()+"~q, expected ~q"+decl.argDecls[i].ty.ToString()+"~q. "
-									End If
-								Next
-							EndIf
-							'remove last space
-							errorDetails = errorDetails.Trim()
-						EndIf
+				' check interfaces?
+				If Not found Then
+					If sclass = cdecl.superClass Then
+						found = MatchesInterfaceFunction(cdecl, strictVoidToInt, errorDetails)
 					End If
-				Next
+
+					If Not found Then
+						found = MatchesInterfaceFunction(sclass, strictVoidToInt, errorDetails)
+					End If
+				End If
+				
 				If found
 					If Not overrides Err "Overriding method does not match any overridden method. (Detail: " + errorDetails+")"
 					If overrides.IsFinal() Err "Final methods cannot be overridden."
+					If Not (attrs & DECL_OVERRIDE) And opt_require_override And Not declImported Then
+						Local msg:String = "Overriding method '" + ident + "' must be declared with 'Override'."
+						If Not opt_override_error Then
+							Warn msg
+						Else
+							Err msg
+						End If
+					End If
 					' for overrides, make the ident match that of the superclass
 					ident = overrides.ident
 					
@@ -2193,6 +2150,10 @@ Type TFuncDecl Extends TBlockDecl
 				EndIf
 				sclass=sclass.superClass
 			Wend
+			
+			If Not found And attrs & DECL_OVERRIDE Then
+				Err "Method does not override method from its super type."
+			End If
 		EndIf
 
 		'append a return statement if necessary
@@ -2211,6 +2172,108 @@ Type TFuncDecl Extends TBlockDecl
 		attrs:|DECL_SEMANTED
 		
 		Super.OnSemant()
+	End Method
+	
+	Method MatchesInterfaceFunction:Int(cdecl:TClassDecl, strictVoidToInt:Int, errorDetails:String Var)
+		Local found:Int
+
+		If Not found Then
+			For Local idecl:TClassDecl = EachIn cdecl.implments
+				found = MatchesFunction(idecl, strictVoidToInt, errorDetails)
+			
+				If Not found Then
+					found = MatchesInterfaceFunction(idecl, strictVoidToInt, errorDetails)
+				End If
+				
+				If found Then
+					Exit
+				End If
+			Next
+		End If
+		Return found
+	End Method
+
+	Method MatchesFunction:Int(sclass:TClassDecl, strictVoidToInt:Int, errorDetails:String Var)
+		Local found:Int
+		For Local decl:TFuncDecl=EachIn sclass.FuncDecls( )
+			
+			If decl.IdentLower() = IdentLower() Then
+
+				If IdentLower() = "new" Continue
+				If IdentLower() = "delete" Continue
+
+				found=True
+
+				If Not decl.IsSemanted() Then
+					decl.Semant
+				End If
+
+				' check void return type strictness, and fail if appropriate.
+				Local voidReturnTypeFail:Int = False
+				' super has void return type... so it is superstrict (or inherited from)
+				If TVoidType(decl.retType) And TIntType(retType) Then
+					' if we are only strict, we may fail on type mismatch
+					If Not ModuleScope().IsSuperStrict() Then
+						' we have the option of upgrading our return type to match superstrict parent
+						If opt_strictupgrade And strictVoidToInt Then
+							retType = TType.voidType
+						Else
+							' otherwise...
+							voidReturnTypeFail = True
+						End If
+					End If
+				End If
+
+				If EqualsFunc( decl ) And Not voidReturnTypeFail
+
+					' check we aren't attempting to assign weaker access modifiers
+					If (IsProtected() And decl.IsPublic()) Or (IsPrivate() And (decl.IsProtected() Or decl.IsPublic())) Then
+					
+						Err PrivilegeError(Self, decl)
+					
+					End If
+				
+					If (TObjectType(retType) And TObjectType(decl.retType )) Or (TArrayType(retType) And TArrayType(decl.retType)) Then
+						If Not retType.EqualsType( decl.retType ) And retType.ExtendsType( decl.retType ) Then
+							returnTypeSubclassed = True
+						End If
+					End If
+					
+					overrides=TFuncDecl( decl.actual )
+				Else
+					' method overloading?
+					If Not EqualsArgs(decl) Then
+						found = False
+						Continue
+					End If
+					
+					'prepare a more detailed error message
+					If (Not retType.EqualsType( decl.retType ) Or Not retType.ExtendsType( decl.retType )) Or (decl.retType And Not decl.retType.EqualsType( retType )) Or voidReturnTypeFail
+						errorDetails :+ "Return type is ~q"+retType.ToString()+"~q, expected ~q"+decl.retType.ToString()+"~q. "
+						If voidReturnTypeFail Then
+							errorDetails :+ "You may have Strict type overriding SuperStrict type. "
+						End If
+					Else
+						found = False
+						Continue
+					End If
+
+					Local argCount:Int = Min(argDecls.Length, decl.argDecls.Length)
+					If argCount > 0
+						For Local i:Int=0 Until argCount
+							If Not argDecls[i].ty.EqualsType( decl.argDecls[i].ty )
+								errorDetails :+ "Argument #"+(i+1)+" is ~q" + argDecls[i].ty.ToString()+"~q, expected ~q"+decl.argDecls[i].ty.ToString()+"~q. "
+							End If
+						Next
+					EndIf
+					'remove last space
+					errorDetails = errorDetails.Trim()
+				EndIf
+			End If
+			
+			If found Exit
+		Next
+		Return found
 	End Method
 
 	Method CheckAccess:Int()
@@ -2994,6 +3057,17 @@ End Rem
 			End If
 		Next
 
+		' structs have a default New
+		' if we haven't defined one, create one
+		If attrs & CLASS_STRUCT Then
+			Local func:TFuncDecl = FindFuncDecl("new", Null,True,,,,0)
+			If Not func Then
+				func = New TNewDecl.CreateF("New", Null, Null, FUNC_CTOR | FUNC_METHOD)
+				TNewDecl(func).cdecl = Self
+				InsertDecl(func)
+			End If
+		End If
+		
 		'NOTE: do this AFTER super semant so UpdateAttrs order is cool.
 
 		If AppScope() Then
@@ -3397,6 +3471,173 @@ Type TTryStmtDecl Extends TBlockDecl
 	
 	Method ToString:String()
 		Return "TTryStmtDecl"
+	End Method
+End Type
+
+Type TEnumDecl Extends TScopeDecl
+	Field ty:TType
+	Field isFlags:Int
+	Field values:TEnumValueDecl[]
+	
+	Method Create:TEnumDecl(id:String, ty:TType, isFlags:Int, values:TEnumValueDecl[])
+		Self.ident = id
+		Self.ty = ty
+		Self.isFlags = isFlags
+		Self.values = values
+		Return Self
+	End Method
+	
+	Method OnSemant()
+		' validate type
+		If Not TIntegralType(ty) Then
+			Err "Invalid type '" + ty.ToString() + "'. Enums can only be declared as integral types."
+		End If
+		
+		For Local val:TEnumValueDecl = EachIn values
+			val.scope = Self
+			val.Semant()
+		Next
+
+		GenerateFuncs()
+	End Method
+
+	Method OnCopy:TDecl(deep:Int = True)
+		Return New TEnumDecl.Create(ident, ty, isFlags, values)
+	End Method
+	
+	Method GetDecl:Object( ident$ )
+		For Local val:TEnumValueDecl = EachIn values
+			If val.IdentLower() = ident And val.IsSemanted() Then
+				Return val
+			End If
+		Next
+		
+		Return Super.GetDecl(ident)
+	End Method
+	
+	Method GenerateFuncs()
+		Local fdecl:TFuncDecl = New TFuncDecl.CreateF("ToString", New TStringType, Null, FUNC_METHOD)
+		InsertDecl fdecl
+		fdecl.Semant()
+		
+		fdecl = New TFuncDecl.CreateF("Ordinal", ty, Null, FUNC_METHOD)
+		InsertDecl fdecl
+		fdecl.Semant()
+
+		fdecl = New TFuncDecl.CreateF("Values", New TArrayType.Create(New TEnumType.Create(Self), 1), Null, 0)
+		InsertDecl fdecl
+		fdecl.Semant()
+	End Method
+	
+	Method ToString:String()
+		Return ident
+	End Method
+End Type
+
+Type TEnumValueDecl Extends TDecl
+
+	Field expr:TExpr
+	Field index:Int
+	
+	
+	Method Create:TEnumValueDecl(id:String, index:Int, expr:TExpr)
+		Self.ident = id
+		Self.index = index
+		Self.expr = expr
+		Return Self
+	End Method
+
+	Method OnSemant()
+		Local parent:TEnumDecl = TEnumDecl(scope)
+		Local previous:TEnumValueDecl
+		If index > 0 Then
+			previous = parent.values[index - 1]
+		End If
+
+		If expr Then
+
+			expr = expr.Semant()
+
+			' 			
+			If TIdentEnumExpr(expr) Then
+				If TIdentEnumExpr(expr).value.scope = parent Then
+					expr = New TConstExpr.Create(parent.ty, TIdentEnumExpr(expr).value.Value()).Semant()
+				End If
+			End If
+			
+			If parent.isFlags And TBinaryMathExpr(expr) Then
+				expr = New TConstExpr.Create(parent.ty, TBinaryMathExpr(expr).Eval())
+			End If
+			
+			If Not TConstExpr(expr) Or Not TIntegralType(TConstExpr(expr).ty) Then
+				Err "Enum values must be integral constants."
+			End If
+		Else
+			Local val:Long
+			
+			' initial flags value
+			If index = 0 And parent.isFlags Then
+				val = 1
+			End If
+
+			If previous Then
+				'
+				If TConstExpr(previous.expr)
+
+					val = TConstExpr(previous.expr).value.ToLong()
+
+					If parent.isFlags Then
+						If val = 0 Then
+							val = 1 
+						Else
+							If (val & (val - 1)) = 0 Then
+								val :+ 1
+							End If
+							' find next power of 2
+
+							Local res:Long
+							bmx_enum_next_power(Asc(TypeCode(parent.ty)), val, res)
+
+							If Not res Then
+								Err "Flags out of bounds at '" + ident + "'."
+							End If
+							
+							val = res
+							
+						End If
+					Else
+						val :+ 1
+					End If
+				Else
+					InternalErr "TEnumValueDecl.OnSemant"
+				End If
+			End If
+
+			expr = New TConstExpr.Create( parent.ty.Copy(), val).Semant()
+		
+		End If
+	End Method
+
+	Method OnCopy:TDecl(deep:Int = True)
+		Return New TEnumValueDecl.Create(ident, index, expr)
+	End Method
+	
+	Method Value:String()
+		Return TConstExpr(expr).value
+	End Method
+
+	Method TypeCode:String(ty:TType)
+		If TByteType( ty ) Return "b"
+		If TShortType( ty ) Return "s"
+		If TIntType( ty ) Return "i"
+		If TUIntType( ty ) Return "u"
+		If TLongType( ty ) Return "l"
+		If TULongType( ty ) Return "y"
+		If TSizeTType( ty ) Return "z"
+	End Method
+	
+	Method ToString:String()
+		Return "TEnumValueDecl"
 	End Method
 End Type
 
