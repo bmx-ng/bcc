@@ -2810,7 +2810,7 @@ Type TIdentExpr Extends TExpr
 		IdentErr
 	End Method
 
-	Method SemantFunc:TExpr( args:TExpr[], throwError:Int = True, funcCall:Int = False )If ident="F"DebugStop
+	Method SemantFunc:TExpr( args:TExpr[], throwError:Int = True, funcCall:Int = False )
 
 		_Semant
 
