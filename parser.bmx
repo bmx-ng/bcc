@@ -53,7 +53,7 @@ Type TForEachinStmt Extends TLoopStmt
 	Method OnCopy:TStmt( scope:TScopeDecl )
 		If loopLabel Then
 			If varExpr Then
-				Return New TForEachinStmt.Create( varid,varty,varlocal,expr.Copy(),block.CopyBlock( scope ),TLoopLabelDecl(loopLabel.Copy()), varExpr.Copy() )
+		Return New TForEachinStmt.Create( varid,varty,varlocal,expr.Copy(),block.CopyBlock( scope ),TLoopLabelDecl(loopLabel.Copy()), varExpr.Copy() )
 			Else
 				Return New TForEachinStmt.Create( varid,varty,varlocal,expr.Copy(),block.CopyBlock( scope ),TLoopLabelDecl(loopLabel.Copy()), Null )
 			End If
@@ -109,16 +109,16 @@ Type TForEachinStmt Extends TLoopStmt
 					Local expr:TExpr=New TVarExpr.Create( varTmp )
 
 					If Not isStruct Then
-						' var = Null
-						expr=New TBinaryCompareExpr.Create( "=",expr, New TNullExpr.Create(TType.nullObjectType))
+					' var = Null
+					expr=New TBinaryCompareExpr.Create( "=",expr, New TNullExpr.Create(TType.nullObjectType))
 	
-						' then continue
+					' then continue
 						Local thenBlock:TBlockDecl=New TBlockDecl.Create( block.scope, , BLOCK_IF )
 						Local elseBlock:TBlockDecl=New TBlockDecl.Create( block.scope, , BLOCK_ELSE )
-						cont = New TContinueStmt
-						thenBlock.AddStmt cont
+					cont = New TContinueStmt
+					thenBlock.AddStmt cont
 	
-						block.stmts.AddFirst New TIfStmt.Create( expr,thenBlock,elseBlock )
+					block.stmts.AddFirst New TIfStmt.Create( expr,thenBlock,elseBlock )
 					End If
 					block.stmts.AddFirst New TAssignStmt.Create( "=",New TVarExpr.Create( indexTmp ),addExpr )
 					block.stmts.AddFirst New TDeclStmt.Create( varTmp )
@@ -149,15 +149,15 @@ Type TForEachinStmt Extends TLoopStmt
 '					expr=New TBinaryCompareExpr.Create( "=",New TIdentExpr.Create( varid ), New TNullExpr.Create(TType.nullObjectType))
 
 					If Not isStruct Then
-						expr=New TBinaryCompareExpr.Create( "=",varExpr, New TNullExpr.Create(TType.nullObjectType))
+					expr=New TBinaryCompareExpr.Create( "=",varExpr, New TNullExpr.Create(TType.nullObjectType))
 		
-						' then continue
+					' then continue
 						Local thenBlock:TBlockDecl=New TBlockDecl.Create( block.scope, , BLOCK_IF )
 						Local elseBlock:TBlockDecl=New TBlockDecl.Create( block.scope, , BLOCK_ELSE )
-						cont = New TContinueStmt
-						thenBlock.AddStmt cont
+					cont = New TContinueStmt
+					thenBlock.AddStmt cont
 		
-						block.stmts.AddFirst New TIfStmt.Create( expr,thenBlock,elseBlock )
+					block.stmts.AddFirst New TIfStmt.Create( expr,thenBlock,elseBlock )
 					End If
 					'block.stmts.AddFirst New TDeclStmt.Create( varTmp )
 
@@ -1221,15 +1221,15 @@ Type TParser Extends TGenProcessor
 				If id="string" And CParseToker(tok, ".") Then
 					expr=New TIdentExpr.Create( id )
 				Else
-					expr=ParseExpr()
-					
-					If TBinaryExpr(expr) Then
-						' cast lhs and apply to rhs
-						Local cexpr:TCastExpr=New TCastExpr.Create( ty,TBinaryExpr(expr).lhs,CAST_EXPLICIT )
-						TBinaryExpr(expr).lhs = cexpr 
-					Else
-						expr=New TCastExpr.Create( ty,expr,CAST_EXPLICIT )
-					End If
+				expr=ParseExpr()
+				
+				If TBinaryExpr(expr) Then
+					' cast lhs and apply to rhs
+					Local cexpr:TCastExpr=New TCastExpr.Create( ty,TBinaryExpr(expr).lhs,CAST_EXPLICIT )
+					TBinaryExpr(expr).lhs = cexpr 
+				Else
+					expr=New TCastExpr.Create( ty,expr,CAST_EXPLICIT )
+				End If
 				End If
 			EndIf
 		Case "sizeof"
@@ -1831,12 +1831,12 @@ End Rem
 			varlocal=True
 			varid=ParseIdent()
 
-			varty=ParseDeclType()
-			If varty._flags & (TType.T_CHAR_PTR | TType.T_SHORT_PTR) Then
-				DoErr "Illegal variable type"
-			End If
-			
-			Parse( "=" )
+				varty=ParseDeclType()
+				If varty._flags & (TType.T_CHAR_PTR | TType.T_SHORT_PTR) Then
+					DoErr "Illegal variable type"
+				End If
+				
+				Parse( "=" )
 			
 			' use an ident expr to pass the variable to different parts of the statement.
 			' the original implementation passed decl references, which cause problems if we wanted to
@@ -2381,7 +2381,6 @@ End Rem
 		Local id$=ParseIdent()
 		Local ty:TType
 		Local init:TExpr
-		
 		
 		If attrs & DECL_EXTERN
 			ty=ParseDeclType(attrs & DECL_API_STDCALL)
@@ -2945,9 +2944,9 @@ End Rem
 		If api = "os" Then
 			Select opt_platform
 				Case "macos", "osx", "ios"
-					api = "macos"
+			api = "macos"
 				Case "linux", "android", "raspberrypi"
-					api = "linux"
+			api = "linux"
 				Case "win32"
 					api = "win32"
 				Case "nx"
@@ -3133,7 +3132,7 @@ End Rem
 						
 							found = True
 							Exit
-						EndIf
+		EndIf
 					Next
 					If Not found Then
 						Err "Use of undeclared type '" + argIdent + "'."
@@ -3266,10 +3265,6 @@ End Rem
 		Local classDecl:TClassDecl=New TClassDecl.Create( id,sargs,superTy,imps,attrs )
 		
 		If meta Then
-			If attrs & CLASS_STRUCT
-				Err "Structs cannot store metadata."
-			EndIf
-
 			classDecl.metadata = meta
 		End If
 
@@ -3353,13 +3348,13 @@ End Rem
 					Err "Interfaces can only contain constants and methods."
 				EndIf
 				If (attrs & CLASS_STRUCT) And _toke<>"field"
-					Err "Structs can only contain fields."
+					Err "Structs can only contain fields and methods."
 				EndIf
 				
 				classDecl.InsertDecls ParseDecls( _toke,decl_attrs, _toke = "field")
 			Case "method"
 				If (attrs & CLASS_STRUCT) And (attrs & DECL_EXTERN) Then
-					Err "Structs can only contain fields."
+					Err "Extern Structs can only contain fields."
 				EndIf
 				Local decl:TFuncDecl=ParseFuncDecl( _toke,method_attrs | abst_attrs,classDecl )
 				classDecl.InsertDecl decl
@@ -3369,7 +3364,7 @@ End Rem
 				'EndIf
 				If attrs & CLASS_STRUCT Then
 					If (attrs & DECL_EXTERN) Then
-						Err "Structs can only contain fields."
+						Err "Extern Structs can only contain fields."
 					End If
 				EndIf
 				If attrs & DECL_EXTERN Then
@@ -4415,7 +4410,7 @@ End Rem
 	' nx / switch
 	env.InsertDecl New TConstDecl.Create( "nx",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="nx" ),0 )
 	env.InsertDecl New TConstDecl.Create( "nxARM64",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="nx" And opt_arch="arm64"),0 )	
-		
+	
 	' new compiler
 	env.InsertDecl New TConstDecl.Create( "bmxng",New TIntType,New TConstExpr.Create( New TIntType, True ),0 )
 
@@ -4431,11 +4426,11 @@ End Rem
 
 	Local val:String
 	Try
-		Local expr:TExpr=parser.ParseExpr()
+	Local expr:TExpr=parser.ParseExpr()
 	
-		expr=expr.Semant()
+	expr=expr.Semant()
 	
-		If ty expr=expr.Cast( ty )
+	If ty expr=expr.Cast( ty )
 	
 		val=expr.Eval()
 	Catch error:String

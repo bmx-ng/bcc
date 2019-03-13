@@ -174,7 +174,7 @@ Type TExpr
 							decl = TVarExpr(argExpr).decl
 						Else
 							decl = TMemberVarExpr(argExpr).decl
-						End If
+				End If
 						If decl.IsReadOnly() Then
 							If TFieldDecl(decl) Then
 								Local scope:TFuncDecl = _env.FuncScope()
@@ -926,7 +926,7 @@ Type TNewObjectExpr Extends TExpr
 		' New Self doesn't necessarily create an instance of ourself - we might be an instance of
 		' a subclass at the time...
 		If Not isNewSelf Then
-			classDecl.attrs:|CLASS_INSTANCED
+		classDecl.attrs:|CLASS_INSTANCED
 		End If
 
 		If TClassType(ty) Then
@@ -1039,7 +1039,7 @@ Type TNewArrayExpr Extends TExpr
 	End Method
 
 	Method Copy:TExpr()
-		'If exprType InternalErr
+		'If exprType InternalErr "TNewArrayExpr.Copy"
 		Local cexpr:TExpr[expr.length]
 		For Local i:Int = 0 Until expr.length
 			cexpr[i] = CopyExpr(expr[i])
@@ -1490,7 +1490,7 @@ Type TCastExpr Extends TExpr
 					exprType = Null
 				Else
 					exprType = ty
-					Return Self
+				Return Self
 				End If
 			Else If TNumericType(src) And (src._flags & TType.T_VARPTR) Then
 				exprType = expr.exprType
@@ -1715,8 +1715,8 @@ Type TUnaryExpr Extends TExpr
 				Err "Bitwise complement can only be used with integers"
 			End If
 			If TByteType(expr.exprType) Or TShortType(expr.exprType) Then
-				expr=expr.SemantAndCast( New TIntType )
-				exprType=New TIntType
+			expr=expr.SemantAndCast( New TIntType )
+			exprType=New TIntType
 			Else
 				exprType = expr.exprType
 			End If
@@ -2508,7 +2508,7 @@ Type TIdentTypeExpr Extends TExpr
 		Else
 			cdecl=exprType.GetClass()
 		End If
-		If Not cdecl InternalErr "TIdentTypeExpr.Semant"
+		If Not cdecl InternalErr "TIdentTypeExpr._Semant"
 	End Method
 
 	Method Semant:TExpr()
