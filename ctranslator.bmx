@@ -2790,7 +2790,7 @@ t:+"NULLNULLNULL"
 	End Method
 
 	Method TransRestoreDataStmt$( stmt:TRestoreDataStmt )
-		Emit "_defDataOffset = &_defData[" + TDataLabelExpr(stmt.expr).dataDef.label.index + "];"
+		Emit "_defDataOffset = &_defData[" + TDataLabelExpr(stmt.label).dataDef.label.index + "];"
 	End Method
 
 	Method TransReadDataStmt$( stmt:TReadDataStmt )

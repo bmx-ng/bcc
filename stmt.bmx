@@ -440,7 +440,10 @@ Type TBreakStmt Extends TLoopControlStmt
 	Method OnSemant()
 		If Not _loopnest Err "Exit statement must appear inside a loop."
 		If label Then
-			label = label.Semant()
+			Local id:String
+			If TIdentExpr(label) id = "'" + TIdentExpr(label).ident  + "'"
+			label = label.Semant(OPTION_WANT_LOOP_LABEL)
+			If Not TLoopLabelExpr(label) Err "Continue/Exit label " + id + " not found"
 		End If
 		If opt_debug And Not loop Then
 			loop = TLoopStmt(_env.FindLoop())
@@ -473,7 +476,10 @@ Type TContinueStmt Extends TLoopControlStmt
 	Method OnSemant()
 		If Not _loopnest Err "Continue statement must appear inside a loop."
 		If label Then
-			label = label.Semant()
+			Local id:String
+			If TIdentExpr(label) id = "'" + TIdentExpr(label).ident  + "'"
+			label = label.Semant(OPTION_WANT_LOOP_LABEL)
+			If Not TLoopLabelExpr(label) Err "Continue/Exit label " + id + " not found"
 		End If
 		If opt_debug And Not loop Then
 			loop = TLoopStmt(_env.FindLoop())
@@ -798,29 +804,25 @@ Type TReadDataStmt Extends TStmt
 End Type
 
 Type TRestoreDataStmt Extends TStmt
-	Field expr:TExpr
+	Field label:TExpr
 
-	Method Create:TRestoreDataStmt( expr:TExpr )
-		Self.expr=expr
+	Method Create:TRestoreDataStmt( label:TExpr )
+		Self.label=label
 		Return Self
 	End Method
 
 	Method OnCopy:TStmt( scope:TScopeDecl )
-		Return New TRestoreDataStmt.Create( expr.Copy() )
+		Return New TRestoreDataStmt.Create( label.Copy() )
 	End Method
 
 	Method OnSemant()
-		If Not TIdentExpr(expr) Then
-			' todo : better (more specific) error?
-			Err "Expecting identifier"
+		If label
+			Local id:String
+			If TIdentExpr(label) id = "'" + TIdentExpr(label).ident  + "'"
+			label = label.Semant(OPTION_WANT_DATA_LABEL)
+			If Not TDataLabelExpr(label) Err "Data label " + id + " not found"
 		Else
-			Local label:String = TIdentExpr(expr).ident
-			TIdentExpr(expr).ident = "#" + TIdentExpr(expr).ident
-			expr=expr.Semant()
-			
-			If Not expr Then
-				Err "Label '" + label + "' not found"
-			End If
+			Err "Expecting label"
 		End If
 	End Method
 

@@ -34,11 +34,11 @@ Type TExpr
 		InternalErr "TExpr.Copy"
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		InternalErr "TExpr.Semant"
 	End Method
 
-	Method SemantSet:TExpr( op$,rhs:TExpr )
+	Method SemantSet:TExpr( op$,rhs:TExpr, options:Int = 0 )
 		Err ToString()+" cannot be assigned to."
 	End Method
 
@@ -371,7 +371,7 @@ Type TStmtExpr Extends TExpr
 		Return "TStmtExpr(,"+expr.ToString()+")"
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		If exprType Return Self
 
 		stmt.Semant()
@@ -518,7 +518,7 @@ Type TConstExpr Extends TExpr
 		Return "TConstExpr(~q"+value+"~q)"
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		If exprType Return Self
 
 		exprType=ty.Semant()
@@ -631,14 +631,14 @@ Type TVarExpr Extends TExpr
 		Return "TVarExpr("+decl.ToString()+")"
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		If exprType Return Self
 		If Not decl.IsSemanted() InternalErr "TVarExpr.Semant"
 		exprType=decl.ty
 		Return Self
 	End Method
 
-	Method SemantSet:TExpr( op$,rhs:TExpr )
+	Method SemantSet:TExpr( op$,rhs:TExpr, options:Int = 0 )
 		Return Semant()
 	End Method
 
@@ -672,14 +672,14 @@ Type TMemberVarExpr Extends TExpr
 		Return "TMemberVarExpr("+expr.ToString()+","+decl.ToString()+")"
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		If exprType Return Self
 		If Not decl.IsSemanted() InternalErr "TMemberVarExpr.Semant"
 		exprType=decl.ty
 		Return Self
 	End Method
 
-	Method SemantSet:TExpr( op$,rhs:TExpr )
+	Method SemantSet:TExpr( op$,rhs:TExpr, options:Int = 0 )
 		Return Semant()
 	End Method
 
@@ -725,7 +725,7 @@ Type TInvokeExpr Extends TExpr
 		Return t+")"
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 
 		If exprType Return Self
 
@@ -799,7 +799,7 @@ Type TInvokeMemberExpr Extends TExpr
 		Return t+")"
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		If exprType Return Self
 
 		If Not decl.IsSemanted() decl.Semant()
@@ -847,7 +847,7 @@ Type TNewObjectExpr Extends TExpr
 		Return New TNewObjectExpr.Create( ty,CopyArgs(args) )
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		If exprType Return Self
 
 		Local it:TIdentType = TIdentType(ty)
@@ -1047,7 +1047,7 @@ Type TNewArrayExpr Extends TExpr
 		Return New TNewArrayExpr.Create( ty,cexpr )
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		If exprType Return Self
 
 		ty=ty.Semant()
@@ -1097,7 +1097,7 @@ Type TInvokeSuperExpr Extends TExpr
 		Return New TInvokeSuperExpr.Create( ident,CopyArgs(args), _identLower )
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		If exprType Return Self
 
 		'If _env.FuncScope().IsStatic() Err "Illegal use of Super."
@@ -1152,7 +1152,7 @@ Type TSelfExpr Extends TExpr
 		Return expr
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		If exprType Return Self
 
 		If _env.FuncScope().IsStatic() Then
@@ -1199,7 +1199,7 @@ Type TCastExpr Extends TExpr
 		Return New TCastExpr.Create( ty,CopyExpr(expr),flags )
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 
 		If exprType Return Self
 
@@ -1675,7 +1675,7 @@ Type TUnaryExpr Extends TExpr
 		Return New TUnaryExpr.Create( op,CopyExpr(expr) )
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		If exprType Return Self
 
 		expr = expr.Semant()
@@ -1783,7 +1783,7 @@ Type TBinaryMathExpr Extends TBinaryExpr
 		Return New TBinaryMathExpr.Create( op,CopyExpr(lhs),CopyExpr(rhs) )
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		If exprType Return Self
 
 		lhs=lhs.Semant()
@@ -1996,7 +1996,7 @@ Type TBinaryCompareExpr Extends TBinaryExpr
 		Return New TBinaryCompareExpr.Create( op,CopyExpr(lhs),CopyExpr(rhs) )
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		If exprType Return Self
 
 		lhs=lhs.Semant()
@@ -2113,7 +2113,7 @@ Type TBinaryLogicExpr Extends TBinaryExpr
 		Return New TBinaryLogicExpr.Create( op,CopyExpr(lhs),CopyExpr(rhs) )
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		If exprType Return Self
 
 		lhs=lhs.SemantAndCast( New TBoolType,CAST_EXPLICIT )
@@ -2252,11 +2252,11 @@ Type TIndexExpr Extends TExpr
 		Return Self
 	End Method
 	
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		Return _Semant(False, Null)
 	End Method
 
-	Method SemantSet:TExpr( op$,rhs:TExpr )
+	Method SemantSet:TExpr( op$,rhs:TExpr, options:Int = 0 )
 		Return _Semant(True, rhs)
 	End Method
 	
@@ -2301,7 +2301,7 @@ Type TSliceExpr Extends TExpr
 		Return New TSliceExpr.Create( CopyExpr(expr),CopyExpr(from),CopyExpr(term) )
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		If exprType Return Self
 
 		expr=expr.Semant()
@@ -2355,7 +2355,7 @@ Type TArrayExpr Extends TExpr
 		Return expr
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		If exprType Return Self
 
 		If TIdentExpr(exprs[0]) Then
@@ -2465,7 +2465,7 @@ Type TArraySizeExpr Extends TExpr
 		Return New TArraySizeExpr.Create( CopyExpr(expr), val, ind )
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		If exprType Return Self
 
 		expr=expr.Semant()
@@ -2511,7 +2511,7 @@ Type TIdentTypeExpr Extends TExpr
 		If Not cdecl InternalErr "TIdentTypeExpr.Semant"
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		_Semant
 		Err "Expression can't be used in this way"
 	End Method
@@ -2650,12 +2650,41 @@ Type TIdentExpr Extends TExpr
 		InternalErr "TIdentExpr.IsVar"
 	End Method
 
-	Method Semant:TExpr()
-		Return SemantSet( "",Null )
+	Method Semant:TExpr(options:Int = 0)
+		Return SemantSet( "",Null, options )
 	End Method
 
-	Method SemantSet:TExpr( op$,rhs:TExpr )
+	Method SemantSet:TExpr( op$,rhs:TExpr, options:Int = 0 )
 		_Semant
+
+		Select options
+		Case OPTION_WANT_LOOP_LABEL
+			
+			Local loopLabel:String = "#" + IdentLower()
+	
+			' maybe it's a loop label?
+			Local stmt:TLoopStmt = TLoopStmt(scope.FindLoop(loopLabel))
+			
+			If stmt Then
+				Return New TLoopLabelExpr.Create(stmt)
+			End If
+		
+			Return Self
+			
+		Case OPTION_WANT_DATA_LABEL
+
+			Local loopLabel:String = "#" + IdentLower()
+
+			' maybe it's a data label?
+			Local ddecl:TDefDataDecl = TDefDataDecl(_appInstance.FindDataLabel(loopLabel))
+			
+			If ddecl Then
+				Return New TDataLabelExpr.Create(ddecl)
+			End If
+			
+			Return Self
+			
+		Default
 
 		'Local scope:TScopeDecl=IdentScope()
 		Local vdecl:TValDecl=scope.FindValDecl( IdentLower(), static )
@@ -2787,25 +2816,11 @@ Type TIdentExpr Extends TExpr
 			Return New TIdentEnumExpr.Create(edecl)
 		End If
 
-		Local loopLabel:String = "#" + IdentLower()
-
-		' maybe it's a loop label?
-		Local stmt:TLoopStmt = TLoopStmt(scope.FindLoop(loopLabel))
-		
-		If stmt Then
-			Return New TLoopLabelExpr.Create(stmt)
-		End If
-		
-		' maybe it's a data label?
-		Local ddecl:TDefDataDecl = TDefDataDecl(_appInstance.FindDataLabel(loopLabel))
-		
-		If ddecl Then
-			Return New TDataLabelExpr.Create(ddecl)
-		End If
-		
 		If unknownIdentsEvalFalse Then
 			Return New TConstExpr.Create( New TIntType, 0 ).Semant()
 		End If
+		
+		End Select
 		
 		IdentErr
 	End Method
@@ -2978,7 +2993,7 @@ Type TBuiltinExpr Extends TExpr
 	Field id:String
 	Field expr:TExpr
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		If exprType Return Self
 
 		expr=expr.Semant()
@@ -3000,7 +3015,7 @@ Type TLenExpr Extends TBuiltinExpr
 		Return Self
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		If exprType Return Self
 
 		expr=expr.Semant()
@@ -3036,7 +3051,7 @@ Type TAscExpr Extends TBuiltinExpr
 		Return Self
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		If exprType Return Self
 
 		If TConstExpr(expr) Then
@@ -3069,7 +3084,7 @@ Type TSizeOfExpr Extends TBuiltinExpr
 		Return Self
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		If exprType Return Self
 		expr=expr.Semant()
 		exprType=New TIntType
@@ -3094,7 +3109,7 @@ Type TChrExpr Extends TBuiltinExpr
 		Return Self
 	End Method
 	
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		If exprType Return Self
 
 		If TConstExpr(expr) Then
@@ -3146,7 +3161,7 @@ Type TFuncCallExpr Extends TExpr
 		Return t+")"
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		args=SemantArgs( args )
 		If TIndexExpr(expr) Then
 			expr = expr.SemantFunc( args, True, True )
@@ -3194,7 +3209,7 @@ Type TScopeExpr Extends TExpr
 		Return "TScopeExpr("+scope.ToString()+")"
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		Err "Syntax error."
 	End Method
 
@@ -3222,7 +3237,7 @@ Type TNewExpr Extends TExpr
 		Return New TNewExpr.Create(CopyArgs(args), isSuper)
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 
 		Local fdecl:TFuncDecl = _env.FuncScope()
 		If Not fdecl Or TNewDecl(fdecl) = Null Or Not _env.ClassScope() Then
@@ -3283,7 +3298,7 @@ Type TNullExpr Extends TExpr
 		Return New TNullExpr.Create(exprType)
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		Return Self
 	End Method
 
@@ -3310,7 +3325,7 @@ Type TLoopLabelExpr Extends TExpr
 		Return New TLoopLabelExpr.Create(loop)
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		Return Self
 	End Method
 
@@ -3337,7 +3352,7 @@ Type TDataLabelExpr Extends TExpr
 		Return New TDataLabelExpr.Create(dataDef)
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		Return Self
 	End Method
 
@@ -3364,7 +3379,7 @@ Type TIdentEnumExpr Extends TExpr
 		Return New TIdentEnumExpr.Create( value )
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		Return Self
 	End Method
 
