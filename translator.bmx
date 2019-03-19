@@ -39,6 +39,7 @@ Type TTranslator
 	
 	'Munging needs a big cleanup!
 	
+	Field globalMungScope:TMap = New TMap
 	Field mungScope:TMap=New TMap'<TDecl>
 	Field mungStack:TStack=New TStack'< StringMap<TDecl> >
 	Field funcMungs:TMap=New TMap'<FuncDeclList>
@@ -554,9 +555,13 @@ Type TTranslator
 		'sanitize non-mung-able characters
 		munged = TStringHelper.Sanitize(munged)
 
+		Local scopeSearch:Int = 0
+		If fdecl And Not fdecl.ClassScope() And Not (fdecl.attrs & FUNC_PTR)
+			scopeSearch = 1
+		End If
 
 		'add an increasing number to identifier if already used  
-		If mungScope.Contains( munged )
+		If MungScopeContains( munged, scopeSearch )
 			If TFuncDecl(decl) And TFuncDecl(decl).exported Then
 				Err "Cannot export duplicate identifiers : " + decl.ident 
 			End If
@@ -564,11 +569,14 @@ Type TTranslator
 			Local i:Int=1
 			Repeat
 				i:+1
-			Until Not mungScope.Contains( munged + i )
+			Until Not MungScopeContains( munged + i, scopeSearch )
 			munged :+ i
 		EndIf
 
 		mungScope.Insert(munged, decl)
+		If scopeSearch Then
+			globalMungScope.Insert(munged, decl)
+		End If
 		decl.munged=munged
 		
 		' a function pointers' real function is stored in "func" - need to set its munged to match the parent.
@@ -578,6 +586,14 @@ Type TTranslator
 			End If
 		End If
 		
+	End Method
+	
+	Method MungScopeContains:Int( munged:String, scopeSearch:Int )
+		If Not scopeSearch Then
+			Return mungScope.Contains( munged )
+		End If
+		
+		Return globalMungScope.Contains( munged )
 	End Method
 
 Rem
