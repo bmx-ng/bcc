@@ -2834,8 +2834,12 @@ Type TIdentExpr Extends TExpr
 
 		'Local scope:TScopeDecl=IdentScope()
 		Local initialScope:Int = SCOPE_ALL
-		If scope And TClassDecl(scope) Then
+		If scope Then
+			If TClassDecl(scope) Then
 			initialScope = SCOPE_CLASS_HEIRARCHY
+			Else If TModuleDecl(scope) Then
+				initialScope = SCOPE_MODULE
+			End If
 		End If
 		
 		Local fdecl:TFuncDecl
