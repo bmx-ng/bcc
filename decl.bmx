@@ -3374,8 +3374,13 @@ Type TLoopLabelDecl Extends TDecl ' also used internally for Try constructs
 	Field realIdent:String
 
 	Method Create:TLoopLabelDecl( ident$, attrs:Int=0 )
+		If Not ident.StartsWith("#") Then
 		Self.ident="#" + ident
 		Self.realIdent = ident
+		Else
+			Self.ident = ident
+			Self.realIdent = ident[1..]
+		End If
 		Self.attrs=attrs
 		Return Self
 	End Method
@@ -3395,8 +3400,13 @@ Type TDataLabelDecl Extends TDecl
 	Field index:Int
 
 	Method Create:TDataLabelDecl( ident$, attrs:Int=0 )
+		If Not ident.StartsWith("#") Then
 		Self.ident="#" + ident
 		Self.realIdent = ident
+		Else
+			Self.ident = ident
+			Self.realIdent = ident[1..]
+		End If
 		Self.attrs=attrs
 		Return Self
 	End Method
