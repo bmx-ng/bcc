@@ -1127,6 +1127,11 @@ Type TInvokeSuperExpr Extends TExpr
 		' ensure the super function has been semanted
 		funcDecl.Semant()
 		
+		' cannot directly call abstract methods
+		If funcDecl.isAbstract() Then
+			Err "Abstract method '" + funcDecl.ident + "' cannot be accessed directly."
+		End If
+		
 		' for static scope, we need to change class scope to that of the super class
 		If _env.FuncScope().IsStatic() Then
 			classScope = TClassDecl(funcDecl.scope)
