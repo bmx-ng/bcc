@@ -1457,6 +1457,8 @@ End Rem
 							End If
 							'funcs.AddLast fp
 							func = fp
+						Else
+							Err "Expression of type '" + TVarDecl(iDecl).ty.ToString() + "' cannot be invoked."
 						End If
 					End If
 					

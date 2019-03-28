@@ -956,6 +956,29 @@ Type TNewObjectExpr Extends TExpr
 				Local id:String = parts[i]
 				i :+ 1
 				
+				' find other member decl (field, etc)
+				Local decl:TValDecl = TValDecl(cdecl.GetDecl(id))
+				If TVarDecl(decl) Then
+					decl.Semant
+					Local tmp:TLocalDecl=New TLocalDecl.Create( "", eType, expr,, True )
+					Local varExpr:TExpr = New TMemberVarExpr.Create(New TVarExpr.Create( tmp ), TVarDecl(decl)).Semant()
+					expr = New TStmtExpr.Create( New TDeclStmt.Create( tmp ), varExpr ).Semant()
+					eType = decl.ty
+					If TObjectType(eType) Then
+						cdecl = TObjectType(expr.exprType).classdecl
+					End If
+					If TArrayType(eType) Or TStringType(eType) Then
+						cdecl = eType.GetClass()
+					End If
+					Continue
+				End If
+				If TConstDecl(decl) Then
+					decl.Semant()
+					expr = New TConstExpr.Create(decl.ty, TConstDecl(decl).value).Semant()
+					eType = decl.ty
+					Continue
+				End If
+
 				' find member function.method
 				Local fdecl:TFuncDecl
 				Try
@@ -982,30 +1005,6 @@ Type TNewObjectExpr Extends TExpr
 					Continue
 				End If
 				
-				' find other member decl (field, etc)
-				If Not errorDetails Then
-					Local decl:TValDecl = TValDecl(cdecl.GetDecl(id))
-					If TVarDecl(decl) Then
-						Local tmp:TLocalDecl=New TLocalDecl.Create( "", eType, expr,, True )
-						Local varExpr:TExpr = New TMemberVarExpr.Create(New TVarExpr.Create( tmp ), TVarDecl(decl)).Semant()
-						expr = New TStmtExpr.Create( New TDeclStmt.Create( tmp ), varExpr ).Semant()
-						eType = decl.ty
-						If TObjectType(eType) Then
-							cdecl = TObjectType(expr.exprType).classdecl
-						End If
-						If TArrayType(eType) Or TStringType(eType) Then
-							cdecl = eType.GetClass()
-						End If
-						Continue
-					End If
-					If TConstDecl(decl) Then
-						decl.Semant()
-						expr = New TConstExpr.Create(decl.ty, TConstDecl(decl).value).Semant()
-						eType = decl.ty
-						Continue
-					End If
-				End If	
-
 				' didn't match member or function??
 				' probably an error...
 				If errorDetails Then
@@ -2268,8 +2267,14 @@ Type TIndexExpr Extends TExpr
 	Method SemantFunc:TExpr( args:TExpr[] , throwError:Int = True, funcCall:Int = False )
 		Local ex:TExpr = Semant()
 		
-		If TArrayType( expr.exprType ) And TFunctionPtrType(exprType) Then
+		If TArrayType( expr.exprType ) Then
+			If TFunctionPtrType(exprType) Then
 			exprType = TFunctionPtrType(exprType).func.retType
+			Else
+				If funcCall Then
+					Err "Expression of type '" + exprType.ToString() + "' cannot be invoked."
+				End If
+			End If
 		End If
 		
 		Return ex
