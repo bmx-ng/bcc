@@ -4548,7 +4548,16 @@ End Rem
 				If classDecl.superClass.ident = "Object" Then
 					Emit "bbObjectCtor((BBOBJECT)o);"
 				Else
-					Emit "_" + superid + "_New((" + TransObject(classDecl.superClass) + ")o);"
+					If fdecl And fdecl.scope <> classDecl And fdecl.argDecls.Length Then
+						t = "o"
+						For Local i:Int=0 Until fdecl.argDecls.Length
+							Local arg:TArgDecl=fdecl.argDecls[i]
+							t :+ ", " + arg.munged
+						Next
+						Emit "_" + newDecl.ClassScope().munged + "_" + newDecl.ident + MangleMethod(newDecl) + Bra(t) + ";"
+					Else
+						Emit "_" + superid + "_New((" + TransObject(classDecl.superClass) + ")o);"
+					End If
 				End If
 			End If
 	
@@ -4620,7 +4629,7 @@ End Rem
 		End If
 
 		'Local decl:TFuncDecl = classDecl.FindFuncDecl("new",,,,,,SCOPE_CLASS_LOCAL)
-		If fdecl And (fdecl.scope = classDecl Or fdecl.argDecls.Length) Then ' only our own New method, not any from superclasses
+		If fdecl And (fdecl.scope = classDecl) Then ' only our own New method, not any from superclasses
 			fdecl.Semant
 			If fdecl.munged <> "bbObjectCtor" Then
 				EmitLocalDeclarations(fdecl)
