@@ -1326,6 +1326,14 @@ t:+"NULLNULLNULL"
 						Return decl.munged + Bra(TransSubExpr( lhs ))
 					End If
 
+				Else If TInvokeSuperExpr(lhs) Then
+				
+					Local lvar:String = CreateLocal(lhs, False, False)
+					Local lvarInit:String = Bra(lvar + " = " + lhs.Trans())
+					
+					Local class:String = Bra(lvarInit + "->clas" + tSuper)
+					Return class + "->" + TransFuncPrefix(decl.scope, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, lvar )
+
 				Else
 					InternalErr "TCTranslator.TransFunc"
 				End If
