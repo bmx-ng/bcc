@@ -1846,6 +1846,7 @@ t:+"NULLNULLNULL"
 					Return Bra( Bra(Bra("BBObject*") + t )+"!= &bbNullObject" )
 				End If
 			End If
+			If TEnumType( src ) Return Bra( t+"!=0" )
 		Else If TIntType( dst )
 			If TBoolType( src ) Return Bra( t )
 			If TByteType( src) Return Bra("(BBINT)"+t)
@@ -5191,6 +5192,10 @@ End Rem
 				End If
 			End If
 		EndIf
+
+		If TEnumType(expr.exprType) Then
+			Return Expr.Eval()
+		End If
 
 		'If TObjectType(expr.exprType) And TNullDecl(TObjectType(expr.exprType).classDecl) Then
 		'	Return Enquote("bbNullObject")

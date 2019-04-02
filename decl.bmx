@@ -450,6 +450,12 @@ Type TValDecl Extends TDecl
 			PushEnv(newScope)
 		End If
 	
+		' for imported enum args with a default value, we need to set the type of the value to the enum
+		' since at this point it's just a number with no context
+		If TArgDecl(Self) And declInit And scope And scope.declImported And TEnumType(ty) Then
+			declInit = New TConstExpr.Create(ty, TConstExpr(declInit).value).Semant()
+		End If
+			
 		If declTy
 			If declInit Then
 				If TFunctionPtrType(ty) Then
@@ -697,6 +703,9 @@ Type TArgDecl Extends TLocalDecl
 				End If
 			End If
 			If TInvokeExpr(init) And TFunctionPtrType(TInvokeExpr(init).exprType) Then
+				Return
+			End If
+			If TIdentEnumExpr(init) Then
 				Return
 			End If
 			Err "Function defaults must be constant"

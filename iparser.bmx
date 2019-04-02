@@ -719,6 +719,7 @@ Type TIParser
 				NextToke
 				
 				Local decl:TFuncDecl = ParseFuncDecl( _toke,method_attrs|FUNC_METHOD, ,classDecl )
+				decl.declImported = True
 				'If decl.IsCtor() decl.retTypeExpr=New TObjectType.Create( classDecl )
 				classDecl.InsertDecl decl
 				
@@ -726,6 +727,7 @@ Type TIParser
 				NextToke
 				
 				Local decl:TFuncDecl = ParseFuncDecl( _toke,method_attrs )
+				decl.declImported = True
 				'If decl.IsCtor() decl.retTypeExpr=New TObjectType.Create( classDecl )
 				classDecl.InsertDecl decl
 
@@ -1628,6 +1630,23 @@ End Rem
 			While CParse( "*" )
 				ty = TType.MapToPointerType(ty)
 			Wend
+		Case "/"
+			NextToke
+			ty=ParseNewType()
+
+			If CParse("*") Then
+				If TIdentType(ty) Then
+					ty = TType.MapToPointerType(ty)
+
+					While CParse( "*" )
+						ty = TType.MapToPointerType(ty)
+					Wend
+
+				End If
+			End If
+			
+			CParse("&")
+
 ' TODO
 '		Case "!" ' BaH Double
 '			NextToke
