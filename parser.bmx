@@ -2959,7 +2959,12 @@ End Rem
 			Case "c", "blitz", "macos", "linux", "nx"
 				Return DECL_API_CDECL
 			Case "win32"
-				Return DECL_API_STDCALL
+				' only if we are compiling for win32
+				If opt_platform = "win32"
+					Return DECL_API_STDCALL
+				Else
+					Return DECL_API_CDECL
+				End If
 		End Select
 		
 		Err "Unrecognized calling convention '" + api+ "'"

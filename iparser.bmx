@@ -281,8 +281,10 @@ Type TIParser
 									ApplyFunctionAttributes(class, DECL_EXTERN)
 									parsed = True
 								Case Asc("W")
-									class.attrs :| DECL_API_STDCALL
-									ApplyFunctionAttributes(class, DECL_API_STDCALL)
+									If opt_platform = "win32" Then
+										class.attrs :| DECL_API_STDCALL
+										ApplyFunctionAttributes(class, DECL_API_STDCALL)
+									End If
 									parsed = True
 								Case Asc("I")
 									class.attrs :| CLASS_INTERFACE
