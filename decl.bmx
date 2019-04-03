@@ -3386,8 +3386,8 @@ Type TLoopLabelDecl Extends TDecl ' also used internally for Try constructs
 
 	Method Create:TLoopLabelDecl( ident$, attrs:Int=0 )
 		If Not ident.StartsWith("#") Then
-		Self.ident="#" + ident
-		Self.realIdent = ident
+			Self.ident="#" + ident
+			Self.realIdent = ident
 		Else
 			Self.ident = ident
 			Self.realIdent = ident[1..]

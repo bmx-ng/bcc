@@ -2269,7 +2269,7 @@ Type TIndexExpr Extends TExpr
 		
 		If TArrayType( expr.exprType ) Then
 			If TFunctionPtrType(exprType) Then
-			exprType = TFunctionPtrType(exprType).func.retType
+				exprType = TFunctionPtrType(exprType).func.retType
 			Else
 				If funcCall Then
 					Err "Expression of type '" + exprType.ToString() + "' cannot be invoked."
@@ -2696,139 +2696,139 @@ Type TIdentExpr Extends TExpr
 			
 		Default
 
-		'Local scope:TScopeDecl=IdentScope()
-		Local vdecl:TValDecl=scope.FindValDecl( IdentLower(), static )
-		
-		If TLocalDecl( vdecl )
-			' local variable should (at least) be in the same function scope.
-			If vdecl.FuncScope() <> scope.FuncScope() Then
-				' or the local can be in localmain..
-				If TModuleDecl(scope) And vdecl.FuncScope() And vdecl.FuncScope().ident = "__LocalMain" Then
-					' ok
-				Else
-					vdecl = Null
-				End If
-			End If
-		End If
-		
-		If vdecl And fixedScope And static Then
-			If TClassDecl(vdecl.scope) And TClassDecl(scope) Then
-				If Not TClassDecl(scope).ExtendsClass(TClassDecl(vdecl.scope)) Then
-					vdecl = Null
-				End If
-			Else
-				If vdecl.scope <> scope Then
-					vdecl = Null
-				End If
-			End If
-		End If
-		
-		If vdecl
-		
-			If op And TLocalDecl( vdecl )
-
-				Local ldecl:TLocalDecl = TLocalDecl( vdecl )
-
-				If Not ldecl.volatile Then
-					Local tryStmtDecl:TTryStmtDecl = scope.FindTry()
-					If tryStmtDecl And (Not ldecl.declaredInTry Or tryStmtDecl <> ldecl.declaredInTry) Then
-						ldecl.volatile = True
+			'Local scope:TScopeDecl=IdentScope()
+			Local vdecl:TValDecl=scope.FindValDecl( IdentLower(), static )
+			
+			If TLocalDecl( vdecl )
+				' local variable should (at least) be in the same function scope.
+				If vdecl.FuncScope() <> scope.FuncScope() Then
+					' or the local can be in localmain..
+					If TModuleDecl(scope) And vdecl.FuncScope() And vdecl.FuncScope().ident = "__LocalMain" Then
+						' ok
+					Else
+						vdecl = Null
 					End If
 				End If
-
-			Else If TConstDecl( vdecl )
-'				If rhs Err "Constant '"+ident+"' cannot be modified."
-'				Return New TConstExpr.Create( vdecl.ty,TConstDecl( vdecl ).value ).Semant()
-				If rhs Err "Constant '"+ident+"' cannot be modified."
-				Local cexpr:TConstExpr =New TConstExpr.Create( vdecl.ty,TConstDecl( vdecl ).value )
-				If Not static And (TInvokeExpr( expr ) Or TInvokeMemberExpr( expr )) Return New TStmtExpr.Create( New TExprStmt.Create( expr ),cexpr ).Semant()
-				Return cexpr.Semant()
-
-			Else If TFieldDecl( vdecl ) 
-				If static Err "Field '"+ident+"' cannot be accessed from here."
-				If expr Return New TMemberVarExpr.Create( expr,TVarDecl( vdecl ) ).Semant()
-'				If expr Return New TMemberVarExpr.Create( expr,TVarDecl( vdecl ) ).Semant()
-'				If scope<>_env Or Not _env.FuncScope() Or _env.FuncScope().IsStatic() Err "Field '"+ident+"' cannot be accessed from here."
-
-			EndIf
-
-			Return New TVarExpr.Create( TVarDecl( vdecl ) ).Semant()
-		EndIf
-
-		If op And op<>"="
-
-			Local fdecl:TFuncDecl=scope.FindFuncDecl( IdentLower(),,,,,,SCOPE_ALL )
-			If Not fdecl IdentErr
-
-			If _env.ModuleScope().IsStrict() And Not fdecl.IsProperty() Err "Identifier '"+ident+"' cannot be used in this way."
-
-			Local lhs:TExpr
-
-			If fdecl.IsStatic() Or (scope=_env And Not _env.FuncScope().IsStatic())
-				lhs=New TInvokeExpr.Create( fdecl )
-			Else If expr
-				Local tmp:TLocalDecl=New TLocalDecl.Create( "",Null,expr,, True )
-				lhs=New TInvokeMemberExpr.Create( New TVarExpr.Create( tmp ),fdecl )
-				lhs=New TStmtExpr.Create( New TDeclStmt.Create( tmp ),lhs )
-			Else
-				Return Null
-			EndIf
-
-			Local bop$=op[..1]
-			Select bop
-			Case "*","/","shl","shr","+","-","&","|","~~"
-				rhs=New TBinaryMathExpr.Create( bop,lhs,rhs )
-			Default
-				InternalErr "TIdentExpr.SemantSet"
-			End Select
-			rhs=rhs.Semant()
-		EndIf
-
-		Local args:TExpr[]
-		If rhs args=[rhs]
-
-		Local fdecl:TFuncDecl
-		
-		Try
-			fdecl=scope.FindFuncDecl( IdentLower(),args, , isArg, True,True,SCOPE_ALL )
-		Catch errorMessage:String
-			If errorMessage.StartsWith("Compile Error") Then
-				Throw errorMessage
 			End If
-		End Try
-
-		If fdecl
-			If Not isArg And Not fdecl.maybeFunctionPtr Err "Identifier '"+ident+"' cannot be used in this way."
-
-			fdecl.maybeFunctionPtr = False
 			
-			If Not fdecl.IsStatic()
-				If expr Return New TInvokeMemberExpr.Create( expr,fdecl,args, False ).Semant()
-				If scope<>_env Or Not _env.FuncScope() Or _env.FuncScope().IsStatic() Err "Method '"+ident+"' cannot be accessed from here."
+			If vdecl And fixedScope And static Then
+				If TClassDecl(vdecl.scope) And TClassDecl(scope) Then
+					If Not TClassDecl(scope).ExtendsClass(TClassDecl(vdecl.scope)) Then
+						vdecl = Null
+					End If
+				Else
+					If vdecl.scope <> scope Then
+						vdecl = Null
+					End If
+				End If
+			End If
+			
+			If vdecl
+			
+				If op And TLocalDecl( vdecl )
+	
+					Local ldecl:TLocalDecl = TLocalDecl( vdecl )
+	
+					If Not ldecl.volatile Then
+						Local tryStmtDecl:TTryStmtDecl = scope.FindTry()
+						If tryStmtDecl And (Not ldecl.declaredInTry Or tryStmtDecl <> ldecl.declaredInTry) Then
+							ldecl.volatile = True
+						End If
+					End If
+	
+				Else If TConstDecl( vdecl )
+	'				If rhs Err "Constant '"+ident+"' cannot be modified."
+	'				Return New TConstExpr.Create( vdecl.ty,TConstDecl( vdecl ).value ).Semant()
+					If rhs Err "Constant '"+ident+"' cannot be modified."
+					Local cexpr:TConstExpr =New TConstExpr.Create( vdecl.ty,TConstDecl( vdecl ).value )
+					If Not static And (TInvokeExpr( expr ) Or TInvokeMemberExpr( expr )) Return New TStmtExpr.Create( New TExprStmt.Create( expr ),cexpr ).Semant()
+					Return cexpr.Semant()
+	
+				Else If TFieldDecl( vdecl ) 
+					If static Err "Field '"+ident+"' cannot be accessed from here."
+					If expr Return New TMemberVarExpr.Create( expr,TVarDecl( vdecl ) ).Semant()
+	'				If expr Return New TMemberVarExpr.Create( expr,TVarDecl( vdecl ) ).Semant()
+	'				If scope<>_env Or Not _env.FuncScope() Or _env.FuncScope().IsStatic() Err "Field '"+ident+"' cannot be accessed from here."
+	
+				EndIf
+	
+				Return New TVarExpr.Create( TVarDecl( vdecl ) ).Semant()
 			EndIf
-
-			Return New TInvokeExpr.Create( fdecl,args, False, isArg, isRhs ).Semant()
-		End If
-
-		Local decl:TDecl = TDecl(scope.FindDecl(IdentLower()))
-		' maybe it's a classdecl?
-		Local cdecl:TClassDecl = TClassDecl(decl)
-		
-		If cdecl Then
-			Local e:TIdentTypeExpr = New TIdentTypeExpr.Create(cdecl.objectType)
-			e.cdecl = cdecl
-			Return e
-		End If
-		
-		' maybe it's an enum?
-		Local edecl:TEnumValueDecl = TEnumValueDecl(decl)
-		If edecl Then
-			Return New TIdentEnumExpr.Create(edecl)
-		End If
-
-		If unknownIdentsEvalFalse Then
-			Return New TConstExpr.Create( New TIntType, 0 ).Semant()
-		End If
+	
+			If op And op<>"="
+	
+				Local fdecl:TFuncDecl=scope.FindFuncDecl( IdentLower(),,,,,,SCOPE_ALL )
+				If Not fdecl IdentErr
+	
+				If _env.ModuleScope().IsStrict() And Not fdecl.IsProperty() Err "Identifier '"+ident+"' cannot be used in this way."
+	
+				Local lhs:TExpr
+	
+				If fdecl.IsStatic() Or (scope=_env And Not _env.FuncScope().IsStatic())
+					lhs=New TInvokeExpr.Create( fdecl )
+				Else If expr
+					Local tmp:TLocalDecl=New TLocalDecl.Create( "",Null,expr,, True )
+					lhs=New TInvokeMemberExpr.Create( New TVarExpr.Create( tmp ),fdecl )
+					lhs=New TStmtExpr.Create( New TDeclStmt.Create( tmp ),lhs )
+				Else
+					Return Null
+				EndIf
+	
+				Local bop$=op[..1]
+				Select bop
+				Case "*","/","shl","shr","+","-","&","|","~~"
+					rhs=New TBinaryMathExpr.Create( bop,lhs,rhs )
+				Default
+					InternalErr "TIdentExpr.SemantSet"
+				End Select
+				rhs=rhs.Semant()
+			EndIf
+	
+			Local args:TExpr[]
+			If rhs args=[rhs]
+	
+			Local fdecl:TFuncDecl
+			
+			Try
+				fdecl=scope.FindFuncDecl( IdentLower(),args, , isArg, True,True,SCOPE_ALL )
+			Catch errorMessage:String
+				If errorMessage.StartsWith("Compile Error") Then
+					Throw errorMessage
+				End If
+			End Try
+	
+			If fdecl
+				If Not isArg And Not fdecl.maybeFunctionPtr Err "Identifier '"+ident+"' cannot be used in this way."
+	
+				fdecl.maybeFunctionPtr = False
+				
+				If Not fdecl.IsStatic()
+					If expr Return New TInvokeMemberExpr.Create( expr,fdecl,args, False ).Semant()
+					If scope<>_env Or Not _env.FuncScope() Or _env.FuncScope().IsStatic() Err "Method '"+ident+"' cannot be accessed from here."
+				EndIf
+	
+				Return New TInvokeExpr.Create( fdecl,args, False, isArg, isRhs ).Semant()
+			End If
+	
+			Local decl:TDecl = TDecl(scope.FindDecl(IdentLower()))
+			' maybe it's a classdecl?
+			Local cdecl:TClassDecl = TClassDecl(decl)
+			
+			If cdecl Then
+				Local e:TIdentTypeExpr = New TIdentTypeExpr.Create(cdecl.objectType)
+				e.cdecl = cdecl
+				Return e
+			End If
+			
+			' maybe it's an enum?
+			Local edecl:TEnumValueDecl = TEnumValueDecl(decl)
+			If edecl Then
+				Return New TIdentEnumExpr.Create(edecl)
+			End If
+	
+			If unknownIdentsEvalFalse Then
+				Return New TConstExpr.Create( New TIntType, 0 ).Semant()
+			End If
 		
 		End Select
 		
@@ -2846,7 +2846,7 @@ Type TIdentExpr Extends TExpr
 		Local initialScope:Int = SCOPE_ALL
 		If scope Then
 			If TClassDecl(scope) Then
-			initialScope = SCOPE_CLASS_HEIRARCHY
+				initialScope = SCOPE_CLASS_HEIRARCHY
 			Else If TModuleDecl(scope) Then
 				initialScope = SCOPE_MODULE
 			End If
