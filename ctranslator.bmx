@@ -6010,6 +6010,9 @@ End If
 
 		' initialise enums
 		For Local decl:TEnumDecl = EachIn app.Semanted()
+
+			If decl.declImported Continue
+			
 			Emit decl.munged + "_BBEnum_impl = &" + decl.munged + "_BBEnum;"
 		Next
 
