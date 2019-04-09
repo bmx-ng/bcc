@@ -1860,7 +1860,7 @@ Type TBinaryMathExpr Extends TBinaryExpr
 			Else If TVoidType( exprType ) Then
 				Err "Illegal operation on a void expression."
 			Else If Not TNumericType( exprType ) And Not IsPointerType( exprType, 0, TType.T_POINTER ) And Not TArrayType( exprType ) And Not TBoolType( exprType )
-				Err "Illegal expression type."
+				Err "Operator " + op + " is not defined between types '" + lhs.exprType.ToString() + "' and '" + rhs.exprType.ToString() + "'"
 			Else If IsPointerType( exprType, 0, TType.T_POINTER ) And op <> "+" And op <> "-" Then
 				Err "Illegal expression type."
 			Else If IsPointerType( lhs.exprType, 0, TType.T_POINTER ) And IsPointerType( rhs.exprType, 0, TType.T_POINTER ) And op <> "-" Then
