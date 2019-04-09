@@ -1688,7 +1688,7 @@ t:+"NULLNULLNULL"
 
 		Local t$= expr.expr.Trans()
 
-		Local dst:TType=expr.exprType
+		Local dst:TType=expr.ty
 		Local src:TType=expr.expr.exprType
 		
 		If TNumericType(src) And (src._flags & TType.T_VAR) Then
