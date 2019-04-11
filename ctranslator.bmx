@@ -5306,7 +5306,7 @@ End Rem
 		
 			If Not classDecl.templateSource Then
 
-				If Not (classDecl.attrs & CLASS_INTERFACE) Then
+				If Not (classDecl.attrs & CLASS_INTERFACE) And Not classDecl.IsStruct() Then
 					Emit "-New()=" + Enquote("_" + classDecl.munged + "_New")
 				End If
 
