@@ -1184,8 +1184,14 @@ t:+"NULLNULLNULL"
 										lvarInit = TransDebugNullObjectError(lvarInit, cdecl)
 									End If
 		
-									Local class:String = Bra("(" + obj + lvarInit + ")->clas" + tSuper)
-									Return class + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, lvar )
+									If cdecl.IsInterface() And Not equalsBuiltInFunc(cdecl, decl) Then
+										Local obj:String = Bra(TransObject(cdecl))
+										Local ifc:String = Bra("(struct " + cdecl.munged + "_methods*)" + Bra("bbObjectInterface(" + obj + lvarInit + ", " + "&" + cdecl.munged + "_ifc)"))
+										Return ifc + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, lvar )
+									Else
+										Local class:String = Bra("(" + obj + lvarInit + ")->clas" + tSuper)
+										Return class + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, lvar )
+									End If
 								End If
 							End If
 						End If
