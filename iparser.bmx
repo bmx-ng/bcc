@@ -734,12 +734,12 @@ Type TIParser
 				classDecl.InsertDecl decl
 
 			Case ".", "@" ' field
+				Local d_attrs:Int = decl_attrs | DECL_FIELD
 				If _toker._toke = "@" Then
-					decl_attrs :| DECL_READ_ONLY
+					d_attrs :| DECL_READ_ONLY
 				End If
 				NextToke
-				decl_attrs :| DECL_FIELD
-				Local decl:TDecl= ParseDecl( _toke,decl_attrs )
+				Local decl:TDecl= ParseDecl( _toke,d_attrs )
 				classDecl.InsertDecl decl
 			Rem
 			Case "private"
