@@ -2786,11 +2786,12 @@ End Rem
 			Local matched:Int = False
 			
 			For Local i:Int = 0 Until funcs.length
+				Local ofunc:TFuncDecl = funcs[i]
 				' found a match - we are overriding it
-				If func.IdentLower() = funcs[i].IdentLower() And func.EqualsArgs(funcs[i]) Then
+				If func.IdentLower() = ofunc.IdentLower() And func.EqualsArgs(ofunc) And func.scope <> ofunc.scope Then
 					matched = True
 					' but don't override if we are an interface and the function is implemented
-					If IsInterface() And Not funcs[i].ClassScope().IsInterface() Then
+					If IsInterface() And Not ofunc.ClassScope().IsInterface() Then
 						Exit
 					End If
 					' set this to our own func

@@ -362,7 +362,7 @@ Type TTranslator
 		Local funcs:TFuncDeclList=TFuncDeclList(funcMungs.ValueForKey( fdecl.ident ))
 		If funcs
 			For Local tdecl:TFuncDecl=EachIn funcs
-				If fdecl.EqualsArgs( tdecl ) And fdecl.scope = tdecl.scope
+				If fdecl.EqualsArgs( tdecl, True ) And fdecl.scope = tdecl.scope
 					fdecl.munged=tdecl.munged
 					Return
 				EndIf

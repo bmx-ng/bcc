@@ -3395,7 +3395,7 @@ End Rem
 					Local link:TLink=list._head._succ
 					While link<>list._head
 						Local ofdecl:TFuncDecl = TFuncDecl(link._value)
-						If fdecl.ident = ofdecl.ident And fdecl.EqualsArgs(ofdecl) Then
+						If fdecl.ident = ofdecl.ident And fdecl.EqualsArgs(ofdecl) And fdecl.scope <> ofdecl.scope Then
 
 							If fdecl.overrides Then
 								link._value = fdecl
@@ -3857,7 +3857,8 @@ End Rem
 					Local ignore:Int
 					Local link:TLink=list._head._succ
 					While link<>list._head
-						If fdecl.ident = TFuncDecl(link._value).ident Then
+						Local ofdecl:TFuncDecl = TFuncDecl(link._value)
+						If fdecl.ident = ofdecl.ident And fdecl.EqualsArgs(ofdecl) And fdecl.scope <> ofdecl.scope Then
 							If fdecl.overrides Then
 								link._value = fdecl
 								ignore = True
