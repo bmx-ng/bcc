@@ -3638,7 +3638,8 @@ End Rem
 	Field emittedStructs:TList = New TList
 
 	Method EmitStructClassProto( classDecl:TClassDecl )
-	
+
+		If classDecl.declImported Return
 		If emittedStructs.Contains(classDecl) Return
 		
 		emittedStructs.AddLast(classDecl)
