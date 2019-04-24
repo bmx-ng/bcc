@@ -6247,6 +6247,13 @@ End If
 							EmitIfcGlobalDecl(gdecl)
 							Continue
 						End If
+
+						' enums
+						Local edecl:TEnumDecl=TEnumDecl( decl )
+						If edecl
+							EmitIfcEnumDecl(edecl)
+							Continue
+						EndIf
 					Next
 
 				End If
