@@ -220,6 +220,45 @@ Function BmxUnquote$( str$ )
 				sb.AppendChar(Asc("~n"))
 			Case Asc("q")
 				sb.AppendChar(Asc("~q"))
+			Case Asc("$") ' hex
+				c = str[i]
+				i :+ 1
+				Local n:Int
+				While True
+					Local v:Int
+					If c >= Asc("0") And c <= Asc("9") Then
+						v = c-Asc("0")
+					Else If c >= Asc("a") And c <= Asc("f") Then
+						v = c-Asc("a")+10
+					Else If c >= Asc("A") And c <= Asc("F") Then
+						v = c-Asc("A")+10
+					Else If c <> Asc("~~")
+						Err "Bad escape sequence in string"
+					Else
+						Exit
+					End If
+					n = (n Shl 4) | (v & $f)
+					If i = length Err "Bad escape sequence in string"
+					c = str[i]
+					i :+ 1
+				Wend
+				If c <> Asc("~~") Err "Bad escape sequence in string"
+				sb.AppendChar(n)
+			Case Asc("%") ' bin
+				c = str[i]
+				i :+ 1
+				Local n:Int
+				While c = Asc("1") Or c = Asc("0")
+					n :Shl 1
+					If c = Asc("1") Then
+						n :| 1
+					End If
+					If i = length Err "Bad escape sequence in string"
+					c = str[i]
+					i :+ 1
+				Wend
+				If c <> Asc("~~") Err "Bad escape sequence in string"
+				sb.AppendChar(n)
 			Default
 				If c >= Asc("1") And c <= Asc("9") Then
 					Local n:Int
