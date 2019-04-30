@@ -511,6 +511,12 @@ void bmx_stringbuffer_append_shorts(struct MaxStringBuffer * buf, short * shorts
 	}	
 }
 
+void bmx_stringbuffer_append_char(struct MaxStringBuffer * buf, int value) {
+	bmx_stringbuffer_resize(buf, buf->count + 1);
+	BBChar * p = buf->buffer + buf->count;
+	*p = (BBChar)value;
+	buf->count++;
+}
 /* ----------------------------------------------------- */
 
 int bmx_stringbuffer_splitbuffer_length(struct MaxSplitBuffer * buf) {

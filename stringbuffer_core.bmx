@@ -145,6 +145,11 @@ Type TStringBuffer
 		bmx_stringbuffer_append_shorts(buffer, shorts, length)
 		Return Self
 	End Method
+	
+	Method AppendChar:TStringBuffer(char:Int)
+		bmx_stringbuffer_append_char(buffer, char)
+		Return Self
+	End Method
 
 	Rem
 	bbdoc: Finds first occurance of a sub string.

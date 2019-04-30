@@ -34,6 +34,7 @@ Extern
 	Function bmx_stringbuffer_setlength(buffer:Byte Ptr, length:Int)
 	Function bmx_stringbuffer_tostring:String(buffer:Byte Ptr)
 	Function bmx_stringbuffer_append_string(buffer:Byte Ptr, value:String)
+	Function bmx_stringbuffer_append_char(buffer:Byte Ptr, value:Int)
 	Function bmx_stringbuffer_remove(buffer:Byte Ptr, startIndex:Int, endIndex:Int)
 	Function bmx_stringbuffer_insert(buffer:Byte Ptr, offset:Int, value:String)
 	Function bmx_stringbuffer_reverse(buffer:Byte Ptr)

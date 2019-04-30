@@ -1381,8 +1381,9 @@ Type TParser Extends TGenProcessor
 					TConstExpr(expr).ty = ty
 				End If
 			Case TOKE_STRINGLIT
-				expr=New TConstExpr.Create( TType.stringType,BmxUnquote( _toke ) )
-				_app.mapStringConsts(BmxUnquote( _toke ))
+				Local s:String = BmxUnquote( _toke )
+				expr=New TConstExpr.Create( TType.stringType,s )
+				_app.mapStringConsts(s)
 				NextToke
 			Default
 				Err "Expecting expression but encountered "+DescribeToke(_toke)

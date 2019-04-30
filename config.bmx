@@ -187,35 +187,56 @@ Function BmxEnquote$( str$ )
 	Return str
 End Function
 
-Function BmxUnquote$( str$, unicodeConvert:Int = False )
+Function BmxUnquote$( str$ )
 	If str.length = 1 Or str[str.length - 1] <> Asc("~q") Then
 		Err "Expecting expression but encountered malformed string literal"
 	End If
-	str=str[1..str.Length-1]
-	If unicodeConvert Then
-		Local pos:Int = str.Find("~~")
-		While pos <> -1
-			If pos + 1 < str.length Then
-				If str[pos + 1] >= Asc("1") And str[pos + 1] <= Asc("9") Then
-					Local p2:Int = str.Find("~~", pos + 1)
-					If p2 <> -1 Then
-						Local s:String = Chr(str[pos + 1.. p2].ToInt())
-						str = str[..pos] + s + str[p2 + 1..]
-					End If
-				End If
-			End If
+	Local length:Int = str.length - 1
+	Local sb:TStringBuffer = New TStringBuffer
+	Local i:Int = 1
+	While i < length
+		Local c:Int = str[i]
+		i :+ 1
+		If c <> Asc("~~") Then
+			sb.AppendChar(c)
+			Continue
+		End If
+
+		If i = length Err "Bad escape sequence in string"
 		
-			pos = str.Find("~~", pos + 1)
-		Wend
-	End If
-	str=str.Replace( "~~~~","~~z" )	'a bit dodgy - uses bad esc sequence ~z 
-	str=str.Replace( "~~q","~q" )
-	str=str.Replace( "~~n","~n" )
-	str=str.Replace( "~~r","~r" )
-	str=str.Replace( "~~t","~t" )
-	str=str.Replace( "~~0","~0" )
-	str=str.Replace( "~~z","~~" )
-	Return str
+		c = str[i]
+		i :+ 1
+		
+		Select c
+			Case Asc("~~")
+				sb.AppendChar(c)
+			Case Asc("0")
+				sb.AppendChar(0)
+			Case Asc("t")
+				sb.AppendChar(Asc("~t"))
+			Case Asc("r")
+				sb.AppendChar(Asc("~r"))
+			Case Asc("n")
+				sb.AppendChar(Asc("~n"))
+			Case Asc("q")
+				sb.AppendChar(Asc("~q"))
+			Default
+				If c >= Asc("1") And c <= Asc("9") Then
+					Local n:Int
+					While c >= Asc("0") And c <= Asc("9") 
+						n = n * 10 + (c-Asc("0"))
+						If i = length Err "Bad escape sequence in string"
+						c = str[i]
+						i :+ 1
+					Wend
+					If c <> Asc("~~") Err "Bad escape sequence in string"
+					sb.AppendChar(n)
+				Else
+					Err "Bad escape sequence in string"
+				End If
+		End Select
+	Wend
+	Return sb.ToString()
 End Function
 
 Type TStack Extends TList
