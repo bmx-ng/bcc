@@ -16,17 +16,19 @@ install:
   - unzip "`basename "${STABLE}"`"
 
 script:
+  - mkdir -p "build"
   - ./BlitzMax/bin/bmk
     makeapp -a -r
     -l ${PLATFORM}
     -g ${CPU}
-    -o ./bcc
+    -o ./build/bcc
     ./bcc.bmx
 
 after_success:
+  - cd ./build
   - BCC_VERSION=`./bcc -v | sed 's/^.*\([0-9][0-9]*\.[0-9][0-9]*\).*/\1/'`
   - ZIP_FILENAME="bcc-v${BCC_VERSION}-${PLATFORM}-${CPU}.zip"
   - echo "Zipping $ZIP_FILENAME"
-  - mkdir -p "archive"
-  - zip "archive/$ZIP_FILENAME" bcc
+  - zip "$ZIP_FILENAME" bcc
+  - ls -la
 
