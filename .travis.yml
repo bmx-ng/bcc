@@ -16,12 +16,13 @@ install:
 script:
   - ./BlitzMax/bin/bmk
     makeapp -a -r -standalone
-    -l $PLATFORM
-    -g $CPU
+    -l ${PLATFORM}
+    -g ${CPU}
     -o ./bcc
     ./bcc.bmx
   - export RESULT="bcc.console.release.${PLATFORM}.${CPU}.build"
+  - chmod +x "./${RESULT}"
 
 after_success:
   - ls -la
-  - ./$RESULT -v
+  - ./${RESULT} -v
