@@ -20,9 +20,9 @@ script:
     -g ${CPU}
     -o ./bcc
     ./bcc.bmx
-  - export RESULT="bcc.console.release.${PLATFORM}.${CPU}.build"
-  - chmod +x "./${RESULT}"
+  - BUILD_SCRIPT="bcc.console.release.${PLATFORM}.${CPU}.build"
+  - ./sh BUILD_SCRIPT
 
 after_success:
   - ls -la
-  - ./${RESULT} -v
+  - ./bcc -v
