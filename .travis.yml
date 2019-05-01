@@ -25,5 +25,7 @@ script:
   - ./${BUILD_SCRIPT}
 
 after_success:
-  - ls -la
-  - ./bcc -v
+  - BCC_VERSION=`./bcc -v | sed 's/^.*\([0-9][0-9]*\.[0-9][0-9]*\).*/\1/'`
+  - ZIP_FILENAME="bcc-v${BCC_VERSION}-${PLATFORM}-${CPU}.zip"
+  - echo "Zipping $ZIP_FILENAME"
+  - zip "$ZIP_FILENAME" bcc
