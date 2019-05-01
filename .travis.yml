@@ -21,7 +21,8 @@ script:
     -o ./bcc
     ./bcc.bmx
   - BUILD_SCRIPT="bcc.console.release.${PLATFORM}.${CPU}.build"
-  - ./sh BUILD_SCRIPT
+  - chmod +x "./${BUILD_SCRIPT}"
+  - ./${BUILD_SCRIPT}
 
 after_success:
   - ls -la
