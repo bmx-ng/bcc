@@ -1,0 +1,26 @@
+env:
+  global:
+    - LC_CTYPE=en_US.UTF-8
+    - LANG=en_US.UTF-8
+
+matrix:
+  include:
+    - os: osx
+      osx_image: xcode10.2
+      env: PLATFORM="macos" CPU="x64" STABLE="https://github.com/bmx-ng/bmx-ng/releases/download/v0.99.3.31.macos/BlitzMax_macos_0.99.3.31.zip"
+
+install:
+  - wget "${STABLE}"
+  - unzip "`basename "${STABLE}"`"
+
+script:
+  - ./BlitzMax/bin/bmk
+    makeapp -a -r -standalone
+    -l $PLATFORM
+    -g $CPU
+    -o ./bcc
+    ./bcc.bmx
+  - export RESULT="bcc.console.release.${PLATFORM}.${CPU}.build"
+
+after_success:
+  - $RESULT -v
