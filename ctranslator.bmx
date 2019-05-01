@@ -1626,7 +1626,7 @@ t:+"NULLNULLNULL"
 			End If
 
 			If expr.instanceExpr Then
-				If expr.classDEcl.IsStruct() Then
+				If expr.classDecl.IsStruct() Then
 					t = ctorMunged + "_ObjectNew" + TransArgs( expr.args,expr.ctor)
 				Else
 					t = "_" + ctorMunged + "_ObjectNew" + TransArgs( expr.args,expr.ctor, Bra(expr.instanceExpr.Trans()) + "->clas" )
@@ -1652,7 +1652,8 @@ t:+"NULLNULLNULL"
 
 		If expr.expr.length = 1 Then
 			If TObjectType(expr.ty) And TObjectType(expr.ty).classdecl.IsStruct() And Not IsPointerType(expr.ty) Then
-				Return "bbArrayNew1DStruct" + Bra(TransArrayType(expr.ty) + ", " + expr.expr[0].Trans() + ", sizeof" + Bra(TransObject(TObjectType(expr.ty).classdecl)))
+				Return "bbArrayNew1DStruct" + Bra(TransArrayType(expr.ty) + ", " + expr.expr[0].Trans() + ", sizeof" + ..
+						Bra(TransObject(TObjectType(expr.ty).classdecl)) + ", _" + TObjectType(expr.ty).classdecl.munged + "_New")
 			Else
 				Return "bbArrayNew1D" + Bra(TransArrayType(expr.ty) + ", " + expr.expr[0].Trans())
 			End If
@@ -1669,7 +1670,8 @@ t:+"NULLNULLNULL"
 			Next
 
 			If TObjectType(expr.ty) And TObjectType(expr.ty).classdecl.IsStruct() And Not IsPointerType(expr.ty) Then
-				Return "bbArrayNewStruct" + Bra(TransArrayType(expr.ty) + ", sizeof" + Bra(TransObject(TObjectType(expr.ty).classdecl)) + ", " + expr.expr.length + ", " + s)
+				Return "bbArrayNewStruct" + Bra(TransArrayType(expr.ty) + ", sizeof" + Bra(TransObject(TObjectType(expr.ty).classdecl)) + ..
+						", " + expr.expr.length + ", " + s)
 			Else
 				Return "bbArrayNew" + Bra(TransArrayType(expr.ty) + ", " + expr.expr.length + ", " + s)
 			End If
@@ -4587,6 +4589,8 @@ End Rem
 			' field initialisation
 			For Local decl:TFieldDecl=EachIn classDecl.Decls()
 			
+				Local doEmit:Int = True
+			
 				If Not decl.IsSemanted() Then
 					decl.Semant()
 				End If
@@ -4628,18 +4632,28 @@ End Rem
 						End If
 					End If
 				Else
-					If TNumericType(decl.ty) Or TObjectType(decl.ty) Or IsPointerType(decl.ty, 0, TType.T_POINTER) Then
-						fld :+ "= 0;"
+					If TNumericType(decl.ty) Or IsPointerType(decl.ty, 0, TType.T_POINTER) Then
+						doEmit = False
+					Else If TObjectType(decl.ty) Then
+						If TObjectType(decl.ty).classDecl.IsStruct() Then
+							fld :+ "= " + TObjectType(decl.ty).classDecl.munged + "_New_ObjectNew();"
+						Else
+							fld :+ "= &bbNullObject;"
+						End If
 					Else If TFunctionPtrType(decl.ty) Then
 						fld :+ "= &brl_blitz_NullFunctionError;"
 					Else If TStringType(decl.ty) Then
 						fld :+ "= &bbEmptyString;"
 					Else If TArrayType(decl.ty) Then
 						fld :+ "= &bbEmptyArray;"
+					Else If TEnumType(decl.ty) Then
+						fld :+ "= " + TEnumType(decl.ty).decl.values[0].Value() + ";"
 					End If
 				End If
 	
-				Emit fld
+				If doEmit Then
+					Emit fld
+				End If
 			Next
 		
 		End If
@@ -4757,7 +4771,7 @@ End Rem
 		t = TransObject(classdecl) + " o"
 
 		If classDecl.IsStruct() Then
-			Emit t + ";"
+			Emit t + " = {0};"
 		Else
 			t :+ " = "
 			If ClassHasObjectField(classDecl) Then

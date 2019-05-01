@@ -2419,8 +2419,10 @@ End Rem
 				'Wend
 				init=New TNewArrayExpr.Create( ty,ln)
 				ty=New TArrayType.Create( ty, ln.length )
-			Else If toke<>"const"
-				init=New TConstExpr.Create( ty,"" )
+			Else If toke <> "const"
+				If toke="global" Or toke="local" Then
+					init=New TConstExpr.Create( ty,"" )
+				End If
 			Else
 				Err "Constants must be initialized."
 			EndIf
@@ -2431,7 +2433,8 @@ End Rem
 		Local decl:TValDecl
 
 		Select toke
-		Case "global" decl=New TGlobalDecl.Create( id,ty,init,attrs )
+		Case "global"
+			decl=New TGlobalDecl.Create( id,ty,init,attrs )
 		Case "field"
 			decl=New TFieldDecl.Create( id,ty,init,attrs )
 

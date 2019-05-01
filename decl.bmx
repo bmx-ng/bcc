@@ -512,28 +512,12 @@ Type TValDecl Extends TDecl
 					init=declInit.Copy().SemantAndCast(ty)
 					
 					' check if struct has been initialised
-					If TObjectType(ty) And TObjectType(ty).classDecl.IsStruct() Then
+					If TObjectType(ty) And TObjectType(ty).classDecl.IsStruct() And Not TObjectType(ty).classDecl.IsExtern() Then
 					
 						' new not used
 						If TConstExpr(init) And Not TConstExpr(init).value Then
-							
-							Local found:Int = False
-							' struct contains any objects?
-							For Local fld:TFieldDecl = EachIn TObjectType(ty).classDecl._decls
-								If Not fld.IsSemanted() Then
-									fld.Semant()
-								End If
-							
-								If TObjectType(fld.ty) Or TStringType(fld.ty) Or TArrayType(fld.ty) Then
-									found = True
-									Exit
-								End If
-							Next
-						
-							' we need to initialise object fields, so we'll call the default constructor
-							If found Then
-								init = New TNewObjectExpr.Create(ty, Null).Semant()
-							End If
+							' always call the default constructor to init all the fields correctly
+							init = New TNewObjectExpr.Create(ty, Null).Semant()
 						End If
 					End If
 				End If
