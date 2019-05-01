@@ -23,4 +23,5 @@ script:
   - export RESULT="bcc.console.release.${PLATFORM}.${CPU}.build"
 
 after_success:
-  - $RESULT -v
+  - ls -la
+  - ./$RESULT -v
