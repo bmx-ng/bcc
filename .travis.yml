@@ -24,11 +24,21 @@ script:
     -o ./build/bcc
     ./bcc.bmx
 
-after_success:
+before_deploy:
   - cd ./build
-  - BCC_VERSION=`./bcc -v | sed 's/^.*\([0-9][0-9]*\.[0-9][0-9]*\).*/\1/'`
-  - ZIP_FILENAME="bcc-v${BCC_VERSION}-${PLATFORM}-${CPU}.zip"
+  - ZIP_FILENAME="bcc-${TRAVIS_TAG}-${PLATFORM}-${CPU}.zip"
   - echo "Zipping $ZIP_FILENAME"
   - zip "$ZIP_FILENAME" bcc
   - ls -la
+  - cd ..
 
+deploy:
+  provider: releases
+  file_glob: true
+  file: build/*.zip
+  skip_cleanup: true
+  draft: true
+  on:
+    all_branches: true
+    tags: true
+    condition: '$TRAVIS_TAG =~ ^v[0-9]'
