@@ -29,3 +29,10 @@ after_success:
   - ZIP_FILENAME="bcc-v${BCC_VERSION}-${PLATFORM}-${CPU}.zip"
   - echo "Zipping $ZIP_FILENAME"
   - zip "$ZIP_FILENAME" bcc
+  - echo ZIP_FILENAME > .zip_filename.txt
+    # Export the filename because the deploy section cannot access
+    # vars from here.
+
+before_deploy:
+  - export ZIP_FILENAME=$(cat .zip_filename.txt)
+
