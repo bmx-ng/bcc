@@ -15,14 +15,11 @@ install:
 
 script:
   - ./BlitzMax/bin/bmk
-    makeapp -a -r -standalone
+    makeapp -a -r
     -l ${PLATFORM}
     -g ${CPU}
     -o ./bcc
     ./bcc.bmx
-  - BUILD_SCRIPT="bcc.console.release.${PLATFORM}.${CPU}.build"
-  - chmod +x "./${BUILD_SCRIPT}"
-  - ./${BUILD_SCRIPT}
 
 after_success:
   - BCC_VERSION=`./bcc -v | sed 's/^.*\([0-9][0-9]*\.[0-9][0-9]*\).*/\1/'`
