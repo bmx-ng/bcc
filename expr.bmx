@@ -2015,7 +2015,11 @@ Type TBinaryCompareExpr Extends TBinaryExpr
 					Return New TInvokeMemberExpr.Create( lhs, decl, args ).Semant()
 				End If
 			Catch error:String
-				' no overload, continue...
+				' Structs must define an operator overload for the given op
+				If TObjectType(lhs.exprType).classDecl.IsStruct() Then
+					Err "No overloaded operator '" + op + "' found for " + TObjectType(lhs.exprType).classDecl.ToString()
+				End If
+				' otherwise, no overload, continue...
 			End Try
 		End If
 
