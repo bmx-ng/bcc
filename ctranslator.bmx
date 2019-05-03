@@ -5328,7 +5328,7 @@ End Rem
 		
 			If Not classDecl.templateSource Then
 
-				If Not (classDecl.attrs & CLASS_INTERFACE) And Not classDecl.IsStruct() Then
+				If Not (classDecl.attrs & CLASS_INTERFACE) And Not classDecl.IsStruct() And Not classHierarchyHasFunction(classDecl, "New") Then
 					Emit "-New()=" + Enquote("_" + classDecl.munged + "_New")
 				End If
 

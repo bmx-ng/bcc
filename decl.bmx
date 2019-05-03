@@ -1571,17 +1571,17 @@ End Rem
 						'match=func
 						matches.AddLast(func)
 						isexact=True
-						Exit
+						'Exit
 					EndIf
 				Else
-					If Not isexact
+					'If Not isexact
 						'If match 
 						'	_err="Unable to determine overload to use: "+match.ToString()+" or "+func.ToString()+"."
 						'Else
 							'match=func
 							matches.AddLast(func)
 						'EndIf
-					EndIf
+					'EndIf
 				EndIf
 				'Exit
 			Next

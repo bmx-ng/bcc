@@ -337,7 +337,7 @@ Type TTranslator
 	End Method
 
 	Method equalsIfcBuiltInFunc:Int(classDecl:TClassDecl, func:TFuncDecl, checked:Int = False)
-		If checked Or func.IdentLower() = "new" Or func.IdentLower() = "delete" Then
+		If checked Or func.IdentLower() = "delete" Then
 			If classDecl.munged = "bbObjectClass" Then
 				For Local decl:TFuncDecl = EachIn classDecl.Decls()
 					If Not decl.IsSemanted() Then
