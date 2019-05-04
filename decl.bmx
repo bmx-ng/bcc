@@ -3404,8 +3404,8 @@ Type TDataLabelDecl Extends TDecl
 
 	Method Create:TDataLabelDecl( ident$, attrs:Int=0 )
 		If Not ident.StartsWith("#") Then
-		Self.ident="#" + ident
-		Self.realIdent = ident
+			Self.ident="#" + ident
+			Self.realIdent = ident
 		Else
 			Self.ident = ident
 			Self.realIdent = ident[1..]
