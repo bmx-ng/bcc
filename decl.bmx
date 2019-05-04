@@ -1572,10 +1572,10 @@ End Rem
 				
 				If exact
 					If isexact
-						Err "Unable to determine overload to use: "+match.ToString()+" or "+func.ToString()+"."
+						'Err "Unable to determine overload to use: "+match.ToString()+" or "+func.ToString()+"."
 					Else
 						_err=""
-						'match=func
+						match=func
 						matches.AddLast(func)
 						isexact=True
 						'Exit
