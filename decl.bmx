@@ -444,10 +444,17 @@ Type TValDecl Extends TDecl
 		' for field initialisation, create a stub New() method to use as current scope
 		' since fields are initialised in New(). Otherwise the scope would be "class", which is
 		' incorrect for processing field inits.
-		If TFieldDecl(Self) And declInit Then
-			Local newScope:TFuncDecl = New TFuncDecl.CreateF( "new", Null,Null,FUNC_METHOD )
-			newScope.scope = _env
-			PushEnv(newScope)
+		If TFieldDecl(Self) Then
+			
+			If Not declInit  And TClassDecl(scope) And Not TClassDecl(scope).IsStruct() Then
+				declInit=New TConstExpr.Create( ty,"" )
+			End If
+			
+			If declInit Then
+				Local newScope:TFuncDecl = New TFuncDecl.CreateF( "new", Null,Null,FUNC_METHOD )
+				newScope.scope = _env
+				PushEnv(newScope)
+			End If
 		End If
 	
 		' for imported enum args with a default value, we need to set the type of the value to the enum
