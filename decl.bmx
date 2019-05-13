@@ -3553,6 +3553,10 @@ Type TEnumValueDecl Extends TDecl
 
 		If expr Then
 
+			If TConstExpr(expr) And Not TConstExpr(expr).ty.EqualsType(parent.ty) Then
+				TConstExpr(expr).UpdateType(parent.ty)
+			End If
+
 			expr = expr.Semant()
 
 			' 			

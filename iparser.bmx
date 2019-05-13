@@ -831,7 +831,13 @@ Type TIParser
 		
 		Parse("=")
 
-		Local expr:TExpr = New TConstExpr.Create( enumTy.Copy(), _toke )
+		Local op:String
+		If _toke = "-" Then
+			op = "-"
+			NextToke
+		End If
+
+		Local expr:TExpr = New TConstExpr.Create( enumTy.Copy(), op + _toke )
 
 		Local valDecl:TEnumValueDecl = New TEnumValueDecl.Create(id, index, expr)		
 		
