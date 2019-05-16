@@ -5460,7 +5460,7 @@ End Rem
 	Method EmitIfcEnumDecl(enumdecl:TEnumDecl)
 		enumDecl.Semant
 		
-		Local e:String = enumDecl.ident + "/" + TransIfcType(enumDecl.ty)
+		Local e:String = enumDecl.ident + "\" + TransIfcType(enumDecl.ty)
 
 		Emit e + "{", False
 		

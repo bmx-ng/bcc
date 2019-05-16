@@ -448,7 +448,7 @@ Type TIParser
 
 						'state = STATE_CLASS
 						'Exit
-				Case "/"
+				Case "\"
 					toker.rollback(pos)
 					toker.NextToke()
 
@@ -794,7 +794,7 @@ Type TIParser
 		Local ty:TType
 		Local attrs:Int
 
-		Parse( "/" )
+		Parse( "\" )
 		ty=ParseDeclType(attrs, False)
 
 		Local enumDecl:TEnumDecl=New TEnumDecl.Create( id, ty, False, Null )
