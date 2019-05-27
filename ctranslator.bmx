@@ -6070,10 +6070,19 @@ End If
 
 		' initialise globals
 		For Local decl:TGlobalDecl=EachIn app.semantedGlobals
+			If decl.declImported Continue
+			
+			decl.Semant
+			
+			Emit TransGlobal( decl )+"="+TransValue(decl.ty, Null)+";"
+		Next
+
+		' initialise globals
+		For Local decl:TGlobalDecl=EachIn app.semantedGlobals
 
 			If decl.declImported Continue
 
-			decl.Semant
+			'decl.Semant
 
 			' TODO : what about OnDebugStop etc, who have no init ?
 			If decl.init And Not (decl.attrs & DECL_INITONLY) Then
