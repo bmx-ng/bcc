@@ -6074,7 +6074,9 @@ End If
 			
 			decl.Semant
 			
-			Emit TransGlobal( decl )+"="+TransValue(decl.ty, Null)+";"
+			If decl.scope And TClassDecl(decl.scope) Then
+				Emit TransGlobal( decl )+"="+TransValue(decl.ty, Null)+";"
+			End If
 		Next
 
 		' initialise globals
