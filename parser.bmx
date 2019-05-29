@@ -4423,10 +4423,21 @@ End Rem
 
 	' nx / switch
 	env.InsertDecl New TConstDecl.Create( "nx",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="nx" ),0 )
-	env.InsertDecl New TConstDecl.Create( "nxARM64",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="nx" And opt_arch="arm64"),0 )	
+	env.InsertDecl New TConstDecl.Create( "nxarm64",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="nx" And opt_arch="arm64"),0 )	
 		
 	' new compiler
 	env.InsertDecl New TConstDecl.Create( "bmxng",New TIntType,New TConstExpr.Create( New TIntType, True ),0 )
+
+	' user defines
+	If opt_userdefs Then
+		Local defs:String[] = opt_userdefs.ToLower().Split(",")
+		For Local def:String = EachIn defs
+			def = def.Trim()
+			If def Then
+				env.InsertDecl New TConstDecl.Create( def,New TIntType,New TConstExpr.Create( New TIntType, True ),0 )
+			End If
+		Next
+	End If
 
 '	env.InsertDecl New TConstDecl.Create( "LANG",TType.stringType,New TConstExpr.Create( TType.stringType,ENV_LANG ),0 )
 '	env.InsertDecl New TConstDecl.Create( "TARGET",TType.stringType,New TConstExpr.Create( TType.stringType,ENV_TARGET ),0 )

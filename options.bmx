@@ -122,6 +122,9 @@ Global opt_require_override:Int = False
 ' overerr
 '    missing override is error
 Global opt_override_error:Int = False
+' ud
+'    user defines
+Global opt_userdefs:String
 
 Global opt_filepath:String
 
@@ -227,6 +230,12 @@ Function ParseArgs:String[](args:String[])
 				opt_require_override=True
 			Case "overerr"
 				opt_override_error=True
+			Case "ud"
+				count:+1
+				If count = args.length Then
+					CmdError "Command line error - Missing arg for '-ud'"
+				End If
+				opt_userdefs = args[count].ToLower()
 		End Select
 	
 		count:+ 1
