@@ -1717,6 +1717,7 @@ End Rem
 					NextToke()
 					If currentToke = "elseif" Or (currentToke + _toke)="elseif"
 						'create a new if-statement and exit current handling
+						SetErr
 						ParseIfStmt(term, True)
 						Exit
 					EndIf
