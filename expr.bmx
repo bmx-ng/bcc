@@ -1379,6 +1379,10 @@ Type TCastExpr Extends TExpr
 						
 						last = e.exprType
 					Next
+				Else
+					If (TObjectType(TArrayType(ty).elemType) And Not (TObjectType(TArrayType(ty).elemType)).ExtendsType(TArrayType(src).elemType)) Or Not TArrayType(ty).elemType.EqualsType(TArrayType(src).elemType) Then
+						Err "Unable to convert from "+src.ToString()+" to "+ty.ToString()+"."
+					End If
 				End If
 				
 				exprType = ty
