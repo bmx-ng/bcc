@@ -1407,7 +1407,15 @@ Type TArrayType Extends TType
 	
 	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
 		Local arrayType:TArrayType=TArrayType( ty )
-		Return (arrayType And dims = arrayType.dims And ( TVoidType( elemType ) Or elemType.EqualsType( arrayType.elemType ) Or (TObjectType(elemType) And elemType.ExtendsType( arrayType.elemType )))) Or IsPointerType(ty, 0, TType.T_POINTER) <> Null Or (TObjectType( ty ) And TObjectType( ty ).classDecl.ident="Object")
+		Return (arrayType And dims = arrayType.dims And ..
+			( TVoidType( elemType ) ..
+				Or elemType.EqualsType( arrayType.elemType ) ..
+				Or ((TObjectType(elemType) Or TStringType(elemType) Or TArrayType(elemType)) And ..
+					(elemType.ExtendsType( arrayType.elemType ) ..
+						Or (TObjectType(arrayType.elemType) And TObjectType( arrayType.elemType ).classDecl.ident="Object") ..
+					))) ..
+					) ..
+				Or IsPointerType(ty, 0, TType.T_POINTER) <> Null Or (TObjectType( ty ) And TObjectType( ty ).classDecl.ident="Object")
 	End Method
 	
 	Method Semant:TType(option:Int = False, callback:TCallback = Null)
