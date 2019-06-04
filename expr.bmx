@@ -1381,10 +1381,10 @@ Type TCastExpr Extends TExpr
 					Next
 				Else
 					If TObjectType(TArrayType(ty).elemType) Then
-						If TObjectType(TArrayType(ty).elemType).classDecl.ident = "Object" And (TStringType(TArrayType(ty).elemType) Or TObjectType(TArrayType(ty).elemType) Or TArrayType(TArrayType(ty).elemType)) Then
+						If TObjectType(TArrayType(ty).elemType).classDecl.ident = "Object" And (TStringType(TArrayType(src).elemType) Or TObjectType(TArrayType(src).elemType) Or TArrayType(TArrayType(src).elemType)) Then
 							' array takes generic objects, so we don't care if source elements are the same kinds.
 						Else
-							If (TObjectType(TArrayType(ty).elemType) And Not (TObjectType(TArrayType(ty).elemType)).ExtendsType(TArrayType(src).elemType)) Or Not TArrayType(ty).elemType.EqualsType(TArrayType(src).elemType) Then
+							If TObjectType(TArrayType(src).elemType) And Not (TObjectType(TArrayType(src).elemType)).ExtendsType(TArrayType(ty).elemType) And Not TArrayType(ty).elemType.EqualsType(TArrayType(src).elemType) Then
 								Err "Unable to convert from "+src.ToString()+" to "+ty.ToString()+"."
 							End If
 						End If
