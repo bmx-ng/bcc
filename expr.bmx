@@ -1583,6 +1583,10 @@ Type TCastExpr Extends TExpr
 				exprType = src
 				Return Self
 			Else If flags & CAST_EXPLICIT Then
+				' validate const
+				If TConstExpr( expr ) And Not TEnumType(ty).decl.CastsToEnum(TConstExpr( expr )) Then
+					Err "The value " + TConstExpr( expr ).value  + " is not valid for enum " + TEnumType(ty).decl.ToString()
+				End If
 				exprType = ty
 				Return Self
 			End If

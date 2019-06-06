@@ -3512,6 +3512,37 @@ Type TEnumDecl Extends TScopeDecl
 		Return Super.GetDecl(ident)
 	End Method
 	
+	Method CastsToEnum:Int(expr:TConstExpr)
+		Local value:Long = StringToLong(expr.value)
+		
+		If isFlags Then
+			' zero value special case
+			If value = 0 Then
+				For Local val:TEnumValueDecl = EachIn values
+					If val.longValue = 0 Then
+						Return True
+					End If
+				Next
+				Return False
+			End If
+		
+			Local result:Long
+			For Local val:TEnumValueDecl = EachIn values
+				value :~ val.longValue
+			Next
+
+			Return value = 0
+		Else
+			For Local val:TEnumValueDecl = EachIn values
+				If value = val.longValue Then
+					Return True
+				End If
+			Next
+		End If
+		
+		Return False
+	End Method
+	
 	Method GenerateFuncs()
 		Local enumType:TEnumType = New TEnumType.Create(Self)
 	
@@ -3548,7 +3579,7 @@ Type TEnumValueDecl Extends TDecl
 
 	Field expr:TExpr
 	Field index:Int
-	
+	Field longValue:Long
 	
 	Method Create:TEnumValueDecl(id:String, index:Int, expr:TExpr)
 		Self.ident = id
@@ -3586,6 +3617,8 @@ Type TEnumValueDecl Extends TDecl
 			If Not TConstExpr(expr) Or Not TIntegralType(TConstExpr(expr).ty) Then
 				Err "Enum values must be integral constants."
 			End If
+			
+			longValue = StringToLong(TConstExpr(expr).value)
 		Else
 			Local val:Long
 			
@@ -3628,7 +3661,8 @@ Type TEnumValueDecl Extends TDecl
 			End If
 
 			expr = New TConstExpr.Create( parent.ty.Copy(), val).Semant()
-		
+			longValue = val
+			
 		End If
 	End Method
 

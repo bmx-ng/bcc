@@ -114,6 +114,26 @@ Function Todo()
 	Err "TODO!"
 End Function
 
+Function StringToLong:Long(value:String)
+	Local Sign:Int = 1
+	Local i:Int
+	While i < value.length And (value[i] = Asc("+") Or value[i] = Asc("-"))
+		If value[i] = Asc("-") Then
+			Sign = -1
+		End If
+		i :+ 1
+	Wend
+	
+	Local n:Long = 0
+	While i < value.length
+		Local c:Int = value[i]
+		If Not IsDigit(c) Exit
+		n = n * 10 + (c-Asc("0"))
+		i :+ 1
+	Wend
+	Return n
+End Function
+
 Function IsStandardFunc:Int(func:String)
 	func = func.ToLower()
 	
