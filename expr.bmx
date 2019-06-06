@@ -2635,6 +2635,8 @@ Type TIdentExpr Extends TExpr
 						e :+ "'" + expr.ToString() + "'"
 					End If
 					Err e
+				Else
+					scope.Semant
 				End If
 			End If
 			fixedScope = True
