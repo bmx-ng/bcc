@@ -1186,6 +1186,7 @@ Type TSelfExpr Extends TExpr
 End Type
 
 Const CAST_EXPLICIT:Int=1
+Const CAST_TWO:Int=2
 
 Type TCastExpr Extends TExpr
 	Field ty:TType
@@ -1571,15 +1572,20 @@ Type TCastExpr Extends TExpr
 		If TEnumType(src) And TEnumType(ty) And (ty._flags & TType.T_VAR) Then
 			Return expr
 		End If
-		
-		If TIntegralType(ty) And TEnumType(src) And (flags & CAST_EXPLICIT Or flags & 2) Then
+
+		If TIntegralType(ty) And TEnumType(src) And (flags & CAST_EXPLICIT Or flags & CAST_TWO) Then
 			exprType = ty
 			Return Self
 		End If
 		
-		If TIntegralType(src) And TEnumType(ty) And flags & 2 Then
-			exprType = src
-			Return Self
+		If TIntegralType(src) And TEnumType(ty) Then
+			If flags & CAST_TWO Then
+				exprType = src
+				Return Self
+			Else If flags & CAST_EXPLICIT Then
+				exprType = ty
+				Return Self
+			End If
 		End If
 
 		If Not exprType
@@ -1593,7 +1599,7 @@ Type TCastExpr Extends TExpr
 			
 			Local ex:TExpr = EvalConst()
 			If flags & CAST_EXPLICIT Then
-				Return New TCastExpr.Create(exprType, ex, 1).Semant()
+				Return New TCastExpr.Create(exprType, ex, CAST_EXPLICIT).Semant()
 			Else
 				Return ex
 			End If

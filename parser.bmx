@@ -1893,20 +1893,20 @@ End Rem
 		Local init:TStmt,expr:TExpr,incr:TStmt
 
 		If varlocal
-			Local indexVar:TLocalDecl=New TLocalDecl.Create( varid,varty,New TCastExpr.Create( varty,from,1 ),0 )
+			Local indexVar:TLocalDecl=New TLocalDecl.Create( varid,varty,New TCastExpr.Create( varty,from,CAST_EXPLICIT ),0 )
 			init=New TDeclStmt.Create( indexVar )
 '			expr=New TBinaryCompareExpr.Create( op,New TVarExpr.Create( indexVar ),New TCastExpr.Create( varty,term,1 ) )
 '			incr=New TAssignStmt.Create( "=",New TVarExpr.Create( indexVar ),New TBinaryMathExpr.Create( "+",New TVarExpr.Create( indexVar ),New TCastExpr.Create( varty,stp,1 ) ) )
-			expr=New TBinaryCompareExpr.Create( op, varExpr,New TCastExpr.Create( varty,term,1 ) )
-			incr=New TAssignStmt.Create( "=",varExpr,New TBinaryMathExpr.Create( "+",varExpr,New TCastExpr.Create( varty,stp,1 ) ) )
+			expr=New TBinaryCompareExpr.Create( op, varExpr,New TCastExpr.Create( varty,term,CAST_EXPLICIT ) )
+			incr=New TAssignStmt.Create( "=",varExpr,New TBinaryMathExpr.Create( "+",varExpr,New TCastExpr.Create( varty,stp,CAST_EXPLICIT ) ) )
 		Else
 			' varty is NULL here for the casts. We will back-populate it later.
 '			init=New TAssignStmt.Create( "=",New TIdentExpr.Create( varid ),from )
 '			expr=New TBinaryCompareExpr.Create( op,New TIdentExpr.Create( varid ),New TCastExpr.Create( varty,term,1 ) )
 '			incr=New TAssignStmt.Create( "=",New TIdentExpr.Create( varid ),New TBinaryMathExpr.Create( "+",New TIdentExpr.Create( varid ),New TCastExpr.Create( varty,stp,1 ) ) )
 			init=New TAssignStmt.Create( "=",varExpr,from )
-			expr=New TBinaryCompareExpr.Create( op,varExpr,New TCastExpr.Create( varty,term,1 ) )
-			incr=New TAssignStmt.Create( "=",varExpr,New TBinaryMathExpr.Create( "+",varExpr,New TCastExpr.Create( varty,stp,1 ) ) )
+			expr=New TBinaryCompareExpr.Create( op,varExpr,New TCastExpr.Create( varty,term,CAST_EXPLICIT ) )
+			incr=New TAssignStmt.Create( "=",varExpr,New TBinaryMathExpr.Create( "+",varExpr,New TCastExpr.Create( varty,stp,CAST_EXPLICIT ) ) )
 		EndIf
 
 		Local block:TBlockDecl=New TBlockDecl.Create( _block, , BLOCK_LOOP )

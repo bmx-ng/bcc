@@ -2050,6 +2050,7 @@ Type TEnumType Extends TType
 
 	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
 		If _flags & T_VARPTR And (TEnumType(ty) <> Null Or IsPointerType(ty, 0, T_POINTER)) Return True
+		Return (widensTest And WidensToType(ty))
 	End Method
 
 	Method WidensToType:Int( ty:TType )

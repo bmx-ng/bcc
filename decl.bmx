@@ -3513,6 +3513,8 @@ Type TEnumDecl Extends TScopeDecl
 	End Method
 	
 	Method GenerateFuncs()
+		Local enumType:TEnumType = New TEnumType.Create(Self)
+	
 		Local fdecl:TFuncDecl = New TFuncDecl.CreateF("ToString", New TStringType, Null, FUNC_METHOD)
 		InsertDecl fdecl
 		fdecl.Semant()
@@ -3521,7 +3523,18 @@ Type TEnumDecl Extends TScopeDecl
 		InsertDecl fdecl
 		fdecl.Semant()
 
-		fdecl = New TFuncDecl.CreateF("Values", New TArrayType.Create(New TEnumType.Create(Self), 1), Null, 0)
+		fdecl = New TFuncDecl.CreateF("Values", New TArrayType.Create(enumType, 1), Null, 0)
+		InsertDecl fdecl
+		fdecl.Semant()
+		
+		Local args:TArgDecl[2]
+		args[0] = New TArgDecl.Create("value", ty, Null)
+		args[1] = New TArgDecl.Create("result", TType.MapToVarType(enumType.Copy()), Null, 0)
+		
+		fdecl = New TFuncDecl.CreateF("TryConvert", New TIntType, args, 0)
+		InsertDecl fdecl
+		fdecl.Semant()
+
 		InsertDecl fdecl
 		fdecl.Semant()
 	End Method

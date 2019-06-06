@@ -956,11 +956,12 @@ t:+"NULLNULLNULL"
 		Else If TBlockDecl(decl.scope)
 			Return decl.munged
 		Else If TEnumDecl(decl.scope)
-			If decl.ident = "Values" Then
-				Return "bbEnumValues"
-			Else
-				Return decl.munged
-			End If
+			Select decl.ident
+				Case "Values"
+					Return "bbEnumValues"
+				Default
+					Return decl.munged
+			End Select
 		EndIf
 		InternalErr "TCTranslator.TransStatic"
 	End Method
@@ -2146,7 +2147,15 @@ t:+"NULLNULLNULL"
 				End If
 			End If
 		Else If TEnumType( dst )
-			If TEnumType( src) Return t			
+			If TEnumType( src) Return t
+			If TIntegralType(src) Then
+				If opt_debug Then
+					Return "bbEnumCast_" + TransDebugScopeType(TEnumType(dst).decl.ty) + Bra(TEnumType(dst).decl.munged + "_BBEnum_impl," + t)
+				Else
+					' no checking in release mode.
+					Return t
+				End If
+			End If
 		End If
 
 		Return TransPtrCast( dst,src,t,"dynamic" )
@@ -4465,6 +4474,10 @@ End Rem
 					Emit "BBSTRING " + fdecl.munged + Bra(TransType(decl.ty, "") + " ordinal") + " {"
 					Emit "return bbEnumToString_" + TransDebugScopeType(decl.ty) + Bra(decl.munged + "_BBEnum_impl, ordinal") + ";"
 					Emit "}"
+				Case "TryConvert"
+					Emit "BBINT " + fdecl.munged + Bra(TransType(decl.ty, "") + " ordinalValue, " + TransType(decl.ty, "") + " * ordinalResult") + " {"
+					Emit "return bbEnumTryConvert_" + TransDebugScopeType(decl.ty) + Bra(decl.munged + "_BBEnum_impl, ordinalValue, ordinalResult") + ";"
+					Emit "}"
 			End Select
 		Next
 
@@ -4479,6 +4492,8 @@ End Rem
 			Select fdecl.ident
 				Case "ToString"
 					Emit "BBSTRING " + fdecl.munged + Bra(TransType(decl.ty, "")) + ";"
+				Case "TryConvert"
+					Emit "BBINT " + fdecl.munged + Bra(TransType(decl.ty, "") + " ordinalValue, " + TransType(decl.ty, "") + " * ordinalResult") + ";"
 				Case "Ordinal"
 					' nothing to generate
 			End Select
