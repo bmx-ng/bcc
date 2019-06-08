@@ -3568,8 +3568,6 @@ Type TEnumDecl Extends TScopeDecl
 		InsertDecl fdecl
 		fdecl.Semant()
 
-		InsertDecl fdecl
-		fdecl.Semant()
 	End Method
 	
 	Method ToString:String()
