@@ -1375,11 +1375,22 @@ t:+"NULLNULLNULL"
 				'Local obj:String = Bra("struct " + scope.munged + "_obj*")
 				'Local class:String = Bra("(" + obj + "o)->clas" + tSuper)
 				'Local class:String = Bra("&" + decl.scope.munged)
-				If TClassDecl(scope).IsStruct() Then
-					Return "_" + decl.munged+TransArgs( args,decl, "o" )
-				Else
-					Return class + "->" + TransFuncPrefix(scope, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, "o" )
+				If TEnumDecl(scope) Then
+						' since we already have the ordinal, we can simply output that
+						If decl.ident = "Ordinal" Then
+							Return Bra(TransSubExpr( lhs ))
+						Else
+							Return decl.munged + Bra(TransSubExpr( lhs ))
+						End If
+				Else If TClassDecl(scope) Then
+					If TClassDecl(scope).IsStruct() Then
+						Return "_" + decl.munged+TransArgs( args,decl, "o" )
+					Else
+						Return class + "->" + TransFuncPrefix(scope, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, "o" )
+					End If
 				End If
+				
+				InternalErr "TCTranslator.TransFunc.2"
 			Else
 				' Null test
 				If opt_debug Then
