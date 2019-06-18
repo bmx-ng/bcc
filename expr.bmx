@@ -1204,6 +1204,30 @@ Type TCastExpr Extends TExpr
 		Return New TCastExpr.Create( ty,CopyExpr(expr),flags )
 	End Method
 
+	Method CheckArrayExpr:TType(src:TType, e:TExpr, last:TType)
+		If TNullType(e.exprType) Then
+			Err "Auto array element has no type"
+		End If
+
+		If TObjectType(TArrayType(ty).elemType) And TObjectType(TArrayType(ty).elemType).classDecl.ident = "Object" And (TStringType(e.exprType) Or TObjectType(e.exprType) Or TArrayType(e.exprType)) Then
+			' array takes generic objects, so we don't care if source elements are the same kinds.
+		Else
+			If last <> Null And Not last.EqualsType(e.exprType) Then
+				Err "Auto array elements must have identical types"
+			End If
+			If Not TArrayType(ty).elemType.EqualsType(e.exprType) Then
+				If (TObjectType(TArrayType(ty).elemType) = Null And TStringType(TArrayType(ty).elemType) = Null) Or (TObjectType(e.exprType) = Null And TStringType(e.exprType) = Null) Then
+					Err "Unable to convert from "+src.ToString()+" to "+ty.ToString()+"."
+				Else If TStringType(e.exprType) = Null And Not TObjectType(e.exprType).ExtendsType(TObjectType(TArrayType(ty).elemType)) Then
+					Err "Unable to convert from "+src.ToString()+" to "+ty.ToString()+"."
+				End If
+			End If
+		End If
+		
+		Return e.exprType
+	End Method
+
+
 	Method Semant:TExpr(options:Int = 0)
 
 		If exprType Return Self
@@ -1359,26 +1383,12 @@ Type TCastExpr Extends TExpr
 				If TArrayExpr(expr) Then
 					Local last:TType
 					For Local e:TExpr = EachIn TArrayExpr(expr).exprs
-						If TNullType(e.exprType) Then
-							Err "Auto array element has no type"
-						End If
-
-						If TObjectType(TArrayType(ty).elemType) And TObjectType(TArrayType(ty).elemType).classDecl.ident = "Object" And (TStringType(e.exprType) Or TObjectType(e.exprType) Or TArrayType(e.exprType)) Then
-							' array takes generic objects, so we don't care if source elements are the same kinds.
-						Else
-							If last <> Null And Not last.EqualsType(e.exprType) Then
-								Err "Auto array elements must have identical types"
-							End If
-							If Not TArrayType(ty).elemType.EqualsType(e.exprType) Then
-								If (TObjectType(TArrayType(ty).elemType) = Null And TStringType(TArrayType(ty).elemType) = Null) Or (TObjectType(e.exprType) = Null And TStringType(e.exprType) = Null) Then
-									Err "Unable to convert from "+src.ToString()+" to "+ty.ToString()+"."
-								Else If TStringType(e.exprType) = Null And Not TObjectType(e.exprType).ExtendsType(TObjectType(TArrayType(ty).elemType)) Then
-									Err "Unable to convert from "+src.ToString()+" to "+ty.ToString()+"."
-								End If
-							End If
-						End If
-						
-						last = e.exprType
+						last = CheckArrayExpr(src, e, last)
+					Next
+				Else If TNewArrayExpr(expr) Then
+					Local last:TType
+					For Local e:TExpr = EachIn TNewArrayExpr(expr).expr
+						last = CheckArrayExpr(src, e, last)
 					Next
 				Else
 					If TObjectType(TArrayType(ty).elemType) Then
