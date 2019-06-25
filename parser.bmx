@@ -3955,6 +3955,35 @@ End Rem
 
 		Local attrs:Int
 
+		While _toke
+			SetErr
+			Select _toke.ToLower()
+			Case "~n"
+				NextToke
+			Case "strict"
+				If _module.attrs & (MODULE_STRICT | MODULE_SUPERSTRICT) Then
+					Err "Strict or SuperStrict already specified"
+				End If
+
+				_module.attrs :| MODULE_STRICT
+				nextToke
+			Case "superstrict"
+				If _module.attrs & (MODULE_STRICT | MODULE_SUPERSTRICT) Then
+					Err "Strict or SuperStrict already specified"
+				End If
+
+				_module.attrs :| MODULE_SUPERSTRICT
+				opt_issuperstrict = True
+				NextToke
+			Default
+				Exit
+			End Select
+		Wend
+
+		If Not (_module.attrs & (MODULE_STRICT | MODULE_SUPERSTRICT)) Then
+			Err "Strict or SuperStrict must be declared at the start of the file."
+		End If
+
 		'Parse header - imports etc.
 		While _toke
 			SetErr
@@ -4017,21 +4046,6 @@ End Rem
 				mainFunc.attrs :| DECL_NODEBUG
 				attrs :| DECL_NODEBUG
 				NextToke
-			Case "strict"
-				If _module.attrs & (MODULE_STRICT | MODULE_SUPERSTRICT) Then
-					Err "Strict or SuperStrict already specified"
-				End If
-
-				_module.attrs :| MODULE_STRICT
-				nextToke
-			Case "superstrict"
-				If _module.attrs & (MODULE_STRICT | MODULE_SUPERSTRICT) Then
-					Err "Strict or SuperStrict already specified"
-				End If
-
-				_module.attrs :| MODULE_SUPERSTRICT
-				opt_issuperstrict = True
-				nextToke
 			Case "moduleinfo"
 				NextToke
 				Local info:String = ParseStringLit()
