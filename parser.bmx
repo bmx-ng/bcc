@@ -3447,6 +3447,10 @@ End Rem
 			Local origPath:String = RealPath(filepath)
 			Local path:String = OutputFilePath(origPath, FileMung(), "i")
 
+			If FileType( origPath )<>FILETYPE_FILE
+				Err "File '"+ origPath +"' not found."
+			EndIf
+
 			If FileType( path )<>FILETYPE_FILE
 				Err "File '"+ path +"' not found."
 			EndIf
