@@ -152,6 +152,32 @@ Type TCTranslator Extends TTranslator
 		If TLParamType( ty ) Return "x"
 		If TStringType( ty ) Return "t"
 	End Method
+
+	Method TransCifType$(ty:TType)
+		Local p:String = TransSPointer(ty)
+
+		If Not p Then
+			If TByteType( ty ) Return "&ffi_type_uint8"
+			If TShortType( ty ) Return "&ffi_type_uint16"
+			If TIntType( ty ) Return "&ffi_type_sint32"
+			If TUIntType( ty ) Return "&ffi_type_uint32"
+			If TFloatType( ty ) Return "&ffi_type_float"
+			If TDoubleType( ty ) Return "&ffi_type_double"
+			If TLongType( ty ) Return "&ffi_type_sint64"
+			If TULongType( ty ) Return "&ffi_type_uint64"
+			If TSizeTType( ty ) Then
+				If WORD_SIZE = 8 Then
+					Return "&ffi_type_uint32"
+				Else
+					Return "&ffi_type_uint64"
+				End If
+			End If			
+			If TWParamType( ty ) Return "&ffi_type_sint32"
+			If TLParamType( ty ) Return "&ffi_type_sint64"
+		End If
+		' everything else is a pointer...
+		Return "&ffi_type_pointer"
+	End Method
 	
 	Method TransDebugScopeType$(ty:TType)
 		Local p:String = TransSPointer(ty)
@@ -4007,6 +4033,50 @@ End Rem
 
 	End Method
 	
+	Method EmitClassFuncsDebugScopeCifs(classDecl:TClassDecl)
+
+		If classDecl.IsExtern() Return
+
+		Local classid$=classDecl.munged
+		Local superid$
+		If classDecl.superClass Then
+			superid = classDecl.superClass.actual.munged
+		End If
+
+		Local list:TList = New TList
+		
+		BBClassClassFuncsDebugScopeBuildList(classDecl, list)
+
+		For Local func:TFuncDecl = EachIn list
+			Local s:String
+			If func.IsMethod() Or func.IsCTor() Then
+				s :+ "&ffi_type_pointer"
+			End If
+			For Local i:Int = 0 Until func.argDecls.length
+				If s Then
+					s :+ ","
+				End If
+				s :+ TransCifType(func.argDecls[i].ty)
+			Next
+			Emit "ffi_type * bbCif_" + func.munged + "_arg_types[] = [" + s + "];"
+
+			Emit "BBCif bbCif_" + func.munged + " = {"
+			Emit "FFI_DEFAULT_ABI,"
+			Local count:Int
+			If func.IsMethod() Then
+				count = 1
+			End If
+			Emit count + func.argDecls.length + ","
+			If TVoidType(func.retType) Then
+				Emit "&ffi_type_void,"
+			Else
+				Emit TransCifType(func.retType) + ","
+			End If
+			Emit "bbCif_" + func.munged + "_arg_types"
+			Emit "};"
+		Next			
+	End Method
+	
 	Method EmitClassGlobalDebugScope( classDecl:TClassDecl )
 		For Local decl:TGlobalDecl = EachIn classDecl.Decls()
 			EmitGlobalDebugScope(decl)
@@ -4222,6 +4292,8 @@ End Rem
 
 		End If
 
+		' cif defs
+		EmitClassFuncsDebugScopeCifs(classDecl)
 			
 		'Emit "struct _" + classid + "_DebugScope{"
 		'Emit "int kind;"
