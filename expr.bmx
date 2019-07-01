@@ -329,7 +329,7 @@ Type TExpr
 			
 		End If
 		' balance structs
-		If TObjectType( lhs ).EqualsType(rhs) And TObjectType( lhs ).classDecl.IsStruct() And TObjectType( rhs ).classDecl.IsStruct() Then
+		If TObjectType( lhs ) And TObjectType( rhs ) And TObjectType( lhs ).EqualsType(rhs) And TObjectType( lhs ).classDecl.IsStruct() And TObjectType( rhs ).classDecl.IsStruct() Then
 			Return lhs
 		End If
 		
