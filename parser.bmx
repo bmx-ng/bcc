@@ -2229,8 +2229,10 @@ End Rem
 			Select _toke
 				Case "~n"
 					NextToke
-				Case "const","global"
+				Case "const"
 					mdecl.InsertDecls ParseDecls( _toke,attrs )
+				Case "global"
+					ParseDeclStmts(True, attrs, mdecl)
 				Case "struct"
 					mdecl.InsertDecl ParseClassDecl( _toke,attrs | CLASS_STRUCT )
 				Case "type"
@@ -2521,22 +2523,33 @@ End Rem
 		Forever
 	End Method
 
-	Method ParseDeclStmts()
-
+	Method ParseDeclStmts(initOnly:Int = False, attrs:Int = 0, mdecl:TModuleDecl  = Null)
 		Local toke$=_toke
 		NextToke
 		Repeat
-			Local decl:TDecl=ParseDecl( toke,0 )
+			Local decl:TDecl=ParseDecl( toke,attrs )
 			_block.AddStmt New TDeclStmt.Create( decl )
 			
 			' reset the decl scope, adding decl to the block decl list.
 			' this improves scope visibilty - for decls such as embedded functions
 			If TConstDecl(decl) Or TGlobalDecl(decl) Then
+
+				If mdecl Then
+					mdecl.InsertDecl decl
+				End If
+
 				decl.scope = Null
 				_block.InsertDecl(decl)
+				
 				If TGlobalDecl(decl) Then
-					TGlobalDecl(decl).funcGlobal = True
+					If initOnly Then
+						decl.attrs :| DECL_INITONLY
+						TGlobalDecl(decl).mscope = _module
+					Else
+						TGlobalDecl(decl).funcGlobal = True
+					End If
 				End If
+
 			End If
 			
 		Until Not CParse(",")
@@ -3775,12 +3788,7 @@ End Rem
 			Case "const"
 				_module.InsertDecls ParseDecls( _toke,attrs )
 			Case "global"
-				Local list:TList = ParseDecls( _toke,attrs )
-				_module.InsertDecls list
-				For Local gdecl:TGlobalDecl = EachIn list
-					gdecl.attrs :| DECL_INITONLY
-					_block.AddStmt New TDeclStmt.Create( gdecl )
-				Next
+				ParseDeclStmts(True, attrs, _module)
 			Case "struct"
 				_module.InsertDecl ParseClassDecl( _toke,attrs | CLASS_STRUCT )
 			Case "type"

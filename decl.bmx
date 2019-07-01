@@ -316,18 +316,20 @@ Type TDecl
 				If TGlobalDecl( Self )
 					' FIXME
 					If AppScope() Then
+						If TGlobalDecl( Self ).mscope Then
+							AppScope()._semanted.AddLast Self
+						End If
 						AppScope().semantedGlobals.AddLast TGlobalDecl( Self )
 					End If
-				EndIf
-				
-				If TModuleDecl( scope )
-					' FIXME
-					Local app:TAppDecl = AppScope()
-					If app Then
-						app._semanted.AddLast Self
-					End If
-				EndIf
-			
+				Else
+					If TModuleDecl( scope )
+						' FIXME
+						Local app:TAppDecl = AppScope()
+						If app Then
+							app._semanted.AddLast Self
+						End If
+					EndIf
+				End If
 			EndIf
 			
 			If TValDecl(Self) And TValDecl(Self).deferInit Then
@@ -713,6 +715,7 @@ Type TGlobalDecl Extends TVarDecl
 
 	Field inited:Int
 	Field funcGlobal:Int
+	Field mscope:TScopeDecl
 	
 	Method Create:TGlobalDecl( ident$,ty:TType,init:TExpr,attrs:Int=0,funcGlobal:Int=False )
 		Self.deferInit = True
@@ -728,6 +731,7 @@ Type TGlobalDecl Extends TVarDecl
 		Local g:TGlobalDecl = New TGlobalDecl.Create( ident,declTy,declInit,attrs,funcGlobal )
 		g.ty = ty
 		g.init = init
+		g.mscope = mscope
 		Return g
 	End Method
 	
