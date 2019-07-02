@@ -2528,7 +2528,9 @@ End Rem
 		NextToke
 		Repeat
 			Local decl:TDecl=ParseDecl( toke,attrs )
-			_block.AddStmt New TDeclStmt.Create( decl )
+			If Not (attrs & DECL_EXTERN) Then
+				_block.AddStmt New TDeclStmt.Create( decl )
+			End If
 			
 			' reset the decl scope, adding decl to the block decl list.
 			' this improves scope visibilty - for decls such as embedded functions
@@ -2538,8 +2540,10 @@ End Rem
 					mdecl.InsertDecl decl
 				End If
 
-				decl.scope = Null
-				_block.InsertDecl(decl)
+				If Not (attrs & DECL_EXTERN) Then
+					decl.scope = Null
+					_block.InsertDecl(decl)
+				End If
 				
 				If TGlobalDecl(decl) Then
 					If initOnly Then
