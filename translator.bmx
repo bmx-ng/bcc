@@ -509,7 +509,7 @@ Type TTranslator
 			munged = id
 		Else
 
-			If TModuleDecl( decl.scope )
+			If TModuleDecl( decl.scope ) Or (TGlobalDecl(decl) And TModuleDecl(TGlobalDecl(decl).mscope))
 				munged=decl.ModuleScope().munged+"_"+id
 				
 				If TClassDecl(decl) And TClassDecl(decl).instArgs Then
