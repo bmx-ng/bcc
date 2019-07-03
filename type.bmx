@@ -1658,6 +1658,9 @@ Type TIdentType Extends TType
 			Else If TEnumType(ty) Then
 				ty = New TEnumType.Create(TEnumType(ty).decl)
 				ty._flags :| T_VAR
+			Else
+				ty = ty.Copy()
+				ty._flags :| T_VAR
 			End If
 		End If
 
