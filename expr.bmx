@@ -1226,7 +1226,29 @@ Type TCastExpr Extends TExpr
 		
 		Return e.exprType
 	End Method
-
+	
+	Method CheckArrayType:Int(ty:TArrayType, src:TArrayType)
+		If src.dims <> ty.dims Then
+			Return False
+		End If
+		If TObjectType(TArrayType(ty).elemType) Then
+			If TObjectType(TArrayType(ty).elemType).classDecl.ident = "Object" And (TStringType(TArrayType(src).elemType) Or TObjectType(TArrayType(src).elemType) Or TArrayType(TArrayType(src).elemType)) Then
+				' array takes generic objects, so we don't care if source elements are the same kinds.
+			Else
+				If TObjectType(TArrayType(src).elemType) And Not (TObjectType(TArrayType(src).elemType)).ExtendsType(TArrayType(ty).elemType) And Not TArrayType(ty).elemType.EqualsType(TArrayType(src).elemType) Then
+					Return False
+				End If
+			End If
+		Else If TArrayType(TArrayType(ty).elemType) And TArrayType(TArrayType(src).elemType) Then
+			If Not CheckArrayType(TArrayType(TArrayType(ty).elemType), TArrayType(TArrayType(src).elemType)) Then
+				Return False
+			End If
+		Else If Not TArrayType(ty).elemType.EqualsType(TArrayType(src).elemType) Then
+			Return False
+		End If
+		
+		Return True
+	End Method
 
 	Method Semant:TExpr(options:Int = 0)
 
@@ -1385,11 +1407,6 @@ Type TCastExpr Extends TExpr
 					For Local e:TExpr = EachIn TArrayExpr(expr).exprs
 						last = CheckArrayExpr(src, e, last)
 					Next
-				Else If TNewArrayExpr(expr) Then
-					Local last:TType
-					For Local e:TExpr = EachIn TNewArrayExpr(expr).expr
-						last = CheckArrayExpr(src, e, last)
-					Next
 				Else
 					If TObjectType(TArrayType(ty).elemType) Then
 						If TObjectType(TArrayType(ty).elemType).classDecl.ident = "Object" And (TStringType(TArrayType(src).elemType) Or TObjectType(TArrayType(src).elemType) Or TArrayType(TArrayType(src).elemType)) Then
@@ -1399,6 +1416,12 @@ Type TCastExpr Extends TExpr
 								Err "Unable to convert from "+src.ToString()+" to "+ty.ToString()+"."
 							End If
 						End If
+					Else If TArrayType(TArrayType(ty).elemType) And TArrayType(TArrayType(src).elemType) Then
+						If Not CheckArrayType(TArrayType(TArrayType(ty).elemType), TArrayType(TArrayType(src).elemType)) Then
+							Err "Unable to convert from "+src.ToString()+" to "+ty.ToString()+"."
+						End If
+					Else If Not TArrayType(ty).elemType.EqualsType(TArrayType(src).elemType) Then
+						Err "Unable to convert from "+src.ToString()+" to "+ty.ToString()+"."
 					End If
 				End If
 				
