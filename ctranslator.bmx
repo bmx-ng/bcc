@@ -1592,8 +1592,6 @@ t:+"NULLNULLNULL"
 		End If
 	End Method
 
-	Field stringMap:TMap = New TMap
-
 	Method TransStringConst:String(value:String)
 		If value Then
 			_appInstance.mapStringConsts(value)
