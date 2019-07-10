@@ -208,17 +208,22 @@ Type TForEachinStmt Extends TLoopStmt
 
 			Local enumerInit:TExpr
 			If iterable Then
-				enumerInit = New TFuncCallExpr.Create( New TIdentExpr.Create( "Iterator",expr ) )
+				enumerInit = New TFuncCallExpr.Create( New TIdentExpr.Create( "GetIterator",expr ) )
 			Else
 				enumerInit = New TFuncCallExpr.Create( New TIdentExpr.Create( "ObjectEnumerator",expr ) )
 			End If
 			Local enumerTmp:TLocalDecl=New TLocalDecl.Create( "",Null,enumerInit,,True )
 
-			Local hasNextExpr:TExpr=New TFuncCallExpr.Create( New TIdentExpr.Create( "HasNext",New TVarExpr.Create( enumerTmp ) ) )
+			Local hasNextExpr:TExpr
+			If iterable Then
+				hasNextExpr = New TFuncCallExpr.Create( New TIdentExpr.Create( "MoveNext",New TVarExpr.Create( enumerTmp ) ) )
+			Else
+				hasNextExpr = New TFuncCallExpr.Create( New TIdentExpr.Create( "HasNext",New TVarExpr.Create( enumerTmp ) ) )
+			End If
 			
 			Local nextObjExpr:TExpr
 			If iterable Then
-				nextObjExpr = New TFuncCallExpr.Create( New TIdentExpr.Create( "NextElement",New TVarExpr.Create( enumerTmp ) ) )
+				nextObjExpr = New TFuncCallExpr.Create( New TIdentExpr.Create( "Current",New TVarExpr.Create( enumerTmp ) ) )
 			Else
 				nextObjExpr = New TFuncCallExpr.Create( New TIdentExpr.Create( "NextObject",New TVarExpr.Create( enumerTmp ) ) )
 			End If
@@ -240,19 +245,21 @@ Type TForEachinStmt Extends TLoopStmt
 				' local variable
 				Local varTmp:TLocalDecl=New TLocalDecl.Create( varid,varty,cExpr)
 
-				' local var as expression
-				Local expr:TExpr=New TVarExpr.Create( varTmp )
-
-				' var = Null
-				expr=New TBinaryCompareExpr.Create( "=",expr, New TNullExpr.Create(TType.nullObjectType))
-
-				' then continue
-				Local thenBlock:TBlockDecl=New TBlockDecl.Create( block.scope, True, BLOCK_IF )
-				Local elseBlock:TBlockDecl=New TBlockDecl.Create( block.scope, True, BLOCK_ELSE )
-				cont = New TContinueStmt.Create(Null, True)
-				thenBlock.AddStmt cont
-
-				block.stmts.AddFirst New TIfStmt.Create( expr,thenBlock,elseBlock, True )
+				If Not TNumericType(varty) Then
+					' local var as expression
+					Local expr:TExpr=New TVarExpr.Create( varTmp )
+	
+					' var = Null
+					expr=New TBinaryCompareExpr.Create( "=",expr, New TNullExpr.Create(TType.nullObjectType))
+	
+					' then continue
+					Local thenBlock:TBlockDecl=New TBlockDecl.Create( block.scope, True, BLOCK_IF )
+					Local elseBlock:TBlockDecl=New TBlockDecl.Create( block.scope, True, BLOCK_ELSE )
+					cont = New TContinueStmt.Create(Null, True)
+					thenBlock.AddStmt cont
+	
+					block.stmts.AddFirst New TIfStmt.Create( expr,thenBlock,elseBlock, True )
+				End If
 				block.stmts.AddFirst New TDeclStmt.Create( varTmp, True )
 			Else
 
@@ -273,17 +280,19 @@ Type TForEachinStmt Extends TLoopStmt
 				
 				' var = Null
 '				Local expr:TExpr=New TBinaryCompareExpr.Create( "=",New TIdentExpr.Create( varid ), New TNullExpr.Create(TType.nullObjectType))
-				Local expr:TExpr=New TBinaryCompareExpr.Create( "=",varExpr, New TNullExpr.Create(TType.nullObjectType))
+				If Not TNumericType(varty) Then
+					Local expr:TExpr=New TBinaryCompareExpr.Create( "=",varExpr, New TNullExpr.Create(TType.nullObjectType))
+	
+					' then continue
+					Local thenBlock:TBlockDecl=New TBlockDecl.Create( block.scope, ,BLOCK_IF )
+					Local elseBlock:TBlockDecl=New TBlockDecl.Create( block.scope, ,BLOCK_ELSE )
+					cont = New TContinueStmt
+					thenBlock.AddStmt cont
+	
+					block.stmts.AddFirst New TIfStmt.Create( expr,thenBlock,elseBlock )
+					'block.stmts.AddFirst New TDeclStmt.Create( varTmp )
 
-				' then continue
-				Local thenBlock:TBlockDecl=New TBlockDecl.Create( block.scope, ,BLOCK_IF )
-				Local elseBlock:TBlockDecl=New TBlockDecl.Create( block.scope, ,BLOCK_ELSE )
-				cont = New TContinueStmt
-				thenBlock.AddStmt cont
-
-				block.stmts.AddFirst New TIfStmt.Create( expr,thenBlock,elseBlock )
-				'block.stmts.AddFirst New TDeclStmt.Create( varTmp )
-
+				End If
 '				block.stmts.AddFirst New TAssignStmt.Create( "=",New TIdentExpr.Create( varid ),New TCastExpr.Create( varty, nextObjExpr,CAST_EXPLICIT ))
 				block.stmts.AddFirst New TAssignStmt.Create( "=",varExpr,New TCastExpr.Create( varty, nextObjExpr,CAST_EXPLICIT ))
 			EndIf

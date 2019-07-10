@@ -3392,49 +3392,21 @@ End Rem
 
 	Method BBClassClassFuncProtoBuildList( classDecl:TClassDecl, list:TList )
 
-		'Local reserved:String = ",New,Delete,ToString,Compare,SendMessage,_reserved1_,_reserved2_,_reserved3_,".ToLower()
+		Local fdecls:TFuncDecl[] = classDecl.GetAllFuncDecls()
 
-		If classDecl.superClass Then
-			BBClassClassFuncProtoBuildList(classDecl.superClass, list)
-		End If
-		
-		For Local idecl:TClassDecl = EachIn classDecl.implmentsAll
-			BBClassClassFuncProtoBuildList(idecl, list)
-		Next
+		For Local decl:TFuncDecl=EachIn fdecls
 
-		For Local decl:TDecl=EachIn classDecl.Decls()
-			Local fdecl:TFuncDecl =TFuncDecl( decl )
-			If fdecl
-				If Not fdecl.IsSemanted()
-					fdecl.Semant()
-				End If
+			If Not decl.IsSemanted()
+				decl.Semant()
+			End If
 
-				If Not equalsBuiltInFunc(classDecl, fdecl) And Not equalsTorFunc(classDecl, fdecl) Then
-				
-					Local ignore:Int
-					Local link:TLink=list._head._succ
-					While link<>list._head
-						Local ofdecl:TFuncDecl = TFuncDecl(link._value)
-						If fdecl.ident = ofdecl.ident And fdecl.EqualsArgs(ofdecl) And fdecl.scope <> ofdecl.scope Then
+			If Not equalsBuiltInFunc(classDecl, decl) And Not equalsTorFunc(classDecl, decl) Then
 
-							If fdecl.overrides Then
-								link._value = fdecl
-								ignore = True
-								Exit
-							End If
-							
-							ignore = True
-						EndIf
-						link = link._succ
-					Wend
+				Local fdecl:TFuncDecl = classDecl.GetLatestFuncDecl(decl)
 
-					If Not ignore Then
-						list.AddLast(fdecl)
-					End If
-				
-					Continue
-				End If
-			EndIf
+				list.AddLast(fdecl)
+
+			End If
 		Next
 
 	End Method

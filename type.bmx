@@ -1381,6 +1381,22 @@ Type TStringType Extends TType
 	Method ToString$()
 		Return "String" + ToStringParts()
 	End Method
+	
+	Method DistanceToType:Int(ty:TType)
+		If TStringType(ty) Then
+			Return 0
+		End If
+		
+		' prefer Object
+		If TObjectType(ty)
+			If TObjectType(ty).classDecl.ident = "Object" Then
+				Return $F
+			End If
+		End If
+
+		Return T_MAX_DISTANCE
+	End Method
+	
 End Type
 
 Type TArrayType Extends TType
@@ -1439,6 +1455,22 @@ Type TArrayType Extends TType
 	Method ToString$()
 		Return elemType.ToString()+" Array"
 	End Method
+	
+	Method DistanceToType:Int(ty:TType)
+		If TArrayType(ty) Then
+			Return 0
+		End If
+		
+		' prefer Object
+		If TObjectType(ty)
+			If TObjectType(ty).classDecl.ident = "Object" Then
+				Return $F
+			End If
+		End If
+
+		Return T_MAX_DISTANCE
+	End Method
+
 End Type
 
 Type TObjectType Extends TType
@@ -1480,6 +1512,20 @@ Type TObjectType Extends TType
 		ty.classDecl = classDecl
 		ty.instance = instance
 		Return ty
+	End Method
+
+	Method DistanceToType:Int(ty:TType)
+		If TObjectType(ty) Then
+			If classDecl = TObjectType(ty).classDecl Then
+				Return 0
+			End If
+			
+			If classDecl.ExtendsClass(TObjectType(ty).classDecl) Then
+				Return $F
+			End If
+		End If
+
+		Return T_MAX_DISTANCE
 	End Method
 
 End Type

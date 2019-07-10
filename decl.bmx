@@ -2783,14 +2783,17 @@ End Rem
 			For Local i:Int = 0 Until funcs.length
 				Local ofunc:TFuncDecl = funcs[i]
 				' found a match - we are overriding it
-				If func.IdentLower() = ofunc.IdentLower() And func.EqualsArgs(ofunc) And func.scope <> ofunc.scope Then
+				If func.IdentLower() = ofunc.IdentLower() And func.EqualsArgs(ofunc) Then
 					matched = True
-					' but don't override if we are an interface and the function is implemented
-					If IsInterface() And Not ofunc.ClassScope().IsInterface() Then
-						Exit
+					
+					If func.scope <> ofunc.scope Then
+						' but don't override if we are an interface and the function is implemented
+						If IsInterface() And Not ofunc.ClassScope().IsInterface() Then
+							Exit
+						End If
+						' set this to our own func
+						funcs[i] = func
 					End If
-					' set this to our own func
-					funcs[i] = func
 					Exit
 				End If
 			Next
@@ -2889,7 +2892,7 @@ End Rem
 		
 		For Local func:TFuncDecl = EachIn _decls
 		
-			If func.IdentLower() = fdecl.IdentLower() And func.EqualsArgs(fdecl) Then
+			If func.IdentLower() = fdecl.IdentLower() And func.EqualsArgs(fdecl, True) Then
 				Return func
 			End If
 		
@@ -3048,9 +3051,9 @@ End Rem
 			End If
 		Next
 
-		' structs have a default New
+		' structs have a default New and Compare
 		' if we haven't defined one, create one
-		If attrs & CLASS_STRUCT Then
+		If attrs & CLASS_STRUCT And Not IsExtern() And Not declImported Then
 			attrs :| DECL_CYCLIC
 			Local func:TFuncDecl = FindFuncDecl("new", Null,True,,,,0)
 			If Not func Then
@@ -3058,6 +3061,30 @@ End Rem
 				TNewDecl(func).cdecl = Self
 				InsertDecl(func)
 			End If
+			
+			' add default compare if required
+			Local list:TFuncDeclList = TFuncDeclList(FindDeclList("compare", , , SCOPE_CLASS_LOCAL))
+			
+			Local arg:TArgDecl = New TArgDecl.Create("o1", TType.MapToVarType(New TObjectType.Create(Self)), Null)
+			func = New TFuncDecl.CreateF("Compare", New TIntType, [arg], FUNC_METHOD)
+			BuildStructCompareStatements(func)
+			
+			Local found:Int
+			If list And list.Count() Then
+				For Local fdecl:TFuncDecl = EachIn list
+					If fdecl.EqualsFunc(func, True) Then
+						found = True
+						Exit
+					End If
+				Next
+			End If
+			If Not found Then
+				InsertDecl(func)
+			End If
+			
+			' generate default comparator compare
+			BuildStructDefaultComparatorCompare()
+			
 			attrs :~ DECL_CYCLIC
 		End If
 		
@@ -3066,6 +3093,71 @@ End Rem
 		If AppScope() Then
 			AppScope().semantedClasses.AddLast Self
 		End If
+	End Method
+	
+	Method BuildStructCompareStatements(func:TFuncDecl)
+		'
+		' Local cmp:Int = 0
+		'
+		Local cmp:TLocalDecl=New TLocalDecl.Create( "cmp",Null,New TConstExpr.Create( New TIntType,"0" ),,True )
+		func.AddStmt New TDeclStmt.Create(cmp)
+		Local cmpVar:TVarExpr = New TVarExpr.Create(cmp)
+		
+		' iterate fields
+		For Local fdecl:TFieldDecl = EachIn _decls
+			
+			'
+			' If cmp <> 0 Then
+			'    Return cmp
+			' End If
+			'
+			Local ifExpr:TExpr = New TBinaryCompareExpr.Create( "<>",cmpVar, New TConstExpr.Create( New TIntType,"0" ))
+			Local thenBlock:TBlockDecl=New TBlockDecl.Create( func, , BLOCK_IF )
+			Local elseBlock:TBlockDecl=New TBlockDecl.Create( func, , BLOCK_ELSE )
+			Local returnStmt:TReturnStmt = New TReturnStmt.Create( cmpVar )
+			returnStmt.generated = True
+			returnStmt.errInfo=errInfo
+			thenBlock.AddStmt returnStmt
+			func.AddStmt New TIfStmt.Create( ifExpr,thenBlock,elseBlock )
+			
+			'
+			' cmp = DefaultComparator_Compare( _field, o1._field )
+			'
+			Local expr1:TExpr = New TIdentExpr.Create( fdecl.ident )
+			Local expr2:TExpr = New TIdentExpr.Create( "o1")
+			expr2 = New TIdentExpr.Create( fdecl.ident, expr2)
+			
+			Local fcExpr:TExpr = New TIdentExpr.Create( "DefaultComparator_Compare")
+			fcExpr = New TFuncCallExpr.Create( fcExpr, [expr1, expr2])
+	
+			func.AddStmt New TAssignStmt.Create( "=",cmpVar,fcExpr)
+			
+		Next
+		
+		'
+		' Return cmp
+		'
+		Local returnStmt:TReturnStmt = New TReturnStmt.Create( cmpVar )
+		returnStmt.generated = True
+		returnStmt.errInfo=errInfo
+		func.stmts.AddLast returnStmt
+	End Method
+
+	Method BuildStructDefaultComparatorCompare()
+		Local arg1:TArgDecl = New TArgDecl.Create("o1", TType.MapToVarType(New TObjectType.Create(Self)), Null)
+		Local arg2:TArgDecl = New TArgDecl.Create("o2", TType.MapToVarType(New TObjectType.Create(Self)), Null)
+		Local func:TFuncDecl = New TFuncDecl.CreateF("DefaultComparator_Compare", New TIntType, [arg1, arg2], 0)
+
+		Local expr:TExpr = New TIdentExpr.Create( "o1")
+		expr = New TIdentExpr.Create( "Compare" ,expr )
+		expr = New TFuncCallExpr.Create( expr, [New TIdentExpr.Create("o2")])
+		
+		Local returnStmt:TReturnStmt = New TReturnStmt.Create( expr )
+		returnStmt.generated = True
+		returnStmt.errInfo=errInfo
+		func.stmts.AddLast returnStmt		
+		
+		ModuleScope().InsertDecl func
 	End Method
 	
 	Method SemantParts()
