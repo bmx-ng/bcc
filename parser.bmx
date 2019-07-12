@@ -190,7 +190,7 @@ Type TForEachinStmt Extends TLoopStmt
 			' ensure semanted
 			TObjectType(expr.exprType).classDecl.Semant()
 			
-			If TObjectType(expr.exprType).classDecl.ImplementsInterface("iiterable") Then
+			If TObjectType(expr.exprType).classDecl.ImplementsInterface("iiterable") Or (TObjectType(expr.exprType).classDecl.ident="IIterable" And TObjectType(expr.exprType).classDecl.IsInterface()) Then
 				iterable = True
 			Else
 				Local declList:TFuncDeclList = TFuncDeclList(TObjectType(expr.exprType).classDecl.GetDecl("objectenumerator"))
