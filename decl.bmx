@@ -3096,6 +3096,8 @@ End Rem
 	End Method
 	
 	Method BuildStructCompareStatements(func:TFuncDecl)
+		func.attrs :| DECL_NODEBUG
+	
 		'
 		' Local cmp:Int = 0
 		'
