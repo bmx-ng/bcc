@@ -4474,7 +4474,17 @@ End Rem
 		For Local def:String = EachIn defs
 			def = def.Trim()
 			If def Then
-				env.InsertDecl New TConstDecl.Create( def,New TIntType,New TConstExpr.Create( New TIntType, True ),0 )
+			
+				Local name:String = def
+				Local value:Int = 1
+				
+				Local dp:String[] = def.Split("=")
+				If dp.length = 2 Then
+					name = dp[0].Trim()
+					value = Int(dp[1])
+				End If
+			
+				env.InsertDecl New TConstDecl.Create( name,New TIntType,New TConstExpr.Create( New TIntType, value ),0 )
 			End If
 		Next
 	End If
