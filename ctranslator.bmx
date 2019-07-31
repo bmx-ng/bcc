@@ -1202,6 +1202,13 @@ t:+"NULLNULLNULL"
 					End If
 
 				Else If TInvokeExpr(lhs) Then
+					If TEnumType(lhs.exprType) Then
+						If decl.ident = "Ordinal" Then
+							Return Bra(TransSubExpr( lhs ))
+						Else
+							Return decl.munged + Bra(TransSubExpr( lhs ))
+						End If
+					End If
 
 					If TClassDecl(decl.scope) And TClassDecl(decl.scope).IsStruct() Then
 						' create a local variable of the inner invocation
@@ -1233,6 +1240,14 @@ t:+"NULLNULLNULL"
 					'Local class:String = Bra("&" + decl.scope.munged)
 					'Return class + "->" + TransFuncPrefix(decl.scope, decl.ident) + decl.ident+TransArgs( args,decl, TransSubExpr( lhs ) )
 				Else If TInvokeMemberExpr(lhs)
+					If TEnumType(lhs.exprType) Then
+						If decl.ident = "Ordinal" Then
+							Return Bra(TransSubExpr( lhs ))
+						Else
+							Return decl.munged + Bra(TransSubExpr( lhs ))
+						End If
+					End If
+
 					' create a local variable of the inner invocation
 					
 					Local lvar:String
@@ -1276,6 +1291,14 @@ t:+"NULLNULLNULL"
 					End If
 
 				Else If TIndexExpr(lhs) Then
+					If TEnumType(lhs.exprType) Then
+						If decl.ident = "Ordinal" Then
+							Return Bra(TransSubExpr( lhs ))
+						Else
+							Return decl.munged + Bra(TransSubExpr( lhs ))
+						End If
+					End If
+				
 					If TClassDecl(decl.scope) And TClassDecl(decl.scope).IsStruct() Then
 					
 						Local lvar:String = CreateLocal(lhs, True, False)
