@@ -355,7 +355,21 @@ Type TCTranslator Extends TTranslator
 			While cdecl.IsPrivate() And cdecl.superClass <> Null
 				cdecl = cdecl.superClass
 			Wend
-			Return t + cdecl.ident + p
+			
+			Local args:String
+			If cdecl.instArgs And cdecl.instArgs.length Then
+				args = "<"
+				For Local i:Int = 0 Until cdecl.instArgs.length
+					If i Then
+						args :+ ","
+					End If
+					
+					args :+ cdecl.instArgs[i].ToString()
+				Next
+				args :+ ">"
+			End If
+			
+			Return t + cdecl.ident + args + p
 		End If
 
 		If TFunctionPtrType( ty ) Then
