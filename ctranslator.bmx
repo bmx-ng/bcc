@@ -1906,7 +1906,14 @@ t:+"NULLNULLNULL"
 						Return Bra("1")
 					End If
 				Else
-					Return Bra( Bra(Bra("BBObject*") + t )+"!= &bbNullObject" )
+					If TObjectType(src).classDecl.ident = "Object" Then
+						If Not TVarExpr(expr.expr) Then
+							t = CreateLocal(expr.expr)
+						End If
+						Return Bra(Bra( Bra(Bra("BBObject*") + t )+"!= &bbNullObject" ) + " && " + Bra( t+"!= &bbEmptyArray" ) + " && " + Bra( t+"!= &bbEmptyString" ))
+					Else
+						Return Bra( Bra(Bra("BBObject*") + t )+"!= &bbNullObject" )
+					End If
 				End If
 			End If
 			If TEnumType( src ) Return Bra( t+"!=0" )
@@ -2283,16 +2290,14 @@ t:+"NULLNULLNULL"
 				If t_lhs <> "&bbEmptyString" And t_rhs <> "&bbEmptyString" Then
 					Return "bbStringCompare" + Bra(t_lhs + ", " + t_rhs) + TransBinaryOp(expr.op, "") + "0"
 				End If
-			End If
-			If IsPointerType(TBinaryCompareExpr(expr).ty, 0, TType.T_POINTER) Then
+			Else If IsPointerType(TBinaryCompareExpr(expr).ty, 0, TType.T_POINTER) Then
 				If t_lhs="&bbNullObject" Then
 					t_lhs = "0"
 				End If
 				If t_rhs="&bbNullObject" Then
 					t_rhs = "0"
 				End If
-			End If
-			If TArrayType(TBinaryCompareExpr(expr).ty) Then
+			Else If TArrayType(TBinaryCompareExpr(expr).ty) Then
 				If t_lhs="&bbNullObject" Then
 					err "NULL"
 					t_lhs = "&bbEmptyArray"
@@ -2300,6 +2305,34 @@ t:+"NULLNULLNULL"
 				If t_rhs="&bbNullObject" Then
 					err "NULL"
 					t_rhs = "&bbEmptyArray"
+				End If
+			Else If TObjectType(TBinaryCompareExpr(expr).ty) Then
+				Local bcExpr:TBinaryCompareExpr = TBinaryCompareExpr(expr)
+				If t_rhs="&bbNullObject" And TObjectType(bcExpr.lhs.exprType) And TObjectType(bcExpr.lhs.exprType).classDecl.ident = "Object" Then
+					If bcExpr.op = "=" Or bcExpr.op = "<>" Then
+						Local t:String = t_lhs
+						If Not TVarExpr(bcExpr.lhs) Then
+							t = CreateLocal(bcExpr.lhs)
+						End If
+						If bcExpr.op = "="
+							Return Bra(t + "==" + t_rhs + " || " + Bra( t+"==&bbEmptyArray" ) + " || " + Bra( t+"==&bbEmptyString" ))
+						Else
+							Return Bra(t + "!=" + t_rhs + " && " + Bra( t+"!=&bbEmptyArray" ) + " && " + Bra( t+"!=&bbEmptyString" ))
+						End If
+					End If
+				End If
+				If t_lhs="&bbNullObject" And TObjectType(bcExpr.rhs.exprType) And TObjectType(bcExpr.rhs.exprType).classDecl.ident = "Object" Then
+					If bcExpr.op = "=" Or bcExpr.op = "<>" Then
+						Local t:String = t_rhs
+						If Not TVarExpr(bcExpr.rhs) Then
+							t = CreateLocal(bcExpr.rhs)
+						End If
+						If bcExpr.op = "="
+							Return Bra(t + "==" + t_lhs + " || " + Bra( t+"==&bbEmptyArray" ) + " || " + Bra( t+"==&bbEmptyString" ))
+						Else
+							Return Bra(t + "!=" + t_lhs + " && " + Bra( t+"!=&bbEmptyArray" ) + " && " + Bra( t+"!=&bbEmptyString" ))
+						End If
+					End If
 				End If
 			End If
 		End If
