@@ -2472,6 +2472,7 @@ Type TArrayExpr Extends TExpr
 
 		Local comp:Int = True
 		Local last:TType
+		Local base:TType
 		For Local i:Int=0 Until exprs.Length
 
 			Local expr:TExpr = exprs[i]
@@ -2486,9 +2487,21 @@ Type TArrayExpr Extends TExpr
 				ety = New TIntType
 			End If
 			
+			If TObjectType(ety) And Not base Then
+				base = ety
+			End If
+			
 			If last <> Null And Not last.EqualsType(ety) Then
-				If (Not TConstExpr(expr) And Not IsNumericType(ety)) Or (TConstExpr(expr) And IsNumericType(ety) And Not TConstExpr(expr).CompatibleWithType(ty)) Then
-					Err "Auto array elements must have identical types : Index " + i
+				If TObjectType(ety) Then
+					If base.ExtendsType(ety) Then
+						base = ety
+					Else If Not ety.ExtendsType(base) Then
+						Err "Auto array elements must be compatible types : Index " + i
+					End If
+				Else
+					If (Not TConstExpr(expr) And Not IsNumericType(ety)) Or (TConstExpr(expr) And IsNumericType(ety) And Not TConstExpr(expr).CompatibleWithType(ty)) Then
+						Err "Auto array elements must have identical types : Index " + i
+					End If
 				End If
 			End If
 			
