@@ -676,7 +676,7 @@ t:+"NULLNULLNULL"
 			'If TNullDecl(TObjectType(src).classDecl) Then
 			'	Return "&bbEmptyString"
 			'End If
-			Return Bra("(BBString *)bbObjectDowncast" + Bra("(BBOBJECT)" + expr + ",(BBClass*)&" + TStringType(ty).cDecl.munged))
+			Return Bra("(BBString *)bbObjectStringcast" + Bra("(BBOBJECT)" + expr ))
 		End If
 
 		'If TArrayType(ty) And TObjectType(src) Then
@@ -2597,10 +2597,10 @@ t:+"NULLNULLNULL"
 			For Local catchStmt:TCatchStmt = EachIn tryStmt.catches
 				MungDecl catchStmt.init
 				If TStringType(catchStmt.init.ty) Then
-					Emit s + "if (bbObjectDowncast((BBOBJECT)ex,(BBClass*)&bbStringClass) != &bbEmptyString) {"
+					Emit s + "if (bbObjectStringcast((BBOBJECT)ex) != &bbEmptyString) {"
 					Emit TransType(catchStmt.init.ty, catchStmt.init.munged) + " " + catchStmt.init.munged + "=(BBSTRING)ex;" 
 				Else If TArrayType(catchStmt.init.ty) Then
-					Emit s + "if (bbObjectDowncast((BBOBJECT)ex,(BBClass*)&bbArrayClass) != &bbEmptyArray) {"
+					Emit s + "if (bbObjectArraycast((BBOBJECT)ex) != &bbEmptyArray) {"
 					Emit TransType(catchStmt.init.ty, catchStmt.init.munged) + " " + catchStmt.init.munged + "=(BBARRAY)ex;" 
 				Else If TObjectType(catchStmt.init.ty) Then
 					If TObjectType(catchStmt.init.ty).classDecl.IsInterface() Then
