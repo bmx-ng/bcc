@@ -2292,7 +2292,11 @@ t:+"NULLNULLNULL"
 					t_rhs = "&bbEmptyString"
 				End If
 				If t_lhs <> "&bbEmptyString" And t_rhs <> "&bbEmptyString" Then
-					Return "bbStringCompare" + Bra(t_lhs + ", " + t_rhs) + TransBinaryOp(expr.op, "") + "0"
+					If expr.op = "=" Or expr.op = "<>" Then
+						Return "bbStringEquals" + Bra(t_lhs + ", " + t_rhs) + TransBinaryOp(expr.op, "") + "1"
+					Else
+						Return "bbStringCompare" + Bra(t_lhs + ", " + t_rhs) + TransBinaryOp(expr.op, "") + "0"
+					End If
 				End If
 			Else If IsPointerType(TBinaryCompareExpr(expr).ty, 0, TType.T_POINTER) Then
 				If t_lhs="&bbNullObject" Then
