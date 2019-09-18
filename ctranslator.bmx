@@ -2258,7 +2258,11 @@ t:+"NULLNULLNULL"
 		End If
 		
 		If expr.op = "^" Then
-			Return "bbFloatPow" + Bra(t_lhs + ", " + t_rhs)
+			If TIntegralType(expr.exprType) Then
+				Return "bbLongPow" + Bra(t_lhs + ", " + t_rhs)
+			Else
+				Return "bbFloatPow" + Bra(t_lhs + ", " + t_rhs)
+			End If
 		End If
 		
 		If expr.op = "mod" Or expr.op = "%" Then
