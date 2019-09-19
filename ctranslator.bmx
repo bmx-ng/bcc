@@ -1912,7 +1912,11 @@ t:+"NULLNULLNULL"
 						End If
 						Return Bra(Bra( Bra(Bra("BBObject*") + t )+"!= &bbNullObject" ) + " && " + Bra( t+"!= &bbEmptyArray" ) + " && " + Bra( t+"!= &bbEmptyString" ))
 					Else
-						Return Bra( Bra(Bra("BBObject*") + t )+"!= &bbNullObject" )
+						If Not TObjectType(src).classDecl.IsStruct() Then
+							Return Bra( Bra(Bra("BBObject*") + t )+"!= &bbNullObject" )
+						Else
+							Return Bra("1")
+						End If
 					End If
 				End If
 			End If
@@ -2222,7 +2226,11 @@ t:+"NULLNULLNULL"
 
 		If TVarExpr(expr.expr) Then
 			If TObjectType(TVarExpr(expr.expr).exprType) Then
-				t_expr = Bra( expr.expr.Trans() + "!= &bbNullObject")
+				If TObjectType(TVarExpr(expr.expr).exprType).classDecl.IsStruct() Then
+					t_expr = Bra( "1" )
+				Else
+					t_expr = Bra( expr.expr.Trans() + "!= &bbNullObject")
+				End If
 			Else If TStringType(TVarExpr(expr.expr).exprType)  Then
 				t_expr = Bra( expr.expr.Trans() + "!= &bbEmptyString")
 			Else
@@ -2866,7 +2874,9 @@ t:+"NULLNULLNULL"
 		Else If (TFunctionPtrType(stmt.lhs.exprType) <> Null Or IsPointerType(stmt.lhs.exprType, TType.T_BYTE)) And TInvokeExpr(stmt.rhs) And Not TInvokeExpr(stmt.rhs).invokedWithBraces Then
 			rhs = TInvokeExpr(stmt.rhs).decl.munged
 			s :+ lhs+TransAssignOp( stmt.op )+cast+rhs
-		Else
+		Else If TObjectType(stmt.lhs.exprType) And TObjectType(stmt.lhs.exprType).classDecl.IsStruct() And rhs = "&bbNullObject" Then
+			s :+ lhs+TransAssignOp( stmt.op )+cast+"{}"
+		Else 
 			s :+ lhs+TransAssignOp( stmt.op )+cast+rhs
 		End If
 

@@ -2069,6 +2069,24 @@ Type TBinaryCompareExpr Extends TBinaryExpr
 
 		' operator overload?
 		If TObjectType(lhs.exprType) Then
+		
+			If TNullExpr(rhs) And TObjectType(lhs.exprType).classDecl.IsStruct() Then
+				If op = "=" Then
+					ty=New TBoolType
+					exprType=New TBoolType
+					lhs = New TConstExpr.Create(New TIntType, 1).Semant()
+					rhs = New TConstExpr.Create(New TIntType, 0).Semant()
+					Return Self
+				Else
+					op = "<>"
+					ty = New TBoolType
+					exprType=New TBoolType
+					lhs = New TConstExpr.Create(New TIntType, 1).Semant()
+					rhs = New TConstExpr.Create(New TIntType, 0).Semant()
+					Return Self
+				End If
+			End If
+		
 			Local args:TExpr[] = [rhs]
 			Try
 				Local decl:TFuncDecl = TFuncDecl(TObjectType(lhs.exprType).classDecl.FindFuncDecl(op, args,,,,True,SCOPE_CLASS_HEIRARCHY))
