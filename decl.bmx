@@ -689,6 +689,9 @@ Type TArgDecl Extends TLocalDecl
 
 	Method OnSemant()
 		Super.OnSemant()
+		If ty Then
+			ty = ty.Semant()
+		End If
 		If init And Not TConstExpr(init) Then
 			If TCastExpr(init) Then
 				If TConstExpr(TCastExpr(init).expr) Or TNullExpr(TCastExpr(init).expr) Then
@@ -2061,6 +2064,8 @@ Type TFuncDecl Extends TBlockDecl
 			End If
 		End If
 		
+		retType = retType.Semant()
+		
 		If TArrayType( retType ) And Not retType.EqualsType( retType.ActualType() )
 '			Err "Return type cannot be an array of generic objects."
 		EndIf
@@ -2547,7 +2552,13 @@ End Rem
 		For Local inst:TClassDecl=EachIn instances
 			Local equal:Int=True
 			For Local i:Int=0 Until args.Length
-				If Not inst.instArgs[i].EqualsType( instArgs[i] )
+				Local instArg:TType = inst.instArgs[i].Semant()
+				inst.instArgs[i] = instArg
+				
+				Local otherInstArg:TType = instArgs[i].Semant()
+				instArgs[i] = otherInstArg
+				
+				If Not instArg.EqualsType( otherInstArg )
 					equal=False
 					Exit
 				EndIf

@@ -272,20 +272,20 @@ Type TReturnStmt Extends TStmt
 				TIdentExpr(expr).isRhs = True
 			End If
 			If fdecl.IsCtor() Err "Constructors may not return a value."
-			If TVoidType( fdecl.retType ) Then
+			If TVoidType( fRetType ) Then
 				Local errorText:String = "Function can not return a value."
 				If Not _env.ModuleScope().IsSuperStrict() Then
 					errorText :+ " You may have Strict type overriding SuperStrict type."
 				End If
 				Err errorText
 			End If
-			expr=expr.SemantAndCast( fdecl.retType )
+			expr=expr.SemantAndCast( fRetType  )
 			If TIdentTypeExpr(expr) Err "Function must return a value."
 		Else If fdecl.IsCtor()
 			expr=New TSelfExpr.Semant()
-		Else If Not TVoidType( fdecl.retType )
+		Else If Not TVoidType( fRetType  )
 			If _env.ModuleScope().IsSuperStrict() Err "Function must return a value"
-			expr=New TConstExpr.Create( fdecl.retType,"" ).Semant()
+			expr=New TConstExpr.Create( fRetType ,"" ).Semant()
 		EndIf
 	End Method
 	
