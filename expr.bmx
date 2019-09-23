@@ -675,7 +675,7 @@ Type TMemberVarExpr Extends TExpr
 	Method Semant:TExpr(options:Int = 0)
 		If exprType Return Self
 		If Not decl.IsSemanted() InternalErr "TMemberVarExpr.Semant"
-		exprType=decl.ty
+		exprType=decl.ty.Semant()
 		Return Self
 	End Method
 

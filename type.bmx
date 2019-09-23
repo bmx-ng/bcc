@@ -1644,6 +1644,8 @@ Type TIdentType Extends TType
 					ty=mdecl.FindType( tyid,targs, callback )
 					If ty Exit
 				Next
+			Else If TIdentType(ty) Then
+				ty = ty.Semant()
 			End If
 		Else
 			Local id:String = ident.ToLower()
