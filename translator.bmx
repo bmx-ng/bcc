@@ -1337,6 +1337,7 @@ End Rem
 		If TChrExpr(expr) Return TransChrExpr(TChrExpr(expr))
 		If TLenExpr(expr) Return TransLenExpr(TLenExpr(expr))
 		If TSizeOfExpr(expr) Return TransSizeOfExpr(TSizeOfExpr(expr))
+		If TStackAllocExpr(expr) Return TransStackAllocExpr(TStackAllocExpr(expr))
 		Err "TODO : TransBuiltinExpr()"
 	End Method
 	
@@ -1350,6 +1351,9 @@ End Rem
 	End Method
 
 	Method TransSizeOfExpr:String(expr:TSizeOfExpr)
+	End Method
+
+	Method TransStackAllocExpr:String(expr:TStackAllocExpr)
 	End Method
 	
 	Method TransIdentTypeExpr:String(expr:TIdentTypeExpr) Abstract

@@ -3504,3 +3504,29 @@ Type TIdentEnumExpr Extends TExpr
 	End Method
 
 End Type
+
+Type TStackAllocExpr Extends TBuiltinExpr
+
+	Method Create:TStackAllocExpr( expr:TExpr )
+		Self.id="stackalloc"
+		Self.expr=expr
+		Return Self
+	End Method
+
+	Method Semant:TExpr(options:Int = 0)
+		If exprType Return Self
+
+		expr = expr.SemantAndCast( New TSizeTType )
+		exprType = TType.MapToPointerType(New TByteType)
+		Return Self
+	End Method
+
+	Method Copy:TExpr()
+		Return New TStackAllocExpr.Create( CopyExpr(expr) )
+	End Method
+
+	Method ToString$()
+		Return "TStackAllocExpr("+expr.ToString()+")"
+	End Method
+
+End Type

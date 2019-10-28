@@ -1339,6 +1339,18 @@ Type TParser Extends TGenProcessor
 			ParseConstNumberType()
 
 			expr=New TInvokeSuperExpr.Create( id,ParseArgs( stmt ) )
+		Case "stackalloc"
+			NextToke
+			
+			' optional brackets
+			If CParse( "(" )
+				expr=ParseExpr()
+				Parse ")"
+				expr=New TStackAllocExpr.Create( expr )
+			Else
+				expr=ParseExpr()
+				expr=New TStackAllocExpr.Create( expr )
+			EndIf
 		Default
 			Select _tokeType
 			Case TOKE_IDENT

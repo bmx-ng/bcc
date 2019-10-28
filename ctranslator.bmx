@@ -1619,6 +1619,10 @@ t:+"NULLNULLNULL"
 		InternalErr "TCTranslator.TransSizeOfExpr"
 	End Method
 
+	Method TransStackAllocExpr:String(expr:TStackAllocExpr)
+		Return "bbStackAlloc" + Bra(expr.expr.Trans())
+	End Method
+
 	'***** Expressions *****
 
 	Method TransConstExpr$( expr:TConstExpr )
