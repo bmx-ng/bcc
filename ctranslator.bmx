@@ -493,7 +493,8 @@ Type TCTranslator Extends TTranslator
 			t:+ objParam
 		End If
 		For Local i:Int=0 Until decl.argDecls.Length
-			Local ty:TType = TArgDecl(decl.argDecls[i].actual).ty
+			Local argDecl:TArgDecl = decl.argDecls[i]
+			Local ty:TType = TArgDecl(argDecl.actual).ty
 		
 			If t t:+","
 			If i < args.length
@@ -508,30 +509,33 @@ Type TCTranslator Extends TTranslator
 					t :+ Bra(TransObject(TObjectType(TArgDecl(fdecl.argDecls[i].actual).ty).classDecl))
 				End If
 				
+				Local varRef:String
+				
 				If TNullExpr(arg) Then
 					t :+ TransValue(ty, Null)
 					Continue
-				Else If TIndexExpr(arg) And (ty._flags & TType.T_VAR) Then
-						t:+ "&"
+				Else If TIndexExpr(arg) And (ty._flags & TType.T_VAR)Then
+						varRef = "&"
 				Else If TStringType(ty) And (ty._flags & TType.T_VAR) Then
 					If TCastExpr(arg) And TStringType(TCastExpr(arg).expr.exprType) Then
-						t:+ "&"
+						varRef = "&"
 					End If
 				Else If TArrayType(ty) And (ty._flags & TType.T_VAR) Then
 					If (TVarExpr(arg) And TArrayType(TVarExpr(arg).exprType) Or (TMemberVarExpr(arg) And TArrayType(TMemberVarExpr(arg).exprType))) And Not (arg.exprType._flags & TType.T_VAR) Then
-						t:+ "&"
+						varRef = "&"
 					End If
 				Else If TObjectType(ty) And (ty._flags & TType.T_VAR) Then
 					If (TVarExpr(arg) Or TMemberVarExpr(arg)) And TObjectType(arg.exprType) And Not (arg.exprType._flags & TType.T_VAR) Then
-						t:+ "&"
+						varRef = "&"
 					End If
 				Else If TFunctionPtrType(ty) Or IsPointerType(ty, TType.T_BYTE) Then
 
 					If TFunctionPtrType(ty) And (ty._flags & TType.T_VAR) Then
-						t:+ "&"
+						varRef = "&"
 					End If
 
 					If TInvokeExpr(arg) And Not TInvokeExpr(arg).decl.IsMethod() Then
+						t :+ varRef
 						If IsPointerType(ty, TType.T_BYTE) Then
 							t:+ TInvokeExpr(arg).Trans()
 						Else
@@ -566,6 +570,7 @@ Type TCTranslator Extends TTranslator
 					End If
 					' some cases where we are passing a function pointer via a void* parameter.
 					If TCastExpr(arg) And TInvokeExpr(TCastExpr(arg).expr) And Not TInvokeExpr(TCastExpr(arg).expr).invokedWithBraces Then
+						t:+ varRef
 						If Not TInvokeExpr(TCastExpr(arg).expr).decl.munged Then
 							t:+ TInvokeExpr(TCastExpr(arg).expr).decl.actual.munged
 						Else
@@ -576,7 +581,7 @@ Type TCTranslator Extends TTranslator
 
 					' Object -> Byte Ptr
 					If IsPointerType(ty, TType.T_BYTE) And TObjectType(arg.exprType) Then
-						t:+ Bra(Bra("(BBBYTE*)" + Bra(arg.Trans())) + "+" + Bra("sizeof(void*)"))
+						t:+ varRef + Bra(Bra("(BBBYTE*)" + Bra(arg.Trans())) + "+" + Bra("sizeof(void*)"))
 						Continue
 					End If
 
@@ -588,16 +593,20 @@ Type TCTranslator Extends TTranslator
 					End If
 				Else If TEnumType(ty) And (ty._flags & TType.T_VAR) Then
 					If (TVarExpr(arg) Or TMemberVarExpr(arg)) And TEnumType(arg.exprType) And Not (arg.exprType._flags & TType.T_VAR) Then
-						t:+ "&"
+						varRef = "&"
 					End If
 				End If
 				
-				If decl.argDecls[i].castTo Then
-					t:+ Bra(decl.argDecls[i].castTo) + arg.Trans()
+				If argDecl.castTo Then
+					If argDecl.castTo.Find("*") >= 0 Then
+						t:+ Bra(argDecl.castTo) + varRef + arg.Trans()
+					Else
+						t:+ varRef + Bra(argDecl.castTo) + arg.Trans()
+					End If
 				Else
-
+					t :+ varRef
 					Local tc:String = TransTemplateCast( ty,arg.exprType,arg.Trans() )
-				
+					
 					' *sigh*
 					' if var is going to var, remove any leading dereference character.
 					' rather hacky. Would be better to cast variable to varptr during semanting (well done if you can work out where!)
@@ -612,30 +621,30 @@ Type TCTranslator Extends TTranslator
 					't:+TransTemplateCast( ty,args[i].exprType,args[i].Trans() )
 				End If
 			Else
-				decl.argDecls[i].Semant()
+				argDecl.Semant()
 				' default values
-				Local init:TExpr = decl.argDecls[i].init
+				Local init:TExpr = argDecl.init
 				If init Then
 					If TConstExpr(init) Then
 						If TObjectType(TConstExpr(init).exprType) Then
 t:+"NULLNULLNULL"
 						' And TNullDecl(TObjectType(TConstExpr(init).exprType).classDecl)) Or (TConstExpr(init).value = "bbNullObject") Then
-							If TStringType(decl.argDecls[i].ty) Then
+							If TStringType(argDecl.ty) Then
 								t :+ "&bbEmptyString"
-							Else If TArrayType(decl.argDecls[i].ty) Then
+							Else If TArrayType(argDecl.ty) Then
 								t :+ "&bbEmptyArray"
 							Else
 								t :+ "&bbNullObject"
 							End If
 						Else
-							t:+ decl.argDecls[i].init.Trans()
+							t:+ argDecl.init.Trans()
 						End If
 					Else If TFunctionPtrType(ty) Then
 						If TInvokeExpr(init) Then
 							t:+ TInvokeExpr(init).decl.munged
 						End If
 					Else
-						t:+ decl.argDecls[i].init.Trans()
+						t:+ argDecl.init.Trans()
 					End If
 				End If
 			End If
