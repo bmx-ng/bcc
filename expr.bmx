@@ -1772,8 +1772,8 @@ Type TUnaryExpr Extends TExpr
 			End If
 		Case "~~"
 			expr=expr.Semant()
-			If Not TIntegralType(expr.exprType) Or IsPointerType(expr.exprType) Then
-				Err "Bitwise complement can only be used with integers"
+			If Not (TIntegralType(expr.exprType) Or (TEnumType(expr.exprType) And TEnumType(expr.exprType).decl.isFlags)) Or IsPointerType(expr.exprType) Then
+				Err "Bitwise complement can only be used with integrals"
 			End If
 			If TByteType(expr.exprType) Or TShortType(expr.exprType) Then
 				expr=expr.SemantAndCast( New TIntType )
