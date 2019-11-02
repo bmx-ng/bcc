@@ -205,6 +205,7 @@ int bmx_stringbuffer_endswith(struct MaxStringBuffer * buf, BBString * subString
 	if (subString->length <= buf->count) {
 		return bmx_stringbuffer_matches(buf, buf->count - subString->length, subString);
 	}
+	return 0;
 }
 
 int bmx_stringbuffer_find(struct MaxStringBuffer * buf, BBString * subString, int startIndex) {
@@ -454,7 +455,7 @@ void bmx_stringbuffer_append_cstring(struct MaxStringBuffer * buf, const char * 
 		
 		bmx_stringbuffer_resize(buf, buf->count + length);
 		
-		char * p = chars;
+		const char * p = chars;
 		BBChar * b = buf->buffer + buf->count;
 		while (length--) {
 			*b++ = *p++;
@@ -472,7 +473,7 @@ void bmx_stringbuffer_append_utf8string(struct MaxStringBuffer * buf, const char
 		bmx_stringbuffer_resize(buf, buf->count + length);
 		
 		int c;
-		char * p = chars;
+		const char * p = chars;
 		BBChar * b = buf->buffer + buf->count;
 		
 		while( c=*p++ & 0xff ){
