@@ -4373,7 +4373,7 @@ End Rem
 			End If
 	
 			If classHierarchyHasFunction(classDecl, "Compare") Then
-				Emit "(int (*)(BBOBJECT))_" + classidForFunction(classDecl, "Compare") + "_Compare,"
+				Emit "(int (*)(BBOBJECT, BBOBJECT))_" + classidForFunction(classDecl, "Compare") + "_Compare,"
 			Else
 				Emit "bbObjectCompare,"
 			End If
@@ -4872,7 +4872,7 @@ End Rem
 		Else
 			t :+ " = "
 			If ClassHasObjectField(classDecl) Then
-				t :+ "bbObjectNewNC"
+				t :+ Bra(TransObject(classdecl)) + "bbObjectNewNC"
 			Else
 				t :+ "bbObjectAtomicNewNC"
 			End If
