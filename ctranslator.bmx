@@ -6146,16 +6146,16 @@ End If
 					If Not cdecl.IsStruct() Then
 						Emit "bbObjectRegisterType((BBCLASS)&" + cdecl.munged + ");"
 					Else
-						Emit "bbObjectRegisterStruct(&" + cdecl.munged + "_scope);"
+						Emit "bbObjectRegisterStruct((BBDebugScope *)&" + cdecl.munged + "_scope);"
 					End If
 				Else
-					Emit "bbObjectRegisterInterface(&" + cdecl.munged + "_ifc);"
+					Emit "bbObjectRegisterInterface((BBInterface *)&" + cdecl.munged + "_ifc);"
 				End If
 				Continue
 			EndIf
 			Local edecl:TEnumDecl = TEnumDecl( decl )
 			If edecl Then
-				Emit "bbEnumRegister(" + decl.munged + "_BBEnum_impl, &" + edecl.munged + "_scope);"
+				Emit "bbEnumRegister((BBEnum *)" + decl.munged + "_BBEnum_impl, (BBDebugScope *)&" + edecl.munged + "_scope);"
 			End If
 		Next
 		'
