@@ -2246,14 +2246,19 @@ t:+"NULLNULLNULL"
 				End If
 			Else If TStringType(TVarExpr(expr.expr).exprType)  Then
 				t_expr = Bra( expr.expr.Trans() + "!= &bbEmptyString")
+			Else If expr.op = "~~" And TEnumType(expr.exprType) Then
+				Return Bra("bbEnum" + TEnumType(expr.exprType).decl.munged +"_Mask & ~~" + Bra(TransSubExpr( expr.expr,pri )))
 			Else
 				t_expr = TransSubExpr( expr.expr,pri )
 			End If
 		Else
-			t_expr = TransSubExpr( expr.expr,pri )
+			If expr.op = "~~" And TEnumType(expr.exprType) Then
+				Return Bra("bbEnum" + TEnumType(expr.exprType).decl.munged +"_Mask & ~~" + Bra(TransSubExpr( expr.expr,pri )))
+			Else
+				t_expr = TransSubExpr( expr.expr,pri )
+			End If
 		End If
 
-'		TransSubExpr( expr.expr,pri )
 		Return TransUnaryOp( expr.op )+t_expr
 	End Method
 
@@ -4494,6 +4499,19 @@ End Rem
 		Emit "void * values;"
 		Emit "BBString * names[" + decl.values.length + "];"
 		Emit "};"
+
+		If decl.isFlags Then
+			Local s:String
+			For Local value:TEnumValueDecl = EachIn decl.values
+				If s Then
+					s :+ "|"
+				End If
+				s :+ value.Value()
+			Next
+		
+			Emit "const " + TransType(decl.ty, "") + " bbEnum" + decl.munged +"_Mask = " + s + ";"
+		
+		End If
 		
 		' debugscope
 		Emit "struct BBDebugScope " + id + "_scope ={"
@@ -4580,6 +4598,8 @@ End Rem
 					' nothing to generate
 			End Select
 		Next
+		
+		Emit "extern const " + TransType(decl.ty, "") + " bbEnum" + decl.munged +"_Mask;"
 	End Method
 
 	Method TransObjectSize:String(classDecl:TClassDecl)
