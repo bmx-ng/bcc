@@ -4013,7 +4013,7 @@ End Rem
 			End Select
 		Wend
 
-		If Not (_module.attrs & (MODULE_STRICT | MODULE_SUPERSTRICT)) Then
+		If opt_need_strict And Not (_module.attrs & (MODULE_STRICT | MODULE_SUPERSTRICT)) Then
 			Err "Strict or SuperStrict must be declared at the start of the file."
 		End If
 

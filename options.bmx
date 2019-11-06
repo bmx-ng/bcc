@@ -125,6 +125,8 @@ Global opt_override_error:Int = False
 ' ud
 '    user defines
 Global opt_userdefs:String
+' 
+Global opt_need_strict:Int = False
 
 Global opt_filepath:String
 
@@ -236,6 +238,8 @@ Function ParseArgs:String[](args:String[])
 					CmdError "Command line error - Missing arg for '-ud'"
 				End If
 				opt_userdefs = args[count].ToLower()
+			Case "strict"
+				opt_need_strict=True
 		End Select
 	
 		count:+ 1
