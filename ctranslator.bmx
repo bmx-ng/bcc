@@ -3607,6 +3607,7 @@ End Rem
 		Emit "BBINTERFACETABLE itable;"
 		Emit "void*     extra;"
 		Emit "unsigned int obj_size;"
+		Emit "unsigned int instance_count;"
 
 		EmitBBClassClassFuncProto(classDecl)
 
@@ -4435,6 +4436,8 @@ End Rem
 	
 			' obj_size
 			Emit TransObjectSize(classDecl)
+			' instance_count
+			Emit ",0"
 	
 	
 			' methods/funcs
