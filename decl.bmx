@@ -637,7 +637,7 @@ Type TLocalDecl Extends TVarDecl
 
 	Method OnSemant()
 		If declTy Then
-			If TObjectType(declTy) Or TArrayType(declTy) Then
+			If TObjectType(declTy) Then
 				volatile = True
 			End If
 		End If
