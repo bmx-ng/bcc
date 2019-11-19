@@ -5042,7 +5042,7 @@ End Rem
 '		End If
 
 		Local decl:TFuncDecl = classDecl.FindFuncDecl("delete",,,,,,SCOPE_CLASS_HEIRARCHY)
-		If decl Then
+		If decl And decl.ClassScope() = classDecl Then
 			decl.Semant
 			EmitLocalDeclarations(decl)
 			EmitBlock decl
