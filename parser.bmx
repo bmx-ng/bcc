@@ -3400,7 +3400,7 @@ End Rem
 				If (attrs & CLASS_INTERFACE) And _toke<>"const"
 					Err "Interfaces can only contain constants and methods."
 				EndIf
-				If (attrs & CLASS_STRUCT) And _toke<>"field"
+				If (attrs & CLASS_STRUCT) And _toke<>"field" And _toke<>"global"
 					Err "Structs can only contain fields."
 				EndIf
 				

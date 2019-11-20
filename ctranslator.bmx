@@ -3777,6 +3777,8 @@ End Rem
 
 		Emit "};"
 
+		EmitClassGlobalsProto(classDecl);
+
 	End Method
 
 	Method classHasFunction:Int(classDecl:TClassDecl, func:String)
@@ -6194,7 +6196,7 @@ End If
 			
 			decl.Semant
 			
-			If decl.scope And TClassDecl(decl.scope) Then
+			If decl.scope And TClassDecl(decl.scope) And Not TClassDecl(decl.scope).IsStruct() Then
 				Emit TransGlobal( decl )+"="+TransValue(decl.ty, Null)+";"
 			End If
 		Next
