@@ -3386,6 +3386,8 @@ Type TNewExpr Extends TExpr
 		End If
 		
 		ctor.Semant
+
+		args=CastArgs(args, ctor)
 		
 		' attach to ctor
 		TNewDecl(fdecl).chainedCtor = Self
