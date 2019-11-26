@@ -2884,7 +2884,15 @@ Type TIdentExpr Extends TExpr
 	
 			Local args:TExpr[]
 			If rhs args=[rhs]
-	
+
+			Local decl:TDecl = TDecl(scope.FindDecl(IdentLower()))
+
+			' maybe it's an enum?
+			Local edecl:TEnumValueDecl = TEnumValueDecl(decl)
+			If edecl Then
+				Return New TIdentEnumExpr.Create(edecl)
+			End If
+
 			Local fdecl:TFuncDecl
 			
 			Try
@@ -2908,7 +2916,6 @@ Type TIdentExpr Extends TExpr
 				Return New TInvokeExpr.Create( fdecl,args, False, isArg, isRhs ).Semant()
 			End If
 	
-			Local decl:TDecl = TDecl(scope.FindDecl(IdentLower()))
 			' maybe it's a classdecl?
 			Local cdecl:TClassDecl = TClassDecl(decl)
 			
@@ -2918,12 +2925,6 @@ Type TIdentExpr Extends TExpr
 				Return e
 			End If
 			
-			' maybe it's an enum?
-			Local edecl:TEnumValueDecl = TEnumValueDecl(decl)
-			If edecl Then
-				Return New TIdentEnumExpr.Create(edecl)
-			End If
-	
 			If unknownIdentsEvalFalse Then
 				Return New TConstExpr.Create( New TIntType, 0 ).Semant()
 			End If
