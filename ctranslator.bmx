@@ -3345,6 +3345,13 @@ End Rem
 					pre = ""
 				End If
 			End If
+			If decl.attrs & DECL_INLINE Then
+				pre = "inline "
+			Else
+				bk = ";"
+			End If
+		Else If decl.attrs & DECL_INLINE Then
+			pre = "extern "
 			bk = ";"
 		End If
 
@@ -3380,6 +3387,10 @@ End Rem
 			For Local t$=EachIn argCasts
 				Emit t
 			Next
+		End If
+		
+		If decl.attrs & DECL_INLINE Then
+			proto = Not proto
 		End If
 
 		If Not proto Then

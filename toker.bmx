@@ -50,7 +50,7 @@ Type TToker
 		"next,return,alias,rem,endrem,throw,assert,try,catch,finally,nodebug,incbin,endselect,endmethod," + ..
 		"endfunction,endtype,endextern,endtry,endwhile,pi,release,defdata,readdata,restoredata,interface," + ..
 		"endinterface,implements,size_t,uint,ulong,struct,endstruct,operator,where,readonly,export,override," + ..
-		"enum,endenum,stackalloc"
+		"enum,endenum,stackalloc,inline"
 	Global _keywords:TMap
 
 	Field _path$

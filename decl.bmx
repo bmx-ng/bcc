@@ -28,6 +28,7 @@ Const DECL_ABSTRACT:Int=      $040000
 Const DECL_FINAL:Int=         $080000
 Const DECL_READ_ONLY:Int=     $000100
 Const DECL_OVERRIDE:Int=    $40000000
+Const DECL_INLINE:Int=      $80000000
 
 Const DECL_SEMANTED:Int=      $100000
 Const DECL_SEMANTING:Int=     $200000

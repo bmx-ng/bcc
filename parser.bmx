@@ -2834,6 +2834,15 @@ End Rem
 				declaredAttrs :| DECL_OVERRIDE
 				Continue
 			End If
+			
+			If CParse("inline") Then
+				If classDecl Then
+					Err "Inline can only be used with global functions"
+				End If
+				If declaredAttrs & DECL_INLINE Then Err "Duplicate modifier 'Inline'"
+				declaredAttrs :| DECL_INLINE
+				Continue
+			End If
 				
 			Exit
 		Wend
