@@ -1919,17 +1919,10 @@ t:+"NULLNULLNULL"
 						Return Bra("1")
 					End If
 				Else
-					If TObjectType(src).classDecl.ident = "Object" Then
-						If Not TVarExpr(expr.expr) Then
-							t = CreateLocal(expr.expr)
-						End If
-						Return Bra(Bra( Bra(Bra("BBObject*") + t )+"!= &bbNullObject" ) + " && " + Bra( t+"!= &bbEmptyArray" ) + " && " + Bra( t+"!= &bbEmptyString" ))
+					If Not TObjectType(src).classDecl.IsStruct() Then
+						Return Bra( Bra(Bra("BBObject*") + t )+"!= &bbNullObject" )
 					Else
-						If Not TObjectType(src).classDecl.IsStruct() Then
-							Return Bra( Bra(Bra("BBObject*") + t )+"!= &bbNullObject" )
-						Else
-							Return Bra("1")
-						End If
+						Return Bra("1")
 					End If
 				End If
 			End If
@@ -2345,26 +2338,26 @@ t:+"NULLNULLNULL"
 				If t_rhs="&bbNullObject" And TObjectType(bcExpr.lhs.exprType) And TObjectType(bcExpr.lhs.exprType).classDecl.ident = "Object" Then
 					If bcExpr.op = "=" Or bcExpr.op = "<>" Then
 						Local t:String = t_lhs
-						If Not TVarExpr(bcExpr.lhs) Then
-							t = CreateLocal(bcExpr.lhs)
-						End If
+						'If Not TVarExpr(bcExpr.lhs) Then
+						'	t = CreateLocal(bcExpr.lhs)
+						'End If
 						If bcExpr.op = "="
-							Return Bra(t + "==" + t_rhs + " || " + Bra( t+"==&bbEmptyArray" ) + " || " + Bra( t+"==&bbEmptyString" ))
+							Return Bra(t + "==" + t_rhs )
 						Else
-							Return Bra(t + "!=" + t_rhs + " && " + Bra( t+"!=&bbEmptyArray" ) + " && " + Bra( t+"!=&bbEmptyString" ))
+							Return Bra(t + "!=" + t_rhs )
 						End If
 					End If
 				End If
 				If t_lhs="&bbNullObject" And TObjectType(bcExpr.rhs.exprType) And TObjectType(bcExpr.rhs.exprType).classDecl.ident = "Object" Then
 					If bcExpr.op = "=" Or bcExpr.op = "<>" Then
 						Local t:String = t_rhs
-						If Not TVarExpr(bcExpr.rhs) Then
-							t = CreateLocal(bcExpr.rhs)
-						End If
+						'If Not TVarExpr(bcExpr.rhs) Then
+						'	t = CreateLocal(bcExpr.rhs)
+						'End If
 						If bcExpr.op = "="
-							Return Bra(t + "==" + t_lhs + " || " + Bra( t+"==&bbEmptyArray" ) + " || " + Bra( t+"==&bbEmptyString" ))
+							Return Bra(t + "==" + t_lhs )
 						Else
-							Return Bra(t + "!=" + t_lhs + " && " + Bra( t+"!=&bbEmptyArray" ) + " && " + Bra( t+"!=&bbEmptyString" ))
+							Return Bra(t + "!=" + t_lhs )
 						End If
 					End If
 				End If
