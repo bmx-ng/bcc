@@ -1107,7 +1107,7 @@ End Rem
 					
 					' cast to function return type
 					If TObjectType(stmt.fRetType) Then
-						s :+ Bra(transObject(TObjectType(stmt.fRetType).classDecl))
+						s :+ Bra(TransType(stmt.fRetType, ""))
 					End If
 
 					s :+ stmt.expr.Trans()
