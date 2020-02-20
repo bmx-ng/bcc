@@ -738,7 +738,7 @@ t:+"NULLNULLNULL"
 		If outputInit Then
 			Local cast:String
 			If TObjectType(decl.ty) Then
-				cast = Bra(TransObject(TObjectType(decl.ty).classDecl))
+				cast = Bra(TransType(decl.ty, ""))
 			End If
 		
 			If TInvokeExpr(init) And Not TInvokeExpr(init).invokedWithBraces Then
