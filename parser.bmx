@@ -2835,7 +2835,7 @@ End Rem
 				Continue
 			End If
 			
-			If CParse("inline") Then
+			If CParse("inline") And Not opt_debug Then
 				If classDecl Then
 					Err "Inline can only be used with global functions"
 				End If
