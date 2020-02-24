@@ -460,7 +460,7 @@ Type TCTranslator Extends TTranslator
 			If TArrayType( ty ) Return Bra("&bbEmptyArray")
 			If TObjectType( ty ) Then
 				If TObjectType( ty ).classDecl.IsExtern() Or TObjectType( ty ).classDecl.IsStruct() Then
-					If TObjectType( ty ).classDecl.IsInterface() Or IsPointerType(ty) Or (Not TObjectType( ty ).classDecl.IsStruct()) Then
+					If TObjectType( ty ).classDecl.IsInterface() Or IsPointerType(ty,0,TType.T_POINTER) Or (Not TObjectType( ty ).classDecl.IsStruct()) Then
 						Return "0"
 					Else
 						Return "{}"
@@ -1830,7 +1830,11 @@ t:+"NULLNULLNULL"
 				If TObjectType(src).classDecl.IsExtern() Or (src._flags & TType.T_VARPTR) Then
 					Return Bra(t)
 				Else
-					Return Bra(Bra("(BBBYTE*)" + t) + "+" + Bra("sizeof(void*)"))
+					If Not TObjectType(src).classDecl.IsStruct() Then
+						Return Bra(Bra("(BBBYTE*)" + t) + "+" + Bra("sizeof(void*)"))
+					Else
+						Return Bra("(BBBYTE*)" + t)
+					End If
 				End If
 			End If
 

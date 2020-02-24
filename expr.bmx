@@ -2264,7 +2264,7 @@ Type TIndexExpr Extends TExpr
 		Next
 		
 		' operator overload?
-		If TObjectType(expr.exprType) Then
+		If TObjectType(expr.exprType) And Not TObjectType(expr.exprType).classDecl.IsStruct() Then
 			Local args:TExpr[]
 			Local op:String
 			If set Then
@@ -2331,7 +2331,11 @@ Type TIndexExpr Extends TExpr
 		Else If TNumericType(expr.exprType) And IsPointerType( expr.exprType, 0 , TType.T_POINTER | TType.T_VARPTR)' And Not TFunctionPtrType( expr.exprType )
 			exprType=TType.MapPointerToPrim(TNumericType(expr.exprType))
 		Else If TObjectType(expr.exprType) And TObjectType(expr.exprType).classDecl.IsStruct() And IsPointerType( expr.exprType, 0 , TType.T_POINTER | TType.T_VARPTR)' And Not TFunctionPtrType( expr.exprType )
-			exprType = expr.exprType
+			If IsPointerType( expr.exprType, 0 , TType.T_POINTER) Then
+				exprType = TType.MapFromPointer(expr.exprType)
+			Else
+				exprType = expr.exprType
+			End If
 		Else
 			Err "Expression of type '" + expr.exprType.ToString() + "' cannot be indexed"
 		EndIf

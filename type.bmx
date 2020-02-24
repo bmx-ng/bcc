@@ -163,6 +163,10 @@ Type TType
 	End Function
 	
 	Function MapPointerToPrim:TType(ty:TNumericType)
+		Return MapFromPointer(ty)
+	End Function
+
+	Function MapFromPointer:TType(ty:TType)
 		Local nty:TType = ty.Copy()
 
 		If ty._flags & T_PTRPTRPTR Then
@@ -1493,7 +1497,12 @@ Type TObjectType Extends TType
 	End Method
 	
 	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
-		If classDecl.IsStruct() Return False
+		If classDecl.IsStruct() Then
+			If IsPointerType(Self, 0, T_POINTER) And (TNumericType(ty) <> Null) And IsPointerType(ty, 0, T_POINTER) Then
+				Return True
+			End If
+			Return False
+		End If
 		Local objty:TObjectType=TObjectType( ty )
 		If objty Return classDecl.ExtendsClass( objty.classDecl )
 		If IsPointerType( ty, T_BYTE ) Return True

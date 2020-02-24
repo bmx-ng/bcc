@@ -525,7 +525,7 @@ Type TValDecl Extends TDecl
 					If TObjectType(ty) And TObjectType(ty).classDecl.IsStruct() And Not TObjectType(ty).classDecl.IsExtern() Then
 					
 						' new not used
-						If TConstExpr(init) And Not TConstExpr(init).value Then
+						If TConstExpr(init) And Not TConstExpr(init).value And Not IsPointerType(ty,0,TType.T_POINTER) Then
 							' always call the default constructor to init all the fields correctly
 							init = New TNewObjectExpr.Create(ty, Null).Semant()
 						End If
