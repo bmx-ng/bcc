@@ -2842,7 +2842,7 @@ t:+"NULLNULLNULL"
 		Local cast:String
 		
 		If TObjectType(stmt.lhs.exprType) Then
-			cast = Bra(TransObject(TObjectType(stmt.lhs.exprType).classDecl))
+			cast = Bra(TransType(stmt.lhs.exprType, ""))
 		End If
 
 		If IsPointerType(stmt.lhs.exprType, TType.T_BYTE) And rhs = "&bbNullObject" Then
