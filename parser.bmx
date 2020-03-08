@@ -4449,7 +4449,7 @@ End Rem
 	env.InsertDecl New TConstDecl.Create( "androidarm64v8a",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="android" And opt_arch="arm64v8a"),0 )
 
 	' raspberrypi - ARM only
-	env.InsertDecl New TConstDecl.Create( "raspberrypi",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="raspberrypi" And opt_arch="arm"),0 )
+	env.InsertDecl New TConstDecl.Create( "raspberrypi",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="raspberrypi" And (opt_arch="arm" Or opt_arch="arm64")),0 )
 	env.InsertDecl New TConstDecl.Create( "raspberrypiARM",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="raspberrypi" And opt_arch="arm"),0 )
 	env.InsertDecl New TConstDecl.Create( "raspberrypiARM64",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="raspberrypi" And opt_arch="arm64"),0 )
 
@@ -4477,7 +4477,7 @@ End Rem
 	env.InsertDecl New TConstDecl.Create( "littleendian",New TIntType,New TConstExpr.Create( New TIntType,opt_arch<>"ppc" ),0 )
 
 	' opengles target platform
-	env.InsertDecl New TConstDecl.Create( "opengles",New TIntType,New TConstExpr.Create( New TIntType, opt_platform="android" Or opt_platform="raspberrypi" Or opt_platform="emscripten" Or opt_platform="ios" Or (opt_platform="linux" And opt_arch="arm") ),0 )
+	env.InsertDecl New TConstDecl.Create( "opengles",New TIntType,New TConstExpr.Create( New TIntType, opt_platform="android" Or opt_platform="raspberrypi" Or opt_platform="emscripten" Or opt_platform="ios" Or (opt_platform="linux" And (opt_arch="arm" Or opt_arch="arm64"))),0 )
 
 	' musl - linux only
 	env.InsertDecl New TConstDecl.Create( "musl",New TIntType,New TConstExpr.Create( New TIntType,(opt_musl And (opt_platform="linux" Or opt_platform="android" Or opt_platform="raspberrypi"))),0 )
