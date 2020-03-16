@@ -2841,7 +2841,7 @@ t:+"NULLNULLNULL"
 		Local s:String
 		Local cast:String
 		
-		If TObjectType(stmt.lhs.exprType) Then
+		If TObjectType(stmt.lhs.exprType) And (Not TObjectType(stmt.lhs.exprType).classdecl.IsStruct() Or IsPointerType(stmt.lhs.exprType)) Then
 			cast = Bra(TransType(stmt.lhs.exprType, ""))
 		End If
 
