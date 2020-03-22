@@ -1351,6 +1351,24 @@ Type TParser Extends TGenProcessor
 				expr=ParseExpr()
 				expr=New TStackAllocExpr.Create( expr )
 			EndIf
+		Case "fieldoffset"
+			NextToke
+			
+			Local withBrackets:Int
+			
+			If CParse("(")
+				withBrackets = True
+			End If
+			
+			Local typeExpr:TExpr = ParseExpr()
+			Parse ","
+			Local fieldExpr:TExpr = ParseExpr()
+			
+			If withBrackets Then
+				Parse(")")
+			End If
+			
+			expr=New TFieldOffsetExpr.Create( typeExpr, fieldExpr )
 		Default
 			Select _tokeType
 			Case TOKE_IDENT

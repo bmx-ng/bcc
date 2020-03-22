@@ -3537,3 +3537,46 @@ Type TStackAllocExpr Extends TBuiltinExpr
 	End Method
 
 End Type
+
+Type TFieldOffsetExpr Extends TBuiltinExpr
+
+	Field typeExpr:TExpr
+	Field fieldExpr:TExpr
+
+	Method Create:TFieldOffsetExpr( typeExpr:TExpr, fieldExpr:TExpr )
+		Self.id="fieldoffset"
+		Self.typeExpr=typeExpr
+		Self.fieldExpr = fieldExpr
+		Return Self
+	End Method
+
+	Method Semant:TExpr(options:Int = 0)
+		If exprType Return Self
+		
+		' validate type and field
+		typeExpr = typeExpr.Semant()
+		
+		If Not TIdentTypeExpr(typeExpr) Then
+			Err "Expecting Type or Struct"
+		End If
+		
+		TIdentExpr(fieldExpr).scope = TIdentTypeExpr(typeExpr).cdecl
+
+		fieldExpr = fieldExpr.Semant()
+		
+		If Not TVarExpr(fieldExpr) Or Not TFieldDecl(TVarExpr(fieldExpr).decl) Then
+			Err "Expecting Field"
+		End If
+		
+		exprType = New TSizeTType
+		Return Self
+	End Method
+
+	Method Copy:TExpr()
+		Return New TFieldOffsetExpr.Create( typeExpr, fieldExpr )
+	End Method
+
+	Method ToString$()
+		Return "TFieldOffsetExpr("+typeExpr.ToString()+"," + fieldExpr.ToString() + ")"
+	End Method
+End Type

@@ -1631,6 +1631,18 @@ t:+"NULLNULLNULL"
 	Method TransStackAllocExpr:String(expr:TStackAllocExpr)
 		Return "bbStackAlloc" + Bra(expr.expr.Trans())
 	End Method
+	
+	Method TransFieldOffsetExpr:String(expr:TFieldOffsetExpr)
+		Local t:String = "offsetof("
+		
+		Local cdecl:TClassDecl = TIdentTypeExpr(expr.typeExpr).cdecl
+		t :+ "struct " + cdecl.munged
+		If Not cdecl.IsStruct() Then
+			t :+ "_obj"
+		End If
+		
+		Return t + ", " + TVarExpr(expr.fieldExpr).decl.munged + ")"
+	End Method
 
 	'***** Expressions *****
 
