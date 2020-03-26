@@ -27,6 +27,7 @@ Const DECL_PRIVATE:Int=       $020000
 Const DECL_ABSTRACT:Int=      $040000
 Const DECL_FINAL:Int=         $080000
 Const DECL_READ_ONLY:Int=     $000100
+Const DECL_STATIC:Int=      $20000000
 Const DECL_OVERRIDE:Int=    $40000000
 Const DECL_INLINE:Int=      $80000000
 
@@ -192,6 +193,10 @@ Type TDecl
 	
 	Method IsAbstract:Int()
 		Return (attrs & DECL_ABSTRACT)<>0
+	End Method
+
+	Method IsStatic:Int()
+		Return (attrs & DECL_STATIC)<>0
 	End Method
 	
 	Method IsSemanted:Int()
@@ -515,19 +520,24 @@ Type TValDecl Extends TDecl
 					
 					
 				Else
-					If TArrayExpr(declInit) And TArrayType(ty) And TNumericType(TArrayType(ty).elemType) Then
-						TArrayExpr(declInit).toType = TArrayType(ty).elemType
-					End If
-				
-					init=declInit.Copy().SemantAndCast(ty)
+					If TArrayType(ty) And TArrayType(ty).isStatic Then
+						init = declInit.Copy().Semant()
+						TArrayType(ty).length = init.Eval()
+					Else
+						If TArrayExpr(declInit) And TArrayType(ty) And TNumericType(TArrayType(ty).elemType) Then
+							TArrayExpr(declInit).toType = TArrayType(ty).elemType
+						End If
 					
-					' check if struct has been initialised
-					If TObjectType(ty) And TObjectType(ty).classDecl.IsStruct() And Not TObjectType(ty).classDecl.IsExtern() Then
-					
-						' new not used
-						If TConstExpr(init) And Not TConstExpr(init).value And Not IsPointerType(ty,0,TType.T_POINTER) Then
-							' always call the default constructor to init all the fields correctly
-							init = New TNewObjectExpr.Create(ty, Null).Semant()
+						init=declInit.Copy().SemantAndCast(ty)
+						
+						' check if struct has been initialised
+						If TObjectType(ty) And TObjectType(ty).classDecl.IsStruct() And Not TObjectType(ty).classDecl.IsExtern() Then
+						
+							' new not used
+							If TConstExpr(init) And Not TConstExpr(init).value And Not IsPointerType(ty,0,TType.T_POINTER) Then
+								' always call the default constructor to init all the fields correctly
+								init = New TNewObjectExpr.Create(ty, Null).Semant()
+							End If
 						End If
 					End If
 				End If
@@ -693,6 +703,17 @@ Type TArgDecl Extends TLocalDecl
 		If ty Then
 			ty = ty.Semant()
 		End If
+		
+		If attrs & DECL_STATIC Then
+			If Not TArrayType(ty) Then
+				Err "Expecting array"
+			End If
+			
+			If Not TNumericType(TArrayType(ty).elemType) Then
+				Err "Static array elements must be numeric"
+			End If
+		End If
+		
 		If init And Not TConstExpr(init) Then
 			If TCastExpr(init) Then
 				If TConstExpr(TCastExpr(init).expr) Or TNullExpr(TCastExpr(init).expr) Then

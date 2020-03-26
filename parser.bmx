@@ -902,8 +902,8 @@ Type TParser Extends TGenProcessor
 		
 		' array or function pointer?
 		Repeat
-			If (_toke = "[" Or _toke = "[]") And IsArrayDef()
-				ty = ParseArrayType(ty)
+			If (_toke = "[" Or _toke = "[]") And IsArrayDef(attr & DECL_STATIC > 0)
+				ty = ParseArrayType(ty, attr & DECL_STATIC > 0)
 			Else If _toke = "(" Then
 				Local args:TArgDecl[] = ParseFuncParamDecl()
 				attr :| ParseCallConvention(attr & DECL_API_STDCALL)
@@ -931,7 +931,16 @@ Type TParser Extends TGenProcessor
 	End Method
 
 	' replaces While CParse( "[]" ) sections, with support for multi-dimension arrays
-	Method ParseArrayType:TType(ty:TType)
+	Method ParseArrayType:TType(ty:TType, isStatic:Int = False)
+		If isStatic Then
+			Parse("[")
+			Local expr:TExpr = ParseUnaryExpr()
+			ty = New TArrayType.Create( ty )
+			TArrayType(ty).isStatic = True
+			TArrayType(ty).length = expr.Eval()
+			Parse("]")
+			Return ty
+		End If
 
 		While True
 			Local dims:Int = 1
@@ -977,9 +986,19 @@ Type TParser Extends TGenProcessor
 		Return False
 	End Method
 	
-	Method IsArrayDef:Int()
+	Method IsArrayDef:Int(isStatic:Int = False)
 		Local isDef:Int = True
 		Local toker:TToker=New TToker.Copy(_toker)
+		If isStatic Then
+			If Not CParseToker(toker, "[") Then
+				Return False
+			End If
+			NextTokeToker(toker)
+			If Not CParseToker(toker, "]") Then
+				Return False
+			End If
+			Return True
+		End If
 		While True
 			'Local dims:Int = 1
 			
@@ -2421,6 +2440,13 @@ End Rem
 
 		SetErr
 
+		If CParse("staticarray") Then
+			If attrs & DECL_STATIC Then
+				Err "Already declared as a static array"
+			End If
+			attrs :| DECL_STATIC
+		End If
+
 		Local id$=ParseIdent()
 		Local ty:TType
 		Local init:TExpr
@@ -2441,26 +2467,35 @@ End Rem
 			ty=ParseDeclType(attrs & DECL_API_STDCALL)
 
 			If CParse( "=" )
+				If (attrs & DECL_STATIC) Then
+					Err "Static arrays cannot be initialized in this way"
+				End If
 				init=ParseExpr()
 			Else If CParse( "[" ) ' an initialised array?
-				Local ln:TExpr[]
-				Repeat
-					If CParse(",") Then
-						ln = ln + [New TNullExpr]
-						Continue
-					End If
-					If CParse("]") Exit
-					ln = ln + [ParseExpr()]
-					If CParse("]") Exit
-					Parse(",")
-				Forever
-				'Parse "]"
-				ty = ParseArrayType(ty)
-				'While CParse( "[]" )
-				'	ty=New TArrayType.Create(ty)
-				'Wend
-				init=New TNewArrayExpr.Create( ty,ln)
-				ty=New TArrayType.Create( ty, ln.length )
+				If (attrs & DECL_STATIC) Then
+					init = ParseExpr()
+					Parse "]"
+					ty=New TArrayType.Create( ty,1,, attrs & DECL_STATIC > 0 )
+				Else
+					Local ln:TExpr[]
+					Repeat
+						If CParse(",") Then
+							ln = ln + [New TNullExpr]
+							Continue
+						End If
+						If CParse("]") Exit
+						ln = ln + [ParseExpr()]
+						If CParse("]") Exit
+						Parse(",")
+					Forever
+					'Parse "]"
+					ty = ParseArrayType(ty)
+					'While CParse( "[]" )
+					'	ty=New TArrayType.Create(ty)
+					'Wend
+					init=New TNewArrayExpr.Create( ty,ln)
+					ty=New TArrayType.Create( ty, ln.length,, attrs & DECL_STATIC > 0 )
+				End If
 			Else If toke <> "const"
 				If toke="global" Or toke="local" Then
 					init=New TConstExpr.Create( ty,"" )
@@ -2549,9 +2584,24 @@ End Rem
 		If toke Parse toke
 
 		If isField Then
-			If CParse("readonly") Then
-				attrs :| DECL_READ_ONLY
-			End If
+			Repeat
+				If CParse("readonly") Then
+					If attrs & DECL_READ_ONLY
+						Err "Duplicate modifier 'ReadOnly'."
+					End If
+
+					attrs :| DECL_READ_ONLY
+
+				Else If CParse("staticarray") Then
+					If attrs & DECL_STATIC
+						Err "Duplicate modifier 'Static'."
+					End If
+
+					attrs :| DECL_STATIC
+				Else
+					Exit
+				End If
+			Forever
 		End If
 
 		Local decls:TList=New TList'<Decl>
@@ -3047,21 +3097,28 @@ End Rem
 		If _toke<>")"
 			Local nargs:Int
 			Repeat
+				Local attrs:Int
+				If CParse("staticarray") Then
+					attrs :| DECL_STATIC
+				End If
 				
 				Local argId$=ParseIdent()
 
-				Local ty:TType=ParseDeclType()
+				Local ty:TType=ParseDeclType(attrs)
 
 				Local init:TExpr
 				
 				' var argument?
 				If CParse("var") Then
+					If attrs & DECL_STATIC Then
+						Err "Unexpected 'Var' for static array argument"
+					End If
 					ty = TType.MapToVarType(ty)
 				Else If CParse( "=" )
 					init=ParseExpr()
 				End If
 				
-				Local arg:TArgDecl=New TArgDecl.Create( argId,ty,init )
+				Local arg:TArgDecl=New TArgDecl.Create( argId,ty,init,attrs )
 				If args.Length=nargs args=args + New TArgDecl[10]
 				args[nargs]=arg
 				nargs:+1

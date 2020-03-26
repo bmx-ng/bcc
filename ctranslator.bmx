@@ -240,7 +240,13 @@ Type TCTranslator Extends TTranslator
 			End If
 			Return "BBSTRING" + p
 		End If
-		If TArrayType( ty ) Return "BBARRAY" + p
+		If TArrayType( ty ) Then
+			If TArrayType( ty ).isStatic Then
+				Return TransType(TArrayType( ty ).elemType, ident)
+			Else
+				Return "BBARRAY" + p
+			End If
+		End If
 		If TObjectType( ty ) Then
 			Return TransObject(TObjectType(ty).classdecl) + p
 		End If
@@ -334,9 +340,13 @@ Type TCTranslator Extends TTranslator
 		End If
 		If TArrayType( ty )  Then
 			Local s:String = TransIfcType(TArrayType( ty ).elemType) + "&["
-			For Local i:Int = 0 Until TArrayType( ty ).dims - 1
-				s:+ ","
-			Next
+			If TArrayType( ty ).isStatic Then
+				s :+ TArrayType( ty ).length
+			Else
+				For Local i:Int = 0 Until TArrayType( ty ).dims - 1
+					s:+ ","
+				Next
+			End If
 			Return s + "]" + p
 		End If
 		If TObjectType( ty ) Then
@@ -744,7 +754,11 @@ t:+"NULLNULLNULL"
 			If TInvokeExpr(init) And Not TInvokeExpr(init).invokedWithBraces Then
 				initTrans = "=" + cast + TInvokeExpr(init).decl.munged
 			Else
-				initTrans = "=" + cast + init.Trans()
+				If Not TArrayType(decl.ty) Or Not TArrayType(decl.ty).isStatic Then
+					initTrans = "=" + cast + init.Trans()
+				Else
+					initTrans = "[" + TArrayType(decl.ty).length + "]"
+				End If
 			End If
 		End If
 		
@@ -1818,7 +1832,11 @@ t:+"NULLNULLNULL"
 		Else If IsPointerType( dst, 0, TType.T_POINTER | TType.T_CHAR_PTR | TType.T_SHORT_PTR )
 
 			If TArrayType(src) Then
-				Return Bra(Bra(TransType(dst, "")) + "BBARRAYDATA(" + t + ",1)")
+				If TArrayType(src).isStatic Then
+					Return Bra("&" + Bra(t))
+				Else
+					Return Bra(Bra(TransType(dst, "")) + "BBARRAYDATA(" + t + ",1)")
+				End If
 			End If
 			'If TByteType(src) And Not IsPointerType(src, TType.T_BYTE, TType.T_POINTER) Return Bra("&"+t)
 
@@ -2425,10 +2443,14 @@ t:+"NULLNULLNULL"
 					Return Bra(Bra(TransType(TArrayType( expr.expr.exprType).elemType, "*")) + Bra("BBARRAYDATA(" + t_expr + ",1)")) + "[" + t_index + "]"
 				End If
 			Else
-				If opt_debug Then
-					Return Bra("(" + TransType(expr.exprType, "") + "*)BBARRAYDATAINDEX(" + Bra(t_expr) + "," + Bra(t_expr) + "->dims," + t_index + ")") + "[" + t_index + "]"
+				If TArrayType( expr.expr.exprType ).isStatic Then
+					Return t_expr + "[" + t_index + "]"
 				Else
-					Return Bra("(" + TransType(expr.exprType, "") + "*)BBARRAYDATA(" + t_expr + ",1)") + "[" + t_index + "]"
+					If opt_debug Then
+						Return Bra("(" + TransType(expr.exprType, "") + "*)BBARRAYDATAINDEX(" + Bra(t_expr) + "," + Bra(t_expr) + "->dims," + t_index + ")") + "[" + t_index + "]"
+					Else
+						Return Bra("(" + TransType(expr.exprType, "") + "*)BBARRAYDATA(" + t_expr + ",1)") + "[" + t_index + "]"
+					End If
 				End If
 			End If
 		End If
@@ -3315,6 +3337,9 @@ End Rem
 			If Not TFunctionPtrType(oarg.ty) Then
 				If Not odecl.castTo Then
 					args:+TransType( oarg.ty, arg.munged )+" "+arg.munged
+					If TArrayType(oarg.ty) And TArrayType(oarg.ty).isStatic Then
+						args :+ "[" + TArrayType(oarg.ty).length + "]"
+					End If
 				Else
 					args:+ oarg.castTo + " " + arg.munged
 				End If
@@ -3489,7 +3514,13 @@ End Rem
 				If classDecl.IsExtern() Then
 					Emit TransType(decl.ty, "") + " " + decl.ident + ";"
 				Else
-					Emit TransType(decl.ty, classDecl.actual.munged) + " _" + classDecl.actual.munged.ToLower() + "_" + decl.IdentLower() + ";"
+					Local t:String = TransType(decl.ty, classDecl.actual.munged) + " _" + classDecl.actual.munged.ToLower() + "_" + decl.IdentLower()
+					
+					If TArrayType(decl.ty) And TArrayType(decl.ty).isStatic Then
+						t :+ "[" + decl.init.Trans() + "]"
+					End If
+					
+					Emit t + ";"
 				End If
 			Else
 				If classDecl.IsExtern() Then
@@ -4769,6 +4800,8 @@ End Rem
 							fld :+ "= " + TInvokeExpr(decl.init).decl.munged + ";"
 						Else If TObjectType(decl.ty) Then
 							fld :+ "= " + Bra(TransObject(TObjectType(decl.ty).classDecl)) + decl.init.Trans() + ";"
+						Else If TArrayType(decl.ty) And TArrayType(decl.ty).isStatic Then
+							doEmit = False
 						Else
 							fld :+ "= " + decl.init.Trans() + ";"
 						End If
@@ -5129,7 +5162,11 @@ End Rem
 		' array.length
 		If decl.scope And decl.scope.ident = "___Array" Then
 			If decl.ident = "length" Then
-				Return Bra(variable + "->scales[0]")
+				If TArrayType(exprType) And TArrayType(exprType).isStatic Then
+					Return TArrayType(exprType).length
+				Else
+					Return Bra(variable + "->scales[0]")
+				End If
 			End If
 			If decl.ident = "numberOfDimensions" Then
 				Return Bra(variable + "->dims")
@@ -5399,7 +5436,13 @@ End Rem
 		Local f:String
 		If fieldDecl.IsReadOnly() Then
 			f :+ "@"
-		Else
+		End If
+
+		If fieldDecl.IsStatic() Then
+			f :+ "~~"
+		End If
+		
+		If Not f Then
 			f :+ "."
 		End If
 		f :+ fieldDecl.ident + TransIfcType(fieldDecl.ty, fieldDecl.ModuleScope().IsSuperStrict())
