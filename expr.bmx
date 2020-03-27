@@ -2100,6 +2100,8 @@ Type TBinaryCompareExpr Extends TBinaryExpr
 				End If
 				' otherwise, no overload, continue...
 			End Try
+		Else If (TArrayType(lhs.exprType) And TArrayType(lhs.exprType).isStatic) Or (TArrayType(rhs.exprType) And TArrayType(rhs.exprType).isStatic) Then
+			Err "Static arrays cannot be compared"
 		End If
 
 

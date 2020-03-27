@@ -774,7 +774,7 @@ t:+"NULLNULLNULL"
 					If Not TConstExpr(init) Then
 						Return decl.munged + initTrans
 					End If
-				Else
+				Else If Not TArrayType(ty) Or Not TArrayType(ty).isStatic Then 
 					Return decl.munged + initTrans
 				End If
 			Else If TObjectType( ty ) And TObjectType( ty ).classDecl.IsStruct() Then
@@ -847,7 +847,11 @@ t:+"NULLNULLNULL"
 				If TLocalDecl(decl) And TLocalDecl(decl).volatile Then
 					Return TransType( decl.ty, decl.munged )+" volatile "+decl.munged + "=" + TransValue(decl.ty, "")
 				Else
-					Return TransType( decl.ty, decl.munged )+" "+decl.munged + "=" + TransValue(decl.ty, "")
+					If TArrayType(decl.ty) And TArrayType(decl.ty).isStatic Then
+						Return TransType( decl.ty, decl.munged )+" "+decl.munged + "[" + TArrayType(decl.ty).length + "]"
+					Else
+						Return TransType( decl.ty, decl.munged )+" "+decl.munged + "=" + TransValue(decl.ty, "")
+					End If
 				End If
 			End If
 		End If
