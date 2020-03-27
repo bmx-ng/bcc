@@ -174,9 +174,13 @@ Type TCTranslator Extends TTranslator
 		If TStringType( ty ) Return "$"
 		If TArrayType( ty ) Then
 			Local s:String = "["
-			For Local i:Int = 0 Until TArrayType( ty ).dims - 1
-				s:+ ","
-			Next
+			If TArrayType( ty ).isStatic Then
+				s :+ TArrayType( ty ).length
+			Else
+				For Local i:Int = 0 Until TArrayType( ty ).dims - 1
+					s:+ ","
+				Next
+			End If
 			s:+ "]"
 			Return s + TransDebugScopeType(TArrayType( ty ).elemType)
 		End If
