@@ -1965,7 +1965,7 @@ End Rem
 		Local infoArray:String[] = info.Split(";")
 
 		Local dbg:String = "struct BBDebugStm __stmt_" + count + " = {"
-		dbg :+ Enquote(infoArray[0]) + ", "
+		dbg :+ GenHash(infoArray[0]) + ", "
 		dbg :+ infoArray[1] + ", "
 		dbg :+ infoArray[2] + "};"
 		Emit dbg

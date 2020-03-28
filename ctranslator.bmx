@@ -6255,6 +6255,14 @@ End If
 			End If
 		Next
 		'
+		
+		' register files
+		If opt_debug Then
+			For Local Hash:String = EachIn fileRegister.Keys()
+				Local file:String = String(fileRegister.ValueForKey(Hash))
+				Emit "bbRegisterSource(" + Hash + ", ~q" + file + "~q);"
+			Next
+		End If
 
 		' defdata init
 		If Not app.dataDefs.IsEmpty() Then

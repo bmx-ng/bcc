@@ -33,6 +33,7 @@ Import "options.bmx"
 Import "base.stringhelper.bmx"
 Import "base64.bmx"
 Import "enums.c"
+Import "hash.c"
 
 ' debugging help
 Const DEBUG:Int = False
@@ -492,6 +493,17 @@ Function HeaderComment:String()
 	' TODO
 End Function
 
+Global fileRegister:TMap = New TMap
+
+Function GenHash:String(file:String)
+	Local Hash:String = bmx_gen_hash(file)
+	
+	If Not fileRegister.Contains(Hash) Then
+		fileRegister.Insert(Hash, file)
+	End If
+	
+	Return Hash
+End Function
 
 Type TTemplateRecord
 
@@ -564,4 +576,5 @@ End Type
 Extern
 	Function strlen_:Int(s:Byte Ptr)="strlen"
 	Function bmx_enum_next_power(char:Int, val:Long Var, ret:Long Var)
+	Function bmx_gen_hash:String(txt:String)
 End Extern
