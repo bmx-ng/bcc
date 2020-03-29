@@ -3116,7 +3116,7 @@ End Rem
 			End If
 			
 			' generate default comparator compare
-			BuildStructDefaultComparatorCompare()
+			BuildStructDefaultComparatorCompare(attrs & DECL_PRIVATE <> 0)
 			
 			attrs :~ DECL_CYCLIC
 		End If
@@ -3178,10 +3178,13 @@ End Rem
 		func.stmts.AddLast returnStmt
 	End Method
 
-	Method BuildStructDefaultComparatorCompare()
+	Method BuildStructDefaultComparatorCompare(isPrivate:Int = False)
 		Local arg1:TArgDecl = New TArgDecl.Create("o1", TType.MapToVarType(New TObjectType.Create(Self)), Null)
 		Local arg2:TArgDecl = New TArgDecl.Create("o2", TType.MapToVarType(New TObjectType.Create(Self)), Null)
 		Local func:TFuncDecl = New TFuncDecl.CreateF("DefaultComparator_Compare", New TIntType, [arg1, arg2], 0)
+		If isPrivate Then
+			func.attrs :| DECL_PRIVATE
+		End If
 
 		Local expr:TExpr = New TIdentExpr.Create( "o1")
 		expr = New TIdentExpr.Create( "Compare" ,expr )
