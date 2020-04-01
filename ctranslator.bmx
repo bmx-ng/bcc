@@ -2760,9 +2760,6 @@ t:+"NULLNULLNULL"
 			If TLocalDecl(decl) Then
 				count :+ 1
 			End If
-			If TConstDecl(decl) Then
-				count :+ 1
-			End If
 			If TGlobalDecl(decl) Then
 				count :+ 1
 			End If
@@ -2771,17 +2768,6 @@ t:+"NULLNULLNULL"
 		' a method also includes "Self" reference back to parent Type
 		If TFuncDecl(block) And TFuncDecl(block).IsMethod() Then
 			count :+ 1
-		End If
-		
-		If _app.mainFunc = block Then
-			For Local decl:TDecl = EachIn _app.mainModule.Decls()
-				If TConstDecl(decl) Then
-					count :+ 1
-				End If
-				If TGlobalDecl(decl) Then
-					count :+ 1
-				End If
-			Next
 		End If
 		
 		If Not count Then
@@ -2815,12 +2801,7 @@ t:+"NULLNULLNULL"
 				Emit "},"
 			End If
 			
-			' block consts and globals
-			' consts
-			For Local cdecl:TConstDecl = EachIn block.Decls()
-				EmitConstDebugScope(cdecl)
-			Next
-			' globals
+			' block globals
 			For Local gdecl:TGlobalDecl = EachIn block.Decls()
 				EmitGlobalDebugScope(gdecl)
 			Next
@@ -2844,18 +2825,6 @@ t:+"NULLNULLNULL"
 				End If
 			Next
 
-			' add module consts and globals
-			If _app.mainFunc = block Then
-				' consts
-				For Local cdecl:TConstDecl = EachIn _app.mainModule.Decls()
-					EmitConstDebugScope(cdecl)
-				Next
-				' globals
-				For Local gdecl:TGlobalDecl = EachIn _app.mainModule.Decls()
-					EmitGlobalDebugScope(gdecl)
-				Next
-			End If
-			
 			Emit "BBDEBUGDECL_END "
 			Emit "}"
 			
