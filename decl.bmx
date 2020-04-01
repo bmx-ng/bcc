@@ -1766,6 +1766,12 @@ Type TBlockDecl Extends TScopeDecl
 		
 		For Local stmt:TStmt=EachIn stmts
 			stmt.Semant
+
+			If opt_debug And Not IsNoDebug() Then
+				If Not stmt.generated Then
+					GenHash(stmt.errInfo[1..].Split(";")[0])
+				End If
+			End If
 			
 			If TReturnStmt(stmt) Then
 				If SurroundingFinallyBlock(Self) Then PushErr stmt.errInfo; Err "Return cannot be used inside a Finally block."
