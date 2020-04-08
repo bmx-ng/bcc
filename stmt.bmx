@@ -282,7 +282,7 @@ Type TReturnStmt Extends TStmt
 			expr=expr.SemantAndCast( fRetType  )
 			If TIdentTypeExpr(expr) Err "Function must return a value."
 		Else If fdecl.IsCtor()
-			expr=New TSelfExpr.Semant()
+			' ctors do not return anything
 		Else If Not TVoidType( fRetType  )
 			If _env.ModuleScope().IsSuperStrict() Err "Function must return a value"
 			expr=New TConstExpr.Create( fRetType ,"" ).Semant()
