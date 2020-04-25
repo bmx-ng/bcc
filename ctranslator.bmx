@@ -1107,10 +1107,14 @@ t:+"NULLNULLNULL"
 '								Return ifc + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, lvar )
 							Else
 								If cdecl And cdecl.IsStruct() Then
+									Local pref:String
+									If decl.IsMethod() Then
+										pref = "_"
+									End If
 									If Not isPointerType(lhs.exprType) Then
-										Return "_" + decl.munged+TransArgs( args,decl, "&" + TransSubExpr( lhs ) )
+										Return pref + decl.munged+TransArgs( args,decl, "&" + TransSubExpr( lhs ) )
 									Else
-										Return "_" + decl.munged+TransArgs( args,decl, TransSubExpr( lhs ) )
+										Return pref + decl.munged+TransArgs( args,decl, TransSubExpr( lhs ) )
 									End If
 								Else
 									If cdecl Then
@@ -1211,11 +1215,14 @@ t:+"NULLNULLNULL"
 						Else
 							If cdecl.IsStruct() Then
 
-								' baaaaaaaaaaaaaaaaa
+								Local pref:String
+								If decl.IsMethod() Then
+									pref = "_"
+								End If
 								If Not isPointerType(lhs.exprType) Then
-									Return "_" + decl.munged+TransArgs( args,decl, "&" + TransSubExpr( lhs ) )
+									Return pref + decl.munged+TransArgs( args,decl, "&" + TransSubExpr( lhs ) )
 								Else
-									Return "_" + decl.munged+TransArgs( args,decl, TransSubExpr( lhs ) )
+									Return pref + decl.munged+TransArgs( args,decl, TransSubExpr( lhs ) )
 								End If
 							
 							Else
@@ -1259,10 +1266,14 @@ t:+"NULLNULLNULL"
 						' create a local variable of the inner invocation
 						Local lvar:String = CreateLocal(lhs, True)
 
+						Local pref:String
+						If decl.IsMethod() Then
+							pref = "_"
+						End If
 						If Not isPointerType(lhs.exprType) Then
-							Return "_" + decl.munged+TransArgs( args,decl, "&" + lvar )
+							Return pref + decl.munged+TransArgs( args,decl, "&" + lvar )
 						Else
-							Return "_" + decl.munged+TransArgs( args,decl, lvar)
+							Return pref + decl.munged+TransArgs( args,decl, lvar)
 						End If
 					Else
 						' create a local variable of the inner invocation
@@ -1348,10 +1359,14 @@ t:+"NULLNULLNULL"
 					
 						Local lvar:String = CreateLocal(lhs, True, False)
 					
+						Local pref:String
+						If decl.IsMethod() Then
+							pref = "_"
+						End If
 						If Not isPointerType(lhs.exprType) Then
-							Return "_" + decl.munged+TransArgs( args,decl, "&" + lvar )
+							Return pref + decl.munged+TransArgs( args,decl, "&" + lvar )
 						Else
-							Return "_" + decl.munged+TransArgs( args,decl, lvar )
+							Return pref + decl.munged+TransArgs( args,decl, lvar )
 						End If
 					Else
 						Local lvar:String = CreateLocal(lhs, False, False)
