@@ -67,7 +67,8 @@ Type TForEachinStmt Extends TLoopStmt
 	End Method
 
 	Method OnSemant()
-
+		Const NotIterableError:String = "EachIn requires a type that implements IIterable or has a suitable ObjectEnumerator method."
+		
 		expr=expr.Semant()
 
 		If TArrayType( expr.exprType ) Or TStringType( expr.exprType )
@@ -195,7 +196,7 @@ Type TForEachinStmt Extends TLoopStmt
 			Else
 				Local declList:TFuncDeclList = TFuncDeclList(TObjectType(expr.exprType).classDecl.GetDecl("objectenumerator"))
 				If Not declList Then
-					Err "Use of EachIn requires enumerable Type with either ObjectEnumerator method or one which implements IIterable interface."
+					Err NotIterableError
 				End If
 			End If
 
@@ -311,7 +312,7 @@ Type TForEachinStmt Extends TLoopStmt
 			End If
 
 		Else
-			InternalErr "TForEachinStmt.OnSemant"
+			Err NotIterableError
 		EndIf
 
 		block.Semant
