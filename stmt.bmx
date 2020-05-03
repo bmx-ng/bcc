@@ -141,7 +141,7 @@ Type TAssignStmt Extends TStmt
 					If TFieldDecl(decl) Then
 						' check scope for ctor
 						Local scope:TFuncDecl = _env.FuncScope()
-						If Not scope Or Not scope.IsCtor() Or (decl.ClassScope() <> scope.ClassScope()) Then
+						If Not scope Or Not scope.IsCtor() Or (Not scope.ClassScope().ExtendsClass(decl.ClassScope())) Then
 							Err "Cannot modify ReadOnly field " + decl.ident
 						End If
 					Else
