@@ -1444,6 +1444,11 @@ Type TParser Extends TGenProcessor
 				expr=New TConstExpr.Create( TType.stringType,s )
 				_app.mapStringConsts(s)
 				NextToke
+			Case TOKE_STRINGMULTI
+				Local s:String = BmxProcessMultiString( _toke )
+				expr=New TConstExpr.Create( TType.stringType,s )
+				_app.mapStringConsts(s)
+				NextToke
 			Default
 				Err "Expecting expression but encountered "+DescribeToke(_toke)
 			End Select

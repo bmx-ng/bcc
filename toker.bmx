@@ -39,6 +39,7 @@ Const TOKE_SYMBOL:Int=8
 Const TOKE_LINECOMMENT:Int=9
 Const TOKE_LONGLIT:Int=10
 Const TOKE_NATIVE:Int=11
+Const TOKE_STRINGMULTI:Int=12
 
 '***** Tokenizer *****
 Type TToker
@@ -199,17 +200,51 @@ Type TToker
 				_tokePos:+1
 			Wend
 		Else If str="~q"
+			Local isMulti:Int
 			_tokeType=TOKE_STRINGLIT
 			Local _tstr:String = TSTR()
-			While _tstr And _tstr<>"~q"
-				' Strings can't cross line boundries
-				If _tstr="~n" Then
-					_tokePos:-1
-					Exit
-				End If
+			If _tstr = "~q" Then
 				_tokePos:+1
-				_tstr = TSTR()
-			Wend
+				Local _tstr2:String = TSTR()
+				If _tstr2 = "~q" Then
+					isMulti = True
+				Else
+					_tokePos:-1
+				End If
+			End If
+			If Not isMulti Then
+				While _tstr And _tstr<>"~q"
+					' Strings can't cross line boundries
+					If _tstr="~n" Then
+						_tokePos:-1
+						Exit
+					End If
+					_tokePos:+1
+					_tstr = TSTR()
+				Wend
+			Else
+				Local lineCount:Int
+				Local count:Int
+				_tokeType = TOKE_STRINGMULTI
+				While _tstr
+					_tokePos:+1
+					_tstr = TSTR()
+					
+					If _tstr = "~n" Then
+						lineCount:+1
+					End If
+					
+					If _tstr = "~q" Then
+						count :+ 1
+						If count = 3 Then
+							_line :+ lineCount - 1
+							Exit
+						End If
+					Else
+						count = 0
+					End If
+				Wend
+			End If
 			If _tokePos<_source.Length _tokePos:+1 Else _tokeType=TOKE_STRINGLITEX
 		Else If str="'"
 			Local _tstr:String = TSTR()
