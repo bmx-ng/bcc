@@ -595,7 +595,7 @@ Type TCTranslator Extends TTranslator
 
 					' Object -> Byte Ptr
 					If IsPointerType(ty, TType.T_BYTE) And TObjectType(arg.exprType) Then
-						t:+ varRef + Bra(Bra("(BBBYTE*)" + Bra(arg.Trans())) + "+" + Bra("sizeof(void*)"))
+						t:+ varRef + Bra("bbObjectToFieldOffset" + Bra(arg.Trans()))
 						Continue
 					End If
 
@@ -1842,7 +1842,7 @@ t:+"NULLNULLNULL"
 						If TObjectType(dst) Then
 							Return Bra("&" + t)
 						Else
-							Return Bra(Bra("(BBBYTE*)" + Bra("&" + t)) + "+" + Bra("sizeof(void*)"))
+							Return Bra("bbObjectToFieldOffset" + Bra("&" + t))
 						End If
 					End If
 				End If
@@ -1884,7 +1884,7 @@ t:+"NULLNULLNULL"
 					Return Bra(t)
 				Else
 					If Not TObjectType(src).classDecl.IsStruct() Then
-						Return Bra(Bra("(BBBYTE*)" + t) + "+" + Bra("sizeof(void*)"))
+						Return Bra("bbObjectToFieldOffset" + Bra(t))
 					Else
 						Return Bra("(BBBYTE*)" + t)
 					End If
@@ -3651,6 +3651,7 @@ End Rem
 		Emit "void*     extra;"
 		Emit "unsigned int obj_size;"
 		Emit "unsigned int instance_count;"
+		Emit "unsigned int fields_offset;"
 
 		EmitBBClassClassFuncProto(classDecl)
 
@@ -4483,6 +4484,8 @@ End Rem
 			Emit TransObjectSize(classDecl)
 			' instance_count
 			Emit ",0"
+			' fields_offset
+			Emit TransFirstFieldOffset(classDecl)
 	
 	
 			' methods/funcs
@@ -4653,21 +4656,47 @@ End Rem
 	Method TransObjectSize:String(classDecl:TClassDecl)
 		Local t:String
 		
-		Local fieldDecl:TFieldDecl
+		Local firstDecl:TFieldDecl
+		Local lastDecl:TFieldDecl
 
 		For Local decl:TFieldDecl = EachIn classDecl.Decls()
-			fieldDecl = decl
+			If Not firstDecl Then
+				firstDecl = decl
+			End If
+			lastDecl = decl
 		Next
 		
-		If fieldDecl Then
-			t = "offsetof" + Bra("struct " + classDecl.munged + "_obj," + fieldDecl.munged) + " - sizeof(void*) + sizeof" + Bra(TransType(fieldDecl.ty, ""))
+		If firstDecl Then
+			If firstDecl <> lastDecl Then
+				t = "offsetof" + Bra("struct " + classDecl.munged + "_obj," + firstDecl.munged) + " - offsetof" + Bra("struct " + classDecl.munged + "_obj," + lastDecl.munged) + " + sizeof" + Bra(TransType(lastDecl.ty, ""))
+			Else
+				t = "sizeof" + Bra(TransType(lastDecl.ty, ""))
+			End If
 		Else
 			t = "0"
 		End If
 
 		Return t
 	End Method
-	
+
+	Method TransFirstFieldOffset:String(classDecl:TClassDecl)
+		Local t:String
+		
+		Local fieldDecl:TFieldDecl
+
+		For Local decl:TFieldDecl = EachIn classDecl.Decls()
+			fieldDecl = decl
+			Exit
+		Next
+
+		If fieldDecl Then
+			t = ",offsetof" + Bra("struct " + classDecl.munged + "_obj," + fieldDecl.munged)
+		Else
+			t = ",sizeof(void*)"
+		End If
+		
+		Return t
+	End Method
 	
 	Method EmitClassDeclNew( classDecl:TClassDecl, fdecl:TFuncDecl )
 		Local classid$=classDecl.munged
