@@ -96,11 +96,37 @@ Type TForEachinStmt Extends TLoopStmt
 					Local isStruct:Int = TObjectType(TArrayType( expr.exprType ).elemType).classdecl.IsStruct()
 
 					Local cExpr:TExpr
+					Local varObjTmp:TLocalDecl
+					Local varObjStmt:TStmt
+					
+					exprTmp.Semant()
+					indexTmp.Semant()
 					
 					If TIdentType(varty) And TIdentType(varty).ident = "Object" Then
 						cExpr = indexExpr
 					Else
-						cExpr = New TCastExpr.Create( varty, indexExpr,CAST_EXPLICIT )
+						If TStringType(varty) Then
+							varObjTmp = New TLocalDecl.Create( "",TType.objectType,indexExpr)
+							varObjTmp.Semant()
+							Local varObjExpr:TExpr=New TVarExpr.Create( varObjTmp )
+							
+							Local expr:TExpr = New TFuncCallExpr.Create( New TIdentExpr.Create( "ObjectIsString"), [varObjExpr])
+							expr=New TBinaryCompareExpr.Create( "=",expr, New TConstExpr.Create( New TIntType,"0" ))
+							
+							Local thenBlock:TBlockDecl=New TBlockDecl.Create( block.scope, True, BLOCK_IF )
+							Local elseBlock:TBlockDecl=New TBlockDecl.Create( block.scope, True, BLOCK_ELSE )
+							cont = New TContinueStmt.Create(Null, True)
+							thenBlock.AddStmt cont
+		
+							varObjStmt = New TIfStmt.Create( expr,thenBlock,elseBlock, True )
+							'block.stmts.AddFirst New TIfStmt.Create( expr,thenBlock,elseBlock, True )
+							
+							cExpr = New TCastExpr.Create( varty, varObjExpr,CAST_EXPLICIT )
+						Else
+							cExpr = New TCastExpr.Create( varty, indexExpr,CAST_EXPLICIT )
+						End If 
+
+						'cExpr = New TCastExpr.Create( varty, indexExpr,CAST_EXPLICIT )
 					End If
 
 					' local variable
@@ -109,7 +135,7 @@ Type TForEachinStmt Extends TLoopStmt
 					' local var as expression
 					Local expr:TExpr=New TVarExpr.Create( varTmp )
 
-					If Not isStruct Then
+					If Not isStruct And Not varObjTmp Then
 						' var = Null
 						expr=New TBinaryCompareExpr.Create( "=",expr, New TNullExpr.Create(TType.nullObjectType))
 	
@@ -123,6 +149,11 @@ Type TForEachinStmt Extends TLoopStmt
 					End If
 					block.stmts.AddFirst New TAssignStmt.Create( "=",New TVarExpr.Create( indexTmp ),addExpr )
 					block.stmts.AddFirst New TDeclStmt.Create( varTmp )
+					If varObjTmp Then
+						block.stmts.AddFirst varObjStmt
+						block.stmts.AddFirst New TDeclStmt.Create( varObjTmp, True )
+					End If
+
 
 				Else
 					Local varTmp:TLocalDecl=New TLocalDecl.Create( varid,varty,indexExpr )
@@ -214,6 +245,7 @@ Type TForEachinStmt Extends TLoopStmt
 				enumerInit = New TFuncCallExpr.Create( New TIdentExpr.Create( "ObjectEnumerator",expr ) )
 			End If
 			Local enumerTmp:TLocalDecl=New TLocalDecl.Create( "",Null,enumerInit,,True )
+			enumerTmp.Semant()
 
 			Local hasNextExpr:TExpr
 			If iterable Then
@@ -237,16 +269,38 @@ Type TForEachinStmt Extends TLoopStmt
 
 				Local cExpr:TExpr
 				
+				Local varObjTmp:TLocalDecl
+				Local varObjStmt:TStmt
+				
 				If iterable Or (TIdentType(varty) And TIdentType(varty).ident = "Object") Then
 					cExpr = nextObjExpr
 				Else
-					cExpr = New TCastExpr.Create( varty, nextObjExpr,CAST_EXPLICIT )
+					If TStringType(varty) Then
+						varObjTmp = New TLocalDecl.Create( "",TType.objectType,nextObjExpr)
+						varObjTmp.Semant()
+						Local varObjExpr:TExpr=New TVarExpr.Create( varObjTmp )
+						
+						Local expr:TExpr = New TFuncCallExpr.Create( New TIdentExpr.Create( "ObjectIsString"), [varObjExpr])
+						expr=New TBinaryCompareExpr.Create( "=",expr, New TConstExpr.Create( New TIntType,"0" ))
+						
+						Local thenBlock:TBlockDecl=New TBlockDecl.Create( block.scope, True, BLOCK_IF )
+						Local elseBlock:TBlockDecl=New TBlockDecl.Create( block.scope, True, BLOCK_ELSE )
+						cont = New TContinueStmt.Create(Null, True)
+						thenBlock.AddStmt cont
+	
+						varObjStmt = New TIfStmt.Create( expr,thenBlock,elseBlock, True )
+						'block.stmts.AddFirst New TIfStmt.Create( expr,thenBlock,elseBlock, True )
+						
+						cExpr = New TCastExpr.Create( varty, varObjExpr,CAST_EXPLICIT )
+					Else
+						cExpr = New TCastExpr.Create( varty, nextObjExpr,CAST_EXPLICIT )
+					End If 
 				End If
 
 				' local variable
 				Local varTmp:TLocalDecl=New TLocalDecl.Create( varid,varty,cExpr)
 
-				If Not TNumericType(varty) Then
+				If Not TNumericType(varty) And Not varObjTmp Then
 					' local var as expression
 					Local expr:TExpr=New TVarExpr.Create( varTmp )
 	
@@ -262,6 +316,10 @@ Type TForEachinStmt Extends TLoopStmt
 					block.stmts.AddFirst New TIfStmt.Create( expr,thenBlock,elseBlock, True )
 				End If
 				block.stmts.AddFirst New TDeclStmt.Create( varTmp, True )
+				If varObjTmp Then
+					block.stmts.AddFirst varObjStmt
+					block.stmts.AddFirst New TDeclStmt.Create( varObjTmp, True )
+				End If
 			Else
 
 				If Not varty Then
@@ -269,6 +327,30 @@ Type TForEachinStmt Extends TLoopStmt
 					varty = varExpr.exprType
 				End If
 				
+				Local varObjTmp:TLocalDecl
+				Local varObjStmt:TStmt
+				Local cExpr:TExpr
+				
+				If TStringType(varty) Then
+					varObjTmp = New TLocalDecl.Create( "",TType.objectType,nextObjExpr)
+					varObjTmp.Semant()
+					Local varObjExpr:TExpr=New TVarExpr.Create( varObjTmp )
+					
+					Local expr:TExpr = New TFuncCallExpr.Create( New TIdentExpr.Create( "ObjectIsString"), [varObjExpr])
+					expr=New TBinaryCompareExpr.Create( "=",expr, New TConstExpr.Create( New TIntType,"0" ))
+					
+					Local thenBlock:TBlockDecl=New TBlockDecl.Create( block.scope, True, BLOCK_IF )
+					Local elseBlock:TBlockDecl=New TBlockDecl.Create( block.scope, True, BLOCK_ELSE )
+					cont = New TContinueStmt.Create(Null, True)
+					thenBlock.AddStmt cont
+
+					varObjStmt = New TIfStmt.Create( expr,thenBlock,elseBlock, True )
+					'block.stmts.AddFirst New TIfStmt.Create( expr,thenBlock,elseBlock, True )
+					
+					cExpr = New TCastExpr.Create( varty, varObjExpr,CAST_EXPLICIT )
+				Else
+					cExpr = New TCastExpr.Create( varty, nextObjExpr,CAST_EXPLICIT )
+				End If 
 '				If Not varty Then
 '					Local decl:TValDecl = block.scope.FindValDecl(varid.ToLower())
 '					
@@ -281,7 +363,8 @@ Type TForEachinStmt Extends TLoopStmt
 				
 				' var = Null
 '				Local expr:TExpr=New TBinaryCompareExpr.Create( "=",New TIdentExpr.Create( varid ), New TNullExpr.Create(TType.nullObjectType))
-				If Not TNumericType(varty) Then
+				If Not TNumericType(varty) And Not varObjTmp Then
+
 					Local expr:TExpr=New TBinaryCompareExpr.Create( "=",varExpr, New TNullExpr.Create(TType.nullObjectType))
 	
 					' then continue
@@ -295,7 +378,10 @@ Type TForEachinStmt Extends TLoopStmt
 
 				End If
 '				block.stmts.AddFirst New TAssignStmt.Create( "=",New TIdentExpr.Create( varid ),New TCastExpr.Create( varty, nextObjExpr,CAST_EXPLICIT ))
-				block.stmts.AddFirst New TAssignStmt.Create( "=",varExpr,New TCastExpr.Create( varty, nextObjExpr,CAST_EXPLICIT ))
+				If varObjTmp Then
+					block.stmts.AddFirst varObjStmt
+				End If
+				block.stmts.AddFirst New TAssignStmt.Create( "=",varExpr,cExpr)
 			EndIf
 
 			Local whileStmt:TWhileStmt=New TWhileStmt.Create( hasNextExpr,block, loopLabel, True )
