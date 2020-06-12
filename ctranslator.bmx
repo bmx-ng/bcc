@@ -4668,7 +4668,7 @@ End Rem
 		
 		If firstDecl Then
 			If firstDecl <> lastDecl Then
-				t = "offsetof" + Bra("struct " + classDecl.munged + "_obj," + firstDecl.munged) + " - offsetof" + Bra("struct " + classDecl.munged + "_obj," + lastDecl.munged) + " + sizeof" + Bra(TransType(lastDecl.ty, ""))
+				t = "offsetof" + Bra("struct " + classDecl.munged + "_obj," + lastDecl.munged) + " - offsetof" + Bra("struct " + classDecl.munged + "_obj," + firstDecl.munged) + " + sizeof" + Bra(TransType(lastDecl.ty, ""))
 			Else
 				t = "sizeof" + Bra(TransType(lastDecl.ty, ""))
 			End If
