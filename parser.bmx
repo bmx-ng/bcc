@@ -106,7 +106,7 @@ Type TForEachinStmt Extends TLoopStmt
 						cExpr = indexExpr
 					Else
 						If TStringType(varty) Then
-							varObjTmp = New TLocalDecl.Create( "",TType.objectType,indexExpr)
+							varObjTmp = New TLocalDecl.Create( "",TType.objectType,indexExpr,,True)
 							varObjTmp.Semant()
 							Local varObjExpr:TExpr=New TVarExpr.Create( varObjTmp )
 							
@@ -276,7 +276,7 @@ Type TForEachinStmt Extends TLoopStmt
 					cExpr = nextObjExpr
 				Else
 					If TStringType(varty) Then
-						varObjTmp = New TLocalDecl.Create( "",TType.objectType,nextObjExpr)
+						varObjTmp = New TLocalDecl.Create( "",TType.objectType,nextObjExpr,,True)
 						varObjTmp.Semant()
 						Local varObjExpr:TExpr=New TVarExpr.Create( varObjTmp )
 						
@@ -332,7 +332,7 @@ Type TForEachinStmt Extends TLoopStmt
 				Local cExpr:TExpr
 				
 				If TStringType(varty) Then
-					varObjTmp = New TLocalDecl.Create( "",TType.objectType,nextObjExpr)
+					varObjTmp = New TLocalDecl.Create( "",TType.objectType,nextObjExpr,,True)
 					varObjTmp.Semant()
 					Local varObjExpr:TExpr=New TVarExpr.Create( varObjTmp )
 					
