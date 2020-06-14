@@ -378,10 +378,11 @@ Type TForEachinStmt Extends TLoopStmt
 
 				End If
 '				block.stmts.AddFirst New TAssignStmt.Create( "=",New TIdentExpr.Create( varid ),New TCastExpr.Create( varty, nextObjExpr,CAST_EXPLICIT ))
+				block.stmts.AddFirst New TAssignStmt.Create( "=",varExpr,cExpr)
 				If varObjTmp Then
 					block.stmts.AddFirst varObjStmt
+					block.stmts.AddFirst New TDeclStmt.Create( varObjTmp, True )
 				End If
-				block.stmts.AddFirst New TAssignStmt.Create( "=",varExpr,cExpr)
 			EndIf
 
 			Local whileStmt:TWhileStmt=New TWhileStmt.Create( hasNextExpr,block, loopLabel, True )
