@@ -559,7 +559,11 @@ Type TParser Extends TGenProcessor
 			Case "~n"
 				Return "end-of-line"
 		End Select
-		Return "'" + toke + "'"
+		Local uni:String
+		If toke.length > 0 And toke[0] > 255 Then
+			uni = " (unicode : " + _toker._lastTCHR + ")"
+		End If
+		Return "'" + toke + "'" + uni
 	End Method
 
 	Method CParse:Int( toke$ )
@@ -580,7 +584,7 @@ Type TParser Extends TGenProcessor
 
 	Method Parse( toke$ )
 		If Not CParse( toke )
-			DoErr "Syntax error - expecting '"+toke+"'."
+			DoErr "Syntax error - expecting '"+toke+"' but found " + DescribeToke(toke)
 		EndIf
 	End Method
 
