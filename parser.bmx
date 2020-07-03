@@ -2184,16 +2184,16 @@ End Rem
 						ty=ParseArrayType(ty)
 					Wend
 				End If
+				PopBlock
 				Local init:TLocalDecl=New TLocalDecl.Create( id,ty,Null,0 )
 				Local block:TBlockDecl=New TBlockDecl.Create( _block, , BLOCK_CATCH )
 				catches.AddLast(New TCatchStmt.Create( init,block ))
-				PopBlock
 				PushBlock block
 			Else If CParse("finally") Then
 				If finallyStmt Then Err "Try statement cannot have more than one Finally block."
+				PopBlock
 				Local block:TBlockDecl = New TBlockDecl.Create(_block, , BLOCK_FINALLY)
 				finallyStmt = New TFinallyStmt.Create(block)
-				PopBlock
 				PushBlock block
 			Else
 				ParseStmt
