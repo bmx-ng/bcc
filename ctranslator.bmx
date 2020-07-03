@@ -2526,7 +2526,13 @@ t:+"NULLNULLNULL"
 		End If
 
 		If TArrayType(expr.exprType) Then
-			Return "bbArraySlice" + Bra(TransArrayType(TArrayType(expr.exprType).elemType) + "," + t_expr + "," + t_args)
+			Local ty:TType = TArrayType(expr.exprType).elemType
+			If TObjectType(ty) And TObjectType(ty).classDecl.IsStruct() Then
+				Return "bbArraySliceStruct" + Bra(TransArrayType(ty) + "," + t_expr + "," + t_args + ", sizeof" + ..
+						Bra(TransObject(TObjectType(ty).classdecl)) + ", _" + TObjectType(ty).classdecl.munged + "_New")
+			Else
+				Return "bbArraySlice" + Bra(TransArrayType(ty) + "," + t_expr + "," + t_args)
+			End If
 		'Else If TStringVarPtrType(expr.exprType) Then
 		'	Return "bbStringSlice" + Bra("*" + t_expr + "," + t_args)
 		Else
