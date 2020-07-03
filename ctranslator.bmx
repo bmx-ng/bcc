@@ -477,7 +477,22 @@ Type TCTranslator Extends TTranslator
 					If TObjectType( ty ).classDecl.IsInterface() Or IsPointerType(ty,0,TType.T_POINTER) Or (Not TObjectType( ty ).classDecl.IsStruct()) Then
 						Return "0"
 					Else
-						Return "{}"
+						If TObjectType( ty ).classDecl.IsStruct() Then
+
+							Local t:String = "((" + TransType(ty, "") + "){"
+							Local fields:Int
+							For Local f:TFieldDecl = EachIn TObjectType( ty ).classDecl.Decls()
+								If fields Then
+									t :+ ","
+								End If
+								fields = True
+								
+								t :+ TransValue(f.ty, "")
+							Next
+							Return t + "})"
+						Else
+							Return "{}"
+						End If
 					End If
 				Else
 					Return Bra("&bbNullObject")
@@ -2248,6 +2263,9 @@ t:+"NULLNULLNULL"
 			'If TStringType( src ) Return Bra("(BBOBJECT)"+t)
 			'If TObjectType( src ) Return t
 			If Not TObjectType( dst ).classDecl.IsExtern() Then
+				If TObjectType( dst ).classDecl.IsStruct() Then
+					Return TransValue(dst, Null)
+				End If
 				If TNullType( src ) Return "&bbNullObject"
 				If TObjectType(dst).classDecl.IsInterface() Then
 					Return Bra(Bra(TransObject(TObjectType(dst).classDecl)) + "bbInterfaceDowncast" + Bra(t + ",&" + TObjectType(dst).classDecl.munged + "_ifc"))
@@ -4967,7 +4985,16 @@ End Rem
 		t = TransObject(classdecl) + " o"
 
 		If classDecl.IsStruct() Then
-			Emit t + " = {0};"
+			t :+ " = {"
+			Local fields:Int
+			For Local f:TFieldDecl = EachIn classDecl.Decls()
+				If fields Then
+					t :+ ","
+				End If
+				fields = True
+				t :+ TransValue(f.ty, "")
+			Next
+			Emit t + "};"
 		Else
 			t :+ " = "
 			If ClassHasObjectField(classDecl) Then
