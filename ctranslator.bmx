@@ -5907,18 +5907,18 @@ End Rem
 			If gdecl
 				MungDecl gdecl
 				
-				If Not TFunctionPtrType(gdecl.ty) Then
 If Not gdecl.IsPrivate() Then
+				If Not TFunctionPtrType(gdecl.ty) Then
 					Emit "extern "+TransRefType( gdecl.ty, "" )+" "+gdecl.munged+";"	'forward reference...
-End If
 				Else
 					If Not TFunctionPtrType(gdecl.ty).func.noCastGen Then
 						' generate function pointer refs if we haven't been told not to
 '						If Not gdecl.IsExtern() Then
-							Emit TransRefType( gdecl.ty, gdecl.munged )+";"	'forward reference...
+							Emit "extern " + TransRefType( gdecl.ty, gdecl.munged )+";"	'forward reference...
 '						End If
 					End If
 				End If
+End If
 				Continue
 			EndIf
 
@@ -6173,7 +6173,9 @@ If Not gdecl.IsExtern() Then
 End If
 					End If
 				Else
-					'Emit TransRefType( gdecl.ty, gdecl.munged ) + ";"
+					If TFunctionPtrType(gdecl.ty) And Not gdecl.IsExtern() Then
+						Emit TransRefType( gdecl.ty, gdecl.munged ) + ";"
+					End If
 				End If
 				Continue
 			EndIf
