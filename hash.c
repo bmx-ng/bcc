@@ -1,9 +1,12 @@
 
+#include "brl.mod/blitz.mod/blitz.h"
+
+#ifndef XXHASH_H_5627135585666179
 #define XXH_STATIC_LINKING_ONLY
 #define XXH_IMPLEMENTATION
 
 #include "xxhash.h"
-#include "brl.mod/blitz.mod/blitz.h"
+#endif
 
 BBString * bmx_gen_hash(BBString * txt) {
 	char * buf[64];
