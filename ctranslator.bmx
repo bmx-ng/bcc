@@ -6387,7 +6387,7 @@ End If
 				If key.count > 0 Then
 					Emit "static BBString " + key.id + "={"
 					Emit "&bbStringClass,"
-					'Emit "2147483647,"
+					Emit bmx_gen_hash(s) + ","
 					Emit s.length + ","
 
 					Local t:String = "{"
