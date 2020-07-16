@@ -3555,7 +3555,7 @@ End Rem
 			decl.Semant()
 
 			If TFunctionPtrType(decl.ty) Then
-					Emit TransRefType( decl.ty, decl.munged ) + ";"
+					Emit "extern " + TransRefType( decl.ty, decl.munged ) + ";"
 			Else
 				Emit "extern "+TransRefType( decl.ty, "" )+" "+ decl.munged+";"
 			End If
