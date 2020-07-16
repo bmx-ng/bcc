@@ -6131,7 +6131,7 @@ Else
 End If
 					End If
 				Else
-					'Emit TransRefType( gdecl.ty, gdecl.munged ) + ";"
+					Emit TransRefType( gdecl.ty, gdecl.munged ) + ";"
 				End If
 				Continue
 			EndIf
@@ -6159,6 +6159,8 @@ End If
 
 			Local gdecl:TGlobalDecl=TGlobalDecl( decl )
 			If gdecl
+				If gdecl.IsPrivate() Continue
+				
 				If Not TFunctionPtrType(gdecl.ty) And Not gdecl.IsPrivate() Then
 					If TConstExpr(gdecl.init) Then
 						Emit TransRefType( gdecl.ty, "WW" )+" "+TransGlobalDecl(gdecl)+";"
