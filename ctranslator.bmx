@@ -6131,7 +6131,9 @@ Else
 End If
 					End If
 				Else
-					Emit TransRefType( gdecl.ty, gdecl.munged ) + ";"
+					If Not gdecl.IsExtern() Then
+						Emit TransRefType( gdecl.ty, gdecl.munged ) + ";"
+					EndIf
 				End If
 				Continue
 			EndIf
