@@ -3146,6 +3146,7 @@ End Rem
 		
 		' iterate fields
 		For Local fdecl:TFieldDecl = EachIn _decls
+			fdecl.Semant()
 			
 			'
 			' If cmp <> 0 Then
@@ -3167,6 +3168,11 @@ End Rem
 			Local expr1:TExpr = New TIdentExpr.Create( fdecl.ident )
 			Local expr2:TExpr = New TIdentExpr.Create( "o1")
 			expr2 = New TIdentExpr.Create( fdecl.ident, expr2)
+			
+			If TEnumType(fdecl.ty) Then
+				expr1 = New TFuncCallExpr.Create(New TIdentExpr.Create("Ordinal", expr1))
+				expr2 = New TFuncCallExpr.Create(New TIdentExpr.Create("Ordinal", expr2))
+			End If
 			
 			Local fcExpr:TExpr = New TIdentExpr.Create( "DefaultComparator_Compare")
 			fcExpr = New TFuncCallExpr.Create( fcExpr, [expr1, expr2])
