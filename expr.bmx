@@ -2858,36 +2858,7 @@ Type TIdentExpr Extends TExpr
 	
 				Return New TVarExpr.Create( TVarDecl( vdecl ) ).Semant()
 			EndIf
-	
-			If op And op<>"="
-	
-				Local fdecl:TFuncDecl=scope.FindFuncDecl( IdentLower(),,,,,,SCOPE_ALL )
-				If Not fdecl IdentErr
-	
-				If _env.ModuleScope().IsStrict() And Not fdecl.IsProperty() Err "Identifier '"+ident+"' cannot be used in this way."
-	
-				Local lhs:TExpr
-	
-				If fdecl.IsStatic() Or (scope=_env And Not _env.FuncScope().IsStatic())
-					lhs=New TInvokeExpr.Create( fdecl )
-				Else If expr
-					Local tmp:TLocalDecl=New TLocalDecl.Create( "",Null,expr,, True )
-					lhs=New TInvokeMemberExpr.Create( New TVarExpr.Create( tmp ),fdecl )
-					lhs=New TStmtExpr.Create( New TDeclStmt.Create( tmp ),lhs )
-				Else
-					Return Null
-				EndIf
-	
-				Local bop$=op[..1]
-				Select bop
-				Case "*","/","shl","shr","+","-","&","|","~~"
-					rhs=New TBinaryMathExpr.Create( bop,lhs,rhs )
-				Default
-					InternalErr "TIdentExpr.SemantSet"
-				End Select
-				rhs=rhs.Semant()
-			EndIf
-	
+
 			Local args:TExpr[]
 			If rhs args=[rhs]
 
