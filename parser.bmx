@@ -4558,23 +4558,8 @@ Function EvalS$( source$,ty:TType )
 
 	Local env:TScopeDecl=New TScopeDecl
 
-Rem
-Debug	True if program is being compiled in debug mode.
-Threaded	True if program is being compiled in threaded mode.
-Win32	True if program is being compiled for the Windows operating system.
-MacOS	True if program is being compiled for the MacOS operating system.
-Linux	True if program is being compiled for the Linux operating system.
-X86	True if program is being compiled for the Intel CPU.
-PPC	True if program is being compiled for the PowerPC CPU.
-MacOSX86	True if program is being compiled for an Intel Mac.
-MacOSPPC	True if program is being compiled for a PowerPC Mac.
-BigEndian	True if program is being compiled for a big endian CPU.
-LittleEndian
-End Rem
-
 	' debug/release
 	env.InsertDecl New TConstDecl.Create( "debug",New TIntType,New TConstExpr.Create( New TIntType,opt_debug ),0 )
-	'env.InsertDecl New TConstDecl.Create( "release",TType.intType,New TConstExpr.Create( TType.intType,opt_release ),0 )
 
 	' threaded
 	env.InsertDecl New TConstDecl.Create( "threaded",New TIntType,New TConstExpr.Create( New TIntType,opt_threaded ),0 )
@@ -4584,12 +4569,14 @@ End Rem
 	env.InsertDecl New TConstDecl.Create( "macosx86",New TIntType,New TConstExpr.Create( New TIntType,(opt_platform="macos" Or opt_platform="osx" Or opt_platform="ios") And opt_arch="x86"),0 )
 	env.InsertDecl New TConstDecl.Create( "macosppc",New TIntType,New TConstExpr.Create( New TIntType,(opt_platform="macos" Or opt_platform="osx") And opt_arch="ppc"),0 )
 	env.InsertDecl New TConstDecl.Create( "macosx64",New TIntType,New TConstExpr.Create( New TIntType,(opt_platform="macos" Or opt_platform="osx" Or opt_platform="ios") And opt_arch="x64"),0 )
+	env.InsertDecl New TConstDecl.Create( "macosarm64",New TIntType,New TConstExpr.Create( New TIntType,(opt_platform="macos" Or opt_platform="osx" Or opt_platform="ios") And opt_arch="arm64"),0 )
 
 	' osx
 	env.InsertDecl New TConstDecl.Create( "osx",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="macos" Or opt_platform="osx" ),0 )
 	env.InsertDecl New TConstDecl.Create( "osxx86",New TIntType,New TConstExpr.Create( New TIntType,(opt_platform="macos" Or opt_platform="osx")  And opt_arch="x86"),0 )
 	env.InsertDecl New TConstDecl.Create( "osxppc",New TIntType,New TConstExpr.Create( New TIntType,(opt_platform="macos" Or opt_platform="osx") And opt_arch="ppc"),0 )
 	env.InsertDecl New TConstDecl.Create( "osxx64",New TIntType,New TConstExpr.Create( New TIntType,(opt_platform="macos" Or opt_platform="osx") And opt_arch="x64"),0 )
+	env.InsertDecl New TConstDecl.Create( "osxarm64",New TIntType,New TConstExpr.Create( New TIntType,(opt_platform="macos" Or opt_platform="osx") And opt_arch="arm64"),0 )
 
 	' ios
 	env.InsertDecl New TConstDecl.Create( "ios",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="ios" ),0 )
@@ -4681,10 +4668,6 @@ End Rem
 			End If
 		Next
 	End If
-
-'	env.InsertDecl New TConstDecl.Create( "LANG",TType.stringType,New TConstExpr.Create( TType.stringType,ENV_LANG ),0 )
-'	env.InsertDecl New TConstDecl.Create( "TARGET",TType.stringType,New TConstExpr.Create( TType.stringType,ENV_TARGET ),0 )
-'	env.InsertDecl New TConstDecl.Create( "CONFIG",TType.stringType,New TConstExpr.Create( TType.stringType,ENV_CONFIG ),0 )
 
 	PushEnv env
 
