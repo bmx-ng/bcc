@@ -1590,7 +1590,7 @@ End Rem
 	
 					Else ' for case of argdecls having default args
 						exact=False
-						If Not explicit Exit
+						Continue ' carry on to the next arg
 					EndIf
 				
 					possible=False
