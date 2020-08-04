@@ -108,6 +108,13 @@ Type TFuncDeclList Extends TList
 		End If
 		Return _identLower
 	End Method
+
+	Method AddLast:TLink( value:Object )
+		If Not Contains(value) Then
+			Return Super.AddLast(value)
+		End If
+	End Method
+
 End Type
 
 Type TMetadata
