@@ -3113,6 +3113,7 @@ End Rem
 			
 			Local arg:TArgDecl = New TArgDecl.Create("o1", TType.MapToVarType(New TObjectType.Create(Self)), Null)
 			func = New TFuncDecl.CreateF("Compare", New TIntType, [arg], FUNC_METHOD)
+			func.retType = New TIntType
 			BuildStructCompareStatements(func)
 			
 			Local found:Int
