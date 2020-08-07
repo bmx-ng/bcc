@@ -4201,7 +4201,9 @@ Type TAppDecl Extends TScopeDecl
 'DebugStop		
 		_env=Null
 		pushenv Self
-		
+	
+		SemantImports()
+
 		SemantDataDefs()	
 
 		mainModule.Semant
@@ -4224,6 +4226,17 @@ Type TAppDecl Extends TScopeDecl
 		
 		For Local cdecl:TClassDecl=EachIn semantedClasses
 			cdecl.FinalizeClass
+		Next
+	End Method
+	
+	Method SemantImports()
+		For Local decl:TModuleDecl = EachIn globalImports.Values()
+			For Local cdecl:TClassDecl = EachIn decl._decls
+				If Not cdecl.IsSemanted() Then
+					cdecl.Semant()
+					cdecl.SemantParts()
+				End If
+			Next
 		Next
 	End Method
 	

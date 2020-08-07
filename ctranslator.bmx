@@ -5301,6 +5301,8 @@ End Rem
 
 	Method EmitIfcClassFuncDecl(funcDecl:TFuncDecl)
 
+		If funcDecl.IsPrivate() Return
+
 		funcDecl.Semant
 
 		Local func:String
@@ -5487,6 +5489,9 @@ End Rem
 	End Method
 
 	Method EmitIfcFieldDecl(fieldDecl:TFieldDecl)
+	
+		If fieldDecl.IsPrivate() Return
+	
 		Local f:String
 		If fieldDecl.IsReadOnly() Then
 			f :+ "@"
