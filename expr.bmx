@@ -3042,10 +3042,12 @@ Type TIdentExpr Extends TExpr
 		'	If cdecl Return args[0].Cast( New TObjectType.Create(cdecl),CAST_EXPLICIT )
 		'EndIf
 
-		Local ty:TType=scope.FindType( IdentLower(),Null )
-		If ty Then
-			If args.Length=1 And args[0] Return args[0].Cast( ty,CAST_EXPLICIT )
-			Err "Illegal number of arguments for type conversion"
+		If Not expr Then
+			Local ty:TType=scope.FindType( IdentLower(),Null )
+			If ty Then
+				If args.Length=1 And args[0] Return args[0].Cast( ty,CAST_EXPLICIT )
+				Err "Illegal number of arguments for type conversion"
+			End If
 		End If
 
 		If throwError Then
