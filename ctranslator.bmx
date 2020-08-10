@@ -1163,7 +1163,11 @@ t:+"NULLNULLNULL"
 					If cdecl.IsStruct() Then
 						' create a local variable of the inner invocation
 						Local lvar:String = CreateLocal(lhs)
-						Return "_" + decl.munged+TransArgs( args,decl, "&" + lvar )
+						Local t:String
+						If decl.IsMethod() Then
+							t = "_"
+						End If
+						Return t + decl.munged+TransArgs( args,decl, "&" + lvar )
 					Else
 						If decl.IsMethod() Then
 							Local class:String = cdecl.munged
