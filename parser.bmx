@@ -4648,6 +4648,9 @@ Function EvalS$( source$,ty:TType )
 	' new compiler
 	env.InsertDecl New TConstDecl.Create( "bmxng",New TIntType,New TConstExpr.Create( New TIntType, True ),0 )
 
+	' shared library?
+	env.InsertDecl New TConstDecl.Create( "sharedlibrary",New TIntType,New TConstExpr.Create( New TIntType, opt_makelib = True ),0 )
+	
 	' user defines
 	If opt_userdefs Then
 		Local defs:String[] = opt_userdefs.ToLower().Split(",")
