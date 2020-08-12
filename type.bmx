@@ -1445,7 +1445,7 @@ Type TArrayType Extends TType
 	
 	Method Semant:TType(option:Int = False, callback:TCallback = Null)
 		Local ty:TType=elemType.Semant(option, callback)
-		If ty<>elemType Return New TArrayType.Create( ty, dims, _flags )
+		If ty<>elemType Return New TArrayType.Create( ty, dims, _flags, isStatic, Int(length) )
 		Return Self
 	End Method
 	
