@@ -3198,6 +3198,9 @@ End Rem
 			If Not TFunctionPtrType(oarg.ty) Then
 				If Not odecl.castTo Then
 					args:+TransType( oarg.ty, arg.munged )
+					If TArrayType(oarg.ty) And TArrayType(oarg.ty).isStatic Then
+						args :+ "[" + TArrayType(oarg.ty).length + "]"
+					End If
 				Else
 					args:+ oarg.castTo + " " + arg.munged
 				End If
