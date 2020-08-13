@@ -73,14 +73,22 @@ Type TForEachinStmt Extends TLoopStmt
 
 		If TArrayType( expr.exprType ) Or TStringType( expr.exprType )
 
-			Local exprTmp:TLocalDecl=New TLocalDecl.Create( "",Null,expr,,True )
+			Local exprTmp:TLocalDecl
+			Local exprVar:TExpr
+			If TArrayType( expr.exprType ).isStatic And (TVarExpr(expr) Or TMemberVarExpr(expr)) Then ' TODO TSliceExpr
+				exprVar = expr
+			Else
+				exprTmp = New TLocalDecl.Create( "",Null,expr,,True )
+				exprVar = New TVarExpr.Create( exprTmp )
+			End If
+			
 			Local indexTmp:TLocalDecl=New TLocalDecl.Create( "",Null,New TConstExpr.Create( New TUIntType,"0" ),,True )
 
-			Local lenExpr:TExpr=New TIdentExpr.Create( "Length",New TVarExpr.Create( exprTmp ) )
+			Local lenExpr:TExpr=New TIdentExpr.Create( "Length",exprVar )
 
 			Local cmpExpr:TExpr=New TBinaryCompareExpr.Create( "<",New TVarExpr.Create( indexTmp ),lenExpr )
 
-			Local indexExpr:TExpr=New TIndexExpr.Create( New TVarExpr.Create( exprTmp ),[New TVarExpr.Create( indexTmp )] )
+			Local indexExpr:TExpr=New TIndexExpr.Create( exprVar,[New TVarExpr.Create( indexTmp )] )
 			Local addExpr:TExpr=New TBinaryMathExpr.Create( "+",New TVarExpr.Create( indexTmp ),New TConstExpr.Create( New TIntType,"1" ) )
 
 			Local cont:TContinueStmt
@@ -99,7 +107,9 @@ Type TForEachinStmt Extends TLoopStmt
 					Local varObjTmp:TLocalDecl
 					Local varObjStmt:TStmt
 					
-					exprTmp.Semant()
+					If exprTmp Then
+						exprTmp.Semant()
+					End If
 					indexTmp.Semant()
 					
 					If TIdentType(varty) And TIdentType(varty).ident = "Object" Then
@@ -207,7 +217,9 @@ Type TForEachinStmt Extends TLoopStmt
 			Local whileStmt:TWhileStmt=New TWhileStmt.Create( cmpExpr,block,loopLabel, True )
 
 			block=New TBlockDecl.Create( block.scope, True, BLOCK_LOOP )
-			block.AddStmt New TDeclStmt.Create( exprTmp, True )
+			If exprTmp Then
+				block.AddStmt New TDeclStmt.Create( exprTmp, True )
+			End If
 			block.AddStmt New TDeclStmt.Create( indexTmp, True )
 			block.AddStmt whileStmt
 			
