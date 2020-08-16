@@ -25,7 +25,7 @@ SuperStrict
 
 Import "base.configmap.bmx"
 
-Const version:String = "0.127"
+Const version:String = "0.128"
 
 Const BUILDTYPE_APP:Int = 0
 Const BUILDTYPE_MODULE:Int = 1
@@ -127,6 +127,8 @@ Global opt_override_error:Int = False
 Global opt_userdefs:String
 ' 
 Global opt_need_strict:Int = False
+'
+Global opt_legacy_incbin:Int = False
 
 Global opt_filepath:String
 
@@ -240,6 +242,8 @@ Function ParseArgs:String[](args:String[])
 				opt_userdefs = args[count].ToLower()
 			Case "strict"
 				opt_need_strict=True
+			Case "ib"
+				opt_legacy_incbin=True
 		End Select
 	
 		count:+ 1

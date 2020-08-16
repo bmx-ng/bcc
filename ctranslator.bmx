@@ -5772,49 +5772,57 @@ End Rem
 
 		If FileType(ib.path) = FILETYPE_FILE Then
 
-			Local ident:String = _appInstance.munged + "_ib_" + ib.id
+			If Not opt_legacy_incbin Then
 
-			Local buf:Byte[] = LoadByteArray(ib.path)
-			ib.length = buf.length
+				Local ident:String = _appInstance.munged + "_" + ib.id
 
-			Emit "unsigned char " + ident + "[] = {"
-			Local sb:TStringBuffer = New TStringBuffer
+				Emit "INCBIN(" + ident + ", ~q" + ib.path + "~q);"
 
-			Local hx:Short[2]
-			Local lines:Int
-			Local count:Int
-			For Local i:Int = 0 Until buf.length
-				Local val:Int = buf[i]
+			Else
 
-				For Local k:Int=1 To 0 Step -1
-					Local n:Int=(val&15)+48
-					If n>57 n:+39
-					hx[k]=n
-					val:Shr 4
+				Local ident:String = _appInstance.munged + "_ib_" + ib.id
+
+				Local buf:Byte[] = LoadByteArray(ib.path)
+				ib.length = buf.length
+
+				Emit "unsigned char " + ident + "[] = {"
+				Local sb:TStringBuffer = New TStringBuffer
+
+				Local hx:Short[2]
+				Local LINES:Int
+				Local count:Int
+				For Local i:Int = 0 Until buf.length
+					Local val:Int = buf[i]
+
+					For Local k:Int=1 To 0 Step -1
+						Local n:Int=(val&15)+48
+						If n>57 n:+39
+						hx[k]=n
+						val:Shr 4
+					Next
+					sb.Append("0x").AppendShorts( hx,2 )
+
+					sb.Append(",")
+					
+					count :+ 5
+
+					If count > 80 Then
+						sb.Append("~n")
+						count = 0
+						LINES :+ 1
+					End If
+					
+					If LINES > 100 Then
+						Emit sb.ToString()
+						sb.SetLength(0)
+						LINES = 0
+					End If
+					
 				Next
-				sb.Append("0x").AppendShorts( hx,2 )
 
-				sb.Append(",")
-				
-				count :+ 5
-
-				If count > 80 Then
-					sb.Append("~n")
-					count = 0
-					lines :+ 1
-				End If
-				
-				If lines > 100 Then
-					Emit sb.ToString()
-					sb.SetLength(0)
-					lines = 0
-				End If
-				
-			Next
-
-			Emit sb.ToString()
-			Emit "};"
-
+				Emit sb.ToString()
+				Emit "};"
+			End If
 		End If
 
 	End Method
@@ -6050,10 +6058,21 @@ End If
 			Local mung:String = FileMung(False)
 
 			Local name:String = StripAll(app.mainModule.filepath)
-			Local file:String = name + ".bmx" + mung + ".incbin.c"
-			Local filepath:String = OutputFilePath(opt_filepath, mung, "incbin.c")
+			Local file:String
+			If opt_legacy_incbin Then
+				file = "incbin.c"
+			Else
+				file = "incbin2.c"
+			End If
+			Local filepath:String = OutputFilePath(opt_filepath, mung, file)
 
 			If IncBinRequiresRebuild(filepath, app.incbins) Then
+
+				If Not opt_legacy_incbin Then
+					Emit "#define INCBIN_PREFIX _ib"
+					Emit "#define INCBIN_STYLE INCBIN_STYLE_SNAKE"
+					Emit "#include ~qbrl.mod/blitz.mod/incbin/incbin.h~q"
+				End If
 
 				app.genIncBinHeader = True
 
@@ -6236,7 +6255,12 @@ End If
 
 		' incbin decls
 		For Local ib:TIncbin = EachIn app.incbins
-			Emit "extern unsigned char * " + app.munged + "_ib_" + ib.id + ";"
+			If opt_legacy_incbin Then
+				Emit "extern unsigned char * " + app.munged + "_ib_" + ib.id + ";"
+			Else
+				Emit "extern const unsigned char * " + ib.GeneratedDataName(app) + ";"
+				Emit "extern const unsigned int " + ib.GeneratedSizeName(app) + ";"
+			End If
 		Next
 
 		Emit "static int " + app.munged + "_inited" + " = 0;"
@@ -6270,7 +6294,11 @@ End If
 
 		' register incbins
 		For Local ib:TIncbin = EachIn app.incbins
-			Emit "bbIncbinAdd(&" + TStringConst(app.stringConsts.ValueForKey(ib.file)).id + ",&" + app.munged + "_ib_" + ib.id + "," + ib.length + ");"
+			If opt_legacy_incbin Then
+				Emit "bbIncbinAdd(&" + TStringConst(app.stringConsts.ValueForKey(ib.file)).id + ",&" + app.munged + "_ib_" + ib.id + "," + ib.length + ");"
+			Else
+				Emit "bbIncbinAdd(&" + TStringConst(app.stringConsts.ValueForKey(ib.file)).id + ",&" + ib.GeneratedDataName(app) + "," + ib.GeneratedSizeName(app) + ");"
+			End If
 		Next
 		
 		Local importOnce:TMap = New TMap

@@ -455,6 +455,14 @@ Type TIncbin
 		id = count
 		Return Self
 	End Method
+	
+	Method GeneratedDataName:String(app:TAppDecl)
+		Return "_ib" + app.munged + "_" + id + "_data"
+	End Method
+
+	Method GeneratedSizeName:String(app:TAppDecl)
+		Return "_ib" + app.munged + "_" + id + "_size"
+	End Method
 
 End Type
 
