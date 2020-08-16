@@ -5990,6 +5990,7 @@ End If
 		' read lines until "// ----"
 		' TODO
 		Local files:TList = New TList
+		Local hashes:TMap = New TMap
 		Local stream:TStream = ReadFile(file)
 		While True
 			Local s:String = ReadLine(stream)
@@ -5999,7 +6000,17 @@ End If
 
 			Local ind:Int = s.Find("// FILE : ")
 			If ind = 0 Then
-				files.AddLast(s[10..].Replace("~q",""))
+				Local line:String = s[10..]
+				
+				Local parts:String[] = line.Split("~t")
+				If parts.length = 1 Then
+					Return True
+				End If
+				
+				Local filename:String = parts[0].Replace("~q","")
+				Local fileHash:String = parts[1]
+				files.AddLast(filename)
+				hashes.Insert(filename, fileHash)
 			End If
 		Wend
 		stream.Close()
@@ -6042,6 +6053,15 @@ End If
 			If timestamp < FileTime(ib.path) Then
 				Return True
 			End If
+			
+			Local fileHash:String = String(hashes.ValueForKey(ib.file))
+			If Not fileHash Then
+				Return True
+			End If
+			
+			If fileHash <> CalculateFileHash(ib.path) Then
+				Return True
+			End If
 
 			' set the length, as we will need this later if we aren't loading the files now.
 			ib.length = FileSize(ib.path)
@@ -6077,7 +6097,8 @@ End If
 				app.genIncBinHeader = True
 
 				For Local ib:TIncbin = EachIn app.incbins
-					Emit "// FILE : " + Enquote(ib.file)
+					Local fileHash:String = CalculateFileHash(ib.path)
+					Emit "// FILE : " + Enquote(ib.file) + "~t" + fileHash
 				Next
 
 				Emit "// ----"
