@@ -256,6 +256,11 @@ Function ParseArgs:String[](args:String[])
 	If opt_arch = "x64" Or opt_arch = "arm64v8a" Or opt_arch = "arm64" Then
 		WORD_SIZE = 8
 	End If
+	
+	' new incbin doesn't work on win32 x86
+	If opt_arch = "x86" And opt_platform = "win32" Then
+		opt_legacy_incbin = True
+	End If
 
 	If opt_makelib Then
 		If Not opt_nodef Then
