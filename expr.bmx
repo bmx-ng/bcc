@@ -153,7 +153,7 @@ Type TExpr
 				If funcDecl.argDecls[i].ty._flags & TType.T_VAR Then
 
 					If TConstExpr(argExpr) Or TBinaryExpr(argExpr) Or (TIndexExpr(argExpr) And TStringType(TIndexExpr(argExpr).expr.exprType)) Or ..
-							TInvokeExpr(argExpr) Or TInvokeMemberExpr(argExpr) Then
+							TInvokeExpr(argExpr) Or TInvokeMemberExpr(argExpr) Or TSelfExpr(argExpr) Then
 						Err "Expression for 'Var' parameter must be a variable or an element of an array or pointer"
 					End If
 
