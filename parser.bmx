@@ -1014,7 +1014,7 @@ Type TParser Extends TGenProcessor
 		
 		' array or function pointer?
 		Repeat
-			If (_toke = "[" Or _toke = "[]") And IsArrayDef() Then
+			If (_toke = "[" Or _toke = "[]") And (IsArrayDef() Or IsArrayDef(attr & DECL_STATIC > 0)) Then
 				If Not IsArrayDef(attr & DECL_STATIC > 0) Then
 					Err "Invalid static array initialization."
 				Else

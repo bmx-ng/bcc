@@ -148,6 +148,9 @@ Type TAssignStmt Extends TStmt
 						Err "Cannot modify ReadOnly variable " + decl.ident
 					End If
 				End If
+				If TValDecl(decl) And TArrayType(TValDecl(decl).ty) And TArrayType(TValDecl(decl).ty).isStatic Then
+					Err "Static arrays cannot be assigned in this way."
+				End If
 			End If
 		
 			If IsPointerType(lhs.exprType, 0, TType.T_POINTER | TType.T_VARPTR) And TNumericType(rhs.exprType) Then
