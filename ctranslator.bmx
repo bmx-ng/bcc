@@ -406,7 +406,7 @@ Type TCTranslator Extends TTranslator
 		Return TransType( ty, ident )
 	End Method
 
-	Method TransValue$( ty:TType,value$ )
+	Method TransValue$( ty:TType,value$, isStructInit:Int = False )
 		If value
 			If IsPointerType(ty, 0, TType.T_POINTER) Return value
 			If TBoolType( ty ) Return "1"
@@ -470,8 +470,31 @@ Type TCTranslator Extends TTranslator
 				End If
 			End If
 			If TNumericType( ty ) Return "0" ' numeric and pointers
-			If TStringType( ty ) Return Bra("&bbEmptyString")
-			If TArrayType( ty ) Return Bra("&bbEmptyArray")
+			If TStringType( ty ) Then
+				If isStructInit Then
+					Return "&bbEmptyString"
+				Else
+					Return Bra("&bbEmptyString")
+				End If
+			End If
+			If TArrayType( ty ) Then
+				If isStructInit Then 
+					If TArrayType( ty ).isStatic Then
+						Local t:String = "{"
+						For Local i:Int = 0 Until Int(TArrayType( ty ).length)
+							If i Then
+								t :+ ","
+							End If
+							t :+ TransValue(TArrayType( ty ).elemType, "", True)
+						Next
+						Return t + "}"
+					Else
+						Return "&bbEmptyArray"
+					End If
+				Else
+					Return Bra("&bbEmptyArray")
+				End If
+			End If
 			If TObjectType( ty ) Then
 				If TObjectType( ty ).classDecl.IsExtern() Or TObjectType( ty ).classDecl.IsStruct() Then
 					If TObjectType( ty ).classDecl.IsInterface() Or IsPointerType(ty,0,TType.T_POINTER) Or (Not TObjectType( ty ).classDecl.IsStruct()) Then
@@ -479,7 +502,12 @@ Type TCTranslator Extends TTranslator
 					Else
 						If TObjectType( ty ).classDecl.IsStruct() Then
 
-							Local t:String = "((" + TransType(ty, "") + "){"
+							Local t:String
+							If Not isStructInit Then
+								t = "((" + TransType(ty, "") + "){"
+							Else
+								t = "{"
+							End If
 							Local fields:Int
 							For Local f:TFieldDecl = EachIn TObjectType( ty ).classDecl.Decls()
 								If fields Then
@@ -487,15 +515,24 @@ Type TCTranslator Extends TTranslator
 								End If
 								fields = True
 								
-								t :+ TransValue(f.ty, "")
+								t :+ TransValue(f.ty, "", True)
 							Next
-							Return t + "})"
+							If Not isStructInit Then
+								t :+ "})"
+							Else
+								t :+ "}"
+							End If
+							Return t 
 						Else
 							Return "{}"
 						End If
 					End If
 				Else
-					Return Bra("&bbNullObject")
+					If isStructInit Then
+						Return "&bbNullObject"
+					Else
+						Return Bra("&bbNullObject")
+					End If
 				End If
 			End If
 			If TFunctionPtrType( ty) Return "(&brl_blitz_NullFunctionError)" ' todo ??
@@ -5005,7 +5042,7 @@ End Rem
 					t :+ ","
 				End If
 				fields = True
-				t :+ TransValue(f.ty, "")
+				t :+ TransValue(f.ty, "", True)
 			Next
 			Emit t + "};"
 		Else

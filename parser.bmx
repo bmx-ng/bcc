@@ -1014,8 +1014,12 @@ Type TParser Extends TGenProcessor
 		
 		' array or function pointer?
 		Repeat
-			If (_toke = "[" Or _toke = "[]") And IsArrayDef(attr & DECL_STATIC > 0)
-				ty = ParseArrayType(ty, attr & DECL_STATIC > 0)
+			If (_toke = "[" Or _toke = "[]") And IsArrayDef() Then
+				If Not IsArrayDef(attr & DECL_STATIC > 0) Then
+					Err "Invalid static array initialization."
+				Else
+					ty = ParseArrayType(ty, attr & DECL_STATIC > 0)
+				End If
 			Else If _toke = "(" Then
 				Local args:TArgDecl[] = ParseFuncParamDecl()
 				attr :| ParseCallConvention(attr & DECL_API_STDCALL)
@@ -2558,6 +2562,9 @@ End Rem
 		SetErr
 
 		If CParse("staticarray") Then
+			If toke = "const" Then
+				Err "Const cannot be used in this way"
+			End If
 			If attrs & DECL_STATIC Then
 				Err "Already declared as a static array"
 			End If
@@ -2570,7 +2577,7 @@ End Rem
 		
 		
 		If attrs & DECL_EXTERN
-			ty=ParseDeclType(attrs & DECL_API_STDCALL)
+			ty=ParseDeclType(attrs & (DECL_STATIC | DECL_API_STDCALL))
 			
 			If toke = "const" Then
 				If CParse("=") Then
@@ -2581,7 +2588,7 @@ End Rem
 '			init=ParseExpr()
 '			ty = init.exprType
 		Else
-			ty=ParseDeclType(attrs & DECL_API_STDCALL)
+			ty=ParseDeclType(attrs & (DECL_STATIC | DECL_API_STDCALL))
 
 			If CParse( "=" )
 				If (attrs & DECL_STATIC) Then
