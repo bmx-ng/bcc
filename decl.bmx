@@ -2056,8 +2056,13 @@ Type TFuncDecl Extends TBlockDecl
 			If retTypeExpr And Not TVoidType(retTypeExpr) Then
 				Err ident + "() cannot specify a return type"
 			End If
-			If ClassScope() And ClassScope().IsInterface() Then
-				Err ident + "() cannot be declared in an Interface."
+			Local sc:TClassDecl = ClassScope()
+			If sc Then
+				If sc.IsInterface() Then
+					Err ident + "() cannot be declared in an Interface."
+				Else If sc.IsStruct() And isDtor() Then
+					Err ident + "() cannot be declared in a Struct."
+				End If
 			End If
 			If IsCtor() retTypeExpr=New TObjectType.Create( TNewDecl(Self).cDecl )
 		End If
