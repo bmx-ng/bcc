@@ -3577,7 +3577,7 @@ End Rem
 					Local t:String = TransType(decl.ty, classDecl.actual.munged) + " _" + classDecl.actual.munged.ToLower() + "_" + decl.IdentLower()
 					
 					If TArrayType(decl.ty) And TArrayType(decl.ty).isStatic Then
-						t :+ "[" + decl.init.Trans() + "]"
+						t :+ "[" + TArrayType(decl.ty).length + "]"
 					End If
 					
 					Emit t + ";"
@@ -4909,7 +4909,11 @@ End Rem
 					Else If TStringType(decl.ty) Then
 						fld :+ "= &bbEmptyString;"
 					Else If TArrayType(decl.ty) Then
-						fld :+ "= &bbEmptyArray;"
+						If TArrayType(decl.ty).isStatic Then
+							doEmit = False
+						Else
+							fld :+ "= &bbEmptyArray;"
+						End If
 					Else If TEnumType(decl.ty) Then
 						fld :+ "= " + TEnumType(decl.ty).decl.values[0].Value() + ";"
 					End If
