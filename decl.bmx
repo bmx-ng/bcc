@@ -529,7 +529,9 @@ Type TValDecl Extends TDecl
 				Else
 					If TArrayType(ty) And TArrayType(ty).isStatic Then
 						init = declInit.Copy().Semant()
-						TArrayType(ty).length = init.Eval()
+						If Not TArrayType(ty).length Then
+							TArrayType(ty).length = init.Eval()
+						End If
 					Else
 						If TArrayExpr(declInit) And TArrayType(ty) And TNumericType(TArrayType(ty).elemType) Then
 							TArrayExpr(declInit).toType = TArrayType(ty).elemType
