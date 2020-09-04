@@ -488,6 +488,10 @@ Type TIParser
 						If CParse( "&" ) Then
 						End If
 
+						If IstStaticArrayDef() Then
+							attrs :| DECL_STATIC
+						End If
+
 						While IsArrayDef()
 							ty = ParseArrayType(ty)
 				
@@ -1301,6 +1305,10 @@ Type TIParser
 					If CParse( "&" ) Then
 					End If
 
+					If IstStaticArrayDef() Then
+						attrs :| DECL_STATIC
+					End If
+
 					While IsArrayDef(attrs & DECL_STATIC > 0)
 						ty = ParseArrayType(ty, attrs & DECL_STATIC > 0)
 			
@@ -1455,6 +1463,21 @@ End Rem
 			Exit
 		Wend
 		Return ty
+	End Method
+
+	Method IstStaticArrayDef:Int()
+		Local toker:TToker=New TToker.Copy(_toker)
+		If Not CParseToker(toker, "[") Then
+			Return False
+		End If
+		If toker.TokeType() <> TOKE_INTLIT Then
+			Return False
+		End If
+		NextTokeToker(toker)
+		If Not CParseToker(toker, "]") Then
+			Return False
+		End If
+		Return True
 	End Method
 
 	Method IsArrayDef:Int(isStatic:Int = False)
@@ -1699,6 +1722,10 @@ End Rem
 		If CParse( "&" ) Then
 		End If
 
+		If IstStaticArrayDef() Then
+			attrs :| DECL_STATIC
+		End If
+		
 		While IsArrayDef(attrs & DECL_STATIC > 0)
 
 			ty = ParseArrayType(ty, attrs & DECL_STATIC > 0)

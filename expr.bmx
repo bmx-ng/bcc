@@ -1327,7 +1327,7 @@ Type TCastExpr Extends TExpr
 
 			EndIf
 			
-			If TNullType(src) And Not TVoidType(ty) Then
+			If TNullType(src) And Not TVoidType(ty) And Not (TArrayType(ty) And TArrayType(ty).IsStatic) Then
 				exprType = ty
 			End If
 			
