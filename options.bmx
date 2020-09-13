@@ -62,6 +62,7 @@ Global opt_arch:String
 '    android
 '    raspberrypi
 '    nx
+'    haiku
 Global opt_platform:String
 ' framework
 Global opt_framework:String
@@ -306,6 +307,8 @@ Function DefaultOptions()
 	opt_platform = "android"
 ?raspberrypi
 	opt_platform = "raspberrypi"
+?haiku
+	opt_platform = "haiku"
 ?emscripten
 	opt_platform = "emscripten"
 ?
@@ -335,6 +338,8 @@ Function CheckConfig()
 		If tmp Then
 			osBmxPath = tmp
 		End If
+	?haiku
+		osBmxPath = config.GetString("BMXPATH_HAIKU")
 	?
 	'load default/generic path
 	If osBmxPath = "" Then osBmxPath = config.GetString("BMXPATH")

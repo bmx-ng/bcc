@@ -3190,7 +3190,7 @@ End Rem
 			Select opt_platform
 				Case "macos", "osx", "ios"
 					api = "macos"
-				Case "linux", "android", "raspberrypi"
+				Case "linux", "android", "raspberrypi", "haiku"
 					api = "linux"
 				Case "win32"
 					api = "win32"
@@ -4638,6 +4638,11 @@ Function EvalS$( source$,ty:TType )
 	env.InsertDecl New TConstDecl.Create( "raspberrypi",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="raspberrypi" And (opt_arch="arm" Or opt_arch="arm64")),0 )
 	env.InsertDecl New TConstDecl.Create( "raspberrypiARM",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="raspberrypi" And opt_arch="arm"),0 )
 	env.InsertDecl New TConstDecl.Create( "raspberrypiARM64",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="raspberrypi" And opt_arch="arm64"),0 )
+
+	' haiku
+	env.InsertDecl New TConstDecl.Create( "haiku",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="haiku" And (opt_arch="x86" Or opt_arch="x64")),0 )
+	env.InsertDecl New TConstDecl.Create( "haikux86",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="haiku" And opt_arch="x86"),0 )
+	env.InsertDecl New TConstDecl.Create( "haikux64",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="haiku" And opt_arch="x64"),0 )
 
 	' emscripten
 	env.InsertDecl New TConstDecl.Create( "emscripten",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="emscripten" ),0 )
