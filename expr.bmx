@@ -1946,6 +1946,10 @@ Type TBinaryMathExpr Extends TBinaryExpr
 		End If
 
 		If TConstExpr( lhs ) And TConstExpr( rhs ) Return EvalConst()
+		
+		If TConstExpr( rhs ) And (op = "/" Or op = "mod") And TIntegralType(rhs.exprType) And Not Long(rhs.Eval()) Then
+			Err "Integer division by zero"
+		End If
 
 		Return Self
 	End Method
