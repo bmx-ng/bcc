@@ -5516,7 +5516,11 @@ End Rem
 		EndIf
 
 		If TEnumType(expr.exprType) Then
-			Return Expr.Eval()
+			If TCastExpr(expr) And TNullExpr(TCastExpr(expr).expr) Then
+				Return TransValue(expr.exprType, Null)
+			Else
+				Return Expr.Eval()
+			End If
 		End If
 
 		'If TObjectType(expr.exprType) And TNullDecl(TObjectType(expr.exprType).classDecl) Then
