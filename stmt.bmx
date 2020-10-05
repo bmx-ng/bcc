@@ -135,7 +135,17 @@ Type TAssignStmt Extends TStmt
 				If TVarExpr(lhs) Then
 					decl = TVarExpr(lhs).decl
 				Else
-					decl = TMemberVarExpr(lhs).decl
+					Local mvExpr:TMemberVarExpr = TMemberVarExpr(lhs)
+					decl = mvExpr.decl
+					
+					If TFieldDecl(decl) And (TInvokeExpr(mvExpr.expr) Or TInvokeMemberExpr(mvExpr.expr)) Then
+						If TClassDecl(decl.scope) And TClassDecl(decl.scope).IsStruct() Then
+							rhs = Null
+							Warn "Discarding Field assignment of Struct returned via invocation"
+							Return
+						End If
+					End If
+					
 				End If
 				If decl And decl.IsReadOnly() Then
 					If TFieldDecl(decl) Then
