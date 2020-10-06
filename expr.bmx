@@ -1907,11 +1907,7 @@ Type TBinaryMathExpr Extends TBinaryExpr
 				exprType=New TIntType
 			End If
 		Case "^"
-			If TIntegralType(lhs.exprType) And TIntegralType(rhs.exprType) Then
-				exprType=New TLongType
-			Else
-				exprType=New TDoubleType
-			End If
+			exprType=New TDoubleType
 		Default
 			exprType=BalanceTypes( lhs.exprType,rhs.exprType )
 			If TStringType( exprType )
@@ -1960,7 +1956,7 @@ Type TBinaryMathExpr Extends TBinaryExpr
 		If TIntType( exprType ) Or TByteType( exprType ) Or TShortType( exprType )
 			Local x:Int=Int(lhs),y:Int=Int(rhs)
 			Select op
-			Case "^" Return x^y
+			Case "^" Return Double(lhs)^Double(rhs)
 			Case "*" Return x*y
 			Case "/" 
 				If Not y Then
@@ -1984,7 +1980,7 @@ Type TBinaryMathExpr Extends TBinaryExpr
 		Else If TLongType( exprType ) Or TSizeTType(exprType) Or TUIntType(exprType) Or TULongType(exprType) Or TInt128Type(exprType) Or TWParamType(exprType) Or TLParamType(exprType) 
 			Local x:Long=Long(lhs),y:Long=Long(rhs)
 			Select op
-			Case "^" Return x^y
+			Case "^" Return Double(lhs)^Double(rhs)
 			Case "*" Return x*y
 			Case "/"
 				If Not y Then
@@ -2006,14 +2002,14 @@ Type TBinaryMathExpr Extends TBinaryExpr
 			Case "|" Return x | y
 			End Select
 		Else If TFloatType( exprType )
-			Local x:Float=Float(lhs),y:Float=Float(rhs)
+			Local x:Double=Double(lhs),y:Double=Double(rhs)
 			Select op
-			Case "^" Return x^y
-			Case "*" Return x * y
-			Case "/" Return x / y
-			Case "mod" Return x Mod y
-			Case "+" Return x + y
-			Case "-" Return x - y
+			Case "^" Return Double(x^y)
+			Case "*" Return Float(x * y)
+			Case "/" Return Float(x / y)
+			Case "mod" Return Float(x Mod y)
+			Case "+" Return Float(x + y)
+			Case "-" Return Float(x - y)
 			End Select
 		Else If TDoubleType( exprType ) Or TFloat128Type(exprType) Or TDouble128Type(exprType) Or TFloat64Type(exprType)
 			Local x:Double=Double(lhs),y:Double=Double(rhs)
