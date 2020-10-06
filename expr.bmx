@@ -1546,6 +1546,8 @@ Type TCastExpr Extends TExpr
 				End If
 			Else If TNumericType(src) And (src._flags & TType.T_VARPTR) Then
 				exprType = expr.exprType
+			Else If TObjectType(src) And (src._flags & TType.T_VARPTR) Then
+				exprType = expr.exprType
 			Else If TArrayType(src) Then
 			
 				' for functions and index access, use a new local variable
