@@ -874,6 +874,14 @@ Type TFieldDecl Extends TVarDecl
 		End If
 		Return True
 	End Method
+	
+	Method OnSemant()
+		Super.OnSemant()
+		
+		If TObjectType(ty) And TObjectType(ty).classDecl.IsStruct() Then
+			TObjectType(ty).classDecl.exposed = True
+		End If
+	End Method
 
 End Type
 
@@ -2112,10 +2120,18 @@ Type TFuncDecl Extends TBlockDecl
 '			Err "Return type cannot be an array of generic objects."
 		EndIf
 
+		If ClassScope() And TObjectType(retType) And TObjectType(retType).classDecl.IsStruct() And TObjectType(retType).classDecl.IsPrivate() Then
+			TObjectType(retType).classDecl.exposed = True
+		End If
+
 		'semant args
 		For Local arg:TArgDecl=EachIn argDecls
 			InsertDecl arg
 			arg.Semant
+
+			If ClassScope() And TObjectType(arg.ty) And TObjectType(arg.ty).classDecl.IsStruct() And TObjectType(arg.ty).classDecl.IsPrivate() Then
+				TObjectType(arg.ty).classDecl.exposed = True
+			End If
 		Next
 
 		' if we are a function pointer declaration, we just want to semant the args here.
@@ -2444,6 +2460,8 @@ Type TClassDecl Extends TScopeDecl
 	Field objectType:TObjectType '"canned" objectType
 	Field globInit:Int
 	Field templateSource:TTemplateRecord
+	
+	Field exposed:Int
 
 	'Global nullObjectClass:TClassDecl=New TNullDecl.Create( "{NULL}",Null,Null,Null,DECL_ABSTRACT|DECL_EXTERN )
 	

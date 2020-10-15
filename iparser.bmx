@@ -293,6 +293,9 @@ Type TIParser
 								Case Asc("G")
 									class.attrs :| CLASS_GENERIC
 									parsed = True
+								Case Asc("P")
+									class.attrs :| DECL_PRIVATE
+									parsed = True
 							End Select
 						Next
 

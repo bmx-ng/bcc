@@ -5349,8 +5349,6 @@ End Rem
 
 	Method EmitIfcClassFuncDecl(funcDecl:TFuncDecl)
 
-		If funcDecl.IsPrivate() Return
-
 		funcDecl.Semant
 
 		Local func:String
@@ -5542,8 +5540,6 @@ End Rem
 
 	Method EmitIfcFieldDecl(fieldDecl:TFieldDecl)
 	
-		If fieldDecl.IsPrivate() Return
-	
 		Local f:String
 		If fieldDecl.IsReadOnly() Then
 			f :+ "@"
@@ -5660,6 +5656,10 @@ End Rem
 				flags :+ "I"
 			Else If classDecl.IsStruct() Then
 				flags :+ "S"
+			End If
+			
+			If classDecl.IsPrivate() Then
+				flags :+ "P"
 			End If
 			
 			If classDecl.templateSource Then
@@ -6749,9 +6749,13 @@ End If
 
 		' classes
 		For Local decl:TDecl=EachIn app.Semanted()
-			If decl.IsPrivate() Continue
 
 			Local cdecl:TClassDecl=TClassDecl( decl )
+			
+			If cdecl And cdecl.IsPrivate() And (Not cdecl.IsStruct() Or (cdecl.IsStruct() And Not cdecl.exposed)) Then
+				Continue
+			End If
+			
 			If cdecl And Not cdecl.declImported
 				EmitIfcClassDecl(cdecl)
 			EndIf
