@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2019 Bruce A Henderson
+' Copyright (c) 2013-2020 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 ' 
@@ -293,6 +293,9 @@ Type TIParser
 								Case Asc("G")
 									class.attrs :| CLASS_GENERIC
 									parsed = True
+								Case Asc("P")
+									class.attrs :| DECL_PRIVATE
+									parsed = True
 							End Select
 						Next
 
@@ -488,6 +491,10 @@ Type TIParser
 						If CParse( "&" ) Then
 						End If
 
+						If IstStaticArrayDef() Then
+							attrs :| DECL_STATIC
+						End If
+
 						While IsArrayDef()
 							ty = ParseArrayType(ty)
 				
@@ -578,6 +585,13 @@ Type TIParser
 			
 		Forever
 		
+		' semant imported classes
+		For Local cdecl:TClassDecl = EachIn _mod.decls
+			cdecl.Semant()
+			If Not cdecl.args Then
+				cdecl.FinalizeClass()
+			End If
+		Next
 		
 		Return True
 		
@@ -733,12 +747,21 @@ Type TIParser
 				'If decl.IsCtor() decl.retTypeExpr=New TObjectType.Create( classDecl )
 				classDecl.InsertDecl decl
 
-			Case ".", "@" ' field
+			Case ".", "@", "~~" ' field			
 				Local d_attrs:Int = decl_attrs | DECL_FIELD
-				If _toker._toke = "@" Then
-					d_attrs :| DECL_READ_ONLY
+				If _toker._toke = "." Then
+					NextToke
+				Else
+					While _toker._toke = "@" Or _toker._toke = "~~"
+						If _toker._toke = "@" Then
+							d_attrs :| DECL_READ_ONLY
+						End If
+						If _toker._toke = "~~" Then
+							d_attrs :| DECL_STATIC
+						End If
+						NextToke
+					Wend
 				End If
-				NextToke
 				Local decl:TDecl= ParseDecl( _toke,d_attrs )
 				classDecl.InsertDecl decl
 			Rem
@@ -1292,8 +1315,12 @@ Type TIParser
 					If CParse( "&" ) Then
 					End If
 
-					While IsArrayDef()
-						ty = ParseArrayType(ty)
+					If IstStaticArrayDef() Then
+						attrs :| DECL_STATIC
+					End If
+
+					While IsArrayDef(attrs & DECL_STATIC > 0)
+						ty = ParseArrayType(ty, attrs & DECL_STATIC > 0)
 			
 						If CParse( "&" ) Then
 						End If
@@ -1413,7 +1440,17 @@ End Rem
 	End Method
 
 	' replaces While CParse( "[]" ) sections, with support for multi-dimension arrays
-	Method ParseArrayType:TType(ty:TType)
+	Method ParseArrayType:TType(ty:TType, isStatic:Int = False)
+		If isStatic Then
+			Parse("[")
+			Local expr:TExpr = ParseUnaryExpr()
+			ty = New TArrayType.Create( ty )
+			TArrayType(ty).isStatic = True
+			TArrayType(ty).length = expr.Eval()
+			Parse("]")
+			Return ty
+		End If
+		
 		While True
 			Local dims:Int = 1
 			
@@ -1438,9 +1475,34 @@ End Rem
 		Return ty
 	End Method
 
-	Method IsArrayDef:Int()
+	Method IstStaticArrayDef:Int()
+		Local toker:TToker=New TToker.Copy(_toker)
+		If Not CParseToker(toker, "[") Then
+			Return False
+		End If
+		If toker.TokeType() <> TOKE_INTLIT Then
+			Return False
+		End If
+		NextTokeToker(toker)
+		If Not CParseToker(toker, "]") Then
+			Return False
+		End If
+		Return True
+	End Method
+
+	Method IsArrayDef:Int(isStatic:Int = False)
 		Local isDef:Int = True
 		Local toker:TToker=New TToker.Copy(_toker)
+		If isStatic Then
+			If Not CParseToker(toker, "[") Then
+				Return False
+			End If
+			NextTokeToker(toker)
+			If Not CParseToker(toker, "]") Then
+				Return False
+			End If
+			Return True
+		End If
 		While True
 			If CParseToker(toker, "[]") Then
 				Exit
@@ -1670,8 +1732,13 @@ End Rem
 		If CParse( "&" ) Then
 		End If
 
-		While IsArrayDef()
-			ty = ParseArrayType(ty)
+		If IstStaticArrayDef() Then
+			attrs :| DECL_STATIC
+		End If
+		
+		While IsArrayDef(attrs & DECL_STATIC > 0)
+
+			ty = ParseArrayType(ty, attrs & DECL_STATIC > 0)
 
 			If CParse( "&" ) Then
 			End If

@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2019 Bruce A Henderson
+' Copyright (c) 2013-2020 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -27,6 +27,7 @@ Const DECL_PRIVATE:Int=       $020000
 Const DECL_ABSTRACT:Int=      $040000
 Const DECL_FINAL:Int=         $080000
 Const DECL_READ_ONLY:Int=     $000100
+Const DECL_STATIC:Int=      $20000000
 Const DECL_OVERRIDE:Int=    $40000000
 Const DECL_INLINE:Int=      $80000000
 
@@ -107,6 +108,13 @@ Type TFuncDeclList Extends TList
 		End If
 		Return _identLower
 	End Method
+
+	Method AddLast:TLink( value:Object )
+		If Not Contains(value) Then
+			Return Super.AddLast(value)
+		End If
+	End Method
+
 End Type
 
 Type TMetadata
@@ -192,6 +200,10 @@ Type TDecl
 	
 	Method IsAbstract:Int()
 		Return (attrs & DECL_ABSTRACT)<>0
+	End Method
+
+	Method IsStatic:Int()
+		Return (attrs & DECL_STATIC)<>0
 	End Method
 	
 	Method IsSemanted:Int()
@@ -515,19 +527,26 @@ Type TValDecl Extends TDecl
 					
 					
 				Else
-					If TArrayExpr(declInit) And TArrayType(ty) And TNumericType(TArrayType(ty).elemType) Then
-						TArrayExpr(declInit).toType = TArrayType(ty).elemType
-					End If
-				
-					init=declInit.Copy().SemantAndCast(ty)
+					If TArrayType(ty) And TArrayType(ty).isStatic Then
+						init = declInit.Copy().Semant()
+						If Not TArrayType(ty).length Then
+							TArrayType(ty).length = init.Eval()
+						End If
+					Else
+						If TArrayExpr(declInit) And TArrayType(ty) And TNumericType(TArrayType(ty).elemType) Then
+							TArrayExpr(declInit).toType = TArrayType(ty).elemType
+						End If
 					
-					' check if struct has been initialised
-					If TObjectType(ty) And TObjectType(ty).classDecl.IsStruct() And Not TObjectType(ty).classDecl.IsExtern() Then
-					
-						' new not used
-						If TConstExpr(init) And Not TConstExpr(init).value And Not IsPointerType(ty,0,TType.T_POINTER) Then
-							' always call the default constructor to init all the fields correctly
-							init = New TNewObjectExpr.Create(ty, Null).Semant()
+						init=declInit.Copy().SemantAndCast(ty)
+						
+						' check if struct has been initialised
+						If TObjectType(ty) And TObjectType(ty).classDecl.IsStruct() And Not TObjectType(ty).classDecl.IsExtern() Then
+						
+							' new not used
+							If TConstExpr(init) And Not TConstExpr(init).value And Not IsPointerType(ty,0,TType.T_POINTER) Then
+								' always call the default constructor to init all the fields correctly
+								init = New TNewObjectExpr.Create(ty, Null).Semant()
+							End If
 						End If
 					End If
 				End If
@@ -693,6 +712,17 @@ Type TArgDecl Extends TLocalDecl
 		If ty Then
 			ty = ty.Semant()
 		End If
+		
+		If attrs & DECL_STATIC Then
+			If Not TArrayType(ty) Then
+				Err "Expecting array"
+			End If
+			
+			If Not TNumericType(TArrayType(ty).elemType) Then
+				Err "Static array elements must be numeric"
+			End If
+		End If
+		
 		If init And Not TConstExpr(init) Then
 			If TCastExpr(init) Then
 				If TConstExpr(TCastExpr(init).expr) Or TNullExpr(TCastExpr(init).expr) Then
@@ -843,6 +873,14 @@ Type TFieldDecl Extends TVarDecl
 			End If
 		End If
 		Return True
+	End Method
+	
+	Method OnSemant()
+		Super.OnSemant()
+		
+		If TObjectType(ty) And TObjectType(ty).classDecl.IsStruct() Then
+			TObjectType(ty).classDecl.exposed = True
+		End If
 	End Method
 
 End Type
@@ -1569,7 +1607,7 @@ End Rem
 	
 					Else ' for case of argdecls having default args
 						exact=False
-						If Not explicit Exit
+						Continue ' carry on to the next arg
 					EndIf
 				
 					possible=False
@@ -1745,6 +1783,12 @@ Type TBlockDecl Extends TScopeDecl
 		
 		For Local stmt:TStmt=EachIn stmts
 			stmt.Semant
+
+			If opt_debug And Not IsNoDebug() Then
+				If Not stmt.generated Then
+					GenHash(stmt.errInfo[1..].Split(";")[0])
+				End If
+			End If
 			
 			If TReturnStmt(stmt) Then
 				If SurroundingFinallyBlock(Self) Then PushErr stmt.errInfo; Err "Return cannot be used inside a Finally block."
@@ -2022,8 +2066,13 @@ Type TFuncDecl Extends TBlockDecl
 			If retTypeExpr And Not TVoidType(retTypeExpr) Then
 				Err ident + "() cannot specify a return type"
 			End If
-			If ClassScope() And ClassScope().IsInterface() Then
-				Err ident + "() cannot be declared in an Interface."
+			Local sc:TClassDecl = ClassScope()
+			If sc Then
+				If sc.IsInterface() Then
+					Err ident + "() cannot be declared in an Interface."
+				Else If sc.IsStruct() And isDtor() Then
+					Err ident + "() cannot be declared in a Struct."
+				End If
 			End If
 			If IsCtor() retTypeExpr=New TObjectType.Create( TNewDecl(Self).cDecl )
 		End If
@@ -2071,10 +2120,18 @@ Type TFuncDecl Extends TBlockDecl
 '			Err "Return type cannot be an array of generic objects."
 		EndIf
 
+		If ClassScope() And TObjectType(retType) And TObjectType(retType).classDecl.IsStruct() And TObjectType(retType).classDecl.IsPrivate() Then
+			TObjectType(retType).classDecl.exposed = True
+		End If
+
 		'semant args
 		For Local arg:TArgDecl=EachIn argDecls
 			InsertDecl arg
 			arg.Semant
+
+			If ClassScope() And TObjectType(arg.ty) And TObjectType(arg.ty).classDecl.IsStruct() And TObjectType(arg.ty).classDecl.IsPrivate() Then
+				TObjectType(arg.ty).classDecl.exposed = True
+			End If
 		Next
 
 		' if we are a function pointer declaration, we just want to semant the args here.
@@ -2403,6 +2460,8 @@ Type TClassDecl Extends TScopeDecl
 	Field objectType:TObjectType '"canned" objectType
 	Field globInit:Int
 	Field templateSource:TTemplateRecord
+	
+	Field exposed:Int
 
 	'Global nullObjectClass:TClassDecl=New TNullDecl.Create( "{NULL}",Null,Null,Null,DECL_ABSTRACT|DECL_EXTERN )
 	
@@ -3079,6 +3138,7 @@ End Rem
 			
 			Local arg:TArgDecl = New TArgDecl.Create("o1", TType.MapToVarType(New TObjectType.Create(Self)), Null)
 			func = New TFuncDecl.CreateF("Compare", New TIntType, [arg], FUNC_METHOD)
+			func.retType = New TIntType
 			BuildStructCompareStatements(func)
 			
 			Local found:Int
@@ -3095,7 +3155,7 @@ End Rem
 			End If
 			
 			' generate default comparator compare
-			BuildStructDefaultComparatorCompare()
+			BuildStructDefaultComparatorCompare(attrs & DECL_PRIVATE <> 0)
 			
 			attrs :~ DECL_CYCLIC
 		End If
@@ -3119,6 +3179,7 @@ End Rem
 		
 		' iterate fields
 		For Local fdecl:TFieldDecl = EachIn _decls
+			fdecl.Semant()
 			
 			'
 			' If cmp <> 0 Then
@@ -3141,6 +3202,11 @@ End Rem
 			Local expr2:TExpr = New TIdentExpr.Create( "o1")
 			expr2 = New TIdentExpr.Create( fdecl.ident, expr2)
 			
+			If TEnumType(fdecl.ty) Then
+				expr1 = New TFuncCallExpr.Create(New TIdentExpr.Create("Ordinal", expr1))
+				expr2 = New TFuncCallExpr.Create(New TIdentExpr.Create("Ordinal", expr2))
+			End If
+			
 			Local fcExpr:TExpr = New TIdentExpr.Create( "DefaultComparator_Compare")
 			fcExpr = New TFuncCallExpr.Create( fcExpr, [expr1, expr2])
 	
@@ -3157,10 +3223,13 @@ End Rem
 		func.stmts.AddLast returnStmt
 	End Method
 
-	Method BuildStructDefaultComparatorCompare()
+	Method BuildStructDefaultComparatorCompare(isPrivate:Int = False)
 		Local arg1:TArgDecl = New TArgDecl.Create("o1", TType.MapToVarType(New TObjectType.Create(Self)), Null)
 		Local arg2:TArgDecl = New TArgDecl.Create("o2", TType.MapToVarType(New TObjectType.Create(Self)), Null)
 		Local func:TFuncDecl = New TFuncDecl.CreateF("DefaultComparator_Compare", New TIntType, [arg1, arg2], 0)
+		If isPrivate Then
+			func.attrs :| DECL_PRIVATE
+		End If
 
 		Local expr:TExpr = New TIdentExpr.Create( "o1")
 		expr = New TIdentExpr.Create( "Compare" ,expr )
@@ -4157,7 +4226,9 @@ Type TAppDecl Extends TScopeDecl
 'DebugStop		
 		_env=Null
 		pushenv Self
-		
+	
+		SemantImports()
+
 		SemantDataDefs()	
 
 		mainModule.Semant
@@ -4180,6 +4251,17 @@ Type TAppDecl Extends TScopeDecl
 		
 		For Local cdecl:TClassDecl=EachIn semantedClasses
 			cdecl.FinalizeClass
+		Next
+	End Method
+	
+	Method SemantImports()
+		For Local decl:TModuleDecl = EachIn globalImports.Values()
+			For Local cdecl:TClassDecl = EachIn decl._decls
+				If Not cdecl.IsSemanted() Then
+					cdecl.Semant()
+					cdecl.SemantParts()
+				End If
+			Next
 		Next
 	End Method
 	

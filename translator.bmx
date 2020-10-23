@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2019 Bruce A Henderson
+' Copyright (c) 2013-2020 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -1338,6 +1338,7 @@ End Rem
 		If TLenExpr(expr) Return TransLenExpr(TLenExpr(expr))
 		If TSizeOfExpr(expr) Return TransSizeOfExpr(TSizeOfExpr(expr))
 		If TStackAllocExpr(expr) Return TransStackAllocExpr(TStackAllocExpr(expr))
+		If TFieldOffsetExpr(expr) Return TransFieldOffsetExpr(TFieldOffsetExpr(expr))
 		Err "TODO : TransBuiltinExpr()"
 	End Method
 	
@@ -1354,6 +1355,9 @@ End Rem
 	End Method
 
 	Method TransStackAllocExpr:String(expr:TStackAllocExpr)
+	End Method
+
+	Method TransFieldOffsetExpr:String(expr:TFieldOffsetExpr)
 	End Method
 	
 	Method TransIdentTypeExpr:String(expr:TIdentTypeExpr) Abstract
@@ -1961,7 +1965,7 @@ End Rem
 		Local infoArray:String[] = info.Split(";")
 
 		Local dbg:String = "struct BBDebugStm __stmt_" + count + " = {"
-		dbg :+ Enquote(infoArray[0]) + ", "
+		dbg :+ GenHash(infoArray[0]) + ", "
 		dbg :+ infoArray[1] + ", "
 		dbg :+ infoArray[2] + "};"
 		Emit dbg

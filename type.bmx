@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2019 Bruce A Henderson
+' Copyright (c) 2013-2020 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -1406,11 +1406,15 @@ End Type
 Type TArrayType Extends TType
 	Field elemType:TType
 	Field dims:Int
+	Field isStatic:Int
+	Field length:String
 	
-	Method Create:TArrayType( elemType:TType, dims:Int = 1, flags:Int = 0 )
+	Method Create:TArrayType( elemType:TType, dims:Int = 1, flags:Int = 0, isStatic:Int = False, length:Int = 0 )
 		Self.elemType=elemType
 		Self.dims = dims
 		Self._flags = flags
+		Self.isStatic = isStatic
+		Self.length = length
 		Return Self
 	End Method
 	
@@ -1422,12 +1426,13 @@ Type TArrayType Extends TType
 		
 	Method EqualsType:Int( ty:TType )
 		Local arrayType:TArrayType=TArrayType( ty )
-		Return arrayType And elemType.EqualsType( arrayType.elemType ) And dims = arrayType.dims
+		Return arrayType And elemType.EqualsType( arrayType.elemType ) And dims = arrayType.dims And arrayType.isStatic = isStatic And arrayType.length = length
 	End Method
 	
 	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
 		Local arrayType:TArrayType=TArrayType( ty )
 		Return (arrayType And dims = arrayType.dims And ..
+			(arrayType.isStatic = isStatic And arrayType.length = length) And ..
 			( TVoidType( elemType ) ..
 				Or elemType.EqualsType( arrayType.elemType ) ..
 				Or ((TObjectType(elemType) Or TStringType(elemType) Or TArrayType(elemType)) And ..
@@ -1440,7 +1445,7 @@ Type TArrayType Extends TType
 	
 	Method Semant:TType(option:Int = False, callback:TCallback = Null)
 		Local ty:TType=elemType.Semant(option, callback)
-		If ty<>elemType Return New TArrayType.Create( ty, dims, _flags )
+		If ty<>elemType Return New TArrayType.Create( ty, dims, _flags, isStatic, Int(length) )
 		Return Self
 	End Method
 	
@@ -1453,11 +1458,19 @@ Type TArrayType Extends TType
 		Local ty:TArrayType = New TArrayType
 		ty.elemType = elemType
 		ty.dims = dims
+		ty.isStatic = isStatic
+		ty.length = length
 		Return ty
 	End Method
 
 	Method ToString$()
-		Return elemType.ToString()+" Array"
+		Local t:String = elemType.ToString()
+		If isStatic Then
+			t :+ " StaticArray[" + length + "]"
+		Else
+			t :+ " Array"
+		End If
+		Return t
 	End Method
 	
 	Method DistanceToType:Int(ty:TType)

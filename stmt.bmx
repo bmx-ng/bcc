@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2019 Bruce A Henderson
+' Copyright (c) 2013-2020 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -135,18 +135,31 @@ Type TAssignStmt Extends TStmt
 				If TVarExpr(lhs) Then
 					decl = TVarExpr(lhs).decl
 				Else
-					decl = TMemberVarExpr(lhs).decl
+					Local mvExpr:TMemberVarExpr = TMemberVarExpr(lhs)
+					decl = mvExpr.decl
+					
+					If TFieldDecl(decl) And (TInvokeExpr(mvExpr.expr) Or TInvokeMemberExpr(mvExpr.expr)) Then
+						If TClassDecl(decl.scope) And TClassDecl(decl.scope).IsStruct() Then
+							rhs = Null
+							Warn "Discarding Field assignment of Struct returned via invocation"
+							Return
+						End If
+					End If
+					
 				End If
 				If decl And decl.IsReadOnly() Then
 					If TFieldDecl(decl) Then
 						' check scope for ctor
 						Local scope:TFuncDecl = _env.FuncScope()
-						If Not scope Or Not scope.IsCtor() Or (decl.ClassScope() <> scope.ClassScope()) Then
+						If Not scope Or Not scope.IsCtor() Or (Not scope.ClassScope().ExtendsClass(decl.ClassScope())) Then
 							Err "Cannot modify ReadOnly field " + decl.ident
 						End If
 					Else
 						Err "Cannot modify ReadOnly variable " + decl.ident
 					End If
+				End If
+				If TValDecl(decl) And TArrayType(TValDecl(decl).ty) And TArrayType(TValDecl(decl).ty).isStatic Then
+					Err "Static arrays cannot be assigned in this way."
 				End If
 			End If
 		
@@ -282,7 +295,7 @@ Type TReturnStmt Extends TStmt
 			expr=expr.SemantAndCast( fRetType  )
 			If TIdentTypeExpr(expr) Err "Function must return a value."
 		Else If fdecl.IsCtor()
-			expr=New TSelfExpr.Semant()
+			' ctors do not return anything
 		Else If Not TVoidType( fRetType  )
 			If _env.ModuleScope().IsSuperStrict() Err "Function must return a value"
 			expr=New TConstExpr.Create( fRetType ,"" ).Semant()

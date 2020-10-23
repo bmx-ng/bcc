@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2019 Bruce A Henderson
+' Copyright (c) 2013-2020 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -33,6 +33,7 @@ Import "options.bmx"
 Import "base.stringhelper.bmx"
 Import "base64.bmx"
 Import "enums.c"
+Import "hash.c"
 
 ' debugging help
 Const DEBUG:Int = False
@@ -53,6 +54,8 @@ Global POINTER_SIZE:Int = 4
 
 Global _symbols$[]=[ "..","[]",":*",":/",":+",":-",":|",":&",":~~",":shr",":shl",":sar",":mod"]
 Global _symbols_map$[]=[ "..","[]","*=","/=","+=","-=","|=","&=","^=",">>=", "<<=",">>=","%=" ]
+
+Global _fileHasher:TFileHash
 
 Function PushErr( errInfo$ )
 	_errStack.AddLast _errInfo
@@ -207,13 +210,21 @@ Function BmxEnquote$( str$ )
 	Return str
 End Function
 
-Function BmxUnquote$( str$ )
-	If str.length = 1 Or str[str.length - 1] <> Asc("~q") Then
-		Err "Expecting expression but encountered malformed string literal"
+Function BmxUnquote$( str$, unquoted:Int = False )
+	Local length:Int
+	Local i:Int
+	If Not unquoted Then
+		If str.length < 2 Or str[str.length - 1] <> Asc("~q") Then
+			Err "Expecting expression but encountered malformed string literal"
+		End If
+		length = str.length - 1
+		i = 1
+	Else
+		length = str.length
 	End If
-	Local length:Int = str.length - 1
+
 	Local sb:TStringBuffer = New TStringBuffer
-	Local i:Int = 1
+
 	While i < length
 		Local c:Int = str[i]
 		i :+ 1
@@ -296,6 +307,90 @@ Function BmxUnquote$( str$ )
 		End Select
 	Wend
 	Return sb.ToString()
+End Function
+
+Function BmxProcessMultiString:String( str:String )
+	Local valid:Int
+	If str.length < 7 Then
+		Err "Expecting expression but encountered malformed multiline string literal"
+	End If
+	
+	For Local i:Int = 0 Until 3
+		If str[i] <> Asc("~q") Or str[str.length -1 -i] <> Asc("~q") Then
+			Err "Expecting expression but encountered malformed multiline string literal"
+		End If
+	Next
+	
+	str = str[3..str.length - 3]
+	' normalise line endings
+	str = str.Replace("~r~n", "~n").Replace("~r", "~n")
+
+	If str[0] <> Asc("~n") Then
+		Err "Expecting EOL but encountered malformed multiline string literal"
+	End If
+
+	str = str[1..]
+
+	Local LINES:String[] = str.Split("~n")
+
+	Local lineCount:Int = LINES.length - 1
+	Local last:String = LINES[lineCount]
+	
+	Local i:Int = last.length - 1
+	While i >= 0
+		If last[i] <> Asc(" ") And last[i] <> Asc("~t") Then
+			Err "Expecting trailing whitespace"
+		End If
+		i :- 1
+	Wend
+	
+	Local trailingIndent:String = last
+	
+	' strip indent
+	If trailingIndent Then
+		For i = 0 Until lineCount
+			Local line:String = LINES[i]
+			If line.StartsWith(trailingIndent) Then
+				line = line[trailingIndent.length..]
+				LINES[i] = line
+			End If
+		Next
+	End If
+
+	' right trim
+	For i = 0 Until lineCount
+		Local line:String = LINES[i]
+		Local index:Int = line.length
+		While index
+			index :- 1
+			If line[index] <> Asc(" ") And line[index] <> Asc("~t") Then
+				Exit
+			End If
+		Wend
+		If index < line.length - 1 Then
+			line = line[..index + 1]
+			LINES[i] = line
+		End If
+	Next
+
+	Local sb:TStringBuffer = New TStringBuffer
+	For i = 0 Until lineCount
+		Local line:String = LINES[i]
+		Local length:Int = line.length
+		Local softWrap:Int
+		If line And line[line.length-1] = Asc("\") Then
+			softWrap = True
+			length :- 1
+		End If
+		If line Then
+			sb.Append(line[..length])
+		End If
+		If Not softWrap And i < lineCount - 1 Then
+			sb.Append("~n")
+		End If
+	Next
+
+	Return BmxUnquote(sb.ToString(), True)
 End Function
 
 Type TStack Extends TList
@@ -492,6 +587,17 @@ Function HeaderComment:String()
 	' TODO
 End Function
 
+Global fileRegister:TMap = New TMap
+
+Function GenHash:String(file:String)
+	Local Hash:String = bmx_gen_hash(file)
+
+	If Not fileRegister.Contains(Hash) Then
+		fileRegister.Insert(Hash, file)
+	End If
+	
+	Return Hash
+End Function
 
 Type TTemplateRecord
 
@@ -561,7 +667,62 @@ Type TCallback
 	Method Callback(obj:Object) Abstract
 End Type
 
+Type TFileHash
+
+	Field statePtr:Byte Ptr
+	
+	Method Create:TFileHash()
+		statePtr = bmx_hash_createState()
+		Return Self
+	End Method
+	
+	Method CalculateHash:String(stream:TStream)
+		Const BUFFER_SIZE:Int = 8192
+	
+	
+		bmx_hash_reset(statePtr)
+		
+		Local data:Byte[BUFFER_SIZE]
+		
+		While True
+			Local read:Int = stream.Read(data, BUFFER_SIZE)
+
+			bmx_hash_update(statePtr, data, read)
+			
+			If read < BUFFER_SIZE Then
+				Exit
+			End If
+
+		Wend
+		
+		Return bmx_hash_digest(statePtr)
+		
+	End Method
+
+End Type
+
+Function CalculateFileHash:String(path:String)
+	If Not _fileHasher Then
+		_fileHasher = New TFileHash.Create()
+	End If
+
+	If FileType(path) = FILETYPE_FILE Then
+		Local stream:TStream = ReadStream(path)
+		Local fileHash:String = _fileHasher.CalculateHash(stream)
+		stream.Close()
+		
+		Return fileHash
+	End If
+	
+	Return Null
+End Function
+
 Extern
 	Function strlen_:Int(s:Byte Ptr)="strlen"
 	Function bmx_enum_next_power(char:Int, val:Long Var, ret:Long Var)
+	Function bmx_gen_hash:String(txt:String)
+	Function bmx_hash_createState:Byte Ptr()
+	Function bmx_hash_reset(state:Byte Ptr)
+	Function bmx_hash_update(state:Byte Ptr, data:Byte Ptr, length:Int)
+	Function bmx_hash_digest:String(state:Byte Ptr)
 End Extern

@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2019 Bruce A Henderson
+' Copyright (c) 2013-2020 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -25,7 +25,7 @@ SuperStrict
 
 Import "base.configmap.bmx"
 
-Const version:String = "0.118"
+Const version:String = "0.129"
 
 Const BUILDTYPE_APP:Int = 0
 Const BUILDTYPE_MODULE:Int = 1
@@ -62,6 +62,7 @@ Global opt_arch:String
 '    android
 '    raspberrypi
 '    nx
+'    haiku
 Global opt_platform:String
 ' framework
 Global opt_framework:String
@@ -127,6 +128,8 @@ Global opt_override_error:Int = False
 Global opt_userdefs:String
 ' 
 Global opt_need_strict:Int = False
+'
+Global opt_legacy_incbin:Int = False
 
 Global opt_filepath:String
 
@@ -240,6 +243,8 @@ Function ParseArgs:String[](args:String[])
 				opt_userdefs = args[count].ToLower()
 			Case "strict"
 				opt_need_strict=True
+			Case "ib"
+				opt_legacy_incbin=True
 		End Select
 	
 		count:+ 1
@@ -251,6 +256,11 @@ Function ParseArgs:String[](args:String[])
 	
 	If opt_arch = "x64" Or opt_arch = "arm64v8a" Or opt_arch = "arm64" Then
 		WORD_SIZE = 8
+	End If
+	
+	' new incbin doesn't work on win32 x86
+	If opt_arch = "x86" And opt_platform = "win32" Then
+		opt_legacy_incbin = True
 	End If
 
 	If opt_makelib Then
@@ -297,6 +307,8 @@ Function DefaultOptions()
 	opt_platform = "android"
 ?raspberrypi
 	opt_platform = "raspberrypi"
+?haiku
+	opt_platform = "haiku"
 ?emscripten
 	opt_platform = "emscripten"
 ?
@@ -326,6 +338,8 @@ Function CheckConfig()
 		If tmp Then
 			osBmxPath = tmp
 		End If
+	?haiku
+		osBmxPath = config.GetString("BMXPATH_HAIKU")
 	?
 	'load default/generic path
 	If osBmxPath = "" Then osBmxPath = config.GetString("BMXPATH")

@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2019 Bruce A Henderson
+' Copyright (c) 2013-2020 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -67,19 +67,28 @@ Type TForEachinStmt Extends TLoopStmt
 	End Method
 
 	Method OnSemant()
-
+		Const NotIterableError:String = "EachIn requires a type that implements IIterable or has a suitable ObjectEnumerator method."
+		
 		expr=expr.Semant()
 
 		If TArrayType( expr.exprType ) Or TStringType( expr.exprType )
 
-			Local exprTmp:TLocalDecl=New TLocalDecl.Create( "",Null,expr,,True )
+			Local exprTmp:TLocalDecl
+			Local exprVar:TExpr
+			If TArrayType( expr.exprType ).isStatic And (TVarExpr(expr) Or TMemberVarExpr(expr)) Then ' TODO TSliceExpr
+				exprVar = expr
+			Else
+				exprTmp = New TLocalDecl.Create( "",Null,expr,,True )
+				exprVar = New TVarExpr.Create( exprTmp )
+			End If
+			
 			Local indexTmp:TLocalDecl=New TLocalDecl.Create( "",Null,New TConstExpr.Create( New TUIntType,"0" ),,True )
 
-			Local lenExpr:TExpr=New TIdentExpr.Create( "Length",New TVarExpr.Create( exprTmp ) )
+			Local lenExpr:TExpr=New TIdentExpr.Create( "Length",exprVar )
 
 			Local cmpExpr:TExpr=New TBinaryCompareExpr.Create( "<",New TVarExpr.Create( indexTmp ),lenExpr )
 
-			Local indexExpr:TExpr=New TIndexExpr.Create( New TVarExpr.Create( exprTmp ),[New TVarExpr.Create( indexTmp )] )
+			Local indexExpr:TExpr=New TIndexExpr.Create( exprVar,[New TVarExpr.Create( indexTmp )] )
 			Local addExpr:TExpr=New TBinaryMathExpr.Create( "+",New TVarExpr.Create( indexTmp ),New TConstExpr.Create( New TIntType,"1" ) )
 
 			Local cont:TContinueStmt
@@ -95,11 +104,39 @@ Type TForEachinStmt Extends TLoopStmt
 					Local isStruct:Int = TObjectType(TArrayType( expr.exprType ).elemType).classdecl.IsStruct()
 
 					Local cExpr:TExpr
+					Local varObjTmp:TLocalDecl
+					Local varObjStmt:TStmt
+					
+					If exprTmp Then
+						exprTmp.Semant()
+					End If
+					indexTmp.Semant()
 					
 					If TIdentType(varty) And TIdentType(varty).ident = "Object" Then
 						cExpr = indexExpr
 					Else
-						cExpr = New TCastExpr.Create( varty, indexExpr,CAST_EXPLICIT )
+						If TStringType(varty) Then
+							varObjTmp = New TLocalDecl.Create( "",TType.objectType,indexExpr,,True)
+							varObjTmp.Semant()
+							Local varObjExpr:TExpr=New TVarExpr.Create( varObjTmp )
+							
+							Local expr:TExpr = New TFuncCallExpr.Create( New TIdentExpr.Create( "ObjectIsString"), [varObjExpr])
+							expr=New TBinaryCompareExpr.Create( "=",expr, New TConstExpr.Create( New TIntType,"0" ))
+							
+							Local thenBlock:TBlockDecl=New TBlockDecl.Create( block.scope, True, BLOCK_IF )
+							Local elseBlock:TBlockDecl=New TBlockDecl.Create( block.scope, True, BLOCK_ELSE )
+							cont = New TContinueStmt.Create(Null, True)
+							thenBlock.AddStmt cont
+		
+							varObjStmt = New TIfStmt.Create( expr,thenBlock,elseBlock, True )
+							'block.stmts.AddFirst New TIfStmt.Create( expr,thenBlock,elseBlock, True )
+							
+							cExpr = New TCastExpr.Create( varty, varObjExpr,CAST_EXPLICIT )
+						Else
+							cExpr = New TCastExpr.Create( varty, indexExpr,CAST_EXPLICIT )
+						End If 
+
+						'cExpr = New TCastExpr.Create( varty, indexExpr,CAST_EXPLICIT )
 					End If
 
 					' local variable
@@ -108,7 +145,7 @@ Type TForEachinStmt Extends TLoopStmt
 					' local var as expression
 					Local expr:TExpr=New TVarExpr.Create( varTmp )
 
-					If Not isStruct Then
+					If Not isStruct And Not varObjTmp Then
 						' var = Null
 						expr=New TBinaryCompareExpr.Create( "=",expr, New TNullExpr.Create(TType.nullObjectType))
 	
@@ -122,6 +159,11 @@ Type TForEachinStmt Extends TLoopStmt
 					End If
 					block.stmts.AddFirst New TAssignStmt.Create( "=",New TVarExpr.Create( indexTmp ),addExpr )
 					block.stmts.AddFirst New TDeclStmt.Create( varTmp )
+					If varObjTmp Then
+						block.stmts.AddFirst varObjStmt
+						block.stmts.AddFirst New TDeclStmt.Create( varObjTmp, True )
+					End If
+
 
 				Else
 					Local varTmp:TLocalDecl=New TLocalDecl.Create( varid,varty,indexExpr )
@@ -175,7 +217,9 @@ Type TForEachinStmt Extends TLoopStmt
 			Local whileStmt:TWhileStmt=New TWhileStmt.Create( cmpExpr,block,loopLabel, True )
 
 			block=New TBlockDecl.Create( block.scope, True, BLOCK_LOOP )
-			block.AddStmt New TDeclStmt.Create( exprTmp, True )
+			If exprTmp Then
+				block.AddStmt New TDeclStmt.Create( exprTmp, True )
+			End If
 			block.AddStmt New TDeclStmt.Create( indexTmp, True )
 			block.AddStmt whileStmt
 			
@@ -195,7 +239,7 @@ Type TForEachinStmt Extends TLoopStmt
 			Else
 				Local declList:TFuncDeclList = TFuncDeclList(TObjectType(expr.exprType).classDecl.GetDecl("objectenumerator"))
 				If Not declList Then
-					Err "Use of EachIn requires enumerable Type with either ObjectEnumerator method or one which implements IIterable interface."
+					Err NotIterableError
 				End If
 			End If
 
@@ -213,6 +257,7 @@ Type TForEachinStmt Extends TLoopStmt
 				enumerInit = New TFuncCallExpr.Create( New TIdentExpr.Create( "ObjectEnumerator",expr ) )
 			End If
 			Local enumerTmp:TLocalDecl=New TLocalDecl.Create( "",Null,enumerInit,,True )
+			enumerTmp.Semant()
 
 			Local hasNextExpr:TExpr
 			If iterable Then
@@ -236,16 +281,38 @@ Type TForEachinStmt Extends TLoopStmt
 
 				Local cExpr:TExpr
 				
+				Local varObjTmp:TLocalDecl
+				Local varObjStmt:TStmt
+				
 				If iterable Or (TIdentType(varty) And TIdentType(varty).ident = "Object") Then
 					cExpr = nextObjExpr
 				Else
-					cExpr = New TCastExpr.Create( varty, nextObjExpr,CAST_EXPLICIT )
+					If TStringType(varty) Then
+						varObjTmp = New TLocalDecl.Create( "",TType.objectType,nextObjExpr,,True)
+						varObjTmp.Semant()
+						Local varObjExpr:TExpr=New TVarExpr.Create( varObjTmp )
+						
+						Local expr:TExpr = New TFuncCallExpr.Create( New TIdentExpr.Create( "ObjectIsString"), [varObjExpr])
+						expr=New TBinaryCompareExpr.Create( "=",expr, New TConstExpr.Create( New TIntType,"0" ))
+						
+						Local thenBlock:TBlockDecl=New TBlockDecl.Create( block.scope, True, BLOCK_IF )
+						Local elseBlock:TBlockDecl=New TBlockDecl.Create( block.scope, True, BLOCK_ELSE )
+						cont = New TContinueStmt.Create(Null, True)
+						thenBlock.AddStmt cont
+	
+						varObjStmt = New TIfStmt.Create( expr,thenBlock,elseBlock, True )
+						'block.stmts.AddFirst New TIfStmt.Create( expr,thenBlock,elseBlock, True )
+						
+						cExpr = New TCastExpr.Create( varty, varObjExpr,CAST_EXPLICIT )
+					Else
+						cExpr = New TCastExpr.Create( varty, nextObjExpr,CAST_EXPLICIT )
+					End If 
 				End If
 
 				' local variable
 				Local varTmp:TLocalDecl=New TLocalDecl.Create( varid,varty,cExpr)
 
-				If Not TNumericType(varty) Then
+				If Not TNumericType(varty) And Not varObjTmp Then
 					' local var as expression
 					Local expr:TExpr=New TVarExpr.Create( varTmp )
 	
@@ -261,6 +328,10 @@ Type TForEachinStmt Extends TLoopStmt
 					block.stmts.AddFirst New TIfStmt.Create( expr,thenBlock,elseBlock, True )
 				End If
 				block.stmts.AddFirst New TDeclStmt.Create( varTmp, True )
+				If varObjTmp Then
+					block.stmts.AddFirst varObjStmt
+					block.stmts.AddFirst New TDeclStmt.Create( varObjTmp, True )
+				End If
 			Else
 
 				If Not varty Then
@@ -268,6 +339,30 @@ Type TForEachinStmt Extends TLoopStmt
 					varty = varExpr.exprType
 				End If
 				
+				Local varObjTmp:TLocalDecl
+				Local varObjStmt:TStmt
+				Local cExpr:TExpr
+				
+				If TStringType(varty) Then
+					varObjTmp = New TLocalDecl.Create( "",TType.objectType,nextObjExpr,,True)
+					varObjTmp.Semant()
+					Local varObjExpr:TExpr=New TVarExpr.Create( varObjTmp )
+					
+					Local expr:TExpr = New TFuncCallExpr.Create( New TIdentExpr.Create( "ObjectIsString"), [varObjExpr])
+					expr=New TBinaryCompareExpr.Create( "=",expr, New TConstExpr.Create( New TIntType,"0" ))
+					
+					Local thenBlock:TBlockDecl=New TBlockDecl.Create( block.scope, True, BLOCK_IF )
+					Local elseBlock:TBlockDecl=New TBlockDecl.Create( block.scope, True, BLOCK_ELSE )
+					cont = New TContinueStmt.Create(Null, True)
+					thenBlock.AddStmt cont
+
+					varObjStmt = New TIfStmt.Create( expr,thenBlock,elseBlock, True )
+					'block.stmts.AddFirst New TIfStmt.Create( expr,thenBlock,elseBlock, True )
+					
+					cExpr = New TCastExpr.Create( varty, varObjExpr,CAST_EXPLICIT )
+				Else
+					cExpr = New TCastExpr.Create( varty, nextObjExpr,CAST_EXPLICIT )
+				End If 
 '				If Not varty Then
 '					Local decl:TValDecl = block.scope.FindValDecl(varid.ToLower())
 '					
@@ -280,7 +375,8 @@ Type TForEachinStmt Extends TLoopStmt
 				
 				' var = Null
 '				Local expr:TExpr=New TBinaryCompareExpr.Create( "=",New TIdentExpr.Create( varid ), New TNullExpr.Create(TType.nullObjectType))
-				If Not TNumericType(varty) Then
+				If Not TNumericType(varty) And Not varObjTmp Then
+
 					Local expr:TExpr=New TBinaryCompareExpr.Create( "=",varExpr, New TNullExpr.Create(TType.nullObjectType))
 	
 					' then continue
@@ -294,7 +390,11 @@ Type TForEachinStmt Extends TLoopStmt
 
 				End If
 '				block.stmts.AddFirst New TAssignStmt.Create( "=",New TIdentExpr.Create( varid ),New TCastExpr.Create( varty, nextObjExpr,CAST_EXPLICIT ))
-				block.stmts.AddFirst New TAssignStmt.Create( "=",varExpr,New TCastExpr.Create( varty, nextObjExpr,CAST_EXPLICIT ))
+				block.stmts.AddFirst New TAssignStmt.Create( "=",varExpr,cExpr)
+				If varObjTmp Then
+					block.stmts.AddFirst varObjStmt
+					block.stmts.AddFirst New TDeclStmt.Create( varObjTmp, True )
+				End If
 			EndIf
 
 			Local whileStmt:TWhileStmt=New TWhileStmt.Create( hasNextExpr,block, loopLabel, True )
@@ -311,7 +411,7 @@ Type TForEachinStmt Extends TLoopStmt
 			End If
 
 		Else
-			InternalErr "TForEachinStmt.OnSemant"
+			Err NotIterableError
 		EndIf
 
 		block.Semant
@@ -354,6 +454,14 @@ Type TIncbin
 
 		id = count
 		Return Self
+	End Method
+	
+	Method GeneratedDataName:String(app:TAppDecl)
+		Return "_ib" + app.munged + "_" + id + "_data"
+	End Method
+
+	Method GeneratedSizeName:String(app:TAppDecl)
+		Return "_ib" + app.munged + "_" + id + "_size"
 	End Method
 
 End Type
@@ -471,7 +579,11 @@ Type TParser Extends TGenProcessor
 			Case "~n"
 				Return "end-of-line"
 		End Select
-		Return "'" + toke + "'"
+		Local uni:String
+		If toke.length > 0 And toke[0] > 255 Then
+			uni = " (unicode : " + _toker._lastTCHR + ")"
+		End If
+		Return "'" + toke + "'" + uni
 	End Method
 
 	Method CParse:Int( toke$ )
@@ -492,7 +604,7 @@ Type TParser Extends TGenProcessor
 
 	Method Parse( toke$ )
 		If Not CParse( toke )
-			DoErr "Syntax error - expecting '"+toke+"'."
+			DoErr "Syntax error - expecting '"+toke+"' but found " + DescribeToke(toke)
 		EndIf
 	End Method
 
@@ -902,8 +1014,12 @@ Type TParser Extends TGenProcessor
 		
 		' array or function pointer?
 		Repeat
-			If (_toke = "[" Or _toke = "[]") And IsArrayDef()
-				ty = ParseArrayType(ty)
+			If (_toke = "[" Or _toke = "[]") And (IsArrayDef() Or IsArrayDef(attr & DECL_STATIC > 0)) Then
+				If Not IsArrayDef(attr & DECL_STATIC > 0) Then
+					Err "Invalid static array initialization."
+				Else
+					ty = ParseArrayType(ty, attr & DECL_STATIC > 0)
+				End If
 			Else If _toke = "(" Then
 				Local args:TArgDecl[] = ParseFuncParamDecl()
 				attr :| ParseCallConvention(attr & DECL_API_STDCALL)
@@ -931,7 +1047,16 @@ Type TParser Extends TGenProcessor
 	End Method
 
 	' replaces While CParse( "[]" ) sections, with support for multi-dimension arrays
-	Method ParseArrayType:TType(ty:TType)
+	Method ParseArrayType:TType(ty:TType, isStatic:Int = False)
+		If isStatic Then
+			Parse("[")
+			Local expr:TExpr = ParseUnaryExpr()
+			ty = New TArrayType.Create( ty )
+			TArrayType(ty).isStatic = True
+			TArrayType(ty).length = expr.Eval()
+			Parse("]")
+			Return ty
+		End If
 
 		While True
 			Local dims:Int = 1
@@ -977,9 +1102,19 @@ Type TParser Extends TGenProcessor
 		Return False
 	End Method
 	
-	Method IsArrayDef:Int()
+	Method IsArrayDef:Int(isStatic:Int = False)
 		Local isDef:Int = True
 		Local toker:TToker=New TToker.Copy(_toker)
+		If isStatic Then
+			If Not CParseToker(toker, "[") Then
+				Return False
+			End If
+			NextTokeToker(toker)
+			If Not CParseToker(toker, "]") Then
+				Return False
+			End If
+			Return True
+		End If
 		While True
 			'Local dims:Int = 1
 			
@@ -1351,6 +1486,24 @@ Type TParser Extends TGenProcessor
 				expr=ParseExpr()
 				expr=New TStackAllocExpr.Create( expr )
 			EndIf
+		Case "fieldoffset"
+			NextToke
+			
+			Local withBrackets:Int
+			
+			If CParse("(")
+				withBrackets = True
+			End If
+			
+			Local typeExpr:TExpr = ParseExpr()
+			Parse ","
+			Local fieldExpr:TExpr = ParseExpr()
+			
+			If withBrackets Then
+				Parse(")")
+			End If
+			
+			expr=New TFieldOffsetExpr.Create( typeExpr, fieldExpr )
 		Default
 			Select _tokeType
 			Case TOKE_IDENT
@@ -1403,6 +1556,11 @@ Type TParser Extends TGenProcessor
 				End If
 			Case TOKE_STRINGLIT
 				Local s:String = BmxUnquote( _toke )
+				expr=New TConstExpr.Create( TType.stringType,s )
+				_app.mapStringConsts(s)
+				NextToke
+			Case TOKE_STRINGMULTI
+				Local s:String = BmxProcessMultiString( _toke )
 				expr=New TConstExpr.Create( TType.stringType,s )
 				_app.mapStringConsts(s)
 				NextToke
@@ -2050,16 +2208,16 @@ End Rem
 						ty=ParseArrayType(ty)
 					Wend
 				End If
+				PopBlock
 				Local init:TLocalDecl=New TLocalDecl.Create( id,ty,Null,0 )
 				Local block:TBlockDecl=New TBlockDecl.Create( _block, , BLOCK_CATCH )
 				catches.AddLast(New TCatchStmt.Create( init,block ))
-				PopBlock
 				PushBlock block
 			Else If CParse("finally") Then
 				If finallyStmt Then Err "Try statement cannot have more than one Finally block."
+				PopBlock
 				Local block:TBlockDecl = New TBlockDecl.Create(_block, , BLOCK_FINALLY)
 				finallyStmt = New TFinallyStmt.Create(block)
-				PopBlock
 				PushBlock block
 			Else
 				ParseStmt
@@ -2403,13 +2561,23 @@ End Rem
 
 		SetErr
 
+		If CParse("staticarray") Then
+			If toke = "const" Then
+				Err "Const cannot be used in this way"
+			End If
+			If attrs & DECL_STATIC Then
+				Err "Already declared as a static array"
+			End If
+			attrs :| DECL_STATIC
+		End If
+
 		Local id$=ParseIdent()
 		Local ty:TType
 		Local init:TExpr
 		
 		
 		If attrs & DECL_EXTERN
-			ty=ParseDeclType(attrs & DECL_API_STDCALL)
+			ty=ParseDeclType(attrs & (DECL_STATIC | DECL_API_STDCALL))
 			
 			If toke = "const" Then
 				If CParse("=") Then
@@ -2420,29 +2588,38 @@ End Rem
 '			init=ParseExpr()
 '			ty = init.exprType
 		Else
-			ty=ParseDeclType(attrs & DECL_API_STDCALL)
+			ty=ParseDeclType(attrs & (DECL_STATIC | DECL_API_STDCALL))
 
 			If CParse( "=" )
+				If (attrs & DECL_STATIC) Then
+					Err "Static arrays cannot be initialized in this way"
+				End If
 				init=ParseExpr()
 			Else If CParse( "[" ) ' an initialised array?
-				Local ln:TExpr[]
-				Repeat
-					If CParse(",") Then
-						ln = ln + [New TNullExpr]
-						Continue
-					End If
-					If CParse("]") Exit
-					ln = ln + [ParseExpr()]
-					If CParse("]") Exit
-					Parse(",")
-				Forever
-				'Parse "]"
-				ty = ParseArrayType(ty)
-				'While CParse( "[]" )
-				'	ty=New TArrayType.Create(ty)
-				'Wend
-				init=New TNewArrayExpr.Create( ty,ln)
-				ty=New TArrayType.Create( ty, ln.length )
+				If (attrs & DECL_STATIC) Then
+					init = ParseExpr()
+					Parse "]"
+					ty=New TArrayType.Create( ty,1,, attrs & DECL_STATIC > 0 )
+				Else
+					Local ln:TExpr[]
+					Repeat
+						If CParse(",") Then
+							ln = ln + [New TNullExpr]
+							Continue
+						End If
+						If CParse("]") Exit
+						ln = ln + [ParseExpr()]
+						If CParse("]") Exit
+						Parse(",")
+					Forever
+					'Parse "]"
+					ty = ParseArrayType(ty)
+					'While CParse( "[]" )
+					'	ty=New TArrayType.Create(ty)
+					'Wend
+					init=New TNewArrayExpr.Create( ty,ln)
+					ty=New TArrayType.Create( ty, ln.length,, attrs & DECL_STATIC > 0 )
+				End If
 			Else If toke <> "const"
 				If toke="global" Or toke="local" Then
 					init=New TConstExpr.Create( ty,"" )
@@ -2531,9 +2708,24 @@ End Rem
 		If toke Parse toke
 
 		If isField Then
-			If CParse("readonly") Then
-				attrs :| DECL_READ_ONLY
-			End If
+			Repeat
+				If CParse("readonly") Then
+					If attrs & DECL_READ_ONLY
+						Err "Duplicate modifier 'ReadOnly'."
+					End If
+
+					attrs :| DECL_READ_ONLY
+
+				Else If CParse("staticarray") Then
+					If attrs & DECL_STATIC
+						Err "Duplicate modifier 'Static'."
+					End If
+
+					attrs :| DECL_STATIC
+				Else
+					Exit
+				End If
+			Forever
 		End If
 
 		Local decls:TList=New TList'<Decl>
@@ -2998,7 +3190,7 @@ End Rem
 			Select opt_platform
 				Case "macos", "osx", "ios"
 					api = "macos"
-				Case "linux", "android", "raspberrypi"
+				Case "linux", "android", "raspberrypi", "haiku"
 					api = "linux"
 				Case "win32"
 					api = "win32"
@@ -3029,21 +3221,28 @@ End Rem
 		If _toke<>")"
 			Local nargs:Int
 			Repeat
+				Local attrs:Int
+				If CParse("staticarray") Then
+					attrs :| DECL_STATIC
+				End If
 				
 				Local argId$=ParseIdent()
 
-				Local ty:TType=ParseDeclType()
+				Local ty:TType=ParseDeclType(attrs)
 
 				Local init:TExpr
 				
 				' var argument?
 				If CParse("var") Then
+					If attrs & DECL_STATIC Then
+						Err "Unexpected 'Var' for static array argument"
+					End If
 					ty = TType.MapToVarType(ty)
 				Else If CParse( "=" )
 					init=ParseExpr()
 				End If
 				
-				Local arg:TArgDecl=New TArgDecl.Create( argId,ty,init )
+				Local arg:TArgDecl=New TArgDecl.Create( argId,ty,init,attrs )
 				If args.Length=nargs args=args + New TArgDecl[10]
 				args[nargs]=arg
 				nargs:+1
@@ -4386,23 +4585,8 @@ Function EvalS$( source$,ty:TType )
 
 	Local env:TScopeDecl=New TScopeDecl
 
-Rem
-Debug	True if program is being compiled in debug mode.
-Threaded	True if program is being compiled in threaded mode.
-Win32	True if program is being compiled for the Windows operating system.
-MacOS	True if program is being compiled for the MacOS operating system.
-Linux	True if program is being compiled for the Linux operating system.
-X86	True if program is being compiled for the Intel CPU.
-PPC	True if program is being compiled for the PowerPC CPU.
-MacOSX86	True if program is being compiled for an Intel Mac.
-MacOSPPC	True if program is being compiled for a PowerPC Mac.
-BigEndian	True if program is being compiled for a big endian CPU.
-LittleEndian
-End Rem
-
 	' debug/release
 	env.InsertDecl New TConstDecl.Create( "debug",New TIntType,New TConstExpr.Create( New TIntType,opt_debug ),0 )
-	'env.InsertDecl New TConstDecl.Create( "release",TType.intType,New TConstExpr.Create( TType.intType,opt_release ),0 )
 
 	' threaded
 	env.InsertDecl New TConstDecl.Create( "threaded",New TIntType,New TConstExpr.Create( New TIntType,opt_threaded ),0 )
@@ -4412,12 +4596,14 @@ End Rem
 	env.InsertDecl New TConstDecl.Create( "macosx86",New TIntType,New TConstExpr.Create( New TIntType,(opt_platform="macos" Or opt_platform="osx" Or opt_platform="ios") And opt_arch="x86"),0 )
 	env.InsertDecl New TConstDecl.Create( "macosppc",New TIntType,New TConstExpr.Create( New TIntType,(opt_platform="macos" Or opt_platform="osx") And opt_arch="ppc"),0 )
 	env.InsertDecl New TConstDecl.Create( "macosx64",New TIntType,New TConstExpr.Create( New TIntType,(opt_platform="macos" Or opt_platform="osx" Or opt_platform="ios") And opt_arch="x64"),0 )
+	env.InsertDecl New TConstDecl.Create( "macosarm64",New TIntType,New TConstExpr.Create( New TIntType,(opt_platform="macos" Or opt_platform="osx" Or opt_platform="ios") And opt_arch="arm64"),0 )
 
 	' osx
 	env.InsertDecl New TConstDecl.Create( "osx",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="macos" Or opt_platform="osx" ),0 )
 	env.InsertDecl New TConstDecl.Create( "osxx86",New TIntType,New TConstExpr.Create( New TIntType,(opt_platform="macos" Or opt_platform="osx")  And opt_arch="x86"),0 )
 	env.InsertDecl New TConstDecl.Create( "osxppc",New TIntType,New TConstExpr.Create( New TIntType,(opt_platform="macos" Or opt_platform="osx") And opt_arch="ppc"),0 )
 	env.InsertDecl New TConstDecl.Create( "osxx64",New TIntType,New TConstExpr.Create( New TIntType,(opt_platform="macos" Or opt_platform="osx") And opt_arch="x64"),0 )
+	env.InsertDecl New TConstDecl.Create( "osxarm64",New TIntType,New TConstExpr.Create( New TIntType,(opt_platform="macos" Or opt_platform="osx") And opt_arch="arm64"),0 )
 
 	' ios
 	env.InsertDecl New TConstDecl.Create( "ios",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="ios" ),0 )
@@ -4452,6 +4638,11 @@ End Rem
 	env.InsertDecl New TConstDecl.Create( "raspberrypi",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="raspberrypi" And (opt_arch="arm" Or opt_arch="arm64")),0 )
 	env.InsertDecl New TConstDecl.Create( "raspberrypiARM",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="raspberrypi" And opt_arch="arm"),0 )
 	env.InsertDecl New TConstDecl.Create( "raspberrypiARM64",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="raspberrypi" And opt_arch="arm64"),0 )
+
+	' haiku
+	env.InsertDecl New TConstDecl.Create( "haiku",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="haiku" And (opt_arch="x86" Or opt_arch="x64")),0 )
+	env.InsertDecl New TConstDecl.Create( "haikux86",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="haiku" And opt_arch="x86"),0 )
+	env.InsertDecl New TConstDecl.Create( "haikux64",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="haiku" And opt_arch="x64"),0 )
 
 	' emscripten
 	env.InsertDecl New TConstDecl.Create( "emscripten",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="emscripten" ),0 )
@@ -4509,10 +4700,6 @@ End Rem
 			End If
 		Next
 	End If
-
-'	env.InsertDecl New TConstDecl.Create( "LANG",TType.stringType,New TConstExpr.Create( TType.stringType,ENV_LANG ),0 )
-'	env.InsertDecl New TConstDecl.Create( "TARGET",TType.stringType,New TConstExpr.Create( TType.stringType,ENV_TARGET ),0 )
-'	env.InsertDecl New TConstDecl.Create( "CONFIG",TType.stringType,New TConstExpr.Create( TType.stringType,ENV_CONFIG ),0 )
 
 	PushEnv env
 
