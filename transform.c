@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2020 Bruce A Henderson
+/* Copyright (c) 2014-2021 Bruce A Henderson
 
   This software is provided 'as-is', without any express or implied
   warranty. In no event will the authors be held liable for any damages
