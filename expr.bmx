@@ -3181,7 +3181,7 @@ Type TSizeOfExpr Extends TBuiltinExpr
 	Method Semant:TExpr(options:Int = 0)
 		If exprType Return Self
 		expr=expr.Semant()
-		exprType=New TIntType
+		exprType=New TSizeTType
 		Return Self
 	End Method
 
