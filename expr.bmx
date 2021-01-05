@@ -1909,7 +1909,11 @@ Type TBinaryMathExpr Extends TBinaryExpr
 				exprType=New TIntType
 			End If
 		Case "^"
-			exprType=New TDoubleType
+			If TIntegralType(lhs.exprType) And TIntegralType(rhs.exprType) Then
+				exprType=New TLongType
+			Else
+				exprType=New TDoubleType
+			End If
 		Default
 			exprType=BalanceTypes( lhs.exprType,rhs.exprType )
 			If TStringType( exprType )
