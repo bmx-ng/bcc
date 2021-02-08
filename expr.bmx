@@ -2272,7 +2272,7 @@ Type TIndexExpr Extends TExpr
 		Next
 		
 		' operator overload?
-		If TObjectType(expr.exprType) And Not TObjectType(expr.exprType).classDecl.IsStruct() Then
+		If TObjectType(expr.exprType) Then
 			Local args:TExpr[]
 			Local op:String
 			If set Then
