@@ -676,7 +676,7 @@ Type TCTranslator Extends TTranslator
 					' *sigh*
 					' if var is going to var, remove any leading dereference character.
 					' rather hacky. Would be better to cast variable to varptr during semanting (well done if you can work out where!)
-					If arg.exprType.EqualsType( ty.ActualType() ) And (ty._flags & TType.T_VAR) And (arg.exprType._flags & TType.T_VAR) Then
+					If arg.exprType.EqualsType( ty.ActualType() ) And (ty._flags & TType.T_VAR) And ( (arg.exprType._flags & TType.T_VAR) Or (TSelfExpr(arg) And TObjectType(arg.exprType) And TObjectType(arg.exprType).classdecl.IsStruct())) Then
 						If tc.startswith("*") Then
 							tc = tc[1..]
 						End If
