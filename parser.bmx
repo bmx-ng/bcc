@@ -4636,8 +4636,8 @@ Function EvalS$( source$,ty:TType )
 
 	' raspberrypi - ARM only
 	env.InsertDecl New TConstDecl.Create( "raspberrypi",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="raspberrypi" And (opt_arch="arm" Or opt_arch="arm64")),0 )
-	env.InsertDecl New TConstDecl.Create( "raspberrypiARM",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="raspberrypi" And opt_arch="arm"),0 )
-	env.InsertDecl New TConstDecl.Create( "raspberrypiARM64",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="raspberrypi" And opt_arch="arm64"),0 )
+	env.InsertDecl New TConstDecl.Create( "raspberrypiarm",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="raspberrypi" And opt_arch="arm"),0 )
+	env.InsertDecl New TConstDecl.Create( "raspberrypiarm64",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="raspberrypi" And opt_arch="arm64"),0 )
 
 	' haiku
 	env.InsertDecl New TConstDecl.Create( "haiku",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="haiku" And (opt_arch="x86" Or opt_arch="x64")),0 )
