@@ -586,7 +586,7 @@ Type TIParser
 		Forever
 		
 		' semant imported classes
-		For Local cdecl:TClassDecl = EachIn _mod.decls
+		For Local cdecl:TClassDecl = EachIn _mod.Decls()
 			cdecl.Semant()
 			If Not cdecl.args Then
 				cdecl.FinalizeClass()
