@@ -2702,12 +2702,7 @@ t:+"NULLNULLNULL"
 				Emit "retptr = &&" + tryStmt.rethrowLabel.munged + ";"
 			End If
 		End If
-		Emit "jmp_buf* buf = bbExEnter();"
-		If opt_platform = "macos" Or opt_platform = "ios" Or opt_platform = "osx" Then
-			Emit "switch(_setjmp(*buf)) {"
-		Else
-		Emit "switch(setjmp(*buf)) {"
-		End If
+		Emit "bbExTry {"
 		
 		' Try block:
 		Emit "case 0: {"
