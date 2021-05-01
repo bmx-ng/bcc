@@ -2451,6 +2451,21 @@ t:+"NULLNULLNULL"
 				End If
 			Else If TObjectType(TBinaryCompareExpr(expr).ty) Then
 				Local bcExpr:TBinaryCompareExpr = TBinaryCompareExpr(expr)
+
+				If bcExpr.lhs.exprType.ExtendsType(bcExpr.rhs.exprType) Then
+					If t_rhs="&bbNullObject" Then
+						t_lhs = Bra("(BBOBJECT)" + t_lhs)
+					Else
+						t_lhs = Bra(Bra(TransType(bcExpr.rhs.exprType, "*")) + t_lhs)
+					End If
+				Else If bcExpr.rhs.exprType.ExtendsType(bcExpr.lhs.exprType)
+					If t_lhs="&bbNullObject" Then
+						t_rhs = Bra("(BBOBJECT)" + t_rhs)
+					Else
+						t_rhs = Bra(Bra(TransType(bcExpr.lhs.exprType, "*")) + t_rhs)
+					End If
+				End If
+
 				If t_rhs="&bbNullObject" And TObjectType(bcExpr.lhs.exprType) And TObjectType(bcExpr.lhs.exprType).classDecl.ident = "Object" Then
 					If bcExpr.op = "=" Or bcExpr.op = "<>" Then
 						Local t:String = t_lhs
@@ -2737,7 +2752,7 @@ t:+"NULLNULLNULL"
 			For Local catchStmt:TCatchStmt = EachIn tryStmt.catches
 				MungDecl catchStmt.init
 				If TStringType(catchStmt.init.ty) Then
-					Emit s + "if (bbObjectStringcast((BBOBJECT)ex) != &bbEmptyString) {"
+					Emit s + "if (bbObjectStringcast((BBOBJECT)ex) != (BBOBJECT)&bbEmptyString) {"
 					Emit TransType(catchStmt.init.ty, catchStmt.init.munged) + " " + catchStmt.init.munged + "=(BBSTRING)ex;" 
 				Else If TArrayType(catchStmt.init.ty) Then
 					Emit s + "if (bbObjectArraycast((BBOBJECT)ex) != &bbEmptyArray) {"
