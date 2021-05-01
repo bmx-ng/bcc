@@ -1005,7 +1005,7 @@ t:+"NULLNULLNULL"
 		If TShortType(ty) Then
 			Emit TransType(ty, "") + " " + tmp.munged + " = bbStringToWString" + Bra(t)+ ";"
 		Else
-			Emit TransType(ty, "") + " " + tmp.munged + " = bbStringToCString" + Bra(t)+ ";"
+			Emit TransType(ty, "") + " " + tmp.munged + " = (BBBYTE*)bbStringToCString" + Bra(t)+ ";"
 		End If
 		customVarStack.Push(tmp.munged)
 		Return tmp.munged
@@ -1763,7 +1763,7 @@ t:+"NULLNULLNULL"
 			s = sc.id
 		End If
 
-		Return "&" + s
+		Return Bra("(BBString*)&" + s)
 	End Method
 
 	Method TransNewObjectExpr$( expr:TNewObjectExpr )
@@ -2900,7 +2900,9 @@ t:+"NULLNULLNULL"
 				End If
 			Next
 
-			Emit "BBDEBUGDECL_END "
+			Emit "{"
+			Emit "BBDEBUGDECL_END"
+			Emit "}"
 			Emit "}"
 			
 			
@@ -3955,7 +3957,7 @@ End Rem
 		
 		_appInstance.mapStringConsts(decl.value)
 		
-		Emit ".const_value=&" + TStringConst(_appInstance.stringConsts.ValueForKey(decl.value)).id
+		Emit ".const_value=(BBString*)&" + TStringConst(_appInstance.stringConsts.ValueForKey(decl.value)).id
 		Emit "},"
 
 	End Method
@@ -4003,7 +4005,7 @@ End Rem
 			Emit "BBDEBUGDECL_TYPEMETHOD,"
 			Emit Enquote(ident) + ","
 			Emit Enquote(ty) + ","
-			Emit ".var_address=(void*)&" + munged
+			Emit ".func_ptr=(BBFuncPtr)&" + munged
 			Emit "},"
 	End Method
 	
@@ -4040,9 +4042,9 @@ End Rem
 
 			Emit Enquote(s) + ","
 			If decl.IsMethod() Or decl.IsCTor() Then 
-				Emit ".var_address=(void*)&_" + decl.munged
+				Emit ".func_ptr=(BBFuncPtr)&_" + decl.munged
 			Else
-				Emit ".var_address=(void*)&" + decl.munged
+				Emit ".func_ptr=(BBFuncPtr)&" + decl.munged
 			End If
 			Emit "},"
 	End Method
@@ -4390,7 +4392,9 @@ End Rem
 		' debug func decls
 		EmitClassFuncsDebugScope(classDecl)
 		
+		Emit "{"
 		Emit "BBDEBUGDECL_END"
+		Emit "}"
 		Emit "}"
 
 		Emit "};"
@@ -4589,7 +4593,7 @@ End Rem
 			Emit "};~n"
 	
 			If classDecl.IsInterface()  Then
-				Emit "const struct BBInterface " + classid + "_ifc = { &" + classid + ", (const char *) ~q" + classDecl.ident + "~q };"
+				Emit "const struct BBInterface " + classid + "_ifc = { (BBClass *)&" + classid + ", (const char *) ~q" + classDecl.ident + "~q };"
 			Else
 				
 			End If
@@ -4626,9 +4630,20 @@ End Rem
 			Emit "const " + TransType(decl.ty, "") + " bbEnum" + decl.munged +"_Mask = " + s + ";"
 		
 		End If
+
+		Local count:Int
+		For Local value:TEnumValueDecl = EachIn decl.values
+			count :+ 1
+		Next
+		
 		
 		' debugscope
-		Emit "struct BBDebugScope " + id + "_scope ={"
+		If count > 0 Then
+			_app.scopeDefs.Insert(String(count), "")
+			Emit "struct BBDebugScope_" + count + " " + id + "_scope ={"
+		Else
+			Emit "struct BBDebugScope " + id + "_scope ={"
+		End If
 		Emit "BBDEBUGSCOPE_USERENUM,"
 
 		Emit EnQuote(decl.ident) + ","
@@ -4646,11 +4661,13 @@ End Rem
 			_appInstance.mapStringConsts(value.ident)
 			_appInstance.mapStringConsts(value.Value())
 
-			Emit ".const_value=&" + TStringConst(_appInstance.stringConsts.ValueForKey(value.Value())).id
+			Emit ".const_value=(BBString*)&" + TStringConst(_appInstance.stringConsts.ValueForKey(value.Value())).id
 			Emit "},"
 		Next
 		
+		Emit "{"
 		Emit "BBDEBUGDECL_END"
+		Emit "}"
 		Emit "}"
 
 		Emit "};"
@@ -4663,7 +4680,7 @@ End Rem
 				n :+ ","
 			End If
 			t :+ v.Value()
-			n :+ "&" + TStringConst(_appInstance.stringConsts.ValueForKey(v.ident)).id
+			n :+ "(BBString*)&" + TStringConst(_appInstance.stringConsts.ValueForKey(v.ident)).id
 		Next
 		
 		Emit TransType(decl.ty, "") + " " + decl.munged + "_values[" + decl.values.length + "] = {" + t + "};"
@@ -6381,7 +6398,7 @@ End If
 
 			If decl.declImported Continue
 			
-			Emit decl.munged + "_BBEnum_impl = &" + decl.munged + "_BBEnum;"
+			Emit decl.munged + "_BBEnum_impl = (BBEnum *)&" + decl.munged + "_BBEnum;"
 		Next
 
 		' register types
@@ -6485,12 +6502,28 @@ End If
 		SetOutput("pre_source")
 
 		' strings
+		' generate sized structs
+		Local sizes:TIntMap = New TIntMap
 		For Local s:String = EachIn app.stringConsts.Keys()
 			If s Then
 				Local key:TStringConst = TStringConst(app.stringConsts.ValueForKey(s))
 
 				If key.count > 0 Then
-					Emit "static BBString " + key.id + "={"
+					If Not sizes.Contains(s.length) Then
+						Emit "struct BBString_" + s.length + "{BBClass_String* clas;BBULONG hash;int length;BBChar buf[" + s.length + "];};"
+						sizes.Insert(s.length, "")
+					End If
+				End If
+			End If
+		Next
+		
+		For Local s:String = EachIn app.stringConsts.Keys()
+			If s Then
+				Local key:TStringConst = TStringConst(app.stringConsts.ValueForKey(s))
+
+				If key.count > 0 Then
+						
+					Emit "static struct BBString_" + s.length + " " + key.id + "={"
 					Emit "&bbStringClass,"
 					Emit bmx_gen_hash(s) + ","
 					Emit s.length + ","
