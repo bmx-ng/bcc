@@ -65,7 +65,7 @@ void bmx_stringbuffer_resize(struct MaxStringBuffer * buf, int size) {
 		if (buf->capacity * 2  > size) {
 			size = buf->capacity * 2;
 		}
-		short * newBuffer = malloc(size * sizeof(BBChar));
+		BBChar * newBuffer = (BBChar*)malloc(size * sizeof(BBChar));
 		
 		/* copy text to new buffer */
 		memcpy(newBuffer, buf->buffer, buf->count * sizeof(BBChar));
@@ -476,7 +476,7 @@ void bmx_stringbuffer_append_utf8string(struct MaxStringBuffer * buf, const char
 		const char * p = chars;
 		BBChar * b = buf->buffer + buf->count;
 		
-		while( c=*p++ & 0xff ){
+		while( (c=*p++ & 0xff) ){
 			if( c<0x80 ){
 				*b++=c;
 			}else{

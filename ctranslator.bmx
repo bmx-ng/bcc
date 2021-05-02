@@ -1757,13 +1757,20 @@ t:+"NULLNULLNULL"
 		If Not sc Then
 			s = "bbEmptyString"
 		Else
-			If Not sc.count Then
-				sc.count :+ 1
-			End If
+			sc.used :+ 1
 			s = sc.id
 		End If
 
 		Return Bra("(BBString*)&" + s)
+	End Method
+	
+	Method StringConstId:String(value:String)
+		Local sc:TStringConst = TStringConst(_app.stringConsts.ValueForKey(value))
+		If sc Then
+			sc.used :+ 1
+			Return sc.id
+		End If
+		InternalErr  "Missing const for string : " + value
 	End Method
 
 	Method TransNewObjectExpr$( expr:TNewObjectExpr )
@@ -2931,7 +2938,7 @@ t:+"NULLNULLNULL"
 			'Return cdecl.munged + "NullObjectTest(" + variable + ")"
 			Return variable
 		Else
-			Return Bra(Bra(TransObject(cdecl)) + "bbNullObjectTest(" + variable + ")")
+			Return Bra(Bra(TransObject(cdecl)) + "bbNullObjectTest((BBObject*)" + variable + ")")
 		End If
 	End Method
 	
@@ -3972,7 +3979,7 @@ End Rem
 		
 		_appInstance.mapStringConsts(decl.value)
 		
-		Emit ".const_value=(BBString*)&" + TStringConst(_appInstance.stringConsts.ValueForKey(decl.value)).id
+		Emit ".const_value=(BBString*)&" + StringConstId(decl.value)
 		Emit "},"
 
 	End Method
@@ -4676,7 +4683,7 @@ End Rem
 			_appInstance.mapStringConsts(value.ident)
 			_appInstance.mapStringConsts(value.Value())
 
-			Emit ".const_value=(BBString*)&" + TStringConst(_appInstance.stringConsts.ValueForKey(value.Value())).id
+			Emit ".const_value=(BBString*)&" + StringConstId(value.Value())
 			Emit "},"
 		Next
 		
@@ -6523,7 +6530,7 @@ End If
 			If s Then
 				Local key:TStringConst = TStringConst(app.stringConsts.ValueForKey(s))
 
-				If key.count > 0 Then
+				If key.used > 0 Then
 					If Not sizes.Contains(s.length) Then
 						Emit "struct BBString_" + s.length + "{BBClass_String* clas;BBULONG hash;int length;BBChar buf[" + s.length + "];};"
 						sizes.Insert(s.length, "")
@@ -6536,7 +6543,7 @@ End If
 			If s Then
 				Local key:TStringConst = TStringConst(app.stringConsts.ValueForKey(s))
 
-				If key.count > 0 Then
+				If key.used > 0 Then
 						
 					Emit "static struct BBString_" + s.length + " " + key.id + "={"
 					Emit "&bbStringClass,"

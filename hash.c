@@ -9,7 +9,7 @@
 #endif
 
 BBString * bmx_gen_hash(BBString * txt) {
-	char * buf[64];
+	char buf[64];
 	snprintf(buf, 64, "0x%llx", XXH3_64bits(txt->buf, txt->length * sizeof(BBChar)));
 	return bbStringFromCString(buf);
 }
@@ -27,7 +27,7 @@ void bmx_hash_update(XXH3_state_t * state, void * data, int length) {
 }
 
 BBString * bmx_hash_digest(XXH3_state_t * state) {
-	char * buf[64];
+	char buf[64];
 	snprintf(buf, 64, "%llx", XXH3_64bits_digest(state));
 	return bbStringFromCString(buf);
 }
