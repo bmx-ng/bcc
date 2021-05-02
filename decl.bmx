@@ -4363,6 +4363,7 @@ Type TStringConst
 
 	Field id:String
 	Field count:Int
+	Field used:Int
 
 End Type
 
