@@ -531,7 +531,7 @@ Type TCTranslator Extends TTranslator
 					If isStructInit Then
 						Return "&bbNullObject"
 					Else
-						Return Bra("&bbNullObject")
+						Return Bra(Bra(TransType(ty, "*")) + "&bbNullObject")
 					End If
 				End If
 			End If
@@ -1153,7 +1153,7 @@ t:+"NULLNULLNULL"
 							Err "TODO extern types not allowed methods"
 						Else
 							If cdecl And cdecl.IsInterface() And Not equalsBuiltInFunc(cdecl, decl) Then
-								Local ifc:String = Bra("(struct " + cdecl.munged + "_methods*)" + Bra("bbObjectInterface(" + TransSubExpr( lhs ) + ", " + "&" + cdecl.munged + "_ifc)"))
+								Local ifc:String = Bra("(struct " + cdecl.munged + "_methods*)" + Bra("bbObjectInterface((BBObject*)" + TransSubExpr( lhs ) + ", " + "(bbObjectInterface*)&" + cdecl.munged + "_ifc)"))
 								Return ifc + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, TransSubExpr( lhs ) )
 '								Local ifc:String = Bra("(struct " + cdecl.munged + "_methods*)" + Bra("bbObjectInterface(" + lvarInit + ", " + "&" + cdecl.munged + "_ifc)"))
 '								Return ifc + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, lvar )
@@ -1234,7 +1234,7 @@ t:+"NULLNULLNULL"
 							End If
 	
 							If cdecl.IsInterface() And Not equalsBuiltInFunc(cdecl, decl) Then
-								Local ifc:String = Bra("(struct " + cdecl.munged + "_methods*)" + Bra("bbObjectInterface(" + obj + lvarInit + ", " + "&" + cdecl.munged + "_ifc)"))
+								Local ifc:String = Bra("(struct " + cdecl.munged + "_methods*)" + Bra("bbObjectInterface((BBObject*)" + obj + lvarInit + ", " + "(BBInterface*)&" + cdecl.munged + "_ifc)"))
 								Return ifc + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, lvar )
 							Else
 								Local class:String = Bra("(" + obj + lvarInit + ")->clas" + tSuper)
@@ -1295,7 +1295,7 @@ t:+"NULLNULLNULL"
 		
 									If cdecl.IsInterface() And Not equalsBuiltInFunc(cdecl, decl) Then
 										Local obj:String = Bra(TransObject(cdecl))
-										Local ifc:String = Bra("(struct " + cdecl.munged + "_methods*)" + Bra("bbObjectInterface(" + obj + lvarInit + ", " + "&" + cdecl.munged + "_ifc)"))
+										Local ifc:String = Bra("(struct " + cdecl.munged + "_methods*)" + Bra("bbObjectInterface((BBObject*)" + obj + lvarInit + ", " + "(BBInterface*)&" + cdecl.munged + "_ifc)"))
 										Return ifc + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, lvar )
 									Else
 										Local class:String = Bra("(" + obj + lvarInit + ")->clas" + tSuper)
@@ -1393,7 +1393,7 @@ t:+"NULLNULLNULL"
 							End If
 							If cdecl.IsInterface() And Not equalsBuiltInFunc(cdecl, decl) Then
 								Local obj:String = Bra(TransObject(cdecl))
-								Local ifc:String = Bra("(struct " + cdecl.munged + "_methods*)" + Bra("bbObjectInterface(" + obj + lvarInit + ", " + "&" + cdecl.munged + "_ifc)"))
+								Local ifc:String = Bra("(struct " + cdecl.munged + "_methods*)" + Bra("bbObjectInterface((BBObject*)" + obj + lvarInit + ", " + "(BBInterface*)&" + cdecl.munged + "_ifc)"))
 								Return ifc + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, lvar )
 							Else
 								Local obj:String = lvarInit + "->clas" + tSuper
@@ -1455,7 +1455,7 @@ t:+"NULLNULLNULL"
 								'Local cdecl:TClassDecl = TClassDecl(decl.scope)
 		
 								If cdecl And (cdecl.IsInterface() And Not equalsBuiltInFunc(cdecl, decl)) Then
-									Local ifc:String = Bra("(struct " + cdecl.munged + "_methods*)" + Bra("bbObjectInterface(" + obj + lvarInit + ", " + "&" + cdecl.munged + "_ifc)"))
+									Local ifc:String = Bra("(struct " + cdecl.munged + "_methods*)" + Bra("bbObjectInterface((BBObject*)" + obj + lvarInit + ", " + "(BBInterface*)&" + cdecl.munged + "_ifc)"))
 									Return ifc + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, lvar )
 								Else					
 									Local class:String = Bra(lvarInit + "->clas" + tSuper)
@@ -2309,7 +2309,7 @@ t:+"NULLNULLNULL"
 				End If
 				If TNullType( src ) Return "&bbNullObject"
 				If TObjectType(dst).classDecl.IsInterface() Then
-					Return Bra(Bra(TransObject(TObjectType(dst).classDecl)) + "bbInterfaceDowncast" + Bra(t + ",&" + TObjectType(dst).classDecl.munged + "_ifc"))
+					Return Bra(Bra(TransObject(TObjectType(dst).classDecl)) + "bbInterfaceDowncast" + Bra("(BBObject*)" +t + ",(BBInterface*)&" + TObjectType(dst).classDecl.munged + "_ifc"))
 				Else
 					' no need to downcast to BBObject, as all objects extend it...
 					If TObjectType( dst ).classDecl.ident = "Object" Then
@@ -2759,7 +2759,7 @@ t:+"NULLNULLNULL"
 					Emit TransType(catchStmt.init.ty, catchStmt.init.munged) + " " + catchStmt.init.munged + "=(BBARRAY)ex;" 
 				Else If TObjectType(catchStmt.init.ty) Then
 					If TObjectType(catchStmt.init.ty).classDecl.IsInterface() Then
-						Emit s + "if (bbInterfaceDowncast(ex,&" + TObjectType(catchStmt.init.ty).classDecl.munged + "_ifc) != &bbNullObject) {"
+						Emit s + "if (bbInterfaceDowncast((BBObject*)ex,(BBInterface*)&" + TObjectType(catchStmt.init.ty).classDecl.munged + "_ifc) != &bbNullObject) {"
 					Else
 						Emit s + "if (bbObjectDowncast((BBOBJECT)ex,(BBClass*)&" + TObjectType(catchStmt.init.ty).classDecl.munged + ") != &bbNullObject) {"
 					End If
