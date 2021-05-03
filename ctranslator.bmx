@@ -4702,7 +4702,7 @@ End Rem
 				n :+ ","
 			End If
 			t :+ v.Value()
-			n :+ "(BBString*)&" + TStringConst(_appInstance.stringConsts.ValueForKey(v.ident)).id
+			n :+ "(BBString*)&" + StringConstId(v.ident)
 		Next
 		
 		Emit TransType(decl.ty, "") + " " + decl.munged + "_values[" + decl.values.length + "] = {" + t + "};"
