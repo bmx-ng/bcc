@@ -3842,10 +3842,12 @@ End Rem
 
 		Next
 	End Method
+	
+	Method EmitExternClassProtoTypedef( classDecl:TClassDecl )
+		Emit "typedef struct " + classDecl.ident + " " + classDecl.ident + ";"
+	End Method
 
 	Method EmitExternClassProto( classDecl:TClassDecl )
-
-		Emit "typedef struct " + classDecl.ident + " " + classDecl.ident + ";"
 		
 		' vtable
 		Emit "struct " + classDecl.ident  + "Vtbl {"
@@ -5999,6 +6001,15 @@ End Rem
 					EmitStructClassProto cdecl
 				End If
 			EndIf
+		Next
+		
+		' prototypes/header - typedefs
+		For Local cdecl:TClassDecl=EachIn app.Semanted()
+			If cdecl.declImported Continue
+			
+			If Not cdecl.IsStruct() And cdecl.IsExtern() Then
+				EmitExternClassProtoTypedef(cdecl)
+			End If
 		Next
 
 		'prototypes/header!
