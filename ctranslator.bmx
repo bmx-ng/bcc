@@ -647,7 +647,7 @@ Type TCTranslator Extends TTranslator
 
 					' Object -> Byte Ptr
 					If IsPointerType(ty, TType.T_BYTE) And TObjectType(arg.exprType) Then
-						t:+ varRef + Bra("bbObjectToFieldOffset" + Bra(arg.Trans()))
+						t:+ varRef + Bra("bbObjectToFieldOffset" + Bra("(BBObject*)" + arg.Trans()))
 						Continue
 					End If
 
@@ -5088,9 +5088,9 @@ End Rem
 			Next
 			Emit t + "};"
 		Else
-			t :+ " = "
+			t :+ " = " + Bra(TransObject(classdecl))
 			If ClassHasObjectField(classDecl) Then
-				t :+ Bra(TransObject(classdecl)) + "bbObjectNewNC"
+				t :+ "bbObjectNewNC"
 			Else
 				t :+ "bbObjectAtomicNewNC"
 			End If
