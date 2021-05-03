@@ -1153,7 +1153,7 @@ t:+"NULLNULLNULL"
 							Err "TODO extern types not allowed methods"
 						Else
 							If cdecl And cdecl.IsInterface() And Not equalsBuiltInFunc(cdecl, decl) Then
-								Local ifc:String = Bra("(struct " + cdecl.munged + "_methods*)" + Bra("bbObjectInterface((BBObject*)" + TransSubExpr( lhs ) + ", " + "(bbObjectInterface*)&" + cdecl.munged + "_ifc)"))
+								Local ifc:String = Bra("(struct " + cdecl.munged + "_methods*)" + Bra("bbObjectInterface((BBObject*)" + TransSubExpr( lhs ) + ", " + "(BBInterface*)&" + cdecl.munged + "_ifc)"))
 								Return ifc + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, TransSubExpr( lhs ) )
 '								Local ifc:String = Bra("(struct " + cdecl.munged + "_methods*)" + Bra("bbObjectInterface(" + lvarInit + ", " + "&" + cdecl.munged + "_ifc)"))
 '								Return ifc + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, lvar )
