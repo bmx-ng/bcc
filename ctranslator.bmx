@@ -4922,7 +4922,11 @@ End Rem
 						Else If TInvokeExpr(decl.init) And Not TInvokeExpr(decl.init).invokedWithBraces Then
 							fld :+ "= " + TInvokeExpr(decl.init).decl.munged + ";"
 						Else If TObjectType(decl.ty) Then
-							fld :+ "= " + Bra(TransObject(TObjectType(decl.ty).classDecl)) + decl.init.Trans() + ";"
+							fld :+ "= "
+							If Not TObjectType(decl.ty).classDecl.IsStruct() Then
+								fld :+ Bra(TransObject(TObjectType(decl.ty).classDecl))
+							End If
+							fld :+ decl.init.Trans() + ";"
 						Else If TArrayType(decl.ty) And TArrayType(decl.ty).isStatic Then
 							fld = "for(int i=0;i<" + TArrayType(decl.ty).length + ";i++) " + TransFieldRef(decl, "o") + "[i]=" + TransValue(TArrayType(decl.ty).elemType,Null,False) + ";"
 						Else
@@ -6201,7 +6205,7 @@ End If
 			End If
 		Else
 			If Not decl.funcGlobal Then
-				If TObjectType(decl.ty) Then
+				If TObjectType(decl.ty) And Not TObjectType(decl.ty).classDecl.IsStruct() Then
 					Emit TransGlobal( decl )+"="+Bra(TransObject(TObjectType(decl.ty).classDecl))+decl.init.Trans()+";"
 				Else
 					Emit TransGlobal( decl )+"="+decl.init.Trans()+";"

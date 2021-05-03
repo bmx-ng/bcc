@@ -1106,7 +1106,7 @@ End Rem
 					Local s:String
 					
 					' cast to function return type
-					If TObjectType(stmt.fRetType) Then
+					If TObjectType(stmt.fRetType) And Not TObjectType(stmt.fRetType).classDecl.IsStruct() Then
 						s :+ Bra(TransType(stmt.fRetType, ""))
 					End If
 
