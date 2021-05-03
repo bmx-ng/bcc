@@ -1905,7 +1905,7 @@ t:+"NULLNULLNULL"
 						If TObjectType(dst) Then
 							Return Bra("&" + t)
 						Else
-							Return Bra("bbObjectToFieldOffset" + Bra("&" + t))
+							Return Bra("bbObjectToFieldOffset" + Bra("(BBObject*)" + "&" + t))
 						End If
 					End If
 				End If
@@ -1947,7 +1947,7 @@ t:+"NULLNULLNULL"
 					Return Bra(t)
 				Else
 					If Not TObjectType(src).classDecl.IsStruct() Then
-						Return Bra("bbObjectToFieldOffset" + Bra(t))
+						Return Bra("bbObjectToFieldOffset" + Bra("(BBObject*)" + t))
 					Else
 						Return Bra("(BBBYTE*)" + t)
 					End If
