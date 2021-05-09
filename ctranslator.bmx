@@ -6410,9 +6410,9 @@ End If
 		' register incbins
 		For Local ib:TIncbin = EachIn app.incbins
 			If opt_legacy_incbin Then
-				Emit "bbIncbinAdd(&" + TStringConst(app.stringConsts.ValueForKey(ib.file)).id + ",&" + app.munged + "_ib_" + ib.id + "," + ib.length + ");"
+				Emit "bbIncbinAdd((BBString*)&" + StringConstId(ib.file) + ",&" + app.munged + "_ib_" + ib.id + "," + ib.length + ");"
 			Else
-				Emit "bbIncbinAdd(&" + TStringConst(app.stringConsts.ValueForKey(ib.file)).id + ",&" + ib.GeneratedDataName(app) + "," + ib.GeneratedSizeName(app) + ");"
+				Emit "bbIncbinAdd((BBString*)&" + StringConstId(ib.file) + ",&" + ib.GeneratedDataName(app) + "," + ib.GeneratedSizeName(app) + ");"
 			End If
 		Next
 		
