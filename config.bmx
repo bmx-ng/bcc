@@ -34,6 +34,9 @@ Import "base.stringhelper.bmx"
 Import "base64.bmx"
 Import "enums.c"
 Import "hash.c"
+?Not bmxng
+Import "math.c"
+?
 
 ' debugging help
 Const DEBUG:Int = False
@@ -717,6 +720,37 @@ Function CalculateFileHash:String(path:String)
 	Return Null
 End Function
 
+?Not bmxng
+Const OP_MUL:Int = 0
+Const OP_DIV:Int = 1
+Const OP_MOD:Int = 2
+Const OP_SHL:Int = 3
+Const OP_SHR:Int = 4
+Const OP_SAR:Int = 5
+Const OP_ADD:Int = 6
+Const OP_SUB:Int = 7
+Const OP_AND:Int = 8
+Const OP_XOR:Int = 9
+Const OP_OR:Int = 10
+
+Function OpToInt:Int(op:String)
+	Select op
+		Case "*" Return OP_MUL
+		Case "/" Return OP_DIV
+		Case "mod" Return OP_MOD
+		Case "shl" Return OP_SHL
+		Case "shr" Return OP_SHR
+		Case "sar" Return OP_SAR
+		Case "+" Return OP_ADD
+		Case "-" Return OP_SUB
+		Case "&" Return OP_AND
+		Case "~~" Return OP_XOR
+		Case "|" Return OP_OR
+	End Select
+	InternalErr "TBinaryMathExpr.Eval.OpToInt : " + op
+End Function
+?
+
 Extern
 	Function strlen_:Int(s:Byte Ptr)="strlen"
 	Function bmx_enum_next_power(char:Int, val:Long Var, ret:Long Var)
@@ -725,4 +759,13 @@ Extern
 	Function bmx_hash_reset(state:Byte Ptr)
 	Function bmx_hash_update(state:Byte Ptr, data:Byte Ptr, length:Int)
 	Function bmx_hash_digest:String(state:Byte Ptr)
+
+?Not bmxng
+	Function bmx_bitwise_not_uint:String(value:String)
+	Function bmx_bitwise_not_sizet:String(value:String)
+	Function bmx_bitwise_not_ulong:String(value:String)
+	Function bmx_binarymathexpr_sizet:String(op:Int, lhs:String, rhs:String)
+	Function bmx_binarymathexpr_uint:String(op:Int, lhs:String, rhs:String)
+	Function bmx_binarymathexpr_ulong:String(op:Int, lhs:String, rhs:String)
+?
 End Extern

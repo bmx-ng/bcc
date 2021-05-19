@@ -1798,7 +1798,17 @@ Type TUnaryExpr Extends TExpr
 		Local val$=expr.Eval()
 		Select op
 		Case "~~"
-			Return ~Int( val )
+			If TIntType(exprType) Return ~Int( val )
+			If TLongType(exprType) Return ~Long( val )
+?Not bmxng
+			If TUIntType(exprType) Return bmx_bitwise_not_uint( val )
+			If TSizeTType(exprType) Return bmx_bitwise_not_sizet( val )
+			If TULongType(exprType) Return bmx_bitwise_not_ulong( val )
+?bmxng
+			If TUIntType(exprType) Return ~UInt( val )
+			If TSizeTType(exprType) Return ~Size_T( val )
+			If TULongType(exprType) Return ~ULong( val )
+?		
 		Case "+"
 			Return val
 		Case "-"
@@ -1983,7 +1993,7 @@ Type TBinaryMathExpr Extends TBinaryExpr
 			Case "~~" Return x ~ y
 			Case "|" Return x | y
 			End Select
-		Else If TLongType( exprType ) Or TSizeTType(exprType) Or TUIntType(exprType) Or TULongType(exprType) Or TInt128Type(exprType) Or TWParamType(exprType) Or TLParamType(exprType) 
+		Else If TLongType( exprType ) Or TInt128Type(exprType) Or TWParamType(exprType) Or TLParamType(exprType) 
 			Local x:Long=Long(lhs),y:Long=Long(rhs)
 			Select op
 			Case "^" Return Double(lhs)^Double(rhs)
@@ -2007,6 +2017,135 @@ Type TBinaryMathExpr Extends TBinaryExpr
 			Case "~~" Return x ~ y
 			Case "|" Return x | y
 			End Select
+		Else If TSizeTType(exprType)
+?bmxng
+			Local x:Size_T=Size_T(lhs),y:Size_T=Size_T(rhs)
+			Select op
+			Case "^" Return Double(lhs)^Double(rhs)
+			Case "*" Return x*y
+			Case "/"
+				If Not y Then
+					Err "Integer division by zero"
+				End If
+				Return x/y
+			Case "mod"
+				If Not y Then
+					Err "Integer division by zero"
+				End If
+				Return x Mod y
+			Case "shl" Return x Shl y
+			Case "shr" Return x Shr y
+			Case "sar" Return x Sar y
+			Case "+" Return x + y
+			Case "-" Return x - y
+			Case "&" Return x & y
+			Case "~~" Return x ~ y
+			Case "|" Return x | y
+			End Select
+?Not bmxng
+		Local opInt:Int = OpToInt(op)
+		Select op
+			Case "^" Return Double(lhs)^Double(rhs)
+			Case "/"
+				If Not Long(rhs) Then
+					Err "Integer division by zero"
+				End If
+				Return bmx_binarymathexpr_sizet(opInt, lhs, rhs)
+			Case "mod"
+				If Not Long(rhs) Then
+					Err "Integer division by zero"
+				End If
+				Return bmx_binarymathexpr_sizet(opInt, lhs, rhs)
+			Default
+				Return bmx_binarymathexpr_sizet(opInt, lhs, rhs)
+		End Select
+?
+		Else If TUIntType(exprType)
+?bmxng
+			Local x:UInt=UInt(lhs),y:UInt=UInt(rhs)
+			Select op
+			Case "^" Return Double(lhs)^Double(rhs)
+			Case "*" Return x*y
+			Case "/"
+				If Not y Then
+					Err "Integer division by zero"
+				End If
+				Return x/y
+			Case "mod"
+				If Not y Then
+					Err "Integer division by zero"
+				End If
+				Return x Mod y
+			Case "shl" Return x Shl y
+			Case "shr" Return x Shr y
+			Case "sar" Return x Sar y
+			Case "+" Return x + y
+			Case "-" Return x - y
+			Case "&" Return x & y
+			Case "~~" Return x ~ y
+			Case "|" Return x | y
+			End Select
+?Not bmxng
+		Local opInt:Int = OpToInt(op)
+		Select op
+			Case "^" Return Double(lhs)^Double(rhs)
+			Case "/"
+				If Not Long(rhs) Then
+					Err "Integer division by zero"
+				End If
+				Return bmx_binarymathexpr_uint(opInt, lhs, rhs)
+			Case "mod"
+				If Not Long(rhs) Then
+					Err "Integer division by zero"
+				End If
+				Return bmx_binarymathexpr_uint(opInt, lhs, rhs)
+			Default
+				Return bmx_binarymathexpr_uint(opInt, lhs, rhs)
+		End Select
+?
+		Else If TULongType(exprType)
+?bmxng
+			Local x:ULong=ULong(lhs),y:ULong=ULong(rhs)
+			Select op
+			Case "^" Return Double(lhs)^Double(rhs)
+			Case "*" Return x*y
+			Case "/"
+				If Not y Then
+					Err "Integer division by zero"
+				End If
+				Return x/y
+			Case "mod"
+				If Not y Then
+					Err "Integer division by zero"
+				End If
+				Return x Mod y
+			Case "shl" Return x Shl y
+			Case "shr" Return x Shr y
+			Case "sar" Return x Sar y
+			Case "+" Return x + y
+			Case "-" Return x - y
+			Case "&" Return x & y
+			Case "~~" Return x ~ y
+			Case "|" Return x | y
+			End Select
+?Not bmxng
+		Local opInt:Int = OpToInt(op)
+		Select op
+			Case "^" Return Double(lhs)^Double(rhs)
+			Case "/"
+				If Not Long(rhs) Then
+					Err "Integer division by zero"
+				End If
+				Return bmx_binarymathexpr_ulong(opInt, lhs, rhs)
+			Case "mod"
+				If Not Long(rhs) Then
+					Err "Integer division by zero"
+				End If
+				Return bmx_binarymathexpr_ulong(opInt, lhs, rhs)
+			Default
+				Return bmx_binarymathexpr_ulong(opInt, lhs, rhs)
+		End Select
+?
 		Else If TFloatType( exprType )
 			Local x:Double=Double(lhs),y:Double=Double(rhs)
 			Select op
