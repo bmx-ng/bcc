@@ -925,7 +925,7 @@ Type TParser Extends TGenProcessor
 		Return ty
 	End Method
 
-	Method ParseDeclType:TType(attr:Int = 0)
+	Method ParseDeclType:TType(attr:Long = 0)
 		Local ty:TType
 		Select _toke
 		Case "@"
@@ -2389,7 +2389,7 @@ End Rem
 		End If
 	End Method
 
-	Method ParseExternBlock(mdecl:TModuleDecl, attrs:Int)
+	Method ParseExternBlock(mdecl:TModuleDecl, attrs:Long)
 
 		NextToke
 
@@ -2412,6 +2412,8 @@ End Rem
 					mdecl.InsertDecls ParseDecls( _toke,attrs )
 				Case "global"
 					ParseDeclStmts(True, attrs, mdecl)
+				Case "threadedglobal"
+					ParseDeclStmts(True, attrs | DECL_THREADED, mdecl)
 				Case "struct"
 					mdecl.InsertDecl ParseClassDecl( _toke,attrs | CLASS_STRUCT )
 				Case "type"
@@ -2439,7 +2441,7 @@ End Rem
 		Select _toke
 			Case ";","~n"
 				NextToke
-			Case "const","local","global"
+			Case "const","local","global","threadedglobal"
 				ParseDeclStmts
 			' nested function - needs to get added to the "module"
 			Case "function"
@@ -2557,7 +2559,7 @@ End Rem
 		End Select
 	End Method
 
-	Method ParseDecl:TDecl( toke$,attrs:Int )
+	Method ParseDecl:TDecl( toke$,attrs:Long )
 
 		SetErr
 
@@ -2621,7 +2623,7 @@ End Rem
 					ty=New TArrayType.Create( ty, ln.length,, attrs & DECL_STATIC > 0 )
 				End If
 			Else If toke <> "const"
-				If toke="global" Or toke="local" Then
+				If toke="global" Or toke="local" Or toke="threadedglobal" Then
 					init=New TConstExpr.Create( ty,"" )
 				End If
 			Else
@@ -2636,6 +2638,8 @@ End Rem
 		Select toke
 		Case "global"
 			decl=New TGlobalDecl.Create( id,ty,init,attrs )
+		Case "threadedglobal"
+			decl=New TGlobalDecl.Create( id,ty,init,attrs | DECL_THREADED )
 		Case "field"
 			decl=New TFieldDecl.Create( id,ty,init,attrs )
 
@@ -2704,7 +2708,7 @@ End Rem
 		Return decl
 	End Method
 
-	Method ParseDecls:TList( toke$,attrs:Int, isField:Int = False )
+	Method ParseDecls:TList( toke$,attrs:Long, isField:Int = False )
 		If toke Parse toke
 
 		If isField Then
@@ -2736,7 +2740,7 @@ End Rem
 		Forever
 	End Method
 
-	Method ParseDeclStmts(initOnly:Int = False, attrs:Int = 0, mdecl:TModuleDecl  = Null)
+	Method ParseDeclStmts(initOnly:Int = False, attrs:Long = 0, mdecl:TModuleDecl  = Null)
 		Local toke$=_toke
 		NextToke
 		Repeat
@@ -2878,7 +2882,7 @@ End Rem
 	End Method
 	
 	
-	Method ParseFuncDecl:TFuncDecl( toke$, attrs:Int, parent:TScopeDecl = Null )
+	Method ParseFuncDecl:TFuncDecl( toke$, attrs:Long, parent:TScopeDecl = Null )
 		SetErr
 
 		If toke Parse toke
@@ -2975,7 +2979,7 @@ End Rem
 			attrs :| (fdecl.attrs & DECL_API_FLAGS)
 		End If
 		
-		Local declaredAttrs:Int
+		Local declaredAttrs:Long
 		While True
 			If CParse( "nodebug" ) Then
 				If declaredAttrs & DECL_NODEBUG Then Err "Duplicate modifier 'NoDebug'"
@@ -3179,7 +3183,7 @@ End Rem
 		Return funcDecl
 	End Method
 	
-	Method ParseCallConvention:Int(callConvention:Int = DECL_API_DEFAULT)
+	Method ParseCallConvention:Long(callConvention:Long = DECL_API_DEFAULT)
 		If _tokeType <> TOKE_STRINGLIT Then
 			Return callConvention
 		End If
@@ -3221,7 +3225,7 @@ End Rem
 		If _toke<>")"
 			Local nargs:Int
 			Repeat
-				Local attrs:Int
+				Local attrs:Long
 				If CParse("staticarray") Then
 					attrs :| DECL_STATIC
 				End If
@@ -3317,7 +3321,7 @@ End Rem
 		
 	End Method
 
-	Method ParseClassDecl:TClassDecl( toke$,attrs:Int, templateDets:TTemplateDets = Null )
+	Method ParseClassDecl:TClassDecl( toke$,attrs:Long, templateDets:TTemplateDets = Null )
 		SetErr
 
 		Local calculatedStartLine:Int = _toker.Line()
@@ -3536,11 +3540,11 @@ End Rem
 
 		'If classDecl.IsTemplateArg() Return classDecl
 
-		Local decl_attrs:Int=(attrs & DECL_EXTERN) | (attrs & DECL_NODEBUG) | (attrs & DECL_API_STDCALL)
+		Local decl_attrs:Long=(attrs & DECL_EXTERN) | (attrs & DECL_NODEBUG) | (attrs & DECL_API_STDCALL)
 
 		Repeat
-			Local method_attrs:Int=decl_attrs|FUNC_METHOD | (attrs & DECL_NODEBUG)
-			Local abst_attrs:Int = 0
+			Local method_attrs:Long=decl_attrs|FUNC_METHOD | (attrs & DECL_NODEBUG)
+			Local abst_attrs:Long = 0
 			If attrs & CLASS_INTERFACE abst_attrs:|DECL_ABSTRACT
 		
 			SkipEols
@@ -3596,7 +3600,12 @@ End Rem
 				NextToke
 				decl_attrs:& ~DECL_PRIVATE
 				decl_attrs:& ~DECL_PROTECTED
-			Case "const","global","field"
+			Case "const","global","field","threadedglobal"
+				Local extra_attrs:Long
+				If _toke = "threadedglobal" Then
+					extra_attrs = DECL_THREADED
+				End If
+			
 				If attrs & DECL_EXTERN Then
 					If (attrs & CLASS_INTERFACE) Then
 						Err "Extern Interfaces can only contain methods."
@@ -3608,11 +3617,11 @@ End Rem
 				If (attrs & CLASS_INTERFACE) And _toke<>"const"
 					Err "Interfaces can only contain constants and methods."
 				EndIf
-				If (attrs & CLASS_STRUCT) And _toke<>"field" And _toke<>"global"
+				If (attrs & CLASS_STRUCT) And _toke<>"field" And _toke<>"global" And _toke<>"threadedglobal"
 					Err "Structs can only contain fields."
 				EndIf
 				
-				classDecl.InsertDecls ParseDecls( _toke,decl_attrs, _toke = "field")
+				classDecl.InsertDecls ParseDecls( _toke,decl_attrs | extra_attrs, _toke = "field")
 			Case "method"
 				If (attrs & CLASS_STRUCT) And (attrs & DECL_EXTERN) Then
 					Err "Structs can only contain fields."
@@ -3665,7 +3674,7 @@ End Rem
 		NextToke
 	End Method
 
-	Method ParseModuleDecl:String( toke$,attrs:Int )
+	Method ParseModuleDecl:String( toke$,attrs:Long )
 		NextToke
 
 		' namespace . module
@@ -3745,7 +3754,7 @@ End Rem
 
 	End Method
 
-	Method ImportAllModules(attrs:Int)
+	Method ImportAllModules(attrs:Long)
 
 		' get all brl and pub modules
 		Local mods:TList = EnumModules("brl")
@@ -3757,7 +3766,7 @@ End Rem
 
 	End Method
 	
-	Method ImportModule( modpath$,attrs:Int )
+	Method ImportModule( modpath$,attrs:Long )
 		SetErr
 		
 		modpath = modpath.ToLower()
@@ -3999,7 +4008,7 @@ End Rem
 		Return dets
 	End Method
 
-	Method ParseCurrentFile:Int(path:String, attrs:Int)
+	Method ParseCurrentFile:Long(path:String, attrs:Long)
 
 		LoadExternCasts(path)
 
@@ -4022,6 +4031,8 @@ End Rem
 				_module.InsertDecls ParseDecls( _toke,attrs )
 			Case "global"
 				ParseDeclStmts(True, attrs, _module)
+			Case "threadedglobal"
+				ParseDeclStmts(True, attrs | DECL_THREADED, _module)
 			Case "struct"
 				_module.InsertDecl ParseClassDecl( _toke,attrs | CLASS_STRUCT )
 			Case "type"
@@ -4117,7 +4128,7 @@ End Rem
 
 		SkipEols
 
-		Local mattrs:Int
+		Local mattrs:Long
 		'If CParse( "strict" ) mattrs:|MODULE_STRICT
 		'If CParse( "superstrict" ) mattrs:|MODULE_SUPERSTRICT
 
@@ -4194,7 +4205,7 @@ End Rem
 		End If
 
 
-		Local attrs:Int
+		Local attrs:Long
 
 		While _toke
 			SetErr

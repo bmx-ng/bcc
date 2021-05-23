@@ -42,7 +42,7 @@ Type TIParser
 	Field _tokeSpace:Int
 	Field _tokerStack:TList=New TList'<TToker>
 
-	Method ParseModuleImport:Int(pmod:TModuleDecl, modpath:String, path:String, imp:String = Null, iData:String = Null, attrs:Int = 0, relPath:String = "", isFileImport:Int = 0)
+	Method ParseModuleImport:Int(pmod:TModuleDecl, modpath:String, path:String, imp:String = Null, iData:String = Null, attrs:Long = 0, relPath:String = "", isFileImport:Int = 0)
 
 		Const STATE_CLASS:Int = 1
 
@@ -477,7 +477,7 @@ Type TIParser
 						Exit
 					End If
 
-					Local a:Int
+					Local a:Long
 					Local ty:TType = ParseDeclType(a)
 
 					If CParse("(") Then
@@ -664,7 +664,7 @@ Type TIParser
 		
 	End Method
 
-	Method ParseClassDecl:TClassDecl( toke$,attrs:Int )
+	Method ParseClassDecl:TClassDecl( toke$,attrs:Long )
 		SetErr
 
 		'If toke Parse toke
@@ -710,9 +710,9 @@ Type TIParser
 		
 		'If classDecl.IsTemplateArg() Return classDecl
 
-		Local decl_attrs:Int=(attrs & DECL_EXTERN)
+		Local decl_attrs:Long=(attrs & DECL_EXTERN)
 		
-		Local method_attrs:Int=decl_attrs
+		Local method_attrs:Long=decl_attrs
 		If attrs & CLASS_INTERFACE method_attrs:|DECL_ABSTRACT
 
 		Repeat
@@ -748,7 +748,7 @@ Type TIParser
 				classDecl.InsertDecl decl
 
 			Case ".", "@", "~~" ' field			
-				Local d_attrs:Int = decl_attrs | DECL_FIELD
+				Local d_attrs:Long = decl_attrs | DECL_FIELD
 				If _toker._toke = "." Then
 					NextToke
 				Else
@@ -815,7 +815,7 @@ Type TIParser
 
 		Local id$=ParseIdent()
 		Local ty:TType
-		Local attrs:Int
+		Local attrs:Long
 
 		Parse( "\" )
 		ty=ParseDeclType(attrs, False)
@@ -979,14 +979,14 @@ Type TIParser
 		Return str
 	End Method
 
-	Method ParseFuncDecl:TFuncDecl( toke$,attrs:Int, returnType:TType = Null, classDecl:TClassDecl = Null )
+	Method ParseFuncDecl:TFuncDecl( toke$,attrs:Long, returnType:TType = Null, classDecl:TClassDecl = Null )
 		SetErr
 
 		'If toke Parse toke
 	
 		Local id$
 		Local ty:TType
-		Local meth:Int = attrs & FUNC_METHOD
+		Local meth:Long = attrs & FUNC_METHOD
 
 		If Not returnType Then		
 			If attrs & FUNC_METHOD
@@ -1278,7 +1278,7 @@ Type TIParser
 		
 	End Method
 	
-	Method ParseDecl:TDecl( toke$,attrs:Int )
+	Method ParseDecl:TDecl( toke$,attrs:Long )
 		SetErr
 		Local pos:Int, tokeType:Int
 		pos = _toker._tokePos
@@ -1525,7 +1525,7 @@ End Rem
 		Return isDef
 	End Method
 
-	Method ParseDeclType:TType(attrs:Int Var, fn:Int = False)
+	Method ParseDeclType:TType(attrs:Long Var, fn:Int = False)
 		Local ty:TType
 		Select _toker._toke
 		'Case "?"
@@ -1906,7 +1906,7 @@ End Rem
 		Return ParseIdentType()
 	End Method
 	
-	Method ApplyFunctionAttributes(classDecl:TClassDecl, attrs:Int)
+	Method ApplyFunctionAttributes(classDecl:TClassDecl, attrs:Long)
 		For Local decl:TFuncDecl = EachIn classDecl._decls
 			decl.attrs :| attrs
 		Next

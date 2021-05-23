@@ -22,40 +22,41 @@
 '    distribution.
 '
 
-Const DECL_EXTERN:Int=        $010000
-Const DECL_PRIVATE:Int=       $020000
-Const DECL_ABSTRACT:Int=      $040000
-Const DECL_FINAL:Int=         $080000
-Const DECL_READ_ONLY:Int=     $000100
-Const DECL_STATIC:Int=      $20000000
-Const DECL_OVERRIDE:Int=    $40000000
-Const DECL_INLINE:Int=      $80000000
+Const DECL_EXTERN:Long=        $010000
+Const DECL_PRIVATE:Long=       $020000
+Const DECL_ABSTRACT:Long=      $040000
+Const DECL_FINAL:Long=         $080000
+Const DECL_READ_ONLY:Long=     $000100
+Const DECL_STATIC:Long=      $20000000
+Const DECL_OVERRIDE:Long=    $40000000
+Const DECL_INLINE:Long=      $80000000
+Const DECL_THREADED:Long=   $100000000:Long
 
-Const DECL_SEMANTED:Int=      $100000
-Const DECL_SEMANTING:Int=     $200000
-Const DECL_CYCLIC:Int=       $8000000
+Const DECL_SEMANTED:Long=      $100000
+Const DECL_SEMANTING:Long=     $200000
+Const DECL_CYCLIC:Long=       $8000000
 
-Const DECL_POINTER:Int=       $400000
+Const DECL_POINTER:Long=       $400000
 
-Const DECL_ARG:Int=           $800000
-Const DECL_INITONLY:Int=     $1000000
+Const DECL_ARG:Long=           $800000
+Const DECL_INITONLY:Long=     $1000000
 
-Const DECL_NODEBUG:Int=      $2000000
-Const DECL_PROTECTED:Int=    $4000000
-Const DECL_EXPORT:Int=       $8000000
+Const DECL_NODEBUG:Long=      $2000000
+Const DECL_PROTECTED:Long=    $4000000
+Const DECL_EXPORT:Long=       $8000000
 
-Const DECL_API_CDECL:Int=   $00000000
-Const DECL_API_STDCALL:Int= $10000000
-Const DECL_API_DEFAULT:Int=DECL_API_CDECL
-Const DECL_API_FLAGS:Int=   DECL_API_CDECL | DECL_API_STDCALL
+Const DECL_API_CDECL:Long=   $00000000
+Const DECL_API_STDCALL:Long= $10000000
+Const DECL_API_DEFAULT:Long=DECL_API_CDECL
+Const DECL_API_FLAGS:Long=   DECL_API_CDECL | DECL_API_STDCALL
 
-Const DECL_NESTED:Int=      $20000000
+Const DECL_NESTED:Long=      $20000000
 
-Const CLASS_INTERFACE:Int=    $002000
-Const CLASS_THROWABLE:Int=    $004000
-Const CLASS_STRUCT:Int=       $008000
-Const CLASS_GENERIC:Int=      $001000
-Const CLASS_FLAGS:Int = CLASS_INTERFACE | CLASS_THROWABLE | CLASS_STRUCT | CLASS_GENERIC
+Const CLASS_INTERFACE:Long=    $002000
+Const CLASS_THROWABLE:Long=    $004000
+Const CLASS_STRUCT:Long=       $008000
+Const CLASS_GENERIC:Long=      $001000
+Const CLASS_FLAGS:Long = CLASS_INTERFACE | CLASS_THROWABLE | CLASS_STRUCT | CLASS_GENERIC
 
 Const SCOPE_FUNC:Int = 0
 Const SCOPE_CLASS_LOCAL:Int = 1
@@ -144,13 +145,14 @@ Type TDecl
 	Field errInfo$
 	Field actual:TDecl
 	Field scope:TScopeDecl
-	Field attrs:Int
+	Field attrs:Long
 	Field metadata:TMetadata = New TMetadata
 	
 	Field declImported:Int = False
 	Field generated:Int
 	
 	Field _identLower:String
+	Field scopeIndex:Int = -1
 	
 	Method New()
 		errInfo=_errInfo
@@ -216,6 +218,10 @@ Type TDecl
 	
 	Method IsNoDebug:Int()
 		Return (attrs & DECL_NODEBUG)<>0
+	End Method
+	
+	Method IsThreaded:Int()
+		Return (attrs & DECL_THREADED)<>0
 	End Method
 	
 	Method FuncScope:TFuncDecl()
@@ -580,7 +586,7 @@ End Type
 Type TConstDecl Extends TValDecl
 	Field value$
 	
-	Method Create:TConstDecl( ident$,ty:TType,init:TExpr,attrs:Int )
+	Method Create:TConstDecl( ident$,ty:TType,init:TExpr,attrs:Long )
 		Self.ident=ident
 		Self.munged=ident
 		Self.declTy=ty
@@ -632,7 +638,7 @@ Type TLocalDecl Extends TVarDecl
 	Field volatile:Int = False
 	Field declaredInTry:TTryStmtDecl
 
-	Method Create:TLocalDecl( ident$,ty:TType,init:TExpr,attrs:Int=0, generated:Int = False, volatile:Int = False )
+	Method Create:TLocalDecl( ident$,ty:TType,init:TExpr,attrs:Long=0, generated:Int = False, volatile:Int = False )
 		Self.ident=ident
 		Self.declTy=ty
 		Self.declInit=init
@@ -678,7 +684,7 @@ Type TArgDecl Extends TLocalDecl
 
 	Field castTo:String
 	
-	Method Create:TArgDecl( ident$,ty:TType,init:TExpr,attrs:Int=0, generated:Int = False, volatile:Int = True )
+	Method Create:TArgDecl( ident$,ty:TType,init:TExpr,attrs:Long=0, generated:Int = False, volatile:Int = True )
 		Self.ident=ident
 		Self.declTy=ty
 		Self.declInit=init
@@ -751,7 +757,7 @@ Type TGlobalDecl Extends TVarDecl
 	Field funcGlobal:Int
 	Field mscope:TScopeDecl
 	
-	Method Create:TGlobalDecl( ident$,ty:TType,init:TExpr,attrs:Int=0,funcGlobal:Int=False )
+	Method Create:TGlobalDecl( ident$,ty:TType,init:TExpr,attrs:Long=0,funcGlobal:Int=False )
 		Self.deferInit = True
 		Self.ident=ident
 		Self.declTy=ty
@@ -805,7 +811,7 @@ Type TFieldDecl Extends TVarDecl
 	' location offset in object variable data
 	Field offset:Int
 
-	Method Create:TFieldDecl( ident$,ty:TType,init:TExpr,attrs:Int=0 )
+	Method Create:TFieldDecl( ident$,ty:TType,init:TExpr,attrs:Long=0 )
 		Self.ident=ident
 		Self.declTy=ty
 		Self.declInit=init
@@ -889,7 +895,7 @@ Type TAliasDecl Extends TDecl
 
 	Field decl:Object
 	
-	Method Create:TAliasDecl( ident$,decl:Object,attrs:Int=0 )
+	Method Create:TAliasDecl( ident$,decl:Object,attrs:Long=0 )
 		Self.ident=ident
 		Self.decl=decl
 		Self.attrs=attrs
@@ -1860,16 +1866,16 @@ Type TBlockDecl Extends TScopeDecl
 	End Method
 End Type
 
-Const FUNC_METHOD:Int=   $0001			'mutually exclusive with ctor
-Const FUNC_CTOR:Int=     $0002
-Const FUNC_PROPERTY:Int= $0004
-Const FUNC_DTOR:Int=     $0008
-Const FUNC_BUILTIN:Int = $0080
-Const FUNC_PTR:Int=      $0100
-Const FUNC_INIT:Int =    $0200
-Const FUNC_NESTED:Int =  $0400
-Const FUNC_OPERATOR:Int= $0800
-Const FUNC_FIELD:Int=    $1000
+Const FUNC_METHOD:Long=   $0001			'mutually exclusive with ctor
+Const FUNC_CTOR:Long=     $0002
+Const FUNC_PROPERTY:Long= $0004
+Const FUNC_DTOR:Long=     $0008
+Const FUNC_BUILTIN:Long = $0080
+Const FUNC_PTR:Long=      $0100
+Const FUNC_INIT:Long =    $0200
+Const FUNC_NESTED:Long =  $0400
+Const FUNC_OPERATOR:Long= $0800
+Const FUNC_FIELD:Long=    $1000
 
 'Fix! A func is NOT a block/scope!
 '
@@ -1895,7 +1901,7 @@ Type TFuncDecl Extends TBlockDecl
 	
 	Field equalsBuiltIn:Int = -1
 	
-	Method CreateF:TFuncDecl( ident$,ty:TType,argDecls:TArgDecl[],attrs:Int )
+	Method CreateF:TFuncDecl( ident$,ty:TType,argDecls:TArgDecl[],attrs:Long )
 		Self.ident=ident
 		Self.retTypeExpr=ty
 		If argDecls
@@ -2465,7 +2471,7 @@ Type TClassDecl Extends TScopeDecl
 
 	'Global nullObjectClass:TClassDecl=New TNullDecl.Create( "{NULL}",Null,Null,Null,DECL_ABSTRACT|DECL_EXTERN )
 	
-	Method Create:TClassDecl( ident$,args:TTemplateArg[],superTy:TIdentType,impls:TIdentType[],attrs:Int )
+	Method Create:TClassDecl( ident$,args:TTemplateArg[],superTy:TIdentType,impls:TIdentType[],attrs:Long )
 		Self.ident=ident
 		Self.args=args
 		Self.superTy=superTy
@@ -3557,7 +3563,7 @@ Type TLoopLabelDecl Extends TDecl ' also used internally for Try constructs
 
 	Field realIdent:String
 
-	Method Create:TLoopLabelDecl( ident$, attrs:Int=0 )
+	Method Create:TLoopLabelDecl( ident$, attrs:Long=0 )
 		If Not ident.StartsWith("#") Then
 			Self.ident="#" + ident
 			Self.realIdent = ident
@@ -3583,7 +3589,7 @@ Type TDataLabelDecl Extends TDecl
 	Field realIdent:String
 	Field index:Int
 
-	Method Create:TDataLabelDecl( ident$, attrs:Int=0 )
+	Method Create:TDataLabelDecl( ident$, attrs:Long=0 )
 		If Not ident.StartsWith("#") Then
 			Self.ident="#" + ident
 			Self.realIdent = ident
@@ -3611,7 +3617,7 @@ Type TDefDataDecl Extends TDecl
 	Field label:TDataLabelDecl
 	Field data:TExpr[]
 
-	Method Create:TDefDataDecl(data:TExpr[], label:TDataLabelDecl = Null, attrs:Int=0 )
+	Method Create:TDefDataDecl(data:TExpr[], label:TDataLabelDecl = Null, attrs:Long=0 )
 		Self.data=data
 		Self.label=label
 		Self.attrs=attrs
@@ -3911,7 +3917,7 @@ Type TModuleDecl Extends TScopeDecl
 		Return "Module "+munged
 	End Method
 	
-	Method Create:TModuleDecl( ident$,munged$,filepath$,attrs:Int )
+	Method Create:TModuleDecl( ident$,munged$,filepath$,attrs:Long )
 		Self.ident=ident
 		Self.munged=munged
 		Self.filepath=filepath

@@ -918,7 +918,7 @@ t:+"NULLNULLNULL"
 
 		If Not gdecl.funcGlobal Then
 			If Not (gdecl.attrs & DECL_INITONLY) Then
-				glob :+"static " + TransType( gdecl.init.exprType, gdecl.munged )+" "
+				glob :+"static " + TransThreadedGlobal(gdecl) + TransType( gdecl.init.exprType, gdecl.munged )+" "
 			End If
 	
 			glob :+ gdecl.munged+"="
@@ -948,7 +948,7 @@ t:+"NULLNULLNULL"
 					Else If Not TConstExpr(gdecl.init) And Not (gdecl.attrs & DECL_INITONLY) Then
 						' for non const, we need to add an initialiser
 						glob :+ TransValue(gdecl.ty, "") + ";~n"
-						glob :+ indent +"static int _" + gdecl.munged + "_inited = 0;~n"
+						glob :+ indent +"static " + TransThreadedGlobal(gdecl) + " int _" + gdecl.munged + "_inited = 0;~n"
 						glob :+ indent + "if (!_" + gdecl.munged + "_inited) {~n"
 						glob :+ indent + "~t_" + gdecl.munged + "_inited = 1;~n"
 						glob :+ indent + "~t" + gdecl.munged + " = " + gdecl.init.Trans() + ";~n"
@@ -968,7 +968,7 @@ t:+"NULLNULLNULL"
 				End If
 			End If
 		Else
-			glob :+ "static int _" + gdecl.munged + "_inited = 0;~n"
+			glob :+ "static " + TransThreadedGlobal(gdecl) + " int _" + gdecl.munged + "_inited = 0;~n"
 			glob :+ indent + "if (!_" + gdecl.munged + "_inited) {~n"
 			glob :+ indent + "~t_" + gdecl.munged + "_inited = 1;~n"
 			glob :+ indent + "~t" + gdecl.munged + " = " 
@@ -1061,6 +1061,14 @@ t:+"NULLNULLNULL"
 			End Select
 		EndIf
 		InternalErr "TCTranslator.TransStatic"
+	End Method
+	
+	Method TransThreadedGlobal:String( decl:TDecl )
+		If decl.attrs & DECL_THREADED Then
+			Return "BBThreadLocal "
+		Else
+			Return ""
+		End If
 	End Method
 
 	Method TransTemplateCast$( ty:TType,src:TType,expr$ )
@@ -2852,6 +2860,7 @@ t:+"NULLNULLNULL"
 	End Method
 
 	Method EmitDebugEnterScope(block:TBlockDecl)
+		Local scopeIndex:Int
 		Local count:Int
 		For Local decl:TDecl = EachIn block.Decls()
 			If TLocalDecl(decl) Then
@@ -2896,11 +2905,12 @@ t:+"NULLNULLNULL"
 				Emit Enquote(TransDebugScopeType(TClassDecl(block.scope).objectType)) + ","
 				Emit ".var_address=&o"
 				Emit "},"
+				scopeIndex:+ 1
 			End If
 			
 			' block globals
 			For Local gdecl:TGlobalDecl = EachIn block.Decls()
-				EmitGlobalDebugScope(gdecl)
+				EmitGlobalDebugScope(gdecl, scopeIndex)
 			Next
 			
 			' iterate through decls and add as appropriate
@@ -2930,7 +2940,24 @@ t:+"NULLNULLNULL"
 			
 		Emit "};"
 		
+		' threaded global
+		For Local gdecl:TGlobalDecl = EachIn block.Decls()
+			If gdecl.IsThreaded() Then
+				Emit "__scope.decls[" + gdecl.scopeIndex + "].var_address = &" + gdecl.munged + ";"
+			End If
+		Next
+		
 		Emit "bbOnDebugEnterScope(&__scope);"
+	End Method
+	
+	Method EmitClassThreadedGlobalDebugInit(classDecl:TClassDecl)
+		Local classid:String = classDecl.munged
+		' classid + "_scope
+		For Local decl:TGlobalDecl = EachIn classDecl.Decls()
+			If decl.IsThreaded() Then
+				Emit classid + "_scope.decls[" + decl.scopeIndex + "].var_address = &" + decl.munged + ";"
+			End If
+		Next
 	End Method
 	
 	Method TransDebugNullObjectError:String(variable:String, cdecl:TClassDecl)
@@ -3618,9 +3645,9 @@ End Rem
 			decl.Semant()
 
 			If TFunctionPtrType(decl.ty) Then
-					Emit "extern " + TransRefType( decl.ty, decl.munged ) + ";"
+				Emit "extern " + TransThreadedGlobal(decl) + TransRefType( decl.ty, decl.munged ) + ";"
 			Else
-				Emit "extern "+TransRefType( decl.ty, "" )+" "+ decl.munged+";"
+				Emit "extern " + TransThreadedGlobal(decl) +TransRefType( decl.ty, "" )+" "+ decl.munged+";"
 			End If
 		Next
 
@@ -3964,10 +3991,11 @@ End Rem
 		EndIf
 	End Method
 	
-	Method EmitClassConstsDebugScope(classDecl:TClassDecl)
+	Method EmitClassConstsDebugScope(classDecl:TClassDecl, scopeIndex:Int Var)
 	
 		For Local decl:TConstDecl = EachIn classDecl.Decls()
 			EmitConstDebugScope(decl)
+			scopeIndex :+ 1
 		Next
 
 	End Method
@@ -3986,7 +4014,7 @@ End Rem
 
 	End Method
 
-	Method EmitClassFieldsDebugScope(classDecl:TClassDecl)
+	Method EmitClassFieldsDebugScope(classDecl:TClassDecl, scopeIndex:Int Var)
 
 		' Don't list superclass fields in our debug scope
 		'If classDecl.superClass Then
@@ -4018,6 +4046,7 @@ End Rem
 			'End If
 			Emit "},"
 			
+			scopeIndex :+ 1
 			'offset:+ decl.ty.GetSize()
 		Next
 		
@@ -4163,18 +4192,24 @@ End Rem
 
 	End Method
 	
-	Method EmitClassGlobalDebugScope( classDecl:TClassDecl )
+	Method EmitClassGlobalDebugScope( classDecl:TClassDecl, scopeIndex:Int Var )
 		For Local decl:TGlobalDecl = EachIn classDecl.Decls()
-			EmitGlobalDebugScope(decl)
+			EmitGlobalDebugScope(decl, scopeIndex)
+			scopeIndex :+ 1
 		Next
 	End Method
 
-	Method EmitGlobalDebugScope( decl:TGlobalDecl )
+	Method EmitGlobalDebugScope( decl:TGlobalDecl, scopeIndex:Int )
 		Emit "{"
 		Emit "BBDEBUGDECL_GLOBAL,"
 		Emit Enquote(decl.ident) + ","
 		Emit Enquote(TransDebugScopeType(decl.ty)) + ","
-		Emit ".var_address=(void*)&" + decl.munged
+		If decl.IsThreaded() Then
+			Emit ".var_address=0"
+			decl.scopeIndex = scopeIndex
+		Else
+			Emit ".var_address=(void*)&" + decl.munged
+		End If
 		Emit "},"
 	End Method
 
@@ -4365,9 +4400,9 @@ End Rem
 				Local gdecl:TGlobalDecl =TGlobalDecl( decl )
 				If gdecl
 					If TFunctionPtrType(gdecl.ty) Then
-						Emit TransRefType( gdecl.ty, gdecl.munged ) + ";"
+						Emit TransThreadedGlobal(gdecl) + TransRefType( gdecl.ty, gdecl.munged ) + ";"
 					Else
-						Emit TransRefType( gdecl.ty, "" )+" "+gdecl.munged+";"
+						Emit TransThreadedGlobal(gdecl) + TransRefType( gdecl.ty, "" )+" "+ gdecl.munged+";"
 					End If
 					Continue
 				EndIf
@@ -4404,14 +4439,16 @@ End Rem
 
 		Emit "{"
 		
+		Local scopeIndex:Int
+		
 		' debug const decls
-		EmitClassConstsDebugScope(classDecl)
+		EmitClassConstsDebugScope(classDecl, scopeIndex)
 		
 		' debug field decls
-		EmitClassFieldsDebugScope(classDecl)
+		EmitClassFieldsDebugScope(classDecl, scopeIndex)
 		
 		' debug global decls
-		EmitClassGlobalDebugScope(classDecl)
+		EmitClassGlobalDebugScope(classDecl, scopeIndex)
 		
 		' debug func decls
 		EmitClassFuncsDebugScope(classDecl)
@@ -6023,12 +6060,12 @@ End Rem
 				
 If Not gdecl.IsPrivate() Then
 				If Not TFunctionPtrType(gdecl.ty) Then
-					Emit "extern "+TransRefType( gdecl.ty, "" )+" "+gdecl.munged+";"	'forward reference...
+					Emit "extern "+TransThreadedGlobal(gdecl)+TransRefType( gdecl.ty, "" )+" "+gdecl.munged+";"	'forward reference...
 				Else
 					If Not TFunctionPtrType(gdecl.ty).func.noCastGen Then
 						' generate function pointer refs if we haven't been told not to
 '						If Not gdecl.IsExtern() Then
-							Emit "extern " + TransRefType( gdecl.ty, gdecl.munged )+";"	'forward reference...
+							Emit "extern " + TransThreadedGlobal(gdecl) + TransRefType( gdecl.ty, gdecl.munged )+";"	'forward reference...
 '						End If
 					End If
 				End If
@@ -6273,7 +6310,8 @@ If Not gdecl.IsExtern() Then
 						Emit TransRefType( gdecl.ty, "WW" )+" "+gdecl.munged+";"
 Else
 					' delcare in source for any references to it locally in this module
-					Emit "extern "+TransRefType( gdecl.ty, "WW" )+" "+gdecl.munged+";"
+					
+					Emit "extern "+ TransThreadedGlobal(gdecl) +TransRefType( gdecl.ty, "WW" )+" "+gdecl.munged+";"
 End If
 					End If
 				Else
@@ -6289,11 +6327,10 @@ End If
 		For Local gdecl:TGlobalDecl=EachIn app.SemantedGlobals
 			If gdecl And gdecl.funcGlobal Then
 				MungDecl gdecl
-				
 				If Not TFunctionPtrType(gdecl.ty) Then
-					Emit "static " + TransRefType( gdecl.ty, "WW" )+" "+gdecl.munged+";"
+					Emit "static " + TransThreadedGlobal(gdecl) + TransRefType( gdecl.ty, "WW" )+" "+gdecl.munged+";"
 				Else
-					Emit "static " + TransRefType( gdecl.ty, gdecl.munged ) + ";"
+					Emit "static " + TransThreadedGlobal(gdecl) + TransRefType( gdecl.ty, gdecl.munged ) + ";"
 				End If
 				Continue
 			End If
@@ -6311,7 +6348,7 @@ End If
 				
 				If Not TFunctionPtrType(gdecl.ty) And Not gdecl.IsPrivate() Then
 					If TConstExpr(gdecl.init) Then
-						Emit TransRefType( gdecl.ty, "WW" )+" "+TransGlobalDecl(gdecl)+";"
+						Emit TransThreadedGlobal(gdecl) + TransRefType( gdecl.ty, "WW" )+" "+TransGlobalDecl(gdecl)+";"
 						gdecl.inited = True
 					Else
 If Not gdecl.IsExtern() Then
@@ -6406,6 +6443,18 @@ End If
 		If first Then
 			Emit "GC_add_roots(&" + first.munged + ", &" + last.munged + " + 1);"
 		End If
+		
+		' threaded global scope assignments
+		For Local decl:TDecl=EachIn app.Semanted()
+
+			If decl.declImported Continue
+
+			Local cdecl:TClassDecl=TClassDecl( decl )
+			If cdecl
+				EmitClassThreadedGlobalDebugInit(cdecl)
+			End If
+
+		Next
 
 		' register incbins
 		For Local ib:TIncbin = EachIn app.incbins
