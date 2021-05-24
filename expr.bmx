@@ -2219,14 +2219,18 @@ Type TBinaryCompareExpr Extends TBinaryExpr
 				If op = "=" Then
 					ty=New TBoolType
 					exprType=New TBoolType
-					lhs = New TConstExpr.Create(New TIntType, 1).Semant()
+					If Not IsPointerType(lhs.exprType, 0, TType.T_POINTER) Then
+						lhs = New TConstExpr.Create(New TIntType, 1).Semant()
+					End If
 					rhs = New TConstExpr.Create(New TIntType, 0).Semant()
 					Return Self
 				Else
 					op = "<>"
 					ty = New TBoolType
 					exprType=New TBoolType
-					lhs = New TConstExpr.Create(New TIntType, 1).Semant()
+					If Not IsPointerType(lhs.exprType, 0, TType.T_POINTER) Then
+						lhs = New TConstExpr.Create(New TIntType, 1).Semant()
+					End If
 					rhs = New TConstExpr.Create(New TIntType, 0).Semant()
 					Return Self
 				End If
