@@ -1354,10 +1354,12 @@ End Rem
 		Local tot:Int = -1
 		index = 0
 		Local i:Int
+		Local minArgs:Int
 		For Local func:TFuncDecl = EachIn matches
 			If tot = -1 Or totals[i] < tot Then
 				tot = totals[i]
 				bestMatch = func
+				minArgs = func.argDecls.Length
 			Else If tot = totals[i] Then
 				If bestMatch.IsMethod() And Not func.IsMethod() Then
 					' 
@@ -1366,6 +1368,15 @@ End Rem
 				Else If (bestMatch.scope <> func.scope) And (TClassDecl(bestMatch.scope).ExtendsClass(TClassDecl(func.scope))) Then
 					' match is in different level of class hierarchy
 					Exit
+				Else If func.generated <> bestMatch.generated Then
+					If Not func.generated Then
+						bestMatch = func
+					End If
+				Else If minArgs <> func.argDecls.Length
+					If minArgs > func.argDecls.Length Then
+						bestMatch = func
+						minArgs = func.argDecls.Length
+					End If
 				Else
 					' a tie?
 					Err "Unable to determine overload to use: "+ bestMatch.ToString()+" or "+func.ToString()+"."
@@ -2148,7 +2159,7 @@ Type TFuncDecl Extends TBlockDecl
 		'check for duplicate decl
 		If ident Then
 			For Local decl:TFuncDecl=EachIn scope.SemantedFuncs( ident )
-				If decl<>Self And EqualsArgs( decl, True ) And Not decl.IsCTOR()
+				If decl<>Self And EqualsArgs( decl, True )
 					Err "Duplicate declaration "+ToString()
 				EndIf
 				If noMangle Then
@@ -3134,7 +3145,8 @@ End Rem
 			attrs :| DECL_CYCLIC
 			Local func:TFuncDecl = FindFuncDecl("new", Null,True,,,,0)
 			If Not func Then
-				func = New TNewDecl.CreateF("New", Null, Null, FUNC_CTOR | FUNC_METHOD)
+				func = New TNewDecl.CreateF("New", Null, Null, FUNC_CTOR)
+				func.generated = True
 				TNewDecl(func).cdecl = Self
 				InsertDecl(func)
 			End If
@@ -3144,6 +3156,7 @@ End Rem
 			
 			Local arg:TArgDecl = New TArgDecl.Create("o1", TType.MapToVarType(New TObjectType.Create(Self)), Null)
 			func = New TFuncDecl.CreateF("Compare", New TIntType, [arg], FUNC_METHOD)
+			func.generated = True
 			func.retType = New TIntType
 			BuildStructCompareStatements(func)
 			
