@@ -412,6 +412,19 @@ Type TBoolType Extends TType
 	Method WidensToType:Int( ty:TType )
 		Return IsNumericType(ty)
 	End Method
+
+	Method DistanceToType:Int(ty:TType)
+
+		If TBoolType(ty)<>Null Then
+			Return 0
+		End If
+		
+		If TIntType(ty)<>Null Then
+			Return 1
+		End If
+		
+		Return 4
+	End Method
 	
 	Method ToString$()
 		Return "Bool"
