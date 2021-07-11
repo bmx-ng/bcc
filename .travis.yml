@@ -1,0 +1,44 @@
+language: c
+
+env:
+  global:
+    - LC_CTYPE=en_US.UTF-8
+    - LANG=en_US.UTF-8
+
+matrix:
+  include:
+    - os: osx
+      osx_image: xcode10.2
+      env: PLATFORM="macos" CPU="x64" STABLE="https://github.com/bmx-ng/bmx-ng/releases/download/v0.99.3.31.macos/BlitzMax_macos_0.99.3.31.zip"
+
+install:
+  - wget "${STABLE}"
+  - unzip "`basename "${STABLE}"`"
+
+script:
+  - mkdir -p "build"
+  - ./BlitzMax/bin/bmk
+    makeapp -a -r
+    -l ${PLATFORM}
+    -g ${CPU}
+    -o ./build/bcc
+    ./bcc.bmx
+
+before_deploy:
+  - cd ./build
+  - ZIP_FILENAME="bcc-${TRAVIS_TAG}-${PLATFORM}-${CPU}.zip"
+  - echo "Zipping $ZIP_FILENAME"
+  - zip "$ZIP_FILENAME" bcc
+  - ls -la
+  - cd ..
+
+deploy:
+  provider: releases
+  file_glob: true
+  file: build/*.zip
+  skip_cleanup: true
+  draft: true
+  on:
+    all_branches: true
+    tags: true
+    condition: '$TRAVIS_TAG =~ ^v[0-9]'
