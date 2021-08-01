@@ -6584,6 +6584,13 @@ End If
 		Emit "return 0;"
 		Emit "}"
 
+
+		' redirect string generation to the def data section of the source
+		SetOutput("def_data")
+
+		' defdata
+		EmitDefDataArray(app)
+		
 		' redirect string generation to the top of the source
 		SetOutput("pre_source")
 
@@ -6634,9 +6641,6 @@ End If
 				End If
 			End If
 		Next
-		
-		' defdata
-		EmitDefDataArray(app)
 		
 		' scope defs
 		If Not app.scopedefs.IsEmpty() Then

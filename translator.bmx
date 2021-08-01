@@ -1419,9 +1419,11 @@ End Rem
 	Method JoinLines$( file:String )
 		Local _lines:TStringList = TStringList(outputFiles.ValueForKey(file))
 		
-		Local code$=_lines.Join( "~n" )
-		_lines.Clear
-		Return code
+		If _lines Then
+			Local code$=_lines.Join( "~n" )
+			_lines.Clear
+			Return code
+		End If
 	End Method
 	
 	'returns and resets unreachable status
