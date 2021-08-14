@@ -225,7 +225,7 @@ Type TExpr
 		Return args
 	End Method
 
-	Method BalanceTypes:TType( lhs:TType,rhs:TType )
+	Method BalanceTypes:TType( lhs:TType,rhs:TType, balancePtrs:Int = True )
 
 		If TStringType( lhs ) Or TStringType( rhs ) Then
 			If TObjectType(lhs) Or TObjectType(rhs) Then
@@ -241,8 +241,22 @@ Type TExpr
 			End If
 		End If
 		If IsPointerType( lhs, 0, TType.T_POINTER ) Or IsPointerType( rhs, 0, TType.T_POINTER ) Then
-			If IsPointerType( lhs, 0, TType.T_POINTER ) Return lhs
-			If IsPointerType( rhs, 0, TType.T_POINTER ) Return rhs
+			If balancePtrs Then
+				If IsPointerType( lhs, 0, TType.T_POINTER ) Return lhs
+				If IsPointerType( rhs, 0, TType.T_POINTER ) Return rhs
+			Else
+				If IsPointerType( lhs, 0, TType.T_POINTER ) Then
+					If Not IsPointerType( rhs, 0, TType.T_POINTER ) And Not TNullType(rhs) Then
+						Err "Can't balance types "+lhs.ToString()+" and "+rhs.ToString()+"."
+					End If
+					Return lhs
+				End If
+				If IsPointerType( rhs, 0, TType.T_POINTER ) Then
+					If Not IsPointerType( lhs, 0, TType.T_POINTER ) And Not TNullType(lhs) Then
+						Return rhs
+					End If
+				End If
+			End If
 		End If
 		If TDouble128Type( lhs ) Or TDouble128Type( rhs ) Return New TDouble128Type
 		If TFloat128Type( lhs ) Or TFloat128Type( rhs ) Return New TFloat128Type
@@ -2254,7 +2268,7 @@ Type TBinaryCompareExpr Extends TBinaryExpr
 		End If
 
 
-		ty=BalanceTypes( lhs.exprType,rhs.exprType )
+		ty=BalanceTypes( lhs.exprType,rhs.exprType, False )
 
 		lhs=lhs.Cast( ty )
 		rhs=rhs.Cast( ty )
