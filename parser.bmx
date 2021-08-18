@@ -1018,7 +1018,10 @@ Type TParser Extends TGenProcessor
 				If Not IsArrayDef(attr & DECL_STATIC > 0) Then
 					Err "Invalid static array initialization."
 				Else
-					ty = ParseArrayType(ty, attr & DECL_STATIC > 0)
+					If attr & DECL_STATIC > 0 Then
+						Exit
+					End If
+					ty = ParseArrayType(ty)
 				End If
 			Else If _toke = "(" Then
 				Local args:TArgDecl[] = ParseFuncParamDecl()
@@ -1053,7 +1056,6 @@ Type TParser Extends TGenProcessor
 			Local expr:TExpr = ParseUnaryExpr()
 			ty = New TArrayType.Create( ty )
 			TArrayType(ty).isStatic = True
-			TArrayType(ty).length = expr.Eval()
 			Parse("]")
 			Return ty
 		End If
@@ -3244,6 +3246,12 @@ End Rem
 					ty = TType.MapToVarType(ty)
 				Else If CParse( "=" )
 					init=ParseExpr()
+				Else
+					If CParse( "[" ) And (attrs & DECL_STATIC) Then
+						init = ParseExpr()
+						Parse "]"
+						ty=New TArrayType.Create( ty,1,, attrs & DECL_STATIC > 0 )
+					End If
 				End If
 				
 				Local arg:TArgDecl=New TArgDecl.Create( argId,ty,init,attrs )

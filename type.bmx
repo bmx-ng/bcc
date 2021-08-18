@@ -1479,7 +1479,7 @@ Type TArrayType Extends TType
 	Method ToString$()
 		Local t:String = elemType.ToString()
 		If isStatic Then
-			t :+ " StaticArray[" + length + "]"
+			t = "Static " + t + " Array[" + length + "]"
 		Else
 			t :+ " Array"
 		End If

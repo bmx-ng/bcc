@@ -291,7 +291,10 @@ Type TExpr
 		If rhs.ExtendsType( lhs ) Return lhs
 		' balance arrays - only for objects... to the lowest common denominator.
 		If TArrayType( lhs ) And TArrayType( rhs ) Then
-
+			If TArrayType( lhs ).isStatic - TArrayType( rhs ).isStatic <> 0 Then
+				Err "Cannot mix arrays and static arrays"
+			End If
+		
 			If TObjectType(TArrayType( lhs ).elemType) And TObjectType(TArrayType( rhs ).elemType) Then
 				' lhs = Object[]
 				If TObjectType(TArrayType( lhs ).elemType).classDecl.ident = "Object" Then
@@ -1415,6 +1418,9 @@ Type TCastExpr Extends TExpr
 
 
 		If TArrayType(ty) And TArrayType(src) Then
+			If TArrayType(ty).isStatic - TArrayType(src).isStatic <> 0 Then
+				Err "Unable to convert from " + src.ToString() + " to " + ty.ToString()
+			End If
 			If TArrayType(ty).dims = TArrayType(src).dims Then
 				If TArrayExpr(expr) Then
 					Local last:TType
@@ -3049,8 +3055,8 @@ Type TIdentExpr Extends TExpr
 				fdecl.maybeFunctionPtr = False
 				
 				If Not fdecl.IsStatic()
-					If expr Return New TInvokeMemberExpr.Create( expr,fdecl,args, False ).Semant()
-					If scope<>_env Or Not _env.FuncScope() Or _env.FuncScope().IsStatic() Err "Method '"+ident+"' cannot be accessed from here."
+					If static Err "Method '"+ident+"' cannot be accessed from here."					
+					'If expr Return New TInvokeMemberExpr.Create( expr,fdecl,args, False ).Semant()
 				EndIf
 	
 				Return New TInvokeExpr.Create( fdecl,args, False, isArg, isRhs ).Semant()
