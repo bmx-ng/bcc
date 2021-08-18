@@ -1524,7 +1524,7 @@ Type TObjectType Extends TType
 	
 	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
 		If classDecl.IsStruct() Then
-			If IsPointerType(Self, 0, T_POINTER) And (TNumericType(ty) <> Null) And IsPointerType(ty, 0, T_POINTER) Then
+			If (_flags & T_VARPTR Or IsPointerType(Self, 0, T_POINTER)) And (TNumericType(ty) <> Null) And IsPointerType(ty, 0, T_POINTER) Then
 				Return True
 			End If
 			Return False
@@ -1557,6 +1557,12 @@ Type TObjectType Extends TType
 			
 			If classDecl.ExtendsClass(TObjectType(ty).classDecl) Then
 				Return $F
+			End If
+		End If
+		
+		If classDecl.IsStruct() Then
+			If (_flags & T_VARPTR Or IsPointerType(Self, 0, T_POINTER)) And (TNumericType(ty) <> Null) And IsPointerType(ty, 0, T_POINTER) Then
+				Return $10
 			End If
 		End If
 
