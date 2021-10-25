@@ -604,7 +604,7 @@ Type TParser Extends TGenProcessor
 
 	Method Parse( toke$ )
 		If Not CParse( toke )
-			DoErr "Syntax error - expecting '"+toke+"' but found " + DescribeToke(toke)
+			DoErr "Syntax error - expecting '"+toke+"' but found " + DescribeToke(_toke)
 		EndIf
 	End Method
 
