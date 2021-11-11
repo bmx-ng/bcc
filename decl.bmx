@@ -535,7 +535,7 @@ Type TValDecl Extends TDecl
 				Else
 					If TArrayType(ty) And TArrayType(ty).isStatic Then
 						init = declInit.Copy().Semant()
-						If Not TConstExpr(init) Then
+						If Not TConstExpr(init) and not TIdentEnumExpr(init) Then
 							Err "Static array initialiser must be constant"
 						End If
 						If Not Int(TArrayType(ty).length) Then
