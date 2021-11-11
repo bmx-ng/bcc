@@ -1889,19 +1889,24 @@ Type TBinaryMathExpr Extends TBinaryExpr
 		
 		' operator overload?
 		If TObjectType(lhs.exprType) Then
-			Local args:TExpr[] = [rhs]
-			Try
-				Local decl:TFuncDecl = TFuncDecl(TObjectType(lhs.exprType).classDecl.FindFuncDecl(op, args,,,,True,SCOPE_CLASS_HEIRARCHY))
-				If decl Then
-					Return New TInvokeMemberExpr.Create( lhs, decl, args ).Semant()
-				End If
-			Catch error:String
-				If error.StartsWith("Compile Error") Then
-					Throw error
-				Else
-					Err "Operator " + op + " is not defined between types '" + lhs.exprType.ToString() + "' and '" + rhs.exprType.ToString() + "'"
-				End If
-			End Try
+
+			If TObjectType(lhs.exprType).classDecl.IsStruct() and IsPointerType( lhs.exprType, 0, TType.T_POINTER ) Then
+				'
+			Else
+				Local args:TExpr[] = [rhs]
+				Try
+					Local decl:TFuncDecl = TFuncDecl(TObjectType(lhs.exprType).classDecl.FindFuncDecl(op, args,,,,True,SCOPE_CLASS_HEIRARCHY))
+					If decl Then
+						Return New TInvokeMemberExpr.Create( lhs, decl, args ).Semant()
+					End If
+				Catch error:String
+					If error.StartsWith("Compile Error") Then
+						Throw error
+					Else
+						Err "Operator " + op + " is not defined between types '" + lhs.exprType.ToString() + "' and '" + rhs.exprType.ToString() + "'"
+					End If
+				End Try
+			End if
 		End If
 
 		Local bitEnumOp:Int

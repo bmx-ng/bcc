@@ -2979,7 +2979,9 @@ t:+"NULLNULLNULL"
 		Local cast:String
 		
 		If TObjectType(stmt.lhs.exprType) And (Not TObjectType(stmt.lhs.exprType).classdecl.IsStruct() Or IsPointerType(stmt.lhs.exprType)) Then
-			cast = Bra(TransType(stmt.lhs.exprType, ""))
+			If Not IsNumericType(stmt.rhs.exprType) Then
+				cast = Bra(TransType(stmt.lhs.exprType, ""))
+			End If
 		End If
 
 		If IsPointerType(stmt.lhs.exprType, TType.T_BYTE) And rhs = "&bbNullObject" Then
@@ -5321,7 +5323,9 @@ End Rem
 		If decl.scope And TClassDecl(decl.scope) And TClassDecl(decl.scope).IsStruct() Then
 			Local exprIsStruct:Int = Not exprType Or (TObjectType(exprType) And TObjectType(exprType).classDecl.attrs & CLASS_STRUCT)
 			If (exprIsStruct Or (exprType And Not IsPointerType(exprType))) And variable <> "o" Then
-				ind = "."
+				If Not exprIsStruct Or (exprType And Not IsPointerType(exprType)) Then
+					ind = "."
+				End If
 			End If
 		End If
 
