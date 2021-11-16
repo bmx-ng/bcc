@@ -4606,6 +4606,7 @@ Function EvalS$( source$,ty:TType )
 
 	' debug/release
 	env.InsertDecl New TConstDecl.Create( "debug",New TIntType,New TConstExpr.Create( New TIntType,opt_debug ),0 )
+	env.InsertDecl New TConstDecl.Create( "gdbdebug",New TIntType,New TConstExpr.Create( New TIntType,opt_gdbdebug ),0 )
 
 	' threaded
 	env.InsertDecl New TConstDecl.Create( "threaded",New TIntType,New TConstExpr.Create( New TIntType,opt_threaded ),0 )
