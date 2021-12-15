@@ -763,6 +763,9 @@ Type TInvokeExpr Extends TExpr
 		' if the call was a statement (even one written without parentheses), then invokedWithBraces is true
 		' so no complicated checks are needed here; if invokedWithBraces is false, this is definitely not a call
 		If Not invokedWithBraces Then
+			If decl.IsMethod() Then
+				Err "Method cannot be used as a function pointer"
+			End If
 			' nothing to do here, as we are a function pointer. i.e. no braces
 			' and our expression type is a function ptr...
 			exprType = New TFunctionPtrType.Create(decl)
