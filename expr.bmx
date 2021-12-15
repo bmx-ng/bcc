@@ -105,6 +105,9 @@ Type TExpr
 						TInvokeExpr(args[i]).exprType = New TFunctionPtrType
 						Local cp:TDecl = TInvokeExpr(args[i]).decl
 						cp.Semant
+						If TFuncDecl(cp) and TFuncDecl(cp).IsMethod() Then
+							Err "Method cannot be used as a function pointer"
+						End If
 						TInvokeExpr(args[i]).decl = TFuncDecl(TInvokeExpr(args[i]).decl.Copy(False))
 						TInvokeExpr(args[i]).decl.actual = cp
 						TInvokeExpr(args[i]).decl.attrs :| FUNC_PTR
