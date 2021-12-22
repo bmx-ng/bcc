@@ -4636,7 +4636,9 @@ Function EvalS$( source$,ty:TType )
 	env.InsertDecl New TConstDecl.Create( "win32",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="win32" ),0 )
 	env.InsertDecl New TConstDecl.Create( "win32x86",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="win32" And opt_arch="x86"),0 )
 	env.InsertDecl New TConstDecl.Create( "win32x64",New TIntType,New TConstExpr.Create( New TIntType,(opt_platform="win64" And opt_arch="x64") Or (opt_platform="win32" And opt_arch="x64")),0 )
-	env.InsertDecl New TConstDecl.Create( "win64",New TIntType,New TConstExpr.Create( New TIntType,(opt_platform="win64" And opt_arch="x64") Or (opt_platform="win32" And opt_arch="x64")),0 )
+	env.InsertDecl New TConstDecl.Create( "win64",New TIntType,New TConstExpr.Create( New TIntType,(opt_platform="win64" And opt_arch="x64") Or (opt_platform="win32" And opt_arch="x64") Or (opt_platform="win32" And opt_arch="arm64")),0 )
+	env.InsertDecl New TConstDecl.Create( "win32armv7",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="win32" And opt_arch="armv7"),0 )
+	env.InsertDecl New TConstDecl.Create( "win32arm64",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="win32" And opt_arch="arm64"),0 )
 
 	' linux
 	env.InsertDecl New TConstDecl.Create( "linux",New TIntType,New TConstExpr.Create( New TIntType,(opt_platform="linux" Or opt_platform="android" Or opt_platform="raspberrypi")),0 )
