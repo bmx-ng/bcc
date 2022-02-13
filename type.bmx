@@ -243,8 +243,20 @@ Type TType
 		If _flags & T_VAR Then
 			s:+ " Var"
 		End If
-		
+
+		If _flags & T_VARPTR Then
+			s:+ " VarPtr"
+		End If
+	
 		Return s
+	End Method
+	
+	Method IsFlagEquivalent:Int(ty:TType)
+		Return _flags = ty._flags Or ..
+			(Not IsPointerType(Self, 0, TType.T_POINTER) And (ty._flags & T_VAR)) Or ..
+			(Not IsPointerType(ty, 0, TType.T_POINTER) And (_flags & T_VAR)) Or ..
+			(IsPointerType(Self, 0, TType.T_POINTER) And (ty._flags & T_VARPTR)) Or ..
+			(IsPointerType(ty, 0, TType.T_POINTER) And (_flags & T_VARPTR))
 	End Method
 	
 End Type
@@ -1519,7 +1531,7 @@ Type TObjectType Extends TType
 	
 	Method EqualsType:Int( ty:TType )
 		Local objty:TObjectType=TObjectType( ty )
-		Return TNullDecl(classDecl) <> Null Or (objty And (classDecl=objty.classDecl))' Or classDecl.ExtendsClass( objty.classDecl ))) 'Or TObjectVarPtrType(ty) <> Null
+		Return TNullDecl(classDecl) <> Null Or (objty And (classDecl=objty.classDecl) And (Not classDecl.IsStruct() Or IsFlagEquivalent(ty)))' Or classDecl.ExtendsClass( objty.classDecl ))) 'Or TObjectVarPtrType(ty) <> Null
 	End Method
 	
 	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
@@ -1539,7 +1551,7 @@ Type TObjectType Extends TType
 	End Method
 	
 	Method ToString$()
-		Return classDecl.ToTypeString()
+		Return classDecl.ToTypeString() + ToStringParts()
 	End Method
 
 	Method OnCopy:TType()
