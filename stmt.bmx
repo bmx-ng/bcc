@@ -675,7 +675,11 @@ Type TForStmt Extends TLoopStmt
 
 		' for anything other than a const value, use a new local variable
 		If Not TConstExpr(TBinaryCompareExpr(expr).rhs) Then
-			Local tmp:TLocalDecl=New TLocalDecl.Create( "", TBinaryCompareExpr(expr).rhs.exprType,TBinaryCompareExpr(expr).rhs,, True )
+			Local ty:TType = TBinaryCompareExpr(expr).rhs.exprType.Copy()
+			If ty._flags & TType.T_VAR Then
+				ty._flags :~ TType.T_VAR ' remove var for local variable
+			End If
+			Local tmp:TLocalDecl=New TLocalDecl.Create( "", ty,TBinaryCompareExpr(expr).rhs,, True )
 			tmp.Semant()
 			Local v:TVarExpr = New TVarExpr.Create( tmp )
 			TBinaryCompareExpr(expr).rhs = New TStmtExpr.Create( New TDeclStmt.Create( tmp ), v ).Semant()
