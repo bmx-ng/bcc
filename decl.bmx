@@ -31,6 +31,7 @@ Const DECL_STATIC:Long=      $20000000
 Const DECL_OVERRIDE:Long=    $40000000
 Const DECL_INLINE:Long=      $80000000
 Const DECL_THREADED:Long=   $100000000:Long
+Const DECL_NO_VAR:Long=     $200000000:Long
 
 Const DECL_SEMANTED:Long=      $100000
 Const DECL_SEMANTING:Long=     $200000
@@ -562,7 +563,10 @@ Type TValDecl Extends TDecl
 			End If
 		Else If declInit
 			init=declInit.Copy().Semant()
-			ty=init.exprType
+			ty=init.exprType.Copy()
+			If attrs & DECL_NO_VAR And ty._flags & TType.T_VAR Then 
+				ty._flags :~ TType.T_VAR ' remove var for variable 
+			End If 
 		End If
 		
 		If init Then

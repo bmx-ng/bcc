@@ -654,7 +654,7 @@ Type TVarExpr Extends TExpr
 	Method Semant:TExpr(options:Int = 0)
 		If exprType Return Self
 		If Not decl.IsSemanted() InternalErr "TVarExpr.Semant"
-		exprType=decl.ty
+		exprType=decl.ty.Copy()
 		Return Self
 	End Method
 

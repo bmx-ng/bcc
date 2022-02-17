@@ -2297,7 +2297,7 @@ End Rem
 		Local tmpVar:TLocalDecl
 		Local selectExpr:TExpr = ParseExpr()
 		If Not TNullType(selectExpr.exprType)
-			tmpVar = New TLocalDecl.Create("", Null, selectExpr, , True)
+			tmpVar = New TLocalDecl.Create("", Null, selectExpr, DECL_NO_VAR, True)
 			block.AddStmt New TDeclStmt.Create(tmpVar)
 		End If
 		
