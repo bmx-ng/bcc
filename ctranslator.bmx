@@ -4969,7 +4969,7 @@ End Rem
 							End If
 							fld :+ decl.init.Trans() + ";"
 						Else If TArrayType(decl.ty) And TArrayType(decl.ty).isStatic Then
-							fld = "for(int i=0;i<" + TArrayType(decl.ty).length + ";i++) " + TransFieldRef(decl, "o") + "[i]=" + TransValue(TArrayType(decl.ty).elemType,Null,False) + ";"
+							fld = "int i;for(i=0;i<" + TArrayType(decl.ty).length + ";i++) " + TransFieldRef(decl, "o") + "[i]=" + TransValue(TArrayType(decl.ty).elemType,Null,False) + ";"
 						Else
 							fld :+ "= " + decl.init.Trans() + ";"
 						End If
@@ -4989,7 +4989,7 @@ End Rem
 						fld :+ "= &bbEmptyString;"
 					Else If TArrayType(decl.ty) Then
 						If TArrayType(decl.ty).isStatic Then
-							fld = "for(int i=0;i<" + TArrayType(decl.ty).length + ";i++) " + TransFieldRef(decl, "o") + "[i]=" + TransValue(TArrayType(decl.ty).elemType,Null,False) + ";"
+							fld = "int i;for(i=0;i<" + TArrayType(decl.ty).length + ";i++) " + TransFieldRef(decl, "o") + "[i]=" + TransValue(TArrayType(decl.ty).elemType,Null,False) + ";"
 						Else
 							fld :+ "= &bbEmptyArray;"
 						End If
