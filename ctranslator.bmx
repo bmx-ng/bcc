@@ -3477,104 +3477,129 @@ End Rem
 			End If
 		End If
 
-		Local bk:String = "{"
-		Local pre:String
-		Local api:String
-		If proto Then
-			If odecl.IsExtern() Then
-				pre = "extern "
-				If TFunctionPtrType(decl.retType) Then
-					pre = ""
+		Local iterations:Int = 1
+		If decl.attrs & DECL_INLINE Then
+			iterations = 2
+		End If
+
+		Local origProto:Int = proto
+
+		For Local i:Int = 0 Until iterations
+			proto = origProto
+
+			Local bk:String = "{"
+			Local pre:String
+			Local api:String
+			If proto Then
+				If odecl.IsExtern() Then
+					pre = "extern "
+					If TFunctionPtrType(decl.retType) Then
+						pre = ""
+					End If
 				End If
-			End If
-			If decl.attrs & DECL_INLINE Then
-				pre = "inline "
-			Else
+				If decl.attrs & DECL_INLINE And i = 0 Then
+					pre = "inline "
+				Else
+					bk = ";"
+				End If
+			Else If decl.attrs & DECL_INLINE And i = 0 Then
+				pre = "extern "
 				bk = ";"
 			End If
-		Else If decl.attrs & DECL_INLINE Then
-			pre = "extern "
-			bk = ";"
-		End If
 
-		If decl.attrs & DECL_API_STDCALL Then
-			api = " __stdcall "
-		End If
-
-'		If Not proto Or (proto And Not odecl.IsExtern()) Then
-		If Not IsStandardFunc(decl.munged) Then
-			If Not TFunctionPtrType(odecl.retType) Then
-				If Not odecl.castTo Then
-					Emit pre + TransType( decl.retType, "" )+ api + " "+id+Bra( args ) + bk
-				Else
-					If Not odecl.noCastGen Then
-						Emit pre + odecl.castTo + api + " "+id+Bra( args ) + bk
-					End If
-				End If
-			Else
-				If Not odecl.castTo Then
-					If Not args Then
-						' for function pointer return type, we need to generate () regardless of whether there are
-						' args or not.
-						args = " "
-					End If
-					Emit pre + TransType( decl.retType, id, args )+ bk
-				Else
-					If Not odecl.noCastGen Then
-						Emit pre + odecl.castTo +" "+Bra( args ) + bk
-					End If
-				End If
-			End If
-
-			For Local t$=EachIn argCasts
-				Emit t
-			Next
-		End If
-		
-		If decl.attrs & DECL_INLINE Then
-			proto = Not proto
-		End If
-
-		If Not proto Then
-
-			If PROFILER Then
-				Select decl.ident
-					Case "WritePixel", "PixelPtr", "CopyPixels", "ConvertPixels", "ConvertPixelsToStdFormat", "ConvertPixelsFromStdFormat"
-					Case "OnDebugEnterScope", "OnDebugEnterStm", "GetDbgState", "OnDebugLeaveScope", "OnDebugPopExState", "OnDebugPushExState"
-					Default
-						DebugPrint("", TransFullName(decl))
+			If decl.attrs & DECL_INLINE Then
+				Select i
+					Case 0
+						pre = "#if defined (__STDC_VERSION__) && __STDC_VERSION__ >= 199901L~n" + pre
+					Case 1
+						pre = "#else~n" + pre
 				End Select
 			End If
-				
-			If DEBUG Then
-				For Local i:Int=0 Until decl.argDecls.Length
-					Local arg:TArgDecl=decl.argDecls[i]
-					DebugObject(arg.ty, arg.munged, id)
+
+			If decl.attrs & DECL_API_STDCALL Then
+				api = " __stdcall "
+			End If
+
+	'		If Not proto Or (proto And Not odecl.IsExtern()) Then
+			If Not IsStandardFunc(decl.munged) Then
+				If Not TFunctionPtrType(odecl.retType) Then
+					If Not odecl.castTo Then
+						Emit pre + TransType( decl.retType, "" )+ api + " "+id+Bra( args ) + bk
+					Else
+						If Not odecl.noCastGen Then
+							Emit pre + odecl.castTo + api + " "+id+Bra( args ) + bk
+						End If
+					End If
+				Else
+					If Not odecl.castTo Then
+						If Not args Then
+							' for function pointer return type, we need to generate () regardless of whether there are
+							' args or not.
+							args = " "
+						End If
+						Emit pre + TransType( decl.retType, id, args )+ bk
+					Else
+						If Not odecl.noCastGen Then
+							Emit pre + odecl.castTo +" "+Bra( args ) + bk
+						End If
+					End If
+				End If
+
+				For Local t$=EachIn argCasts
+					Emit t
 				Next
 			End If
-
-			If decl.IsAbstract() Then
-				Emit "brl_blitz_NullMethodError();"
-				If Not TVoidType( decl.retType ) Then
-					Local ret:TReturnStmt = New TReturnStmt.Create(New TConstExpr.Create( decl.retType,"" ).Semant())
-					ret.fRetType = decl.retType
-					Emit ret.Trans() + ";"
-					unreachable = False
-				End If
-			Else
-
-				decl.Semant()
-				
-				If opt_debug And decl.IsMethod() Then
-					Emit TransDebugNullObjectError("o", TClassDecl(decl.scope)) + ";"
-				End If
-
-				EmitLocalDeclarations(decl)
-
-				EmitBlock decl
-
+			
+			If decl.attrs & DECL_INLINE And i = 0 Then
+				proto = Not proto
 			End If
-			Emit "}"
+
+			If Not proto Then
+
+				If PROFILER Then
+					Select decl.ident
+						Case "WritePixel", "PixelPtr", "CopyPixels", "ConvertPixels", "ConvertPixelsToStdFormat", "ConvertPixelsFromStdFormat"
+						Case "OnDebugEnterScope", "OnDebugEnterStm", "GetDbgState", "OnDebugLeaveScope", "OnDebugPopExState", "OnDebugPushExState"
+						Default
+							DebugPrint("", TransFullName(decl))
+					End Select
+				End If
+					
+				If DEBUG Then
+					For Local i:Int=0 Until decl.argDecls.Length
+						Local arg:TArgDecl=decl.argDecls[i]
+						DebugObject(arg.ty, arg.munged, id)
+					Next
+				End If
+
+				If decl.IsAbstract() Then
+					Emit "brl_blitz_NullMethodError();"
+					If Not TVoidType( decl.retType ) Then
+						Local ret:TReturnStmt = New TReturnStmt.Create(New TConstExpr.Create( decl.retType,"" ).Semant())
+						ret.fRetType = decl.retType
+						Emit ret.Trans() + ";"
+						unreachable = False
+					End If
+				Else
+
+					decl.Semant()
+					
+					If opt_debug And decl.IsMethod() Then
+						Emit TransDebugNullObjectError("o", TClassDecl(decl.scope)) + ";"
+					End If
+
+					EmitLocalDeclarations(decl)
+
+					EmitBlock decl
+
+				End If
+				Emit "}"
+			End If
+
+		Next
+
+		If decl.attrs & DECL_INLINE Then
+			Emit "#endif"
 		End If
 
 		' reset label ids
