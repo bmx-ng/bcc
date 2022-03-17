@@ -4994,7 +4994,8 @@ End Rem
 							End If
 							fld :+ decl.init.Trans() + ";"
 						Else If TArrayType(decl.ty) And TArrayType(decl.ty).isStatic Then
-							fld = "int i;for(i=0;i<" + TArrayType(decl.ty).length + ";i++) " + TransFieldRef(decl, "o") + "[i]=" + TransValue(TArrayType(decl.ty).elemType,Null,False) + ";"
+							Local idx:String = "i" + fdecl.NextIdx()
+							fld = "int " + idx + ";for(" + idx + "=0;" + idx + "<" + TArrayType(decl.ty).length + ";" + idx + "++) " + TransFieldRef(decl, "o") + "[" + idx + "]=" + TransValue(TArrayType(decl.ty).elemType,Null,False) + ";"
 						Else
 							fld :+ "= " + decl.init.Trans() + ";"
 						End If
@@ -5014,7 +5015,8 @@ End Rem
 						fld :+ "= &bbEmptyString;"
 					Else If TArrayType(decl.ty) Then
 						If TArrayType(decl.ty).isStatic Then
-							fld = "int i;for(i=0;i<" + TArrayType(decl.ty).length + ";i++) " + TransFieldRef(decl, "o") + "[i]=" + TransValue(TArrayType(decl.ty).elemType,Null,False) + ";"
+							Local idx:String = "i" + fdecl.NextIdx()
+							fld = "int " + idx + ";for(" + idx + "=0;" + idx + "<" + TArrayType(decl.ty).length + ";" + idx + "++) " + TransFieldRef(decl, "o") + "[" + idx + "]=" + TransValue(TArrayType(decl.ty).elemType,Null,False) + ";"
 						Else
 							fld :+ "= &bbEmptyArray;"
 						End If

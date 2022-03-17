@@ -1918,6 +1918,7 @@ Type TFuncDecl Extends TBlockDecl
 	Field exported:Int
 	
 	Field equalsBuiltIn:Int = -1
+	field idx:Int
 	
 	Method CreateF:TFuncDecl( ident$,ty:TType,argDecls:TArgDecl[],attrs:Long )
 		Self.ident=ident
@@ -2405,6 +2406,12 @@ Type TFuncDecl Extends TBlockDecl
 		Return decl.ToString() + " clashes with " + decl2.ToString() + ". Attempt to assign weaker access privileges ('" + p + "'), was '" + dp + "'."
 	End Function
 	
+	Method NextIdx:Int()
+		Local i:Int = idx
+		idx :+ 1
+		return i
+	End Method
+
 End Type
 
 Type TNewDecl Extends TFuncDecl
