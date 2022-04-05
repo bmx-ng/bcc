@@ -2903,7 +2903,11 @@ t:+"NULLNULLNULL"
 				Emit "BBDEBUGDECL_LOCAL,"
 				Emit "~qSelf~q,"
 				Emit Enquote(TransDebugScopeType(TClassDecl(block.scope).objectType)) + ","
-				Emit ".var_address=&o"
+				Local prefix:String = "&"
+				If block.ClassScope().IsStruct() Then
+					prefix = ""
+				End If
+				Emit ".var_address=" + prefix + "o"
 				Emit "},"
 				scopeIndex:+ 1
 			End If
@@ -3584,7 +3588,7 @@ End Rem
 
 					decl.Semant()
 					
-					If opt_debug And decl.IsMethod() Then
+					If opt_debug And decl.IsMethod() And Not TClassDecl(decl.scope).IsStruct() Then
 						Emit TransDebugNullObjectError("o", TClassDecl(decl.scope)) + ";"
 					End If
 
