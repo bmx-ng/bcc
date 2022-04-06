@@ -3124,11 +3124,31 @@ t:+"NULLNULLNULL"
 			If Not decl.IsSemanted() Then
 				decl.Semant()
 			End If
-			If TStringType(decl.ty) Or TArrayType(decl.ty) Or (TObjectType(decl.ty) And Not TObjectType(decl.ty).classDecl.IsStruct()) Then
+
+			If IsManagedType(decl.ty) Then
 				Return True
 			End If
+
 		Next
 		
+		Return False
+	End Method
+
+	Method IsManagedType:Int(ty:TType)
+		If TStringType(ty) Or (TArrayType(ty) And Not TArrayType(ty).isStatic) Or (TObjectType(ty) And Not TObjectType(ty).classDecl.IsStruct()) Then
+			Return True
+		End If
+
+		If TArrayType(ty) And TArrayType(ty).isStatic Then
+			Return IsManagedType(TArrayType(ty).elemType)
+		End If
+
+		If TObjectType(ty) And TObjectType(ty).classDecl.IsStruct() Then
+			If ClassHasObjectField(TObjectType(ty).classDecl) Then
+				Return True
+			End If
+		End If
+
 		Return False
 	End Method
 
