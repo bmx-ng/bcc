@@ -3112,10 +3112,20 @@ t:+"NULLNULLNULL"
 		Return s
 	End Method
 	
-	Method ClassHasObjectField:Int(classDecl:TClassDecl)
-	
+	Method ClassHasObjectField:Int(classDecl:TClassDecl, checked:TMap = Null)
+
+		If Not checked Then
+			checked = New TMap
+		End If
+		
+		If checked.Contains(classDecl) Then
+			Return False
+		End If
+		
+		checked.Insert(classDecl, "")
+
 		If classDecl.superClass Then
-			If ClassHasObjectField(classDecl.superClass) Then
+			If ClassHasObjectField(classDecl.superClass, checked) Then
 				Return True
 			End If
 		End If
@@ -3125,7 +3135,7 @@ t:+"NULLNULLNULL"
 				decl.Semant()
 			End If
 
-			If IsManagedType(decl.ty) Then
+			If IsManagedType(decl.ty, checked) Then
 				Return True
 			End If
 
@@ -3134,7 +3144,11 @@ t:+"NULLNULLNULL"
 		Return False
 	End Method
 
-	Method IsManagedType:Int(ty:TType)
+	Method IsManagedType:Int(ty:TType, checked:TMap = Null)
+		If IsPointerType(ty) Then
+			Return False
+		End If
+	
 		If TStringType(ty) Or (TArrayType(ty) And Not TArrayType(ty).isStatic) Or (TObjectType(ty) And Not TObjectType(ty).classDecl.IsStruct()) Then
 			Return True
 		End If
@@ -3144,7 +3158,7 @@ t:+"NULLNULLNULL"
 		End If
 
 		If TObjectType(ty) And TObjectType(ty).classDecl.IsStruct() Then
-			If ClassHasObjectField(TObjectType(ty).classDecl) Then
+			If ClassHasObjectField(TObjectType(ty).classDecl, checked) Then
 				Return True
 			End If
 		End If
