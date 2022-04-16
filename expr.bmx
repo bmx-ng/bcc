@@ -156,21 +156,10 @@ Type TExpr
 				If funcDecl.argDecls[i].ty._flags & TType.T_VAR Then
 
 					If TConstExpr(argExpr) Or TBinaryExpr(argExpr) Or (TIndexExpr(argExpr) And TStringType(TIndexExpr(argExpr).expr.exprType)) Or ..
-							TInvokeExpr(argExpr) Or TInvokeMemberExpr(argExpr) Then
+							TInvokeExpr(argExpr) Or TInvokeMemberExpr(argExpr) Or TNewObjectExpr(argExpr) or TNewArrayExpr(argExpr) Then
 						Err "Expression for 'Var' parameter must be a variable or an element of an array or pointer"
 					End If
 
-					' Passing a "new" object into a Var, requires us to create a local variable and pass its address instead.
-					If TNewObjectExpr(argExpr) Then
-						Local tmp:TLocalDecl=New TLocalDecl.Create( "",TNewObjectExpr(argExpr).ty,argExpr,, True )
-						tmp.Semant()
-						Local v:TVarExpr = New TVarExpr.Create( tmp )
-						Local stmt:TExpr = New TStmtExpr.Create( New TDeclStmt.Create( tmp ), v ).Semant()
-						stmt.exprType = TNewObjectExpr(argExpr).ty
-						args[i] = stmt
-						argExpr = args[i]
-					End If
-					
 					If TVarExpr(argExpr) Or TMemberVarExpr(argExpr) Then
 						Local decl:TDecl
 						If TVarExpr(argExpr) Then
