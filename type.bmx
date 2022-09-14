@@ -219,6 +219,8 @@ Type TType
 	Const T_LPARAM:Int      =$10000
 	Const T_WPARAM:Int      =$20000
 	Const T_ENUM:Int        =$40000
+	Const T_LONGINT:Int     =$80000
+	Const T_ULONGINT:Int    =$100000
 
 	Const T_MAX_DISTANCE:Int = $FFFF
 
@@ -299,6 +301,10 @@ Function NewType:TType(kind:Int = 0)
 			ty = New TFunctionPtrType
 		Case TType.T_ENUM
 			ty = New TEnumType
+		Case TType.T_LONGINT
+			ty = New TLongIntType
+		Case TType.T_ULONGINT
+			ty = New TULongIntType
 		Default
 			Err "Don't have a pointer type for " + kind
 	End Select
@@ -366,6 +372,10 @@ Function IsType:Int(ty:TType, kind:Int)
 			Return TFunctionPtrType(ty) <> Null
 		Case TType.T_ENUM
 			Return TEnumType(ty) <> Null
+		Case TType.T_LONGINT
+			Return TLongIntType(ty) <> Null
+		Case TType.T_ULONGINT
+			Return TULongIntType(ty) <> Null
 	End Select
 
 	Return False
@@ -1041,6 +1051,194 @@ Type TULongType Extends TIntegralType
 	Method ToString$()
 		Return "ULong" + ToStringParts()
 	End Method
+End Type
+
+Type TLongIntType Extends TIntegralType
+	
+	Method EqualsType:Int( ty:TType )
+		Return TLongIntType( ty )<>Null And (_flags = ty._flags Or ..
+			(_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR) Or (_flags & T_VAR))
+	End Method
+	
+	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
+		If _flags & T_VARPTR And (TIntType(ty) <> Null Or IsPointerType(ty, 0, T_POINTER)) Return True
+		Return (widensTest And WidensToType(ty)) Or (Not widensTest And TNumericType( ty )<>Null) Or (Not noExtendString And TStringType( ty )<>Null) Or (WORD_SIZE=4 And TLParamType(ty)<>Null)
+	End Method
+
+	Method WidensToType:Int( ty:TType )
+		Return (IsPointerType(ty, 0, T_POINTER) And IsPointerType(Self, 0, T_POINTER)) Or (TIntType(ty)<>Null And (ty._flags & T_VAR)) Or TLongType(ty)<>Null Or TFloatType(ty)<>Null Or TDoubleType(ty)<>Null Or (WORD_SIZE=8 And TLParamType(ty)<>Null)
+	End Method
+	
+	Method DistanceToType:Int(ty:TType)
+		If IsPointerType(ty, 0, T_POINTER) Then
+			If IsPointerType(Self, 0, T_POINTER) Then
+				Return 0
+			Else
+				Return T_MAX_DISTANCE
+			End If
+		End If
+
+		If TLongIntType(ty)<>Null Then
+			Return 0
+		End If
+
+		Local longIntSize:Int = GetSize()
+
+		If longIntSize = 4 And TIntType(ty)<>Null Then
+			Return 1
+		End If
+
+		If longIntSize = 4 And TLParamType(ty)<>Null Then
+			Return 1
+		End If
+		
+		If longIntSize = 4 And TLongType(ty)<>Null Then
+			Return 2
+		End If
+
+		If longIntSize = 8 And TLParamType(ty)<>Null Then
+			Return 3
+		End If
+
+		If longIntSize = 8 And TIntType(ty)<>Null Then
+			Return 2
+		End If
+
+		If longIntSize = 8 And TLongType(ty)<>Null Then
+			Return 1
+		End If
+
+		If TFloatType(ty)<>Null Then
+			Return 4
+		End If
+
+		If TDoubleType(ty)<>Null Then
+			Return 6
+		End If
+		
+		Return T_MAX_DISTANCE
+	End Method
+	
+	Method OnCopy:TType()
+		Return New TLongIntType
+	End Method
+
+	Method ToString$()
+		Return "LongInt" + ToStringParts()
+	End Method
+
+	Method GetSize:Int()
+		If WORD_SIZE = 4 Then
+			Return 4
+		Else
+			If opt_platform = "linux" or opt_platform = "macos" Then
+				Return 8
+			Else
+				Return 4
+			End If
+		End If
+	End Method
+
+End Type
+
+Type TULongIntType Extends TIntegralType
+	
+	Method EqualsType:Int( ty:TType )
+		Return TULongIntType( ty )<>Null And (_flags = ty._flags Or ..
+			(_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR) Or (_flags & T_VAR))
+	End Method
+	
+	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
+		If _flags & T_VARPTR And (TIntType(ty) <> Null Or IsPointerType(ty, 0, T_POINTER)) Return True
+		Return (widensTest And WidensToType(ty)) Or (Not widensTest And TNumericType( ty )<>Null) Or (Not noExtendString And TStringType( ty )<>Null) Or (WORD_SIZE=4 And TLParamType(ty)<>Null)
+	End Method
+
+	Method WidensToType:Int( ty:TType )
+		Return (IsPointerType(ty, 0, T_POINTER) And IsPointerType(Self, 0, T_POINTER)) Or (TIntType(ty)<>Null And (ty._flags & T_VAR)) Or TLongType(ty)<>Null Or TFloatType(ty)<>Null Or TDoubleType(ty)<>Null Or (WORD_SIZE=8 And TLParamType(ty)<>Null)
+	End Method
+	
+	Method DistanceToType:Int(ty:TType)
+		If IsPointerType(ty, 0, T_POINTER) Then
+			If IsPointerType(Self, 0, T_POINTER) Then
+				Return 0
+			Else
+				Return T_MAX_DISTANCE
+			End If
+		End If
+
+		If TULongIntType(ty)<>Null Then
+			Return 0
+		End If
+
+		Local longIntSize:Int = GetSize()
+
+		If longIntSize = 4 And TIntType(ty)<>Null Then
+			Return 2
+		End If
+
+		If longIntSize = 4 And TUIntType(ty)<>Null Then
+			Return 1
+		End If
+
+		If longIntSize = 4 And TLParamType(ty)<>Null Then
+			Return 3
+		End If
+		
+		If longIntSize = 4 And TLongType(ty)<>Null Then
+			Return 4
+		End If
+
+		If longIntSize = 8 And TLParamType(ty)<>Null Then
+			Return 3
+		End If
+
+		If longIntSize = 8 And TIntType(ty)<>Null Then
+			Return 4
+		End If
+
+		If longIntSize = 8 And TUIntType(ty)<>Null Then
+			Return 3
+		End If
+
+		If longIntSize = 8 And TLongType(ty)<>Null Then
+			Return 1
+		End If
+
+		If longIntSize = 8 And TULongType(ty)<>Null Then
+			Return 2
+		End If
+
+		If TFloatType(ty)<>Null Then
+			Return 5
+		End If
+
+		If TDoubleType(ty)<>Null Then
+			Return 6
+		End If
+		
+		Return T_MAX_DISTANCE
+	End Method
+	
+	Method OnCopy:TType()
+		Return New TULongIntType
+	End Method
+
+	Method ToString$()
+		Return "ULongInt" + ToStringParts()
+	End Method
+
+	Method GetSize:Int()
+		If WORD_SIZE = 4 Then
+			Return 4
+		Else
+			If opt_platform = "linux" or opt_platform = "macos" Then
+				Return 8
+			Else
+				Return 4
+			End If
+		End If
+	End Method
+
 End Type
 
 Type TDecimalType Extends TNumericType

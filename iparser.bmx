@@ -1539,6 +1539,10 @@ End Rem
 				ty = New TLongType
 			ElseIf CParse("z") Then
 				ty = New TSizetType
+			ElseIf CParse("v") Then
+				ty = New TLongIntType
+			ElseIf CParse("e") Then
+				ty = New TULongIntType
 			ElseIf CParse("j") Then
 				ty = New TInt128Type
 			ElseIf CParse("w") Then
@@ -1823,6 +1827,26 @@ End Rem
 			Wend
 			Return ty
 		End If
+		If CParse( "longint" )
+			Local ty:TType = New TLongType
+			While CParse("ptr")
+				ty = TType.MapToPointerType(ty)
+			Wend
+			While CParse( "*" )
+				ty = TType.MapToPointerType(ty)
+			Wend
+			Return ty
+		End If
+		If CParse( "ulongint" )
+			Local ty:TType = New TULongIntType
+			While CParse("ptr")
+				ty = TType.MapToPointerType(ty)
+			Wend
+			While CParse( "*" )
+				ty = TType.MapToPointerType(ty)
+			Wend
+			Return ty
+		End If
 		If CParse( "double" )
 			Local ty:TType = New TDoubleType
 			While CParse("ptr")
@@ -1943,6 +1967,10 @@ End Rem
 			ty = New TLongType
 		Else If CParse( "ulong" )
 			ty = New TULongType
+		Else If CParse( "longint" )
+			ty = New TLongIntType
+		Else If CParse( "ulongint" )
+			ty = New TULongIntType
 		Else If CParse( "double" )
 			ty = New TDoubleType
 		Else If CParse( "size_t" )

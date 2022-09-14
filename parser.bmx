@@ -739,6 +739,10 @@ Type TParser Extends TGenProcessor
 			ty = New TLongType
 		Else If CParse( "ulong" )
 			ty = New TULongType
+		Else If CParse( "longint" )
+			ty = New TLongIntType
+		Else If CParse( "ulongint" )
+			ty = New TULongIntType
 		Else If CParse( "double" )
 			ty = New TDoubleType
 		Else If CParse( "size_t" )
@@ -777,6 +781,8 @@ Type TParser Extends TGenProcessor
 		If CParse( "float" ) Return New TFloatType
 		If CParse( "long" ) Return New TLongType
 		If CParse( "ulong" ) Return New TULongType
+		If CParse( "longint" ) Return New TLongIntType
+		If CParse( "ulongint" ) Return New TULongIntType
 		If CParse( "double" ) Return New TDoubleType
 		If CParse( "size_t" ) Return New TSizeTType
 		If CParse( "int128" ) Then
@@ -816,6 +822,8 @@ Type TParser Extends TGenProcessor
 		If CParse( "object" ) Return New TIdentType.Create( "brl.classes.object" )
 		If CParse( "long" ) Return New TLongType
 		If CParse( "ulong" ) Return New TULongType
+		If CParse( "longint" ) Return New TLongIntType
+		If CParse( "ulongint" ) Return New TULongIntType
 		If CParse( "double" ) Return New TDoubleType
 		If CParse( "size_t" ) Return New TSizeTType
 		If CParse( "int128" ) Then
@@ -1306,7 +1314,7 @@ Type TParser Extends TGenProcessor
 		Case "false"
 			NextToke
 			expr=New TConstExpr.Create( New TIntType,"" )
-		Case "int","long","float","double","object","short","byte","size_t","uint","ulong","int128","float64","float128","double128","lparam","wparam","string"
+		Case "int","long","float","double","object","short","byte","size_t","uint","ulong","longint","ulongint","int128","float64","float128","double128","lparam","wparam","string"
 			Local id$=_toke
 			Local ty:TType=ParseType()
 
@@ -1322,6 +1330,10 @@ Type TParser Extends TGenProcessor
 						ty = New TLongType
 					Case "ulong"
 						ty = New TULongType
+					Case "longint"
+						ty = New TLongIntType
+					Case "ulongint"
+						ty = New TULongIntType
 					Case "float"
 						ty = New TFloatType
 					Case "double"

@@ -266,7 +266,9 @@ Type TExpr
 		If TLongType( lhs ) And TUIntType( rhs ) Return New TULongType
 		If TUIntType( lhs ) And TLongType( rhs ) Return New TULongType
 		If TLParamType( lhs ) Or TLParamType( rhs ) Return New TLParamType
+		If TULongIntType( lhs ) Or TULongIntType( rhs ) Return New TULongIntType
 		If TLongType( lhs ) Or TLongType( rhs ) Return New TLongType
+		If TLongIntType( lhs ) Or TLongIntType( rhs ) Return New TLongIntType
 		If TUIntType( lhs ) Or TUIntType( rhs ) Return New TUIntType
 		If TIntType( lhs ) Or TIntType( rhs ) Return New TIntType
 		If TEnumType( lhs ) Or TEnumType( rhs ) Then
@@ -421,7 +423,7 @@ Type TConstExpr Extends TExpr
 			Return Self
 		End If
 		
-		If TIntType( ty ) Or TShortType( ty ) Or TByteType( ty ) Or TLongType( ty ) Or TUIntType( ty ) Or TULongType( ty ) Or TWParamType(ty) Or TLParamType(ty)
+		If TIntType( ty ) Or TShortType( ty ) Or TByteType( ty ) Or TLongType( ty ) Or TUIntType( ty ) Or TULongType( ty ) Or TWParamType(ty) Or TLParamType(ty) Or TLongIntType(ty) Or TULongIntType(ty)
 			Local radix:Int
 			If value.StartsWith( "%" )
 				radix=1
@@ -566,7 +568,7 @@ Type TConstExpr Extends TExpr
 			Local val:Long = value.ToLong()
 			
 			If val < 0 Then
-				If TByteType(ty) Or TShortType(ty) Or TUIntType(ty) Or TULongType(ty) Or TSizeTType(ty) Or TInt128Type(ty) Or TWParamType(ty) Then
+				If TByteType(ty) Or TShortType(ty) Or TUIntType(ty) Or TULongType(ty) Or TSizeTType(ty) Or TInt128Type(ty) Or TWParamType(ty) or TULongIntType(ty) Then
 					Return False
 				End If
 			Else
@@ -576,13 +578,13 @@ Type TConstExpr Extends TExpr
 					End If
 				End If
 
-				If TUIntType(ty) Or ((TSizeTType(ty) Or TWParamType(ty)) And WORD_SIZE = 4) Then
+				If TUIntType(ty) Or ((TSizeTType(ty) Or TWParamType(ty)) And WORD_SIZE = 4) Or (TULongIntType(ty) And TULongIntType(ty).GetSize() = 4) Then
 					If val > 4294967296:Long Then
 						Return False
 					End If
 				End If
 				
-				If TULongType(ty) Or ((TSizeTType(ty) Or TWParamType(ty)) And WORD_SIZE = 8) Then
+				If TULongType(ty) Or ((TSizeTType(ty) Or TWParamType(ty)) And WORD_SIZE = 8) Or (TULongIntType(ty) And TULongIntType(ty).GetSize() = 8) Then
 					If value.length > 20 Then
 						Return False
 					Else If value.length = 20 Then
@@ -605,13 +607,13 @@ Type TConstExpr Extends TExpr
 				End If
 			End If
 
-			If TIntType(ty) Or (TLParamType(ty) And WORD_SIZE = 4) Then
+			If TIntType(ty) Or (TLParamType(ty) And WORD_SIZE = 4) Or (TLongIntType(ty) And TLongIntType(ty).GetSize() = 4) Then
 				If value <> String.FromInt(Int(val)) Then
 					Return False
 				End If
 			End If
 
-			If TLongType(ty) Or (TLParamType(ty) And WORD_SIZE = 8) Then
+			If TLongType(ty) Or (TLParamType(ty) And WORD_SIZE = 8) Or (TLongIntType(ty) And TLongIntType(ty).GetSize() = 8) Then
 				If value <> String.FromLong(Long(val)) Then
 					Return False
 				End If
@@ -1351,7 +1353,7 @@ Type TCastExpr Extends TExpr
 				' intrinsics can only cast between selves
 				If (TIntrinsicType(src) And TIntrinsicType(ty)=Null) Or (TIntrinsicType(ty) And TIntrinsicType(src)=Null) Then
 					If TFloat64Type(src) Or TFloat64Type(ty) Then
-						If (TFloat64Type(src) And (TLongType(ty) Or TULongType(ty))) Or (TFloat64Type(ty) And (TLongType(src) Or TULongType(src))) Then
+						If (TFloat64Type(src) And (TLongType(ty) Or TULongType(ty) Or (TLongIntType(ty) And TLongIntType(ty).GetSize() = 8) Or (TULongIntType(ty) And TULongIntType(ty).GetSize() = 8))) Or (TFloat64Type(ty) And (TLongType(src) Or TULongType(src) Or (TLongIntType(src) And TLongIntType(src).GetSize() = 8) Or (TULongIntType(src) And TULongIntType(src).GetSize() = 8))) Then
 							' ok
 						Else
 							Err "Unable to convert from "+src.ToString()+" to "+ty.ToString()+"."
@@ -1697,6 +1699,10 @@ Type TCastExpr Extends TExpr
 			Return Long( val )
 		Else If TULongType( exprType )
 			Return Long( val )
+		Else If TLongIntType( exprType )
+			Return Long( val )
+		Else If TULongIntType( exprType )
+			Return Long( val )
 		Else If TSizeTType( exprType )
 			Return Long( val )
 		Else If TInt128Type( exprType )
@@ -1815,6 +1821,8 @@ Type TUnaryExpr Extends TExpr
 		Case "~~"
 			If TIntType(exprType) Return ~Int( val )
 			If TLongType(exprType) Return ~Long( val )
+			If TLongIntType(exprType) Return bmx_bitwise_not_longint( val, TLongIntType(exprType).GetSize() )
+			If TULongIntType(exprType) Return bmx_bitwise_not_ulongint( val, TULongIntType(exprType).GetSize() )
 ?Not bmxng
 			If TUIntType(exprType) Return bmx_bitwise_not_uint( val )
 			If TSizeTType(exprType) Return bmx_bitwise_not_sizet( val )

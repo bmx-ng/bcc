@@ -154,6 +154,27 @@ BBString * bmx_bitwise_not_ulong(BBString * value) {
 	return bmx_string_from_ulong(~v);
 }
 
+BBString * bmx_bitwise_not_longint(BBString * value, int size) {
+	if (size == 4) {
+		int v = bbStringToInt(value);
+		return bbStringFromInt(~v);
+	} else { // 8
+		BBInt64 v = bbStringToLong(value);
+		return bbStringFromLong(~v);
+	}
+}
+
+BBString * bmx_bitwise_not_ulongint(BBString * value, int size) {
+	if (size == 4) {
+		unsigned int v = bmx_string_to_uint(value);
+		return bmx_string_from_uint(~v);
+	} else { // 8
+		unsigned long long v = bmx_string_to_ulong(value);
+		return bmx_string_from_ulong(~v);
+	}
+}
+
+
 BBString * bmx_binarymathexpr_sizet(enum binaryOps op, BBString * slhs, BBString * srhs) {
 	size_t lhs = bmx_string_to_size_t(slhs);
 	size_t rhs = bmx_string_to_size_t(srhs);
@@ -272,4 +293,92 @@ BBString * bmx_binarymathexpr_ulong(enum binaryOps op, BBString * slhs, BBString
 			break;
 	}
 	return bmx_string_from_ulong(res);
+}
+
+BBString * bmx_binarymathexpr_longint(enum binaryOps op, BBString * slhs, BBString * srhs, int size) {
+	if (size == 4) {
+		int lhs = bbStringToInt(slhs);
+		int rhs = bbStringToInt(srhs);
+		int res = 0;
+		switch (op) {
+			case OP_MUL:
+				res = lhs * rhs;
+				break;
+			case OP_DIV:
+				res = lhs / rhs;
+				break;
+			case OP_MOD:
+				res = lhs % rhs;
+				break;
+			case OP_SHL:
+				res = lhs << rhs;
+				break;
+			case OP_SHR:
+			case OP_SAR:
+				res = lhs >> rhs;
+				break;
+			case OP_ADD:
+				res = lhs + rhs;
+				break;
+			case OP_SUB:
+				res = lhs - rhs;
+				break;
+			case OP_AND:
+				res = lhs & rhs;
+				break;
+			case OP_XOR:
+				res = lhs ^ rhs;
+				break;
+			case OP_OR:
+				res = lhs | rhs;
+				break;
+		}
+		return bbStringFromInt(res);
+	} else { // 8
+		BBInt64 lhs = bbStringToLong(slhs);
+		BBInt64 rhs = bbStringToLong(srhs);
+		BBInt64 res = 0;
+		switch (op) {
+			case OP_MUL:
+				res = lhs * rhs;
+				break;
+			case OP_DIV:
+				res = lhs / rhs;
+				break;
+			case OP_MOD:
+				res = lhs % rhs;
+				break;
+			case OP_SHL:
+				res = lhs << rhs;
+				break;
+			case OP_SHR:
+			case OP_SAR:
+				res = lhs >> rhs;
+				break;
+			case OP_ADD:
+				res = lhs + rhs;
+				break;
+			case OP_SUB:
+				res = lhs - rhs;
+				break;
+			case OP_AND:
+				res = lhs & rhs;
+				break;
+			case OP_XOR:
+				res = lhs ^ rhs;
+				break;
+			case OP_OR:
+				res = lhs | rhs;
+				break;
+		}
+		return bbStringFromLong(res);
+	}
+}
+
+BBString * bmx_binarymathexpr_ulongint(enum binaryOps op, BBString * slhs, BBString * srhs, int size) {
+	if (size == 4) {
+		return bmx_binarymathexpr_uint(op, slhs, srhs);
+	} else { // 8
+		return bmx_binarymathexpr_ulong(op, slhs, srhs);
+	}
 }

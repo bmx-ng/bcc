@@ -34,9 +34,7 @@ Import "base.stringhelper.bmx"
 Import "base64.bmx"
 Import "enums.c"
 Import "hash.c"
-?Not bmxng
 Import "math.c"
-?
 
 ' debugging help
 Const DEBUG:Int = False
@@ -760,12 +758,15 @@ Extern
 	Function bmx_hash_update(state:Byte Ptr, data:Byte Ptr, length:Int)
 	Function bmx_hash_digest:String(state:Byte Ptr)
 
-?Not bmxng
 	Function bmx_bitwise_not_uint:String(value:String)
 	Function bmx_bitwise_not_sizet:String(value:String)
 	Function bmx_bitwise_not_ulong:String(value:String)
+	Function bmx_bitwise_not_longint:String(value:String, size:Int)
+	Function bmx_bitwise_not_ulongint:String(value:String, size:Int)
 	Function bmx_binarymathexpr_sizet:String(op:Int, lhs:String, rhs:String)
 	Function bmx_binarymathexpr_uint:String(op:Int, lhs:String, rhs:String)
 	Function bmx_binarymathexpr_ulong:String(op:Int, lhs:String, rhs:String)
-?
+	Function bmx_binarymathexpr_longint:String(op:Int, lhs:String, rhs:String, size:Int)
+	Function bmx_binarymathexpr_ulongint:String(op:Int, lhs:String, rhs:String, size:Int)
+
 End Extern
