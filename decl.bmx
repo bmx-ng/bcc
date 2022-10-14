@@ -2088,7 +2088,7 @@ Type TFuncDecl Extends TBlockDecl
 		Local strictVoidToInt:Int = False
 
 		If isCtor() Or isDtor() Then
-			If retTypeExpr And Not TVoidType(retTypeExpr) Then
+			If retTypeExpr And Not TVoidType(retTypeExpr) And Not generated Then
 				Err ident + "() cannot specify a return type"
 			End If
 			Local sc:TClassDecl = ClassScope()
