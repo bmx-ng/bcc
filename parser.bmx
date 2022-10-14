@@ -3790,7 +3790,7 @@ End Rem
 		SetErr
 		
 		modpath = modpath.ToLower()
-		Local basepath:String = ModulePath(modpath.ToLower())
+		Local basepath:String = ModulePath(modpath)
 
 		If _module.imported.Contains( basepath ) Return
 
@@ -4713,6 +4713,10 @@ Function EvalS$( source$,ty:TType )
 		
 	' new compiler
 	env.InsertDecl New TConstDecl.Create( "bmxng",New TIntType,New TConstExpr.Create( New TIntType, True ),0 )
+
+	' console or gui build?
+	env.InsertDecl New TConstDecl.Create( "console",New TIntType,New TConstExpr.Create( New TIntType, opt_apptype = APPTYPE_CONSOLE ),0 )
+	env.InsertDecl New TConstDecl.Create( "gui",New TIntType,New TConstExpr.Create( New TIntType, opt_apptype = APPTYPE_GUI ),0 )
 
 	' user defines
 	If opt_userdefs Then
