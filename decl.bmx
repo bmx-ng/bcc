@@ -3144,6 +3144,13 @@ End Rem
 						fdecl.generated = True
 						fdecl.scope = Null
 						fdecl.overrides = decl
+						fdecl.castTo = Null
+						fdecl.noCastGen = Null
+						fdecl.munged = Null
+						fdecl.metadata = metadata
+						fdecl.mangled = Null
+						fdecl.noMangle = Null
+				
 						TNewDecl(fdecl).cdecl = Self
 						InsertDecl(fdecl)
 
