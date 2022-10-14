@@ -2863,7 +2863,7 @@ End Rem
 		Return Super.FindFuncDecl( ident,args,explicit,,isIdentExpr,0,0 )
 	End Method
 	
-	Method GetAllFuncDecls:TFuncDecl[](funcs:TFuncDecl[] = Null, includeSuper:Int = True)
+	Method GetAllFuncDecls:TFuncDecl[](funcs:TFuncDecl[] = Null, includeSuper:Int = True, onlyCtors:Int = False)
 
 		If Not funcs Then
 			funcs = New TFuncDecl[0]
@@ -2879,7 +2879,11 @@ End Rem
 		Next
 		
 		For Local func:TFuncDecl = EachIn _decls
-		
+
+			If onlyCtors And Not func.IsCtor() Then
+				Continue
+			End If
+
 			Local matched:Int = False
 			
 			For Local i:Int = 0 Until funcs.length
@@ -3127,18 +3131,29 @@ End Rem
 
 		If Not IsExtern() And Not IsInterface()
 			Local fdecl:TFuncDecl
-			For Local decl:TFuncDecl=EachIn FuncDecls()
+			For Local decl:TFuncDecl=EachIn GetAllFuncDecls(Null, True, True)
 				If Not decl.IsCtor() Continue
-				Local nargs:Int
-				For Local arg:TArgDecl=EachIn decl.argDecls
-					If Not arg.init nargs:+1
-				Next
-				If nargs Continue
-				fdecl=decl
-				Exit
+
+				' only non default ctors
+				If decl.argDecls.Length > 0 Then
+
+					' method belongs to super? implement default
+					If decl.Scope <> Self Then
+
+						fdecl = TFuncDecl(decl.OnCopy(False))
+						fdecl.generated = True
+						fdecl.scope = Null
+						fdecl.overrides = decl
+						TNewDecl(fdecl).cdecl = Self
+						InsertDecl(fdecl)
+
+					End If
+
+				End If
+
 			Next
 			
-			
+
 			' Don't need default new?
 			'If Not fdecl
 			'	fdecl=New TFuncDecl.CreateF( "new",New TObjectType.Create( Self ),Null,FUNC_CTOR )

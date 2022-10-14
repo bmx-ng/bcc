@@ -5017,12 +5017,17 @@ End Rem
 		Else
 			t :+ classid + "_New"
 		End If
-		
+
 		'Find decl we override
 		Local odecl:TFuncDecl=fdecl
-		While odecl.overrides
-			odecl=odecl.overrides
-		Wend
+
+		If odecl.overrides And odecl.generated Then
+			fdecl = odecl.overrides
+		Else
+			While odecl.overrides
+				odecl=odecl.overrides
+			Wend
+		End If
 
 		Local args:String = TransObject(classdecl, True) + " o"
 
