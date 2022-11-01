@@ -1931,6 +1931,10 @@ Type TBinaryMathExpr Extends TBinaryExpr
 				exprType=New TLongType
 			Else If TULongType(lhs.exprType) Then
 				exprType=New TULongType
+			Else If TLongIntType(lhs.exprType) Then
+				exprType=New TLongIntType
+			Else If TULongIntType(lhs.exprType) Then
+				exprType=New TULongIntType
 			Else If TSizeTType(lhs.exprType) Then
 				exprType=New TSizeTType
 			Else If TWParamType(lhs.exprType) Then
@@ -2021,7 +2025,7 @@ Type TBinaryMathExpr Extends TBinaryExpr
 			Case "~~" Return x ~ y
 			Case "|" Return x | y
 			End Select
-		Else If TLongType( exprType ) Or TInt128Type(exprType) Or TWParamType(exprType) Or TLParamType(exprType) 
+		Else If TLongType( exprType ) Or TInt128Type(exprType) Or TWParamType(exprType) Or TLParamType(exprType) Or TLongIntType(exprType)
 			Local x:Long=Long(lhs),y:Long=Long(rhs)
 			Select op
 			Case "^" Return Double(lhs)^Double(rhs)
@@ -2131,7 +2135,7 @@ Type TBinaryMathExpr Extends TBinaryExpr
 				Return bmx_binarymathexpr_uint(opInt, lhs, rhs)
 		End Select
 ?
-		Else If TULongType(exprType)
+		Else If TULongType(exprType) Or TULongIntType(exprType)
 ?bmxng
 			Local x:ULong=ULong(lhs),y:ULong=ULong(rhs)
 			Select op
@@ -2314,7 +2318,7 @@ Type TBinaryCompareExpr Extends TBinaryExpr
 			Case ">"  r=(lhs> rhs)
 			Case ">=", "=>" r=(lhs>=rhs)
 			End Select
-		Else If TLongType( ty ) Or TSizeTType( ty ) Or TUIntType( ty ) Or TULongType( ty ) Or TInt128Type(ty) Or TWParamType(ty) Or TLParamType(ty)
+		Else If TLongType( ty ) Or TSizeTType( ty ) Or TUIntType( ty ) Or TULongType( ty ) Or TInt128Type(ty) Or TWParamType(ty) Or TLParamType(ty) Or TLongIntType(ty) Or TULongIntType(ty)
 			Local lhs:Long=Long( Self.lhs.Eval() )
 			Local rhs:Long=Long( Self.rhs.Eval() )
 			Select op
