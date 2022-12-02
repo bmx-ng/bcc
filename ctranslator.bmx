@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2021 Bruce A Henderson
+' Copyright (c) 2013-2022 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -2736,6 +2736,8 @@ t:+"NULLNULLNULL"
 
 		If TObjectType(elemType) And TObjectType(elemType).classdecl.IsStruct() And Not IsPointerType(elemType) Then
 			Emit "BBARRAY " + tmpArray.munged + " = bbArrayFromDataStruct" + Bra(TransArrayType(elemType) + "," + count + "," + tmpData.munged + ", sizeof" + Bra(TransObject(TObjectType(elemType).classdecl))) + ";"
+		Else If TEnumType(elemType)
+			Emit "BBARRAY " + tmpArray.munged + " = bbArrayFromDataSize" + Bra(TransArrayType(elemType) + "," + count + "," + tmpData.munged + "," + TEnumType(elemType).decl.ty.GetSize() ) + ";"
 		Else
 			Emit "BBARRAY " + tmpArray.munged + " = bbArrayFromData" + Bra(TransArrayType(elemType) + "," + count + "," + tmpData.munged ) + ";"
 		End If
