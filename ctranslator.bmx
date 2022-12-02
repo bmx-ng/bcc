@@ -1867,7 +1867,7 @@ t:+"NULLNULLNULL"
 
 			If TObjectType(expr.ty) And TObjectType(expr.ty).classdecl.IsStruct() And Not IsPointerType(expr.ty) Then
 				Return "bbArrayNewStruct" + Bra(TransArrayType(expr.ty) + ", sizeof" + Bra(TransObject(TObjectType(expr.ty).classdecl)) + ..
-						", " + expr.expr.length + ", " + s)
+					", _" + TObjectType(expr.ty).classdecl.munged + "_New, " + expr.expr.length + ", " + s)
 			Else
 				Return "bbArrayNew" + Bra(TransArrayType(expr.ty) + ", " + expr.expr.length + ", " + s)
 			End If
