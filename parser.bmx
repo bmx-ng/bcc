@@ -313,19 +313,23 @@ Type TForEachinStmt Extends TLoopStmt
 				Local varTmp:TLocalDecl=New TLocalDecl.Create( varid,varty,cExpr)
 
 				If Not TNumericType(varty) And Not varObjTmp Then
-					' local var as expression
-					Local expr:TExpr=New TVarExpr.Create( varTmp )
-	
-					' var = Null
-					expr=New TBinaryCompareExpr.Create( "=",expr, New TNullExpr.Create(TType.nullObjectType))
-	
-					' then continue
-					Local thenBlock:TBlockDecl=New TBlockDecl.Create( block.scope, True, BLOCK_IF )
-					Local elseBlock:TBlockDecl=New TBlockDecl.Create( block.scope, True, BLOCK_ELSE )
-					cont = New TContinueStmt.Create(Null, True)
-					thenBlock.AddStmt cont
-	
-					block.stmts.AddFirst New TIfStmt.Create( expr,thenBlock,elseBlock, True )
+					If iterable And TStringType(varty) Then
+						'
+					Else
+						' local var as expression
+						Local expr:TExpr=New TVarExpr.Create( varTmp )
+		
+						' var = Null
+						expr=New TBinaryCompareExpr.Create( "=",expr, New TNullExpr.Create(TType.nullObjectType))
+		
+						' then continue
+						Local thenBlock:TBlockDecl=New TBlockDecl.Create( block.scope, True, BLOCK_IF )
+						Local elseBlock:TBlockDecl=New TBlockDecl.Create( block.scope, True, BLOCK_ELSE )
+						cont = New TContinueStmt.Create(Null, True)
+						thenBlock.AddStmt cont
+		
+						block.stmts.AddFirst New TIfStmt.Create( expr,thenBlock,elseBlock, True )
+					End If
 				End If
 				block.stmts.AddFirst New TDeclStmt.Create( varTmp, True )
 				If varObjTmp Then
@@ -376,18 +380,20 @@ Type TForEachinStmt Extends TLoopStmt
 				' var = Null
 '				Local expr:TExpr=New TBinaryCompareExpr.Create( "=",New TIdentExpr.Create( varid ), New TNullExpr.Create(TType.nullObjectType))
 				If Not TNumericType(varty) And Not varObjTmp Then
-
-					Local expr:TExpr=New TBinaryCompareExpr.Create( "=",varExpr, New TNullExpr.Create(TType.nullObjectType))
-	
-					' then continue
-					Local thenBlock:TBlockDecl=New TBlockDecl.Create( block.scope, ,BLOCK_IF )
-					Local elseBlock:TBlockDecl=New TBlockDecl.Create( block.scope, ,BLOCK_ELSE )
-					cont = New TContinueStmt
-					thenBlock.AddStmt cont
-	
-					block.stmts.AddFirst New TIfStmt.Create( expr,thenBlock,elseBlock )
-					'block.stmts.AddFirst New TDeclStmt.Create( varTmp )
-
+					If iterable And TStringType(varty) Then
+						'
+					Else
+						Local expr:TExpr=New TBinaryCompareExpr.Create( "=",varExpr, New TNullExpr.Create(TType.nullObjectType))
+		
+						' then continue
+						Local thenBlock:TBlockDecl=New TBlockDecl.Create( block.scope, ,BLOCK_IF )
+						Local elseBlock:TBlockDecl=New TBlockDecl.Create( block.scope, ,BLOCK_ELSE )
+						cont = New TContinueStmt
+						thenBlock.AddStmt cont
+		
+						block.stmts.AddFirst New TIfStmt.Create( expr,thenBlock,elseBlock )
+						'block.stmts.AddFirst New TDeclStmt.Create( varTmp )
+					End If
 				End If
 '				block.stmts.AddFirst New TAssignStmt.Create( "=",New TIdentExpr.Create( varid ),New TCastExpr.Create( varty, nextObjExpr,CAST_EXPLICIT ))
 				block.stmts.AddFirst New TAssignStmt.Create( "=",varExpr,cExpr)
