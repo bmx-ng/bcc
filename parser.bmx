@@ -313,7 +313,7 @@ Type TForEachinStmt Extends TLoopStmt
 				Local varTmp:TLocalDecl=New TLocalDecl.Create( varid,varty,cExpr)
 
 				If Not TNumericType(varty) And Not varObjTmp Then
-					If iterable And TStringType(varty) Then
+					If iterable Then
 						'
 					Else
 						' local var as expression
@@ -380,7 +380,7 @@ Type TForEachinStmt Extends TLoopStmt
 				' var = Null
 '				Local expr:TExpr=New TBinaryCompareExpr.Create( "=",New TIdentExpr.Create( varid ), New TNullExpr.Create(TType.nullObjectType))
 				If Not TNumericType(varty) And Not varObjTmp Then
-					If iterable And TStringType(varty) Then
+					If iterable Then
 						'
 					Else
 						Local expr:TExpr=New TBinaryCompareExpr.Create( "=",varExpr, New TNullExpr.Create(TType.nullObjectType))
