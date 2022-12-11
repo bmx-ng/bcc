@@ -441,8 +441,10 @@ Type TToker
 	Method Join:String(startLine:Int, endLine:Int, s:String)
 		Local sb:TStringBuffer = New TStringBuffer
 		For Local i:Int = startLine - 1 To endLine
-			sb.Append(_lines[i])
-			sb.Append(s)
+			If i < _lines.Length Then
+				sb.Append(_lines[i])
+				sb.Append(s)
+			End If
 		Next
 		Return sb.ToString()
 	End Method
