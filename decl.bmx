@@ -362,8 +362,25 @@ Type TDecl
 				TValDecl(Self).SemantInit
 			End If
 		EndIf
-		
-		
+
+		Semant2()
+		PopErr
+	End Method
+
+	Method Semant2()
+
+		PushErr errInfo
+	
+		If scope
+			PushEnv scope
+		EndIf
+
+		OnSemant2()
+
+		If scope 
+			PopEnv
+		End If
+
 		PopErr
 	End Method
 	
@@ -382,6 +399,8 @@ Type TDecl
 	End Method
 	
 	Method OnSemant() Abstract
+	Method OnSemant2()
+	End Method
 	
 	Method Clear()
 	End Method
@@ -3129,46 +3148,6 @@ End Rem
 			GetFieldOffset(decl)
 		Next
 
-		If Not IsExtern() And Not IsInterface()
-			Local fdecl:TFuncDecl
-			For Local decl:TFuncDecl=EachIn GetAllFuncDecls(Null, True, True)
-				If Not decl.IsCtor() Continue
-
-				' only non default ctors
-				If decl.argDecls.Length > 0 Then
-
-					' method belongs to super? implement default
-					If decl.Scope <> Self Then
-
-						fdecl = TFuncDecl(decl.OnCopy(False))
-						fdecl.generated = True
-						fdecl.scope = Null
-						fdecl.overrides = decl
-						fdecl.castTo = Null
-						fdecl.noCastGen = Null
-						fdecl.munged = Null
-						fdecl.metadata = metadata
-						fdecl.mangled = Null
-						fdecl.noMangle = Null
-				
-						TNewDecl(fdecl).cdecl = Self
-						InsertDecl(fdecl)
-
-					End If
-
-				End If
-
-			Next
-			
-
-			' Don't need default new?
-			'If Not fdecl
-			'	fdecl=New TFuncDecl.CreateF( "new",New TObjectType.Create( Self ),Null,FUNC_CTOR )
-			'	fdecl.AddStmt New TReturnStmt.Create( Null )
-			'	InsertDecl fdecl
-			'EndIf
-		EndIf
-
 		For Local decl:TDecl=EachIn _decls
 			If TClassDecl(decl) Then
 				TClassDecl(decl).Semant
@@ -3220,6 +3199,53 @@ End Rem
 		If AppScope() Then
 			AppScope().semantedClasses.AddLast Self
 		End If
+	End Method
+
+	Method OnSemant2()
+
+		If args or instargs Then
+			Return
+		End If
+
+		If Not IsExtern() And Not IsInterface()
+			Local fdecl:TFuncDecl
+			For Local decl:TFuncDecl=EachIn GetAllFuncDecls(Null, True, True)
+				If Not decl.IsCtor() Continue
+
+				' only non default ctors
+				If decl.argDecls.Length > 0 Then
+
+					' method belongs to super? implement default
+					If decl.Scope <> Self Then
+
+						fdecl = TFuncDecl(decl.OnCopy(False))
+						fdecl.generated = True
+						fdecl.scope = Null
+						fdecl.overrides = decl
+						fdecl.castTo = Null
+						fdecl.noCastGen = Null
+						fdecl.munged = Null
+						fdecl.metadata = metadata
+						fdecl.mangled = Null
+						fdecl.noMangle = Null
+				
+						TNewDecl(fdecl).cdecl = Self
+						InsertDecl(fdecl)
+
+					End If
+
+				End If
+
+			Next
+			
+
+			' Don't need default new?
+			'If Not fdecl
+			'	fdecl=New TFuncDecl.CreateF( "new",New TObjectType.Create( Self ),Null,FUNC_CTOR )
+			'	fdecl.AddStmt New TReturnStmt.Create( Null )
+			'	InsertDecl fdecl
+			'EndIf
+		EndIf
 	End Method
 	
 	Method BuildStructCompareStatements(func:TFuncDecl)
