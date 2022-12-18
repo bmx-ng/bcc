@@ -245,6 +245,8 @@ Type TTranslator
 		If TStringType( ty ) Return p + "S"
 		If TWParamType( ty ) Return p + "W"
 		If TLParamType( ty ) Return p + "L"
+		If TLongIntType( ty ) Return p + "g"
+		If TULongIntType( ty ) Return p + "G"
 		If TArrayType( ty ) Then
 			Return p + "a" + TransMangleType(TArrayType( ty ).elemType)
 		End If
