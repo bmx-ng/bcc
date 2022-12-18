@@ -3605,7 +3605,6 @@ Type TLoopLabelExpr Extends TExpr
 	End Method
 
 	Method Trans$()
-		DebugStop
 	End Method
 
 	Method Eval$()
@@ -3632,7 +3631,6 @@ Type TDataLabelExpr Extends TExpr
 	End Method
 
 	Method Trans$()
-		DebugStop
 	End Method
 
 	Method Eval$()
