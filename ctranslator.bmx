@@ -3048,7 +3048,7 @@ t:+"NULLNULLNULL"
 			End If
 		Next
 		
-		Emit "bbOnDebugEnterScope(&__scope);"
+		Emit "bbOnDebugEnterScope((BBDebugScope *)&__scope);"
 	End Method
 	
 	Method EmitClassThreadedGlobalDebugInit(classDecl:TClassDecl)
