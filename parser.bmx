@@ -4557,16 +4557,16 @@ End Function
 
 Function AppendLibInit:String(source:String)
 
-	Local sb:TStringBuffer = TStringBuffer.Create(source)
+	Local sb:TStringBuilder = New TStringBuilder(source)
 	
-	sb.Append("~n")
-	sb.Append("Extern~n")
-	sb.Append("Function bbLibInit()~n")
-	sb.Append("End Extern~n")
+	sb.AppendNewLine()
+	sb.AppendLine("Extern")
+	sb.AppendLine("Function bbLibInit()")
+	sb.AppendLine("End Extern")
 
-	sb.Append("Function InitBRL() Export~n")
-	sb.Append("bbLibInit()~n")
-	sb.Append("End Function~n")
+	sb.AppendLine("Function InitBRL() Export")
+	sb.AppendLine("bbLibInit()")
+	sb.AppendLine("End Function")
 	
 	Return sb.ToString()
 End Function

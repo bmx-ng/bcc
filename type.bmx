@@ -23,6 +23,7 @@
 '
 SuperStrict
 
+Import Brl.StringBuilder
 Import "config.bmx"
 
 Include "translator.bmx"

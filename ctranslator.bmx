@@ -6081,7 +6081,7 @@ End Rem
 				ib.length = buf.length
 
 				Emit "unsigned char " + ident + "[] = {"
-				Local sb:TStringBuffer = New TStringBuffer
+				Local sb:TStringBuilder = New TStringBuilder
 
 				Local hx:Short[2]
 				Local LINES:Int
@@ -6102,7 +6102,7 @@ End Rem
 					count :+ 5
 
 					If count > 80 Then
-						sb.Append("~n")
+						sb.AppendNewLine()
 						count = 0
 						LINES :+ 1
 					End If

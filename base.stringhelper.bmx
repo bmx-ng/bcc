@@ -22,9 +22,9 @@
 '
 SuperStrict
 
+Import Brl.StringBuilder
 Import "transform.c"
 
-Import "stringbuffer_core.bmx"
 
 Extern
 	Function transform:Byte Ptr(i:Int)
@@ -37,7 +37,7 @@ Type TStringHelper
 	'with their basic characters (é = e)
 
 	Function Sanitize:String(value:String, replaceInvalidCharsWith:String="_", requiresAlphaPrefix:Int = False)
-		Local result:TStringBuffer = New TStringBuffer
+		Local result:TStringBuilder = New TStringBuilder
 
 		For Local i:Int = 0 Until value.length
 

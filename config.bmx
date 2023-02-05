@@ -224,7 +224,7 @@ Function BmxUnquote$( str$, unquoted:Int = False )
 		length = str.length
 	End If
 
-	Local sb:TStringBuffer = New TStringBuffer
+	Local sb:TStringBuilder = New TStringBuilder
 
 	While i < length
 		Local c:Int = str[i]
@@ -374,7 +374,7 @@ Function BmxProcessMultiString:String( str:String )
 		End If
 	Next
 
-	Local sb:TStringBuffer = New TStringBuffer
+	Local sb:TStringBuilder = New TStringBuilder
 	For i = 0 Until lineCount
 		Local line:String = LINES[i]
 		Local length:Int = line.length
@@ -387,7 +387,7 @@ Function BmxProcessMultiString:String( str:String )
 			sb.Append(line[..length])
 		End If
 		If Not softWrap And i < lineCount - 1 Then
-			sb.Append("~n")
+			sb.AppendNewLine()
 		End If
 	Next
 
