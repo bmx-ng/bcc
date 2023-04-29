@@ -4664,6 +4664,8 @@ Function EvalS$( source$,ty:TType )
 	env.InsertDecl New TConstDecl.Create( "linuxx64",New TIntType,New TConstExpr.Create( New TIntType,(opt_platform="linux" Or opt_platform="android") And opt_arch="x64"),0 )
 	env.InsertDecl New TConstDecl.Create( "linuxarm",New TIntType,New TConstExpr.Create( New TIntType, ((opt_platform="android" Or opt_platform="linux") And (opt_arch="arm" Or opt_arch="armeabi" Or opt_arch="armeabiv7a" Or opt_arch="arm64v8a")) Or (opt_platform="raspberrypi" And opt_arch="arm")),0 )
 	env.InsertDecl New TConstDecl.Create( "linuxarm64",New TIntType,New TConstExpr.Create( New TIntType, (opt_platform="android" And opt_arch="arm64v8a") Or ((opt_platform="linux" Or opt_platform="raspberrypi") And opt_arch="arm64")),0 )
+	env.InsertDecl New TConstDecl.Create( "linuxriscv32",New TIntType,New TConstExpr.Create( New TIntType, (opt_platform="linux" And  opt_arch="riscv32")),0 )
+	env.InsertDecl New TConstDecl.Create( "linuxriscv64",New TIntType,New TConstExpr.Create( New TIntType, (opt_platform="linux" And  opt_arch="riscv64")),0 )
 
 	' android
 	env.InsertDecl New TConstDecl.Create( "android",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="android" ),0 )
@@ -4699,9 +4701,11 @@ Function EvalS$( source$,ty:TType )
 	env.InsertDecl New TConstDecl.Create( "js",New TIntType,New TConstExpr.Create( New TIntType,opt_arch="js" ),0 )
 	env.InsertDecl New TConstDecl.Create( "armv7",New TIntType,New TConstExpr.Create( New TIntType,opt_arch="armv7" ),0 )
 	env.InsertDecl New TConstDecl.Create( "arm64",New TIntType,New TConstExpr.Create( New TIntType,opt_arch="arm64" ),0 )
+	env.InsertDecl New TConstDecl.Create( "riscv32",New TIntType,New TConstExpr.Create( New TIntType,opt_arch="riscv32" ),0 )
+	env.InsertDecl New TConstDecl.Create( "riscv64",New TIntType,New TConstExpr.Create( New TIntType,opt_arch="riscv64" ),0 )
 
-	env.InsertDecl New TConstDecl.Create( "ptr32",New TIntType,New TConstExpr.Create( New TIntType,opt_arch="x86" Or opt_arch="ppc" Or opt_arch="armv7" Or opt_arch="arm" Or opt_arch="armeabi" Or opt_arch="armeabiv7a" ),0 )
-	env.InsertDecl New TConstDecl.Create( "ptr64",New TIntType,New TConstExpr.Create( New TIntType,opt_arch="x64" Or opt_arch="arm64" Or opt_arch="arm64v8a" ),0 )
+	env.InsertDecl New TConstDecl.Create( "ptr32",New TIntType,New TConstExpr.Create( New TIntType,opt_arch="x86" Or opt_arch="ppc" Or opt_arch="armv7" Or opt_arch="arm" Or opt_arch="armeabi" Or opt_arch="armeabiv7a" Or opt_arch="riscv32" ),0 )
+	env.InsertDecl New TConstDecl.Create( "ptr64",New TIntType,New TConstExpr.Create( New TIntType,opt_arch="x64" Or opt_arch="arm64" Or opt_arch="arm64v8a" Or opt_arch="riscv64" ),0 )
 
 	' endian
 	env.InsertDecl New TConstDecl.Create( "bigendian",New TIntType,New TConstExpr.Create( New TIntType,opt_arch="ppc" ),0 )
