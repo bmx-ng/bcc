@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2022 Bruce A Henderson
+' Copyright (c) 2013-2023 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -4723,6 +4723,8 @@ Function EvalS$( source$,ty:TType )
 		
 	' new compiler
 	env.InsertDecl New TConstDecl.Create( "bmxng",New TIntType,New TConstExpr.Create( New TIntType, True ),0 )
+	' coverage
+	env.InsertDecl New TConstDecl.Create( "coverage",New TIntType,New TConstExpr.Create( New TIntType, opt_coverage ),0 )
 
 	' console or gui build?
 	env.InsertDecl New TConstDecl.Create( "console",New TIntType,New TConstExpr.Create( New TIntType, opt_apptype = APPTYPE_CONSOLE ),0 )

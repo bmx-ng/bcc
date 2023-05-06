@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2022 Bruce A Henderson
+' Copyright (c) 2013-2023 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
