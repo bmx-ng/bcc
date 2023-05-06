@@ -2061,11 +2061,6 @@ End Rem
 		func.line = line
 
 		funcInfo.funcs :+ [func]
-
-		' Don't add duplicate lines
-		'If Not lineInfo.lines.Length Or lineInfo.lines[lineInfo.lines.Length-1] <> line Then
-		'	lineInfo.lines :+ [line]
-		'End If
 	End Method
 
 	Method EmitClassDeclDeleteDtor( classDecl:TClassDecl )
