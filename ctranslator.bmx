@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2022 Bruce A Henderson
+' Copyright (c) 2013-2023 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -3693,6 +3693,10 @@ End Rem
 
 			If Not proto Then
 
+				If opt_coverage Then
+					EmitCoverageFunction(decl)
+				End If
+
 				If PROFILER Then
 					Select decl.ident
 						Case "WritePixel", "PixelPtr", "CopyPixels", "ConvertPixels", "ConvertPixelsToStdFormat", "ConvertPixelsFromStdFormat"
@@ -6588,6 +6592,73 @@ End If
 			End If
 		Next
 
+		' coverage
+		Local covCount:Int
+		If opt_coverage Then
+			Local id:Int
+			For Local file:String = EachIn coverageFileInfo.Keys()
+				Local covFile:TCoverageLineInfo = TCoverageLineInfo(coverageFileInfo.ValueForKey(file))
+				Local t:String
+
+				Emit "static int coverage_lines_" + id + "[] = {"
+
+				For Local i:Int = 0 Until covFile.lines.Length
+					If i And i Mod 40 = 0 Then
+						If i Then
+							t :+ ","
+						End If
+						Emit t
+						t = ""
+					Else
+						If i Then
+							t :+ ","
+						End If
+					End If
+					t :+ covFile.lines[i]
+				Next
+
+				If t Then
+					Emit t
+				End If
+
+				Emit "};"
+
+				Emit "static BBCoverageFunctionInfo coverage_funcs_" + id + "[] = {"
+				Local covFuncFile:TCoverageFunctionLineInfo = TCoverageFunctionLineInfo(coverageFunctionFileInfo.ValueForKey(file))
+
+				For Local i:Int = 0 Until covFuncFile.funcs.Length
+					Emit "{ " + Enquote(covFuncFile.funcs[i].name) + ", " + covFuncFile.funcs[i].line + " },"
+				Next
+
+				Emit "};"
+
+				id :+ 1
+			Next
+
+			covCount = id
+			If id Then
+				id = 0
+				Emit "static BBCoverageFileInfo coverage_files[] = {"
+				For Local file:String = EachIn coverageFileInfo.Keys()
+					Local covFile:TCoverageLineInfo = TCoverageLineInfo(coverageFileInfo.ValueForKey(file))
+					
+					Emit "{"
+					Emit Enquote(file) + ","
+					Emit "coverage_lines_" + id + ","
+					Emit "sizeof(coverage_lines_" + id + ") / sizeof(coverage_lines_" + id + "[0]),"
+					Emit "NULL,"
+					Emit "coverage_funcs_" + id + ","
+					Emit "sizeof(coverage_funcs_" + id + ") / sizeof(coverage_funcs_" + id + "[0]),"
+					Emit "NULL,"
+					Emit "},"
+
+					id :+ 1
+				Next
+				Emit "{ NULL, NULL, 0, NULL, NULL, 0, NULL }"
+				Emit "};"
+			End If
+		End If
+
 		Emit "static int " + app.munged + "_inited" + " = 0;"
 
 		Emit "int " + app.munged + "(){"
@@ -6659,6 +6730,11 @@ End If
 			
 			Emit decl.munged + "_BBEnum_impl = (BBEnum *)&" + decl.munged + "_BBEnum;"
 		Next
+
+		' initialise coverage
+		If opt_coverage And covCount Then
+			Emit "bbCoverageRegisterFile(coverage_files);"
+		End If
 
 		' register types
 		For Local decl:TDecl=EachIn app.Semanted()

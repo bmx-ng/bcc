@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2022 Bruce A Henderson
+' Copyright (c) 2013-2023 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -58,6 +58,9 @@ Type TTranslator
 	Field debugOut:String
 	
 	Field processingReturnStatement:Int
+
+	Field coverageFileInfo:TMap = New TMap
+	Field coverageFunctionFileInfo:TMap = New TMap
 
 	Method PushVarScope()
 		varStack.Push customVarStack
@@ -817,6 +820,7 @@ op = mapSymbol(op)
 		MungDecl tmp
 		Emit TransLocalDecl( tmp,expr, True, init )+";"
 
+		EmitCoverage(_errInfo)
 		EmitGDBDebug(_errInfo)
 		
 		Return tmp.munged
@@ -1483,6 +1487,7 @@ End Rem
 			
 			End If
 
+			EmitCoverage(stmt)
 			EmitGDBDebug(stmt)
 			
 			If TReturnStmt(stmt) And Not tryStack.IsEmpty() Then
@@ -1995,10 +2000,90 @@ End Rem
 			End If
 		End If
 	End Method
-	
+
+	Method EmitCoverage(obj:Object)
+		If opt_coverage Then
+			If TStmt(obj) Then
+				Local stmt:TStmt = TStmt(obj)
+				Local infoArray:String[] = stmt.errInfo[1..stmt.errInfo.length-1].Split(";")
+				If Not stmt.generated Then
+					GenerateCoverageLine(infoArray)
+				End If
+			Else If TDecl(obj) Then
+				Local decl:TDecl = TDecl(obj)
+				Local infoArray:String[] = decl.errInfo[1..decl.errInfo.length-1].Split(";")
+				GenerateCoverageLine(infoArray)
+			Else If String(obj) Then
+				Local errInfo:String = String(obj)
+				Local infoArray:String[] = errInfo[1..errInfo.length-1].Split(";")
+				GenerateCoverageLine(infoArray)
+			End If
+		End If
+	End Method
+
+	Method GenerateCoverageLine(infoArray:String[])
+		Emit "bbCoverageUpdateLineInfo(" + Enquote(infoArray[0]) + ", " + infoArray[1] + ");"
+
+		Local filename:String = infoArray[0]
+		Local line:Int = Int(infoArray[1])
+		Local lineInfo:TCoverageLineInfo = TCoverageLineInfo(coverageFileInfo.ValueForKey(filename))
+		If Not lineInfo Then
+			lineInfo = New TCoverageLineInfo
+			lineInfo.lines = New Int[0]
+			coverageFileInfo.Insert(filename, lineInfo)
+		End If
+		' Don't add duplicate lines
+		If Not lineInfo.lines.Length Or lineInfo.lines[lineInfo.lines.Length-1] <> line Then
+			lineInfo.lines :+ [line]
+		End If
+	End Method
+
+	Method EmitCoverageFunction(decl:TFuncDecl)
+		If opt_coverage Then
+			Local infoArray:String[] = decl.errInfo[1..decl.errInfo.length-1].Split(";")
+			GenerateCoverageFunctionLine(infoArray, decl.ident)
+		End If
+	End Method
+
+	Method GenerateCoverageFunctionLine(infoArray:String[], name:String)
+		Emit "bbCoverageUpdateFunctionLineInfo(" + Enquote(infoArray[0]) + ", " + Enquote(name) + ", " + infoArray[1] + ");"
+
+		Local filename:String = infoArray[0]
+		Local line:Int = Int(infoArray[1])
+		Local funcInfo:TCoverageFunctionLineInfo = TCoverageFunctionLineInfo(coverageFunctionFileInfo.ValueForKey(filename))
+		If Not funcInfo Then
+			funcInfo = New TCoverageFunctionLineInfo
+			coverageFunctionFileInfo.Insert(filename, funcInfo)
+		End If
+
+		Local func:TCoverageFunctionInfo = New TCoverageFunctionInfo
+		func.name = name
+		func.line = line
+
+		funcInfo.funcs :+ [func]
+
+		' Don't add duplicate lines
+		'If Not lineInfo.lines.Length Or lineInfo.lines[lineInfo.lines.Length-1] <> line Then
+		'	lineInfo.lines :+ [line]
+		'End If
+	End Method
+
 	Method EmitClassDeclDeleteDtor( classDecl:TClassDecl )
 	End Method
 	
+End Type
+
+Type TCoverageLineInfo
+	Field lines:Int[]
+End Type
+
+Type TCoverageFunctionLineInfo
+	Field funcs:TCoverageFunctionInfo[]
+End Type
+
+Type TCoverageFunctionInfo
+	Field name:String
+	Field line:Int
 End Type
 
 Type TTryBreakCheck

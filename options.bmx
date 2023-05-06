@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2022 Bruce A Henderson
+' Copyright (c) 2013-2023 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -25,7 +25,7 @@ SuperStrict
 
 Import "base.configmap.bmx"
 
-Const version:String = "0.137"
+Const version:String = "0.138"
 
 Const BUILDTYPE_APP:Int = 0
 Const BUILDTYPE_MODULE:Int = 1
@@ -132,6 +132,8 @@ Global opt_need_strict:Int = False
 Global opt_legacy_incbin:Int = False
 
 Global opt_filepath:String
+
+Global opt_coverage:Int = False
 
 Function CmdError(details:String = Null, fullUsage:Int = False)
 	Local s:String = "Compile Error"
@@ -245,6 +247,8 @@ Function ParseArgs:String[](args:String[])
 				opt_need_strict=True
 			Case "ib"
 				opt_legacy_incbin=True
+			Case "cov"
+				opt_coverage=True
 		End Select
 	
 		count:+ 1
