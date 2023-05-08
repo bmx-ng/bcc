@@ -750,8 +750,9 @@ Type TArgDecl Extends TLocalDecl
 				Err "Expecting array"
 			End If
 			
-			If Not TNumericType(TArrayType(ty).elemType) Then
-				Err "Static array elements must be numeric"
+			Local et:TType = TArrayType(ty).elemType
+			If Not TNumericType(et) And Not (TObjectType(et) And TObjectType(et).classDecl.IsStruct()) Then
+				Err "Static array elements must be numeric or a Struct"
 			End If
 		End If
 		
