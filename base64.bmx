@@ -186,17 +186,17 @@ Type TBase64
     
 		Local inBuff:Int
 		If numSigBytes > 0 Then
-			inBuff = (source[ srcOffset     ] Shl 24) Shr 8
-			
+			inBuff = (source[ srcOffset     ] & $FF) Shl 16
+
 			If numSigBytes > 1 Then
-				inBuff :| (source[ srcOffset + 1 ] Shl 24) Shr 16
+				inBuff :| ((source[ srcOffset + 1 ] & $FF) Shl 8)
 
 				If numSigBytes > 2 Then
-					inBuff :| (source[ srcOffset + 2 ] Shl 24) Shr 24
+					inBuff :| (source[ srcOffset + 2 ] & $FF)
 				End If
 			End If
 		End If
-		
+
 		Select numSigBytes
 			Case 3
 				destination[ destOffset     ] = _STANDARD_ALPHABET[ (inBuff Shr 18)       ]
