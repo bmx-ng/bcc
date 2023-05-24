@@ -497,9 +497,15 @@ Type TCTranslator Extends TTranslator
 				If isStructInit Then 
 					If TArrayType( ty ).isStatic Then
 						Local t:String = "{"
+						Local count:Int = 0
 						For Local i:Int = 0 Until Int(TArrayType( ty ).length)
+							count :+ 1
 							If i Then
 								t :+ ","
+							End If
+							If count = 100 Then
+								t :+ "~n"
+								count = 0
 							End If
 							t :+ TransValue(TArrayType( ty ).elemType, "", True)
 						Next
@@ -920,7 +926,21 @@ t:+"NULLNULLNULL"
 					Return TransType( decl.ty, decl.munged )+" volatile "+decl.munged + "=" + TransValue(decl.ty, "")
 				Else
 					If TArrayType(decl.ty) And TArrayType(decl.ty).isStatic Then
-						Return TransType( decl.ty, decl.munged )+" "+decl.munged + "[" + TArrayType(decl.ty).length + "]"
+						Local t:String = TransType( decl.ty, decl.munged )+" "+decl.munged + "[" + TArrayType(decl.ty).length + "]"
+						t :+ "={"
+						Local count:Int
+						For Local i:Int = 0 Until Int(TArrayType( decl.ty ).length)
+							count :+ 1
+							If i Then
+								t :+ ","
+							End If
+							If count = 100 Then
+								t :+ "~n"
+								count = 0
+							End If
+							t :+ TransValue(TArrayType( decl.ty ).elemType, "", True)
+						Next
+						Return t + "}"
 					Else
 						Return TransType( decl.ty, decl.munged )+" "+decl.munged + "=" + TransValue(decl.ty, "")
 					End If
