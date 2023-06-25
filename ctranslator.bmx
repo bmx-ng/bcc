@@ -4391,7 +4391,7 @@ End Rem
 		Emit "{"
 		Emit "BBDEBUGDECL_GLOBAL,"
 		Emit Enquote(decl.ident) + ","
-		Emit Enquote(TransDebugScopeType(decl.ty)) + ","
+		Emit Enquote(TransDebugScopeType(decl.ty) + TransDebugMetaData(decl.metadata.metadataString)) + ","
 		If decl.IsThreaded() Then
 			Emit ".var_address=0"
 			decl.scopeIndex = scopeIndex
