@@ -3718,6 +3718,22 @@ End Rem
 		NextToke
 	End Method
 
+	Method ParsePragmaStmt()
+		
+		Local pragma:String = _toke
+		If pragma.StartsWith("'") Then
+			pragma = pragma[1..].Trim()
+			If Not pragma.StartsWith("@bmk") Then
+				Err "Syntax error - expecting @bmk pragma"
+			End If
+
+			pragma = pragma[4..].Trim()
+
+			_module.pragmas.AddLast(pragma)
+		End If
+		NextToke
+	End Method
+
 	Method ParseModuleDecl:String( toke$,attrs:Long )
 		NextToke
 
@@ -4349,6 +4365,11 @@ End Rem
 			Default
 				Exit
 			End Select
+
+			If _tokeType = TOKE_PRAGMA Then
+				ParsePragmaStmt()
+				NextToke
+			End If
 		Wend
 
 		' app code

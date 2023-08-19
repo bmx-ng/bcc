@@ -3983,6 +3983,8 @@ Type TModuleDecl Extends TScopeDecl
 	
 	' cache of ModuleInfo lines
 	Field modInfo:TList = New TList
+	' cache of pragma lines
+	Field pragmas:TList = New TList
 
 	Field _getDeclTreeCache:TList
 	

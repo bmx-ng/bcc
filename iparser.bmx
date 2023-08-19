@@ -246,6 +246,11 @@ Type TIParser
 				toker.nextToke()
 				If toker.TokeType()=TOKE_SPACE toker.NextToke()
 				Continue
+			case "#"
+				toker.nextToke()
+				Parse("pragma")
+				toker.nextToke()
+				Continue
 			Case "~r", "~n"
 				Continue
 			Default

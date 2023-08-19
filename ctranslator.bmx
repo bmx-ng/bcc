@@ -7082,6 +7082,11 @@ End If
 			Emit "ModuleInfo " + BmxEnquote(info)
 		Next
 
+		' module pragmas
+		For Local pragma:String = EachIn app.mainModule.pragmas
+			Emit "#pragma " + BmxEnquote(pragma)
+		Next
+
 		Local processed:TMap = New TMap
 
 		' module imports
