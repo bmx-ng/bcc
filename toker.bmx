@@ -40,6 +40,7 @@ Const TOKE_LINECOMMENT:Int=9
 Const TOKE_LONGLIT:Int=10
 Const TOKE_NATIVE:Int=11
 Const TOKE_STRINGMULTI:Int=12
+Const TOKE_PRAGMA:Int=13
 
 '***** Tokenizer *****
 Type TToker
@@ -256,25 +257,36 @@ Type TToker
 					If _tstr="~n" Then
 						_tokePos:-1
 						Exit
+					Else If _tstr="" Then
+						Exit
 					End If
 					_tokePos:+1
 					_tstr = TSTR()
 				Wend
-		
 			Else
 				_tokeType=TOKE_LINECOMMENT
 				
 				SkipToEOL()
-	
-				' completely ignore line comments
-				If TSTR()="~n" Then
-					start = _tokePos
-					If _tokePos<_source.Length
-						_tokePos:+1
-					End If
-					_line:+1
-					_tokeType=TOKE_SYMBOL
+
+				Local pos:Int = _tokePos
+				If pos >= _source.Length
+					pos = _source.Length - 1
 				End If
+				Local tk:String = _source[start + 1..pos].Trim()
+				If tk.StartsWith("@bmk") Then
+					_tokeType=TOKE_PRAGMA
+				Else
+					' completely ignore line comments
+					If TSTR()="~n" Then
+						start = _tokePos
+						If _tokePos<_source.Length
+							_tokePos:+1
+						End If
+						_line:+1
+						_tokeType=TOKE_SYMBOL
+					End If
+				End If
+
 			End If
 		Else If str="." And TSTR()="." Then
 			Local pos:Int = _tokePos
