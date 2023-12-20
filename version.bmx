@@ -23,4 +23,4 @@
 '
 SuperStrict
 
-Const BCC_VERSION:String = "0.139"
+Const BCC_VERSION:String = "0.140"
