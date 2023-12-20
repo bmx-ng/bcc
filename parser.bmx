@@ -4223,6 +4223,10 @@ End Rem
 
 		_module=New TModuleDecl.Create( ident,munged,path,mattrs )
 
+		If Not _env Then
+			_env = _module
+		End If
+
 		_module.AddImport path,_module
 
 		_app.InsertModule _module
