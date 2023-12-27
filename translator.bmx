@@ -206,7 +206,7 @@ Type TTranslator
 		Next
 	End Method
 
-	Method TransManglePointer$( ty:TType )
+	Function TransManglePointer$( ty:TType )
 		Local p:String
 		
 		If ty
@@ -226,9 +226,9 @@ Type TTranslator
 		End If
 		
 		Return p
-	End Method
+	End Function
 
-	Method TransMangleType:String(ty:TType)
+	Function TransMangleType:String(ty:TType)
 		Local p:String = TransManglePointer(ty)
 
 		If TVoidType( ty ) Return "v"
@@ -277,7 +277,7 @@ Type TTranslator
 		If TEnumType( ty ) Return p + "e" + TEnumType( ty ).decl.ident
 		
 		Err "Unsupported type for name mangling : " + ty.ToString()
-	End Method
+	End Function
 
 	Method MangleMethod:String(fdecl:TFuncDecl)
 		If (fdecl.IsMethod() And Not fdecl.ClassScope().IsStruct())Or fdecl.IsCtor() Then
@@ -295,7 +295,7 @@ Type TTranslator
 		End If
 	End Method
 	
-	Method MangleMethodArgs:String(fdecl:TFuncDecl)
+	Function MangleMethodArgs:String(fdecl:TFuncDecl)
 		Local s:String
 		For Local arg:TArgDecl = EachIn fdecl.argDecls
 			If Not s Then
@@ -304,7 +304,7 @@ Type TTranslator
 			s :+ TransMangleType(arg.ty)
 		Next
 		Return s
-	End Method
+	End Function
 
 	Method equalsTorFunc:Int(classDecl:TClassDecl, func:TFuncDecl)
 		If func.IdentLower() = "new" Or func.IdentLower() = "delete" Then

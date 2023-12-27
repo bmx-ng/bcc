@@ -1836,6 +1836,7 @@ t:+"NULLNULLNULL"
 			Local ctorMunged:String
 			
 			If expr.classDecl = expr.ctor.scope Then
+				MungDecl expr.ctor
 				ctorMunged = expr.ctor.munged
 			Else
 				ctorMunged = expr.classDecl.actual.munged + "_" + expr.ctor.ident + MangleMethod(expr.ctor)
@@ -3336,6 +3337,7 @@ End Rem
 '			odecl=odecl.overrides
 '		Wend
 
+		MungDecl decl
 		Local id$=decl.munged
 		Local pre:String
 
