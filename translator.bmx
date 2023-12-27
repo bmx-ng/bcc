@@ -1072,6 +1072,12 @@ End Rem
 			expr.args=expr.CastArgs( expr.args,TFuncDecl(decl) )
 			Return expr.expr.Trans() + TransArgs(expr.args, TFuncDecl(decl))
 		End If
+
+		If TInvokeMemberExpr(expr.expr) Then
+			Local decl:TFuncDecl = TFuncDecl(TInvokeMemberExpr(expr.expr).decl.actual)
+			decl.Semant()
+			Return expr.expr.Trans()
+		End If
 		
 		InternalErr "TTranslator.TransFuncCallExpr"
 	End Method
