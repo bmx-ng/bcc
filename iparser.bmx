@@ -418,7 +418,19 @@ Type TIParser
 
 											cdecl.scope.munged = class.munged
 											cdecl.scope.scope = _appInstance
-										
+
+											If Not cdecl.munged Then
+												Local mung:String = cdecl.scope.munged + "_" + cdecl.ident
+							
+												If cdecl.instArgs Then
+													For Local ty:TType = EachIn cdecl.instArgs
+														mung :+ TTranslator.TransMangleType(ty)
+													Next
+												End If
+
+												cdecl.munged = mung
+											End If
+
 										End If
 									
 										' don't add to module
