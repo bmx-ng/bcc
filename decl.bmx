@@ -3953,6 +3953,8 @@ End Type
 Const MODULE_STRICT:Int=1
 Const MODULE_SUPERSTRICT:Int=2
 Const MODULE_ACTUALMOD:Int=4
+Const MODULE_FRAMEWORK:Int=8
+Const MODULE_MODULE:Int=16
 
 Type TNamespaceDecl Extends TScopeDecl
 
