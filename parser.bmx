@@ -2553,18 +2553,7 @@ End Rem
 					Local expr:TExpr=ParsePrimaryExpr( True )
 	
 					Select _toke.ToLower()
-					'"=","*=","/=","+=","-=","&=","|=","~~=","Mod","Shl","Shr"
-					Case "=",":*",":/",":+",":-",":&",":|",":~~","mod","shl","shr", ":shl", ":shr", "sar", ":sar", ":mod"
-
-						' remap symbols...
-						'For Local i:Int = 0 Until TToker._symbols.length
-						'	Local sym$= TToker._symbols[i]
-						'	If _toke.ToLower() = sym
-						'		_toke = TToker._symbols_map[i]
-						'		Exit
-						'	EndIf
-						'Next
-	
+					Case "=",":*",":/",":+",":-",":&",":|",":~~", ":shl", ":shr", "sar", ":sar", ":mod"
 	
 						If TIdentExpr( expr ) Or TIndexExpr( expr )
 							Local op$=_toke.ToLower()
