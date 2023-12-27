@@ -4322,8 +4322,16 @@ End Rem
 					ImportModule ParseModPath(),attrs | MODULE_ACTUALMOD
 				EndIf
 			Case "framework"
+				If _module.attrs & MODULE_FRAMEWORK Then
+					Err "Framework already specified"
+				End If
+				If _module.attrs & MODULE_MODULE Then
+					Err "Module already specified"
+				End If
+				
 				NextToke
 				ImportModule ParseModPath(),attrs
+				_module.attrs :| MODULE_FRAMEWORK
 			Case "alias"
 				NextToke
 				Repeat
@@ -4350,6 +4358,13 @@ End Rem
 
 				Until Not CParse(",")
 			Case "module"
+				If _module.attrs & MODULE_FRAMEWORK Then
+					Err "Framework already specified"
+				End If
+				If _module.attrs & MODULE_MODULE Then
+					Err "Module already specified"
+				End If
+
 				Local m:String = ParseModuleDecl(_toke, attrs)
 
 				If m.ToLower() <> opt_modulename Then
@@ -4358,6 +4373,7 @@ End Rem
 
 				'sanitize, remove non-allowed chars
 				_module.munged = TStringHelper.Sanitize(m)
+				_module.attrs :| MODULE_MODULE
 			Case "nodebug"
 				mainFunc.attrs :| DECL_NODEBUG
 				attrs :| DECL_NODEBUG
