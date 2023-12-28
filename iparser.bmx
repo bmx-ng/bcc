@@ -416,20 +416,17 @@ Type TIParser
 										
 											cdecl = genDecl.GenClassInstance(args, True)
 
-											cdecl.scope.munged = class.munged
-											cdecl.scope.scope = _appInstance
+											Local scopeMunged:String = class.munged
 
-											If Not cdecl.munged Then
-												Local mung:String = cdecl.scope.munged + "_" + cdecl.ident
-							
-												If cdecl.instArgs Then
-													For Local ty:TType = EachIn cdecl.instArgs
-														mung :+ TTranslator.TransMangleType(ty)
-													Next
-												End If
-
-												cdecl.munged = mung
+											If class.munged.Find("|") >= 0 Then
+												Local mung:String[] = class.munged.Split("|")
+												scopeMunged = mung[0]
+												
+												cdecl.munged = mung[1]
 											End If
+
+											cdecl.scope.munged = scopeMunged
+											cdecl.scope.scope = _appInstance
 
 										End If
 									

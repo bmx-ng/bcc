@@ -5947,13 +5947,12 @@ End Rem
 			
 			
 			If classDecl.templateSource Then
-				t :+ Enquote(classDecl.scope.munged)
-			
-				t :+ ",<"
-
 				Local s:String
-				
+
 				If classDecl.instArgs Then
+					t :+ Enquote(classDecl.scope.munged + "|" + classDecl.munged)
+					t :+ ",<"
+
 					For Local ty:TType = EachIn classDecl.instArgs
 						If s Then
 							s :+ ","
@@ -5961,6 +5960,8 @@ End Rem
 						s :+ ty.ToString()
 					Next
 				Else
+					t :+ Enquote(classDecl.scope.munged)
+					t :+ ",<"
 					s = "?"
 				End If
 				
