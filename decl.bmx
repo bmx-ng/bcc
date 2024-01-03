@@ -2072,7 +2072,12 @@ Type TFuncDecl Extends TBlockDecl
 		If argDecls.Length<>decl.argDecls.Length Return False
 		For Local i:Int=0 Until argDecls.Length
 			' ensure arg decls have been semanted
+			decl.argDecls[i].scope = decl
+			decl.argDecls[i].attrs :| DECL_INITONLY
 			decl.argDecls[i].Semant()
+
+			argDecls[i].scope = Self
+			argDecls[i].attrs :| DECL_INITONLY
 			argDecls[i].Semant()
 			
 			' objects can be subclasses as well as the same.

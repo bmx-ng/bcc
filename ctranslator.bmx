@@ -5845,7 +5845,22 @@ End Rem
 	
 		Local head:String = classDecl.ident + "^"
 		If classDecl.superClass Then
-			head :+ classDecl.superClass.ident
+			Local superDecl:TClassDecl = classDecl.superClass
+
+			head :+ superDecl.ident
+
+			If superDecl.instArgs Then
+				head :+ "<"
+				Local s:String
+				For Local ty:TType = EachIn superDecl.instArgs
+					If s Then
+						s :+ ","
+					End If
+					s :+ ty.ToString()
+				Next
+				head :+ s
+				head :+ ">"
+			End If
 		Else
 			head :+ "Null"
 		End If
