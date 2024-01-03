@@ -4285,8 +4285,15 @@ End Rem
 			End Select
 		Wend
 
-		If opt_need_strict And Not (_module.attrs & (MODULE_STRICT | MODULE_SUPERSTRICT)) Then
-			Err "Strict or SuperStrict must be declared at the start of the file."
+		' auto enable superstrict mode?
+		If Not (_module.attrs & (MODULE_STRICT | MODULE_SUPERSTRICT)) Then
+			If opt_no_auto_superstrict Then
+				If opt_need_strict And Not (_module.attrs & (MODULE_STRICT | MODULE_SUPERSTRICT)) Then
+					Err "Strict or SuperStrict must be declared at the start of the file."
+				End If
+			Else
+				_module.attrs :| MODULE_SUPERSTRICT
+			End If
 		End If
 
 		'Parse header - imports etc.
