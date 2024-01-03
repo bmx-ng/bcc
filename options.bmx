@@ -134,6 +134,8 @@ Global opt_filepath:String
 
 Global opt_coverage:Int = False
 
+Global opt_no_auto_superstrict:Int = False
+
 Function CmdError(details:String = Null, fullUsage:Int = False)
 	Local s:String = "Compile Error"
 	If details Then
@@ -248,6 +250,8 @@ Function ParseArgs:String[](args:String[])
 				opt_legacy_incbin=True
 			Case "cov"
 				opt_coverage=True
+			Case "nas"
+				opt_no_auto_superstrict=True
 		End Select
 	
 		count:+ 1
