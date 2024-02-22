@@ -3816,7 +3816,7 @@ End Rem
 	End Method
 	
 	Method ImportModule( modpath$,attrs:Long )
-		SetErr
+'		SetErr
 		
 		modpath = modpath.ToLower()
 		Local basepath:String = ModulePath(modpath)
