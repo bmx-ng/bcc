@@ -6803,6 +6803,7 @@ End If
 		If opt_debug Then
 			For Local Hash:String = EachIn fileRegister.Keys()
 				Local file:String = String(fileRegister.ValueForKey(Hash))
+				file = file.Replace("\", "\\")
 				Emit "bbRegisterSource(" + Hash + ", ~q" + file + "~q);"
 			Next
 		End If

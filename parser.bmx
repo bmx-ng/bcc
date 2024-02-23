@@ -3816,7 +3816,7 @@ End Rem
 	End Method
 	
 	Method ImportModule( modpath$,attrs:Long )
-		SetErr
+'		SetErr
 		
 		modpath = modpath.ToLower()
 		Local basepath:String = ModulePath(modpath)
@@ -4093,15 +4093,17 @@ End Rem
 			Case "function"
 				_module.InsertDecl ParseFuncDecl( _toke,attrs )
 			Case "incbin"
+				SetErr
 				NextToke
 				Local s:String = ParseStringLit()
 				_app.mapStringConsts(s)
 				Local ib:TIncBin = New TIncbin.Create(s, path)
 				If Not ib Then
-					DoErr "Incbin file '"+ s +"' not found."
+					Err "Incbin file '"+ s +"' not found."
 				End If
 				_app.incbins.AddLast(ib)
 			Case "include"
+				SetErr
 				'include command is NOT just a pattern to replace with
 				'content. BlitzMax parses each included file before the
 				'content gets appended to the source (right before
@@ -4118,7 +4120,7 @@ End Rem
 				'of them uses an individual toker
 
 				If FileType( includeFile )<>FILETYPE_FILE
-					DoErr "File '"+ includeFile +"' not found."
+					Err "File '"+ includeFile +"' not found."
 				EndIf
 
 				'instead of "LoadText" "PreProcess" is used to include
