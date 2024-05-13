@@ -4581,7 +4581,7 @@ End Rem
 
 		For Local value:TEnumValueDecl = EachIn decl.values
 			Emit "{"
-			Emit "BBDEBUGDECL_GLOBAL,"
+			Emit "BBDEBUGDECL_CONST,"
 			Emit Enquote(value.ident) + ","
 			Emit Enquote(TransDebugScopeType(ty) + TransDebugMetaData(decl.metadata.metadataString)) + ","
 
@@ -4592,7 +4592,11 @@ End Rem
 			Emit "},"
 		Next
 		
-		Emit "BBDEBUGDECL_END"
+		Emit "BBDEBUGDECL_END,"
+		Emit "(char*)0,"
+		Emit Enquote(TransDebugScopeType(decl.ty)) + ","
+		Emit ".is_flags_enum=" + decl.isFlags + ","
+		Emit "(void (*)(void**))0"
 		Emit "}"
 
 		Emit "};"
