@@ -4293,7 +4293,7 @@ End Rem
 		End If
 
 		' cif defs
-		EmitClassFuncsDebugScopeCifs(classDecl)
+		'EmitClassFuncsDebugScopeCifs(classDecl)
 			
 		'Emit "struct _" + classid + "_DebugScope{"
 		'Emit "int kind;"
