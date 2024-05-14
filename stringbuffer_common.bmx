@@ -1,4 +1,4 @@
-' Copyright (c) 2016-2019 Bruce A Henderson
+' Copyright (c) 2016-2023 Bruce A Henderson
 ' 
 ' Permission is hereby granted, free of charge, to any person obtaining a copy
 ' of this software and associated documentation files (the "Software"), to deal
@@ -34,6 +34,7 @@ Extern
 	Function bmx_stringbuffer_setlength(buffer:Byte Ptr, length:Int)
 	Function bmx_stringbuffer_tostring:String(buffer:Byte Ptr)
 	Function bmx_stringbuffer_append_string(buffer:Byte Ptr, value:String)
+	Function bmx_stringbuffer_append_char(buffer:Byte Ptr, value:Int)
 	Function bmx_stringbuffer_remove(buffer:Byte Ptr, startIndex:Int, endIndex:Int)
 	Function bmx_stringbuffer_insert(buffer:Byte Ptr, offset:Int, value:String)
 	Function bmx_stringbuffer_reverse(buffer:Byte Ptr)

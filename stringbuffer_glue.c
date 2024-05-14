@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2016-2019 Bruce A Henderson
+  Copyright (c) 2016-2023 Bruce A Henderson
  
   Permission is hereby granted, free of charge, to any person obtaining a copy
   of this software and associated documentation files (the "Software"), to deal
@@ -65,7 +65,7 @@ void bmx_stringbuffer_resize(struct MaxStringBuffer * buf, int size) {
 		if (buf->capacity * 2  > size) {
 			size = buf->capacity * 2;
 		}
-		short * newBuffer = malloc(size * sizeof(BBChar));
+		BBChar * newBuffer = (BBChar*)malloc(size * sizeof(BBChar));
 		
 		/* copy text to new buffer */
 		memcpy(newBuffer, buf->buffer, buf->count * sizeof(BBChar));
@@ -205,6 +205,7 @@ int bmx_stringbuffer_endswith(struct MaxStringBuffer * buf, BBString * subString
 	if (subString->length <= buf->count) {
 		return bmx_stringbuffer_matches(buf, buf->count - subString->length, subString);
 	}
+	return 0;
 }
 
 int bmx_stringbuffer_find(struct MaxStringBuffer * buf, BBString * subString, int startIndex) {
@@ -454,7 +455,7 @@ void bmx_stringbuffer_append_cstring(struct MaxStringBuffer * buf, const char * 
 		
 		bmx_stringbuffer_resize(buf, buf->count + length);
 		
-		char * p = chars;
+		const char * p = chars;
 		BBChar * b = buf->buffer + buf->count;
 		while (length--) {
 			*b++ = *p++;
@@ -472,10 +473,10 @@ void bmx_stringbuffer_append_utf8string(struct MaxStringBuffer * buf, const char
 		bmx_stringbuffer_resize(buf, buf->count + length);
 		
 		int c;
-		char * p = chars;
+		const char * p = chars;
 		BBChar * b = buf->buffer + buf->count;
 		
-		while( c=*p++ & 0xff ){
+		while( (c=*p++ & 0xff) ){
 			if( c<0x80 ){
 				*b++=c;
 			}else{
@@ -511,6 +512,12 @@ void bmx_stringbuffer_append_shorts(struct MaxStringBuffer * buf, short * shorts
 	}	
 }
 
+void bmx_stringbuffer_append_char(struct MaxStringBuffer * buf, int value) {
+	bmx_stringbuffer_resize(buf, buf->count + 1);
+	BBChar * p = buf->buffer + buf->count;
+	*p = (BBChar)value;
+	buf->count++;
+}
 /* ----------------------------------------------------- */
 
 int bmx_stringbuffer_splitbuffer_length(struct MaxSplitBuffer * buf) {

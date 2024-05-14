@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2019 Bruce A Henderson
+' Copyright (c) 2013-2023 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -135,18 +135,31 @@ Type TAssignStmt Extends TStmt
 				If TVarExpr(lhs) Then
 					decl = TVarExpr(lhs).decl
 				Else
-					decl = TMemberVarExpr(lhs).decl
+					Local mvExpr:TMemberVarExpr = TMemberVarExpr(lhs)
+					decl = mvExpr.decl
+					
+					If TFieldDecl(decl) And (TInvokeExpr(mvExpr.expr) Or TInvokeMemberExpr(mvExpr.expr)) Then
+						If TClassDecl(decl.scope) And TClassDecl(decl.scope).IsStruct() Then
+							rhs = Null
+							Warn "Discarding Field assignment of Struct returned via invocation"
+							Return
+						End If
+					End If
+					
 				End If
 				If decl And decl.IsReadOnly() Then
 					If TFieldDecl(decl) Then
 						' check scope for ctor
 						Local scope:TFuncDecl = _env.FuncScope()
-						If Not scope Or Not scope.IsCtor() Or (decl.ClassScope() <> scope.ClassScope()) Then
+						If Not scope Or Not scope.IsCtor() Or (Not scope.ClassScope().ExtendsClass(decl.ClassScope())) Then
 							Err "Cannot modify ReadOnly field " + decl.ident
 						End If
 					Else
 						Err "Cannot modify ReadOnly variable " + decl.ident
 					End If
+				End If
+				If TValDecl(decl) And TArrayType(TValDecl(decl).ty) And TArrayType(TValDecl(decl).ty).isStatic Then
+					Err "Static arrays cannot be assigned in this way."
 				End If
 			End If
 		
@@ -272,20 +285,20 @@ Type TReturnStmt Extends TStmt
 				TIdentExpr(expr).isRhs = True
 			End If
 			If fdecl.IsCtor() Err "Constructors may not return a value."
-			If TVoidType( fdecl.retType ) Then
+			If TVoidType( fRetType ) Then
 				Local errorText:String = "Function can not return a value."
 				If Not _env.ModuleScope().IsSuperStrict() Then
 					errorText :+ " You may have Strict type overriding SuperStrict type."
 				End If
 				Err errorText
 			End If
-			expr=expr.SemantAndCast( fdecl.retType )
+			expr=expr.SemantAndCast( fRetType  )
 			If TIdentTypeExpr(expr) Err "Function must return a value."
 		Else If fdecl.IsCtor()
-			expr=New TSelfExpr.Semant()
-		Else If Not TVoidType( fdecl.retType )
+			' ctors do not return anything
+		Else If Not TVoidType( fRetType  )
 			If _env.ModuleScope().IsSuperStrict() Err "Function must return a value"
-			expr=New TConstExpr.Create( fdecl.retType,"" ).Semant()
+			expr=New TConstExpr.Create( fRetType ,"" ).Semant()
 		EndIf
 	End Method
 	
@@ -440,7 +453,10 @@ Type TBreakStmt Extends TLoopControlStmt
 	Method OnSemant()
 		If Not _loopnest Err "Exit statement must appear inside a loop."
 		If label Then
-			label = label.Semant()
+			Local id:String
+			If TIdentExpr(label) id = "'" + TIdentExpr(label).ident  + "'"
+			label = label.Semant(OPTION_WANT_LOOP_LABEL)
+			If Not TLoopLabelExpr(label) Err "Continue/Exit label " + id + " not found"
 		End If
 		If opt_debug And Not loop Then
 			loop = TLoopStmt(_env.FindLoop())
@@ -473,7 +489,10 @@ Type TContinueStmt Extends TLoopControlStmt
 	Method OnSemant()
 		If Not _loopnest Err "Continue statement must appear inside a loop."
 		If label Then
-			label = label.Semant()
+			Local id:String
+			If TIdentExpr(label) id = "'" + TIdentExpr(label).ident  + "'"
+			label = label.Semant(OPTION_WANT_LOOP_LABEL)
+			If Not TLoopLabelExpr(label) Err "Continue/Exit label " + id + " not found"
 		End If
 		If opt_debug And Not loop Then
 			loop = TLoopStmt(_env.FindLoop())
@@ -656,7 +675,11 @@ Type TForStmt Extends TLoopStmt
 
 		' for anything other than a const value, use a new local variable
 		If Not TConstExpr(TBinaryCompareExpr(expr).rhs) Then
-			Local tmp:TLocalDecl=New TLocalDecl.Create( "", TBinaryCompareExpr(expr).rhs.exprType,TBinaryCompareExpr(expr).rhs,, True )
+			Local ty:TType = TBinaryCompareExpr(expr).rhs.exprType.Copy()
+			If ty._flags & TType.T_VAR Then
+				ty._flags :~ TType.T_VAR ' remove var for local variable
+			End If
+			Local tmp:TLocalDecl=New TLocalDecl.Create( "", ty,TBinaryCompareExpr(expr).rhs,, True )
 			tmp.Semant()
 			Local v:TVarExpr = New TVarExpr.Create( tmp )
 			TBinaryCompareExpr(expr).rhs = New TStmtExpr.Create( New TDeclStmt.Create( tmp ), v ).Semant()
@@ -798,29 +821,25 @@ Type TReadDataStmt Extends TStmt
 End Type
 
 Type TRestoreDataStmt Extends TStmt
-	Field expr:TExpr
+	Field label:TExpr
 
-	Method Create:TRestoreDataStmt( expr:TExpr )
-		Self.expr=expr
+	Method Create:TRestoreDataStmt( label:TExpr )
+		Self.label=label
 		Return Self
 	End Method
 
 	Method OnCopy:TStmt( scope:TScopeDecl )
-		Return New TRestoreDataStmt.Create( expr.Copy() )
+		Return New TRestoreDataStmt.Create( label.Copy() )
 	End Method
 
 	Method OnSemant()
-		If Not TIdentExpr(expr) Then
-			' todo : better (more specific) error?
-			Err "Expecting identifier"
+		If label
+			Local id:String
+			If TIdentExpr(label) id = "'" + TIdentExpr(label).ident  + "'"
+			label = label.Semant(OPTION_WANT_DATA_LABEL)
+			If Not TDataLabelExpr(label) Err "Data label " + id + " not found"
 		Else
-			Local label:String = TIdentExpr(expr).ident
-			TIdentExpr(expr).ident = "#" + TIdentExpr(expr).ident
-			expr=expr.Semant()
-			
-			If Not expr Then
-				Err "Label '" + label + "' not found"
-			End If
+			Err "Expecting label"
 		End If
 	End Method
 

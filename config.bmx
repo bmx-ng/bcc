@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2019 Bruce A Henderson
+' Copyright (c) 2013-2023 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -33,6 +33,8 @@ Import "options.bmx"
 Import "base.stringhelper.bmx"
 Import "base64.bmx"
 Import "enums.c"
+Import "hash.c"
+Import "math.c"
 
 ' debugging help
 Const DEBUG:Int = False
@@ -53,6 +55,8 @@ Global POINTER_SIZE:Int = 4
 
 Global _symbols$[]=[ "..","[]",":*",":/",":+",":-",":|",":&",":~~",":shr",":shl",":sar",":mod"]
 Global _symbols_map$[]=[ "..","[]","*=","/=","+=","-=","|=","&=","^=",">>=", "<<=",">>=","%=" ]
+
+Global _fileHasher:TFileHash
 
 Function PushErr( errInfo$ )
 	_errStack.AddLast _errInfo
@@ -112,6 +116,26 @@ End Function
 
 Function Todo() 
 	Err "TODO!"
+End Function
+
+Function StringToLong:Long(value:String)
+	Local Sign:Int = 1
+	Local i:Int
+	While i < value.length And (value[i] = Asc("+") Or value[i] = Asc("-"))
+		If value[i] = Asc("-") Then
+			Sign = -1
+		End If
+		i :+ 1
+	Wend
+	
+	Local n:Long = 0
+	While i < value.length
+		Local c:Int = value[i]
+		If Not IsDigit(c) Exit
+		n = n * 10 + (c-Asc("0"))
+		i :+ 1
+	Wend
+	Return n
 End Function
 
 Function IsStandardFunc:Int(func:String)
@@ -187,35 +211,187 @@ Function BmxEnquote$( str$ )
 	Return str
 End Function
 
-Function BmxUnquote$( str$, unicodeConvert:Int = False )
-	If str.length = 1 Or str[str.length - 1] <> Asc("~q") Then
-		Err "Expecting expression but encountered malformed string literal"
+Function BmxUnquote$( str$, unquoted:Int = False )
+	Local length:Int
+	Local i:Int
+	If Not unquoted Then
+		If str.length < 2 Or str[str.length - 1] <> Asc("~q") Then
+			Err "Expecting expression but encountered malformed string literal"
+		End If
+		length = str.length - 1
+		i = 1
+	Else
+		length = str.length
 	End If
-	str=str[1..str.Length-1]
-	If unicodeConvert Then
-		Local pos:Int = str.Find("~~")
-		While pos <> -1
-			If pos + 1 < str.length Then
-				If str[pos + 1] >= Asc("1") And str[pos + 1] <= Asc("9") Then
-					Local p2:Int = str.Find("~~", pos + 1)
-					If p2 <> -1 Then
-						Local s:String = Chr(str[pos + 1.. p2].ToInt())
-						str = str[..pos] + s + str[p2 + 1..]
-					End If
-				End If
-			End If
+
+	Local sb:TStringBuffer = New TStringBuffer
+
+	While i < length
+		Local c:Int = str[i]
+		i :+ 1
+		If c <> Asc("~~") Then
+			sb.AppendChar(c)
+			Continue
+		End If
+
+		If i = length Err "Bad escape sequence in string"
 		
-			pos = str.Find("~~", pos + 1)
-		Wend
+		c = str[i]
+		i :+ 1
+		
+		Select c
+			Case Asc("~~")
+				sb.AppendChar(c)
+			Case Asc("0")
+				sb.AppendChar(0)
+			Case Asc("t")
+				sb.AppendChar(Asc("~t"))
+			Case Asc("r")
+				sb.AppendChar(Asc("~r"))
+			Case Asc("n")
+				sb.AppendChar(Asc("~n"))
+			Case Asc("q")
+				sb.AppendChar(Asc("~q"))
+			Case Asc("$") ' hex
+				c = str[i]
+				i :+ 1
+				Local n:Int
+				While True
+					Local v:Int
+					If c >= Asc("0") And c <= Asc("9") Then
+						v = c-Asc("0")
+					Else If c >= Asc("a") And c <= Asc("f") Then
+						v = c-Asc("a")+10
+					Else If c >= Asc("A") And c <= Asc("F") Then
+						v = c-Asc("A")+10
+					Else If c <> Asc("~~")
+						Err "Bad escape sequence in string"
+					Else
+						Exit
+					End If
+					n = (n Shl 4) | (v & $f)
+					If i = length Err "Bad escape sequence in string"
+					c = str[i]
+					i :+ 1
+				Wend
+				If c <> Asc("~~") Err "Bad escape sequence in string"
+				sb.AppendChar(n)
+			Case Asc("%") ' bin
+				c = str[i]
+				i :+ 1
+				Local n:Int
+				While c = Asc("1") Or c = Asc("0")
+					n :Shl 1
+					If c = Asc("1") Then
+						n :| 1
+					End If
+					If i = length Err "Bad escape sequence in string"
+					c = str[i]
+					i :+ 1
+				Wend
+				If c <> Asc("~~") Err "Bad escape sequence in string"
+				sb.AppendChar(n)
+			Default
+				If c >= Asc("1") And c <= Asc("9") Then
+					Local n:Int
+					While c >= Asc("0") And c <= Asc("9") 
+						n = n * 10 + (c-Asc("0"))
+						If i = length Err "Bad escape sequence in string"
+						c = str[i]
+						i :+ 1
+					Wend
+					If c <> Asc("~~") Err "Bad escape sequence in string"
+					sb.AppendChar(n)
+				Else
+					Err "Bad escape sequence in string"
+				End If
+		End Select
+	Wend
+	Return sb.ToString()
+End Function
+
+Function BmxProcessMultiString:String( str:String )
+	Local valid:Int
+	If str.length < 7 Then
+		Err "Expecting expression but encountered malformed multiline string literal"
 	End If
-	str=str.Replace( "~~~~","~~z" )	'a bit dodgy - uses bad esc sequence ~z 
-	str=str.Replace( "~~q","~q" )
-	str=str.Replace( "~~n","~n" )
-	str=str.Replace( "~~r","~r" )
-	str=str.Replace( "~~t","~t" )
-	str=str.Replace( "~~0","~0" )
-	str=str.Replace( "~~z","~~" )
-	Return str
+	
+	For Local i:Int = 0 Until 3
+		If str[i] <> Asc("~q") Or str[str.length -1 -i] <> Asc("~q") Then
+			Err "Expecting expression but encountered malformed multiline string literal"
+		End If
+	Next
+	
+	str = str[3..str.length - 3]
+	' normalise line endings
+	str = str.Replace("~r~n", "~n").Replace("~r", "~n")
+
+	If str[0] <> Asc("~n") Then
+		Err "Expecting EOL but encountered malformed multiline string literal"
+	End If
+
+	str = str[1..]
+
+	Local LINES:String[] = str.Split("~n")
+
+	Local lineCount:Int = LINES.length - 1
+	Local last:String = LINES[lineCount]
+	
+	Local i:Int = last.length - 1
+	While i >= 0
+		If last[i] <> Asc(" ") And last[i] <> Asc("~t") Then
+			Err "Expecting trailing whitespace"
+		End If
+		i :- 1
+	Wend
+	
+	Local trailingIndent:String = last
+	
+	' strip indent
+	If trailingIndent Then
+		For i = 0 Until lineCount
+			Local line:String = LINES[i]
+			If line.StartsWith(trailingIndent) Then
+				line = line[trailingIndent.length..]
+				LINES[i] = line
+			End If
+		Next
+	End If
+
+	' right trim
+	For i = 0 Until lineCount
+		Local line:String = LINES[i]
+		Local index:Int = line.length
+		While index
+			index :- 1
+			If line[index] <> Asc(" ") And line[index] <> Asc("~t") Then
+				Exit
+			End If
+		Wend
+		If index < line.length - 1 Then
+			line = line[..index + 1]
+			LINES[i] = line
+		End If
+	Next
+
+	Local sb:TStringBuffer = New TStringBuffer
+	For i = 0 Until lineCount
+		Local line:String = LINES[i]
+		Local length:Int = line.length
+		Local softWrap:Int
+		If line And line[line.length-1] = Asc("\") Then
+			softWrap = True
+			length :- 1
+		End If
+		If line Then
+			sb.Append(line[..length])
+		End If
+		If Not softWrap And i < lineCount - 1 Then
+			sb.Append("~n")
+		End If
+	Next
+
+	Return BmxUnquote(sb.ToString(), True)
 End Function
 
 Type TStack Extends TList
@@ -397,6 +573,10 @@ Function FileMung:String(makeApp:Int = False)
 		m :+ "debug"
 	End If
 	
+	If opt_coverage Then
+		m :+ ".cov"
+	End If
+
 '	If opt_threaded Then
 '		m :+ ".mt"
 '	End If
@@ -412,6 +592,17 @@ Function HeaderComment:String()
 	' TODO
 End Function
 
+Global fileRegister:TMap = New TMap
+
+Function GenHash:String(file:String)
+	Local Hash:String = bmx_gen_hash(file)
+
+	If Not fileRegister.Contains(Hash) Then
+		fileRegister.Insert(Hash, file)
+	End If
+	
+	Return Hash
+End Function
 
 Type TTemplateRecord
 
@@ -481,7 +672,105 @@ Type TCallback
 	Method Callback(obj:Object) Abstract
 End Type
 
+Type TFileHash
+
+	Field statePtr:Byte Ptr
+	
+	Method Create:TFileHash()
+		statePtr = bmx_hash_createState()
+		Return Self
+	End Method
+	
+	Method CalculateHash:String(stream:TStream)
+		Const BUFFER_SIZE:Int = 8192
+	
+	
+		bmx_hash_reset(statePtr)
+		
+		Local data:Byte[BUFFER_SIZE]
+		
+		While True
+			Local read:Int = stream.Read(data, BUFFER_SIZE)
+
+			bmx_hash_update(statePtr, data, read)
+			
+			If read < BUFFER_SIZE Then
+				Exit
+			End If
+
+		Wend
+		
+		Return bmx_hash_digest(statePtr)
+		
+	End Method
+
+End Type
+
+Function CalculateFileHash:String(path:String)
+	If Not _fileHasher Then
+		_fileHasher = New TFileHash.Create()
+	End If
+
+	If FileType(path) = FILETYPE_FILE Then
+		Local stream:TStream = ReadStream(path)
+		Local fileHash:String = _fileHasher.CalculateHash(stream)
+		stream.Close()
+		
+		Return fileHash
+	End If
+	
+	Return Null
+End Function
+
+?Not bmxng
+Const OP_MUL:Int = 0
+Const OP_DIV:Int = 1
+Const OP_MOD:Int = 2
+Const OP_SHL:Int = 3
+Const OP_SHR:Int = 4
+Const OP_SAR:Int = 5
+Const OP_ADD:Int = 6
+Const OP_SUB:Int = 7
+Const OP_AND:Int = 8
+Const OP_XOR:Int = 9
+Const OP_OR:Int = 10
+
+Function OpToInt:Int(op:String)
+	Select op
+		Case "*" Return OP_MUL
+		Case "/" Return OP_DIV
+		Case "mod" Return OP_MOD
+		Case "shl" Return OP_SHL
+		Case "shr" Return OP_SHR
+		Case "sar" Return OP_SAR
+		Case "+" Return OP_ADD
+		Case "-" Return OP_SUB
+		Case "&" Return OP_AND
+		Case "~~" Return OP_XOR
+		Case "|" Return OP_OR
+	End Select
+	InternalErr "TBinaryMathExpr.Eval.OpToInt : " + op
+End Function
+?
+
 Extern
 	Function strlen_:Int(s:Byte Ptr)="strlen"
 	Function bmx_enum_next_power(char:Int, val:Long Var, ret:Long Var)
+	Function bmx_gen_hash:String(txt:String)
+	Function bmx_hash_createState:Byte Ptr()
+	Function bmx_hash_reset(state:Byte Ptr)
+	Function bmx_hash_update(state:Byte Ptr, data:Byte Ptr, length:Int)
+	Function bmx_hash_digest:String(state:Byte Ptr)
+
+	Function bmx_bitwise_not_uint:String(value:String)
+	Function bmx_bitwise_not_sizet:String(value:String)
+	Function bmx_bitwise_not_ulong:String(value:String)
+	Function bmx_bitwise_not_longint:String(value:String, size:Int)
+	Function bmx_bitwise_not_ulongint:String(value:String, size:Int)
+	Function bmx_binarymathexpr_sizet:String(op:Int, lhs:String, rhs:String)
+	Function bmx_binarymathexpr_uint:String(op:Int, lhs:String, rhs:String)
+	Function bmx_binarymathexpr_ulong:String(op:Int, lhs:String, rhs:String)
+	Function bmx_binarymathexpr_longint:String(op:Int, lhs:String, rhs:String, size:Int)
+	Function bmx_binarymathexpr_ulongint:String(op:Int, lhs:String, rhs:String, size:Int)
+
 End Extern

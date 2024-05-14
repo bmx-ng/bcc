@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2019 Bruce A Henderson
+' Copyright (c) 2013-2023 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -39,6 +39,8 @@ Const TOKE_SYMBOL:Int=8
 Const TOKE_LINECOMMENT:Int=9
 Const TOKE_LONGLIT:Int=10
 Const TOKE_NATIVE:Int=11
+Const TOKE_STRINGMULTI:Int=12
+Const TOKE_PRAGMA:Int=13
 
 '***** Tokenizer *****
 Type TToker
@@ -50,7 +52,7 @@ Type TToker
 		"next,return,alias,rem,endrem,throw,assert,try,catch,finally,nodebug,incbin,endselect,endmethod," + ..
 		"endfunction,endtype,endextern,endtry,endwhile,pi,release,defdata,readdata,restoredata,interface," + ..
 		"endinterface,implements,size_t,uint,ulong,struct,endstruct,operator,where,readonly,export,override," + ..
-		"enum,endenum"
+		"enum,endenum,stackalloc,inline,fieldoffset,staticarray,threadedglobal,longint,ulongint"
 	Global _keywords:TMap
 
 	Field _path$
@@ -199,17 +201,51 @@ Type TToker
 				_tokePos:+1
 			Wend
 		Else If str="~q"
+			Local isMulti:Int
 			_tokeType=TOKE_STRINGLIT
 			Local _tstr:String = TSTR()
-			While _tstr And _tstr<>"~q"
-				' Strings can't cross line boundries
-				If _tstr="~n" Then
-					_tokePos:-1
-					Exit
-				End If
+			If _tstr = "~q" Then
 				_tokePos:+1
-				_tstr = TSTR()
-			Wend
+				Local _tstr2:String = TSTR()
+				If _tstr2 = "~q" Then
+					isMulti = True
+				Else
+					_tokePos:-1
+				End If
+			End If
+			If Not isMulti Then
+				While _tstr And _tstr<>"~q"
+					' Strings can't cross line boundries
+					If _tstr="~n" Then
+						_tokePos:-1
+						Exit
+					End If
+					_tokePos:+1
+					_tstr = TSTR()
+				Wend
+			Else
+				Local lineCount:Int
+				Local count:Int
+				_tokeType = TOKE_STRINGMULTI
+				While _tstr
+					_tokePos:+1
+					_tstr = TSTR()
+					
+					If _tstr = "~n" Then
+						lineCount:+1
+					End If
+					
+					If _tstr = "~q" Then
+						count :+ 1
+						If count = 3 Then
+							_line :+ lineCount - 1
+							Exit
+						End If
+					Else
+						count = 0
+					End If
+				Wend
+			End If
 			If _tokePos<_source.Length _tokePos:+1 Else _tokeType=TOKE_STRINGLITEX
 		Else If str="'"
 			Local _tstr:String = TSTR()
@@ -221,25 +257,36 @@ Type TToker
 					If _tstr="~n" Then
 						_tokePos:-1
 						Exit
+					Else If _tstr="" Then
+						Exit
 					End If
 					_tokePos:+1
 					_tstr = TSTR()
 				Wend
-		
 			Else
 				_tokeType=TOKE_LINECOMMENT
 				
 				SkipToEOL()
-	
-				' completely ignore line comments
-				If TSTR()="~n" Then
-					start = _tokePos
-					If _tokePos<_source.Length
-						_tokePos:+1
-					End If
-					_line:+1
-					_tokeType=TOKE_SYMBOL
+
+				Local pos:Int = _tokePos
+				If pos >= _source.Length
+					pos = _source.Length - 1
 				End If
+				Local tk:String = _source[start + 1..pos].Trim()
+				If tk.StartsWith("@bmk") Then
+					_tokeType=TOKE_PRAGMA
+				Else
+					' completely ignore line comments
+					If TSTR()="~n" Then
+						start = _tokePos
+						If _tokePos<_source.Length
+							_tokePos:+1
+						End If
+						_line:+1
+						_tokeType=TOKE_SYMBOL
+					End If
+				End If
+
 			End If
 		Else If str="." And TSTR()="." Then
 			Local pos:Int = _tokePos
@@ -406,8 +453,10 @@ Type TToker
 	Method Join:String(startLine:Int, endLine:Int, s:String)
 		Local sb:TStringBuffer = New TStringBuffer
 		For Local i:Int = startLine - 1 To endLine
-			sb.Append(_lines[i])
-			sb.Append(s)
+			If i < _lines.Length Then
+				sb.Append(_lines[i])
+				sb.Append(s)
+			End If
 		Next
 		Return sb.ToString()
 	End Method

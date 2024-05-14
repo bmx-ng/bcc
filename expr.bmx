@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2019 Bruce A Henderson
+' Copyright (c) 2013-2023 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -34,11 +34,11 @@ Type TExpr
 		InternalErr "TExpr.Copy"
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		InternalErr "TExpr.Semant"
 	End Method
 
-	Method SemantSet:TExpr( op$,rhs:TExpr )
+	Method SemantSet:TExpr( op$,rhs:TExpr, options:Int = 0 )
 		Err ToString()+" cannot be assigned to."
 	End Method
 
@@ -105,6 +105,9 @@ Type TExpr
 						TInvokeExpr(args[i]).exprType = New TFunctionPtrType
 						Local cp:TDecl = TInvokeExpr(args[i]).decl
 						cp.Semant
+						If TFuncDecl(cp) and TFuncDecl(cp).IsMethod() Then
+							Err "Method cannot be used as a function pointer"
+						End If
 						TInvokeExpr(args[i]).decl = TFuncDecl(TInvokeExpr(args[i]).decl.Copy(False))
 						TInvokeExpr(args[i]).decl.actual = cp
 						TInvokeExpr(args[i]).decl.attrs :| FUNC_PTR
@@ -153,21 +156,10 @@ Type TExpr
 				If funcDecl.argDecls[i].ty._flags & TType.T_VAR Then
 
 					If TConstExpr(argExpr) Or TBinaryExpr(argExpr) Or (TIndexExpr(argExpr) And TStringType(TIndexExpr(argExpr).expr.exprType)) Or ..
-							TInvokeExpr(argExpr) Or TInvokeMemberExpr(argExpr) Then
+							TInvokeExpr(argExpr) Or TInvokeMemberExpr(argExpr) Or TNewObjectExpr(argExpr) or TNewArrayExpr(argExpr) Then
 						Err "Expression for 'Var' parameter must be a variable or an element of an array or pointer"
 					End If
 
-					' Passing a "new" object into a Var, requires us to create a local variable and pass its address instead.
-					If TNewObjectExpr(argExpr) Then
-						Local tmp:TLocalDecl=New TLocalDecl.Create( "",TNewObjectExpr(argExpr).ty,argExpr,, True )
-						tmp.Semant()
-						Local v:TVarExpr = New TVarExpr.Create( tmp )
-						Local stmt:TExpr = New TStmtExpr.Create( New TDeclStmt.Create( tmp ), v ).Semant()
-						stmt.exprType = TNewObjectExpr(argExpr).ty
-						args[i] = stmt
-						argExpr = args[i]
-					End If
-					
 					If TVarExpr(argExpr) Or TMemberVarExpr(argExpr) Then
 						Local decl:TDecl
 						If TVarExpr(argExpr) Then
@@ -225,7 +217,7 @@ Type TExpr
 		Return args
 	End Method
 
-	Method BalanceTypes:TType( lhs:TType,rhs:TType )
+	Method BalanceTypes:TType( lhs:TType,rhs:TType, balancePtrs:Int = True )
 
 		If TStringType( lhs ) Or TStringType( rhs ) Then
 			If TObjectType(lhs) Or TObjectType(rhs) Then
@@ -241,8 +233,22 @@ Type TExpr
 			End If
 		End If
 		If IsPointerType( lhs, 0, TType.T_POINTER ) Or IsPointerType( rhs, 0, TType.T_POINTER ) Then
-			If IsPointerType( lhs, 0, TType.T_POINTER ) Return lhs
-			If IsPointerType( rhs, 0, TType.T_POINTER ) Return rhs
+			If balancePtrs Then
+				If IsPointerType( lhs, 0, TType.T_POINTER ) Return lhs
+				If IsPointerType( rhs, 0, TType.T_POINTER ) Return rhs
+			Else
+				If IsPointerType( lhs, 0, TType.T_POINTER ) Then
+					If Not IsPointerType( rhs, 0, TType.T_POINTER ) And Not TNullType(rhs) Then
+						Err "Can't balance types "+lhs.ToString()+" and "+rhs.ToString()+"."
+					End If
+					Return lhs
+				End If
+				If IsPointerType( rhs, 0, TType.T_POINTER ) Then
+					If Not IsPointerType( lhs, 0, TType.T_POINTER ) And Not TNullType(lhs) Then
+						Return rhs
+					End If
+				End If
+			End If
 		End If
 		If TDouble128Type( lhs ) Or TDouble128Type( rhs ) Return New TDouble128Type
 		If TFloat128Type( lhs ) Or TFloat128Type( rhs ) Return New TFloat128Type
@@ -260,7 +266,9 @@ Type TExpr
 		If TLongType( lhs ) And TUIntType( rhs ) Return New TULongType
 		If TUIntType( lhs ) And TLongType( rhs ) Return New TULongType
 		If TLParamType( lhs ) Or TLParamType( rhs ) Return New TLParamType
+		If TULongIntType( lhs ) Or TULongIntType( rhs ) Return New TULongIntType
 		If TLongType( lhs ) Or TLongType( rhs ) Return New TLongType
+		If TLongIntType( lhs ) Or TLongIntType( rhs ) Return New TLongIntType
 		If TUIntType( lhs ) Or TUIntType( rhs ) Return New TUIntType
 		If TIntType( lhs ) Or TIntType( rhs ) Return New TIntType
 		If TEnumType( lhs ) Or TEnumType( rhs ) Then
@@ -277,7 +285,10 @@ Type TExpr
 		If rhs.ExtendsType( lhs ) Return lhs
 		' balance arrays - only for objects... to the lowest common denominator.
 		If TArrayType( lhs ) And TArrayType( rhs ) Then
-
+			If TArrayType( lhs ).isStatic - TArrayType( rhs ).isStatic <> 0 Then
+				Err "Cannot mix arrays and static arrays"
+			End If
+		
 			If TObjectType(TArrayType( lhs ).elemType) And TObjectType(TArrayType( rhs ).elemType) Then
 				' lhs = Object[]
 				If TObjectType(TArrayType( lhs ).elemType).classDecl.ident = "Object" Then
@@ -329,7 +340,7 @@ Type TExpr
 			
 		End If
 		' balance structs
-		If TObjectType( lhs ).EqualsType(rhs) And TObjectType( lhs ).classDecl.IsStruct() And TObjectType( rhs ).classDecl.IsStruct() Then
+		If TObjectType( lhs ) And TObjectType( rhs ) And TObjectType( lhs ).EqualsType(rhs) And TObjectType( lhs ).classDecl.IsStruct() And TObjectType( rhs ).classDecl.IsStruct() Then
 			Return lhs
 		End If
 		
@@ -371,7 +382,7 @@ Type TStmtExpr Extends TExpr
 		Return "TStmtExpr(,"+expr.ToString()+")"
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		If exprType Return Self
 
 		stmt.Semant()
@@ -412,7 +423,7 @@ Type TConstExpr Extends TExpr
 			Return Self
 		End If
 		
-		If TIntType( ty ) Or TShortType( ty ) Or TByteType( ty ) Or TLongType( ty ) Or TUIntType( ty ) Or TULongType( ty ) Or TWParamType(ty) Or TLParamType(ty)
+		If TIntType( ty ) Or TShortType( ty ) Or TByteType( ty ) Or TLongType( ty ) Or TUIntType( ty ) Or TULongType( ty ) Or TWParamType(ty) Or TLParamType(ty) Or TLongIntType(ty) Or TULongIntType(ty)
 			Local radix:Int
 			If value.StartsWith( "%" )
 				radix=1
@@ -518,7 +529,7 @@ Type TConstExpr Extends TExpr
 		Return "TConstExpr(~q"+value+"~q)"
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		If exprType Return Self
 
 		exprType=ty.Semant()
@@ -557,7 +568,7 @@ Type TConstExpr Extends TExpr
 			Local val:Long = value.ToLong()
 			
 			If val < 0 Then
-				If TByteType(ty) Or TShortType(ty) Or TUIntType(ty) Or TULongType(ty) Or TSizeTType(ty) Or TInt128Type(ty) Or TWParamType(ty) Then
+				If TByteType(ty) Or TShortType(ty) Or TUIntType(ty) Or TULongType(ty) Or TSizeTType(ty) Or TInt128Type(ty) Or TWParamType(ty) or TULongIntType(ty) Then
 					Return False
 				End If
 			Else
@@ -567,13 +578,13 @@ Type TConstExpr Extends TExpr
 					End If
 				End If
 
-				If TUIntType(ty) Or ((TSizeTType(ty) Or TWParamType(ty)) And WORD_SIZE = 4) Then
+				If TUIntType(ty) Or ((TSizeTType(ty) Or TWParamType(ty)) And WORD_SIZE = 4) Or (TULongIntType(ty) And TULongIntType(ty).GetSize() = 4) Then
 					If val > 4294967296:Long Then
 						Return False
 					End If
 				End If
 				
-				If TULongType(ty) Or ((TSizeTType(ty) Or TWParamType(ty)) And WORD_SIZE = 8) Then
+				If TULongType(ty) Or ((TSizeTType(ty) Or TWParamType(ty)) And WORD_SIZE = 8) Or (TULongIntType(ty) And TULongIntType(ty).GetSize() = 8) Then
 					If value.length > 20 Then
 						Return False
 					Else If value.length = 20 Then
@@ -596,13 +607,13 @@ Type TConstExpr Extends TExpr
 				End If
 			End If
 
-			If TIntType(ty) Or (TLParamType(ty) And WORD_SIZE = 4) Then
+			If TIntType(ty) Or (TLParamType(ty) And WORD_SIZE = 4) Or (TLongIntType(ty) And TLongIntType(ty).GetSize() = 4) Then
 				If value <> String.FromInt(Int(val)) Then
 					Return False
 				End If
 			End If
 
-			If TLongType(ty) Or (TLParamType(ty) And WORD_SIZE = 8) Then
+			If TLongType(ty) Or (TLParamType(ty) And WORD_SIZE = 8) Or (TLongIntType(ty) And TLongIntType(ty).GetSize() = 8) Then
 				If value <> String.FromLong(Long(val)) Then
 					Return False
 				End If
@@ -631,14 +642,14 @@ Type TVarExpr Extends TExpr
 		Return "TVarExpr("+decl.ToString()+")"
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		If exprType Return Self
 		If Not decl.IsSemanted() InternalErr "TVarExpr.Semant"
-		exprType=decl.ty
+		exprType=decl.ty.Copy()
 		Return Self
 	End Method
 
-	Method SemantSet:TExpr( op$,rhs:TExpr )
+	Method SemantSet:TExpr( op$,rhs:TExpr, options:Int = 0 )
 		Return Semant()
 	End Method
 
@@ -672,14 +683,14 @@ Type TMemberVarExpr Extends TExpr
 		Return "TMemberVarExpr("+expr.ToString()+","+decl.ToString()+")"
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		If exprType Return Self
 		If Not decl.IsSemanted() InternalErr "TMemberVarExpr.Semant"
-		exprType=decl.ty
+		exprType=decl.ty.Semant()
 		Return Self
 	End Method
 
-	Method SemantSet:TExpr( op$,rhs:TExpr )
+	Method SemantSet:TExpr( op$,rhs:TExpr, options:Int = 0 )
 		Return Semant()
 	End Method
 
@@ -725,7 +736,7 @@ Type TInvokeExpr Extends TExpr
 		Return t+")"
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 
 		If exprType Return Self
 
@@ -743,6 +754,9 @@ Type TInvokeExpr Extends TExpr
 		' if the call was a statement (even one written without parentheses), then invokedWithBraces is true
 		' so no complicated checks are needed here; if invokedWithBraces is false, this is definitely not a call
 		If Not invokedWithBraces Then
+			If decl.IsMethod() Then
+				Err "Method cannot be used as a function pointer"
+			End If
 			' nothing to do here, as we are a function pointer. i.e. no braces
 			' and our expression type is a function ptr...
 			exprType = New TFunctionPtrType.Create(decl)
@@ -799,7 +813,7 @@ Type TInvokeMemberExpr Extends TExpr
 		Return t+")"
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		If exprType Return Self
 
 		If Not decl.IsSemanted() decl.Semant()
@@ -847,7 +861,7 @@ Type TNewObjectExpr Extends TExpr
 		Return New TNewObjectExpr.Create( ty,CopyArgs(args) )
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		If exprType Return Self
 
 		Local it:TIdentType = TIdentType(ty)
@@ -956,6 +970,29 @@ Type TNewObjectExpr Extends TExpr
 				Local id:String = parts[i]
 				i :+ 1
 				
+				' find other member decl (field, etc)
+				Local decl:TValDecl = TValDecl(cdecl.GetDecl(id))
+				If TVarDecl(decl) Then
+					decl.Semant
+					Local tmp:TLocalDecl=New TLocalDecl.Create( "", eType, expr,, True )
+					Local varExpr:TExpr = New TMemberVarExpr.Create(New TVarExpr.Create( tmp ), TVarDecl(decl)).Semant()
+					expr = New TStmtExpr.Create( New TDeclStmt.Create( tmp ), varExpr ).Semant()
+					eType = decl.ty
+					If TObjectType(eType) Then
+						cdecl = TObjectType(expr.exprType).classdecl
+					End If
+					If TArrayType(eType) Or TStringType(eType) Then
+						cdecl = eType.GetClass()
+					End If
+					Continue
+				End If
+				If TConstDecl(decl) Then
+					decl.Semant()
+					expr = New TConstExpr.Create(decl.ty, TConstDecl(decl).value).Semant()
+					eType = decl.ty
+					Continue
+				End If
+
 				' find member function.method
 				Local fdecl:TFuncDecl
 				Try
@@ -982,30 +1019,6 @@ Type TNewObjectExpr Extends TExpr
 					Continue
 				End If
 				
-				' find other member decl (field, etc)
-				If Not errorDetails Then
-					Local decl:TValDecl = TValDecl(cdecl.GetDecl(id))
-					If TVarDecl(decl) Then
-						Local tmp:TLocalDecl=New TLocalDecl.Create( "", eType, expr,, True )
-						Local varExpr:TExpr = New TMemberVarExpr.Create(New TVarExpr.Create( tmp ), TVarDecl(decl)).Semant()
-						expr = New TStmtExpr.Create( New TDeclStmt.Create( tmp ), varExpr ).Semant()
-						eType = decl.ty
-						If TObjectType(eType) Then
-							cdecl = TObjectType(expr.exprType).classdecl
-						End If
-						If TArrayType(eType) Or TStringType(eType) Then
-							cdecl = eType.GetClass()
-						End If
-						Continue
-					End If
-					If TConstDecl(decl) Then
-						decl.Semant()
-						expr = New TConstExpr.Create(decl.ty, TConstDecl(decl).value).Semant()
-						eType = decl.ty
-						Continue
-					End If
-				End If	
-
 				' didn't match member or function??
 				' probably an error...
 				If errorDetails Then
@@ -1047,7 +1060,7 @@ Type TNewArrayExpr Extends TExpr
 		Return New TNewArrayExpr.Create( ty,cexpr )
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		If exprType Return Self
 
 		ty=ty.Semant()
@@ -1097,7 +1110,7 @@ Type TInvokeSuperExpr Extends TExpr
 		Return New TInvokeSuperExpr.Create( ident,CopyArgs(args), _identLower )
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		If exprType Return Self
 
 		'If _env.FuncScope().IsStatic() Err "Illegal use of Super."
@@ -1127,6 +1140,11 @@ Type TInvokeSuperExpr Extends TExpr
 		' ensure the super function has been semanted
 		funcDecl.Semant()
 		
+		' cannot directly call abstract methods
+		If funcDecl.isAbstract() Then
+			Err "Abstract method '" + funcDecl.ident + "' cannot be accessed directly."
+		End If
+		
 		' for static scope, we need to change class scope to that of the super class
 		If _env.FuncScope().IsStatic() Then
 			classScope = TClassDecl(funcDecl.scope)
@@ -1152,7 +1170,7 @@ Type TSelfExpr Extends TExpr
 		Return expr
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		If exprType Return Self
 
 		If _env.FuncScope().IsStatic() Then
@@ -1182,6 +1200,7 @@ Type TSelfExpr Extends TExpr
 End Type
 
 Const CAST_EXPLICIT:Int=1
+Const CAST_TWO:Int=2
 
 Type TCastExpr Extends TExpr
 	Field ty:TType
@@ -1199,7 +1218,53 @@ Type TCastExpr Extends TExpr
 		Return New TCastExpr.Create( ty,CopyExpr(expr),flags )
 	End Method
 
-	Method Semant:TExpr()
+	Method CheckArrayExpr:TType(src:TType, e:TExpr, last:TType)
+		If TNullType(e.exprType) Then
+			Err "Auto array element has no type"
+		End If
+
+		If TObjectType(TArrayType(ty).elemType) And TObjectType(TArrayType(ty).elemType).classDecl.ident = "Object" And (TStringType(e.exprType) Or TObjectType(e.exprType) Or TArrayType(e.exprType)) Then
+			' array takes generic objects, so we don't care if source elements are the same kinds.
+		Else
+			If last <> Null And Not last.EqualsType(e.exprType) Then
+				Err "Auto array elements must have identical types"
+			End If
+			If Not TArrayType(ty).elemType.EqualsType(e.exprType) Then
+				If (TObjectType(TArrayType(ty).elemType) = Null And TStringType(TArrayType(ty).elemType) = Null) Or (TObjectType(e.exprType) = Null And TStringType(e.exprType) = Null) Then
+					Err "Unable to convert from "+src.ToString()+" to "+ty.ToString()+"."
+				Else If TStringType(e.exprType) = Null And Not TObjectType(e.exprType).ExtendsType(TObjectType(TArrayType(ty).elemType)) Then
+					Err "Unable to convert from "+src.ToString()+" to "+ty.ToString()+"."
+				End If
+			End If
+		End If
+		
+		Return e.exprType
+	End Method
+	
+	Method CheckArrayType:Int(ty:TArrayType, src:TArrayType)
+		If src.dims <> ty.dims Then
+			Return False
+		End If
+		If TObjectType(TArrayType(ty).elemType) Then
+			If TObjectType(TArrayType(ty).elemType).classDecl.ident = "Object" And (TStringType(TArrayType(src).elemType) Or TObjectType(TArrayType(src).elemType) Or TArrayType(TArrayType(src).elemType)) Then
+				' array takes generic objects, so we don't care if source elements are the same kinds.
+			Else
+				If TObjectType(TArrayType(src).elemType) And Not (TObjectType(TArrayType(src).elemType)).ExtendsType(TArrayType(ty).elemType) And Not TArrayType(ty).elemType.EqualsType(TArrayType(src).elemType) Then
+					Return False
+				End If
+			End If
+		Else If TArrayType(TArrayType(ty).elemType) And TArrayType(TArrayType(src).elemType) Then
+			If Not CheckArrayType(TArrayType(TArrayType(ty).elemType), TArrayType(TArrayType(src).elemType)) Then
+				Return False
+			End If
+		Else If Not TArrayType(ty).elemType.EqualsType(TArrayType(src).elemType) Then
+			Return False
+		End If
+		
+		Return True
+	End Method
+
+	Method Semant:TExpr(options:Int = 0)
 
 		If exprType Return Self
 
@@ -1276,7 +1341,7 @@ Type TCastExpr Extends TExpr
 
 			EndIf
 			
-			If TNullType(src) And Not TVoidType(ty) Then
+			If TNullType(src) And Not TVoidType(ty) And Not (TArrayType(ty) And TArrayType(ty).IsStatic) Then
 				exprType = ty
 			End If
 			
@@ -1288,7 +1353,7 @@ Type TCastExpr Extends TExpr
 				' intrinsics can only cast between selves
 				If (TIntrinsicType(src) And TIntrinsicType(ty)=Null) Or (TIntrinsicType(ty) And TIntrinsicType(src)=Null) Then
 					If TFloat64Type(src) Or TFloat64Type(ty) Then
-						If (TFloat64Type(src) And (TLongType(ty) Or TULongType(ty))) Or (TFloat64Type(ty) And (TLongType(src) Or TULongType(src))) Then
+						If (TFloat64Type(src) And (TLongType(ty) Or TULongType(ty) Or (TLongIntType(ty) And TLongIntType(ty).GetSize() = 8) Or (TULongIntType(ty) And TULongIntType(ty).GetSize() = 8))) Or (TFloat64Type(ty) And (TLongType(src) Or TULongType(src) Or (TLongIntType(src) And TLongIntType(src).GetSize() = 8) Or (TULongIntType(src) And TULongIntType(src).GetSize() = 8))) Then
 							' ok
 						Else
 							Err "Unable to convert from "+src.ToString()+" to "+ty.ToString()+"."
@@ -1350,31 +1415,35 @@ Type TCastExpr Extends TExpr
 
 
 		If TArrayType(ty) And TArrayType(src) Then
+			If TArrayType(ty).isStatic - TArrayType(src).isStatic <> 0 Then
+				Err "Unable to convert from " + src.ToString() + " to " + ty.ToString()
+			End If
 			If TArrayType(ty).dims = TArrayType(src).dims Then
 				If TArrayExpr(expr) Then
 					Local last:TType
 					For Local e:TExpr = EachIn TArrayExpr(expr).exprs
-						If TNullType(e.exprType) Then
-							Err "Auto array element has no type"
-						End If
-
-						If TObjectType(TArrayType(ty).elemType) And TObjectType(TArrayType(ty).elemType).classDecl.ident = "Object" And (TStringType(e.exprType) Or TObjectType(e.exprType) Or TArrayType(e.exprType)) Then
+						last = CheckArrayExpr(src, e, last)
+					Next
+				Else
+					If TObjectType(TArrayType(ty).elemType) Then
+						If TObjectType(TArrayType(ty).elemType).classDecl.ident = "Object" And (TStringType(TArrayType(src).elemType) Or TObjectType(TArrayType(src).elemType) Or TArrayType(TArrayType(src).elemType)) Then
 							' array takes generic objects, so we don't care if source elements are the same kinds.
 						Else
-							If last <> Null And Not last.EqualsType(e.exprType) Then
-								Err "Auto array elements must have identical types"
-							End If
-							If Not TArrayType(ty).elemType.EqualsType(e.exprType) Then
-								If (TObjectType(TArrayType(ty).elemType) = Null And TStringType(TArrayType(ty).elemType) = Null) Or (TObjectType(e.exprType) = Null And TStringType(e.exprType) = Null) Then
-									Err "Unable to convert from "+src.ToString()+" to "+ty.ToString()+"."
-								Else If TStringType(e.exprType) = Null And Not TObjectType(e.exprType).ExtendsType(TObjectType(TArrayType(ty).elemType)) Then
+							If TObjectType(TArrayType(src).elemType) Then
+								If Not (TObjectType(TArrayType(src).elemType)).ExtendsType(TArrayType(ty).elemType) And Not TArrayType(ty).elemType.EqualsType(TArrayType(src).elemType) Then
 									Err "Unable to convert from "+src.ToString()+" to "+ty.ToString()+"."
 								End If
+							Else If Not TArrayType(ty).elemType.EqualsType(TArrayType(src).elemType) Then
+								Err "Unable to convert from "+src.ToString()+" to "+ty.ToString()+"."
 							End If
 						End If
-						
-						last = e.exprType
-					Next
+					Else If TArrayType(TArrayType(ty).elemType) And TArrayType(TArrayType(src).elemType) Then
+						If Not CheckArrayType(TArrayType(TArrayType(ty).elemType), TArrayType(TArrayType(src).elemType)) Then
+							Err "Unable to convert from "+src.ToString()+" to "+ty.ToString()+"."
+						End If
+					Else If Not TArrayType(ty).elemType.EqualsType(TArrayType(src).elemType) Then
+						Err "Unable to convert from "+src.ToString()+" to "+ty.ToString()+"."
+					End If
 				End If
 				
 				exprType = ty
@@ -1494,6 +1563,8 @@ Type TCastExpr Extends TExpr
 				End If
 			Else If TNumericType(src) And (src._flags & TType.T_VARPTR) Then
 				exprType = expr.exprType
+			Else If TObjectType(src) And (src._flags & TType.T_VARPTR) Then
+				exprType = expr.exprType
 			Else If TArrayType(src) Then
 			
 				' for functions and index access, use a new local variable
@@ -1557,15 +1628,24 @@ Type TCastExpr Extends TExpr
 		If TEnumType(src) And TEnumType(ty) And (ty._flags & TType.T_VAR) Then
 			Return expr
 		End If
-		
-		If TIntegralType(ty) And TEnumType(src) And (flags & CAST_EXPLICIT Or flags & 2) Then
+
+		If TIntegralType(ty) And TEnumType(src) And (flags & CAST_EXPLICIT Or flags & CAST_TWO) Then
 			exprType = ty
 			Return Self
 		End If
 		
-		If TIntegralType(src) And TEnumType(ty) And flags & 2 Then
-			exprType = src
-			Return Self
+		If TIntegralType(src) And TEnumType(ty) Then
+			If flags & CAST_TWO Then
+				exprType = src
+				Return Self
+			Else If flags & CAST_EXPLICIT Then
+				' validate const
+				If TConstExpr( expr ) And Not TEnumType(ty).decl.CastsToEnum(TConstExpr( expr )) Then
+					Err "The value " + TConstExpr( expr ).value  + " is not valid for enum " + TEnumType(ty).decl.ToString()
+				End If
+				exprType = ty
+				Return Self
+			End If
 		End If
 
 		If Not exprType
@@ -1579,7 +1659,7 @@ Type TCastExpr Extends TExpr
 			
 			Local ex:TExpr = EvalConst()
 			If flags & CAST_EXPLICIT Then
-				Return New TCastExpr.Create(exprType, ex, 1).Semant()
+				Return New TCastExpr.Create(exprType, ex, CAST_EXPLICIT).Semant()
 			Else
 				Return ex
 			End If
@@ -1618,6 +1698,10 @@ Type TCastExpr Extends TExpr
 		Else If TLongType( exprType )
 			Return Long( val )
 		Else If TULongType( exprType )
+			Return Long( val )
+		Else If TLongIntType( exprType )
+			Return Long( val )
+		Else If TULongIntType( exprType )
 			Return Long( val )
 		Else If TSizeTType( exprType )
 			Return Long( val )
@@ -1675,7 +1759,7 @@ Type TUnaryExpr Extends TExpr
 		Return New TUnaryExpr.Create( op,CopyExpr(expr) )
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		If exprType Return Self
 
 		expr = expr.Semant()
@@ -1711,8 +1795,8 @@ Type TUnaryExpr Extends TExpr
 			End If
 		Case "~~"
 			expr=expr.Semant()
-			If Not TIntegralType(expr.exprType) Or IsPointerType(expr.exprType) Then
-				Err "Bitwise complement can only be used with integers"
+			If Not (TIntegralType(expr.exprType) Or (TEnumType(expr.exprType) And TEnumType(expr.exprType).decl.isFlags)) Or IsPointerType(expr.exprType) Then
+				Err "Bitwise complement can only be used with integrals"
 			End If
 			If TByteType(expr.exprType) Or TShortType(expr.exprType) Then
 			expr=expr.SemantAndCast( New TIntType )
@@ -1735,7 +1819,19 @@ Type TUnaryExpr Extends TExpr
 		Local val$=expr.Eval()
 		Select op
 		Case "~~"
-			Return ~Int( val )
+			If TIntType(exprType) Return ~Int( val )
+			If TLongType(exprType) Return ~Long( val )
+			If TLongIntType(exprType) Return bmx_bitwise_not_longint( val, TLongIntType(exprType).GetSize() )
+			If TULongIntType(exprType) Return bmx_bitwise_not_ulongint( val, TULongIntType(exprType).GetSize() )
+?Not bmxng
+			If TUIntType(exprType) Return bmx_bitwise_not_uint( val )
+			If TSizeTType(exprType) Return bmx_bitwise_not_sizet( val )
+			If TULongType(exprType) Return bmx_bitwise_not_ulong( val )
+?bmxng
+			If TUIntType(exprType) Return ~UInt( val )
+			If TSizeTType(exprType) Return ~Size_T( val )
+			If TULongType(exprType) Return ~ULong( val )
+?		
 		Case "+"
 			Return val
 		Case "-"
@@ -1783,7 +1879,7 @@ Type TBinaryMathExpr Extends TBinaryExpr
 		Return New TBinaryMathExpr.Create( op,CopyExpr(lhs),CopyExpr(rhs) )
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		If exprType Return Self
 
 		lhs=lhs.Semant()
@@ -1796,19 +1892,24 @@ Type TBinaryMathExpr Extends TBinaryExpr
 		
 		' operator overload?
 		If TObjectType(lhs.exprType) Then
-			Local args:TExpr[] = [rhs]
-			Try
-				Local decl:TFuncDecl = TFuncDecl(TObjectType(lhs.exprType).classDecl.FindFuncDecl(op, args,,,,True,SCOPE_CLASS_HEIRARCHY))
-				If decl Then
-					Return New TInvokeMemberExpr.Create( lhs, decl, args ).Semant()
-				End If
-			Catch error:String
-				If error.StartsWith("Compile Error") Then
-					Throw error
-				Else
-					Err "Operator " + op + " is not defined between types '" + lhs.exprType.ToString() + "' and '" + rhs.exprType.ToString() + "'"
-				End If
-			End Try
+
+			If TObjectType(lhs.exprType).classDecl.IsStruct() and IsPointerType( lhs.exprType, 0, TType.T_POINTER ) Then
+				'
+			Else
+				Local args:TExpr[] = [rhs]
+				Try
+					Local decl:TFuncDecl = TFuncDecl(TObjectType(lhs.exprType).classDecl.FindFuncDecl(op, args,,,,True,SCOPE_CLASS_HEIRARCHY))
+					If decl Then
+						Return New TInvokeMemberExpr.Create( lhs, decl, args ).Semant()
+					End If
+				Catch error:String
+					If error.StartsWith("Compile Error") Then
+						Throw error
+					Else
+						Err "Operator " + op + " is not defined between types '" + lhs.exprType.ToString() + "' and '" + rhs.exprType.ToString() + "'"
+					End If
+				End Try
+			End if
 		End If
 
 		Local bitEnumOp:Int
@@ -1830,6 +1931,10 @@ Type TBinaryMathExpr Extends TBinaryExpr
 				exprType=New TLongType
 			Else If TULongType(lhs.exprType) Then
 				exprType=New TULongType
+			Else If TLongIntType(lhs.exprType) Then
+				exprType=New TLongIntType
+			Else If TULongIntType(lhs.exprType) Then
+				exprType=New TULongIntType
 			Else If TSizeTType(lhs.exprType) Then
 				exprType=New TSizeTType
 			Else If TWParamType(lhs.exprType) Then
@@ -1846,7 +1951,11 @@ Type TBinaryMathExpr Extends TBinaryExpr
 				exprType=New TIntType
 			End If
 		Case "^"
-			exprType=New TDoubleType
+			If TIntegralType(lhs.exprType) And TIntegralType(rhs.exprType) Then
+				exprType=New TLongType
+			Else
+				exprType=New TDoubleType
+			End If
 		Default
 			exprType=BalanceTypes( lhs.exprType,rhs.exprType )
 			If TStringType( exprType )
@@ -1856,7 +1965,7 @@ Type TBinaryMathExpr Extends TBinaryExpr
 			Else If TVoidType( exprType ) Then
 				Err "Illegal operation on a void expression."
 			Else If Not TNumericType( exprType ) And Not IsPointerType( exprType, 0, TType.T_POINTER ) And Not TArrayType( exprType ) And Not TBoolType( exprType )
-				Err "Illegal expression type."
+				Err "Operator " + op + " is not defined between types '" + lhs.exprType.ToString() + "' and '" + rhs.exprType.ToString() + "'"
 			Else If IsPointerType( exprType, 0, TType.T_POINTER ) And op <> "+" And op <> "-" Then
 				Err "Illegal expression type."
 			Else If IsPointerType( lhs.exprType, 0, TType.T_POINTER ) And IsPointerType( rhs.exprType, 0, TType.T_POINTER ) And op <> "-" Then
@@ -1881,6 +1990,10 @@ Type TBinaryMathExpr Extends TBinaryExpr
 		End If
 
 		If TConstExpr( lhs ) And TConstExpr( rhs ) Return EvalConst()
+		
+		If TConstExpr( rhs ) And (op = "/" Or op = "mod") And TIntegralType(rhs.exprType) And Not Long(rhs.Eval()) Then
+			Err "Integer division by zero"
+		End If
 
 		Return Self
 	End Method
@@ -1891,7 +2004,7 @@ Type TBinaryMathExpr Extends TBinaryExpr
 		If TIntType( exprType ) Or TByteType( exprType ) Or TShortType( exprType )
 			Local x:Int=Int(lhs),y:Int=Int(rhs)
 			Select op
-			Case "^" Return x^y
+			Case "^" Return Double(lhs)^Double(rhs)
 			Case "*" Return x*y
 			Case "/" 
 				If Not y Then
@@ -1912,10 +2025,10 @@ Type TBinaryMathExpr Extends TBinaryExpr
 			Case "~~" Return x ~ y
 			Case "|" Return x | y
 			End Select
-		Else If TLongType( exprType ) Or TSizeTType(exprType) Or TUIntType(exprType) Or TULongType(exprType) Or TInt128Type(exprType) Or TWParamType(exprType) Or TLParamType(exprType) 
+		Else If TLongType( exprType ) Or TInt128Type(exprType) Or TWParamType(exprType) Or TLParamType(exprType) Or TLongIntType(exprType)
 			Local x:Long=Long(lhs),y:Long=Long(rhs)
 			Select op
-			Case "^" Return x^y
+			Case "^" Return Double(lhs)^Double(rhs)
 			Case "*" Return x*y
 			Case "/"
 				If Not y Then
@@ -1936,15 +2049,144 @@ Type TBinaryMathExpr Extends TBinaryExpr
 			Case "~~" Return x ~ y
 			Case "|" Return x | y
 			End Select
-		Else If TFloatType( exprType )
-			Local x:Float=Float(lhs),y:Float=Float(rhs)
+		Else If TSizeTType(exprType)
+?bmxng
+			Local x:Size_T=Size_T(lhs),y:Size_T=Size_T(rhs)
 			Select op
-			Case "^" Return x^y
-			Case "*" Return x * y
-			Case "/" Return x / y
-			Case "mod" Return x Mod y
+			Case "^" Return Double(lhs)^Double(rhs)
+			Case "*" Return x*y
+			Case "/"
+				If Not y Then
+					Err "Integer division by zero"
+				End If
+				Return x/y
+			Case "mod"
+				If Not y Then
+					Err "Integer division by zero"
+				End If
+				Return x Mod y
+			Case "shl" Return x Shl y
+			Case "shr" Return x Shr y
+			Case "sar" Return x Sar y
 			Case "+" Return x + y
 			Case "-" Return x - y
+			Case "&" Return x & y
+			Case "~~" Return x ~ y
+			Case "|" Return x | y
+			End Select
+?Not bmxng
+		Local opInt:Int = OpToInt(op)
+		Select op
+			Case "^" Return Double(lhs)^Double(rhs)
+			Case "/"
+				If Not Long(rhs) Then
+					Err "Integer division by zero"
+				End If
+				Return bmx_binarymathexpr_sizet(opInt, lhs, rhs)
+			Case "mod"
+				If Not Long(rhs) Then
+					Err "Integer division by zero"
+				End If
+				Return bmx_binarymathexpr_sizet(opInt, lhs, rhs)
+			Default
+				Return bmx_binarymathexpr_sizet(opInt, lhs, rhs)
+		End Select
+?
+		Else If TUIntType(exprType)
+?bmxng
+			Local x:UInt=UInt(lhs),y:UInt=UInt(rhs)
+			Select op
+			Case "^" Return Double(lhs)^Double(rhs)
+			Case "*" Return x*y
+			Case "/"
+				If Not y Then
+					Err "Integer division by zero"
+				End If
+				Return x/y
+			Case "mod"
+				If Not y Then
+					Err "Integer division by zero"
+				End If
+				Return x Mod y
+			Case "shl" Return x Shl y
+			Case "shr" Return x Shr y
+			Case "sar" Return x Sar y
+			Case "+" Return x + y
+			Case "-" Return x - y
+			Case "&" Return x & y
+			Case "~~" Return x ~ y
+			Case "|" Return x | y
+			End Select
+?Not bmxng
+		Local opInt:Int = OpToInt(op)
+		Select op
+			Case "^" Return Double(lhs)^Double(rhs)
+			Case "/"
+				If Not Long(rhs) Then
+					Err "Integer division by zero"
+				End If
+				Return bmx_binarymathexpr_uint(opInt, lhs, rhs)
+			Case "mod"
+				If Not Long(rhs) Then
+					Err "Integer division by zero"
+				End If
+				Return bmx_binarymathexpr_uint(opInt, lhs, rhs)
+			Default
+				Return bmx_binarymathexpr_uint(opInt, lhs, rhs)
+		End Select
+?
+		Else If TULongType(exprType) Or TULongIntType(exprType)
+?bmxng
+			Local x:ULong=ULong(lhs),y:ULong=ULong(rhs)
+			Select op
+			Case "^" Return Double(lhs)^Double(rhs)
+			Case "*" Return x*y
+			Case "/"
+				If Not y Then
+					Err "Integer division by zero"
+				End If
+				Return x/y
+			Case "mod"
+				If Not y Then
+					Err "Integer division by zero"
+				End If
+				Return x Mod y
+			Case "shl" Return x Shl y
+			Case "shr" Return x Shr y
+			Case "sar" Return x Sar y
+			Case "+" Return x + y
+			Case "-" Return x - y
+			Case "&" Return x & y
+			Case "~~" Return x ~ y
+			Case "|" Return x | y
+			End Select
+?Not bmxng
+		Local opInt:Int = OpToInt(op)
+		Select op
+			Case "^" Return Double(lhs)^Double(rhs)
+			Case "/"
+				If Not Long(rhs) Then
+					Err "Integer division by zero"
+				End If
+				Return bmx_binarymathexpr_ulong(opInt, lhs, rhs)
+			Case "mod"
+				If Not Long(rhs) Then
+					Err "Integer division by zero"
+				End If
+				Return bmx_binarymathexpr_ulong(opInt, lhs, rhs)
+			Default
+				Return bmx_binarymathexpr_ulong(opInt, lhs, rhs)
+		End Select
+?
+		Else If TFloatType( exprType )
+			Local x:Double=Double(lhs),y:Double=Double(rhs)
+			Select op
+			Case "^" Return Double(x^y)
+			Case "*" Return Float(x * y)
+			Case "/" Return Float(x / y)
+			Case "mod" Return Float(x Mod y)
+			Case "+" Return Float(x + y)
+			Case "-" Return Float(x - y)
 			End Select
 		Else If TDoubleType( exprType ) Or TFloat128Type(exprType) Or TDouble128Type(exprType) Or TFloat64Type(exprType)
 			Local x:Double=Double(lhs),y:Double=Double(rhs)
@@ -1996,7 +2238,7 @@ Type TBinaryCompareExpr Extends TBinaryExpr
 		Return New TBinaryCompareExpr.Create( op,CopyExpr(lhs),CopyExpr(rhs) )
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		If exprType Return Self
 
 		lhs=lhs.Semant()
@@ -2004,6 +2246,28 @@ Type TBinaryCompareExpr Extends TBinaryExpr
 
 		' operator overload?
 		If TObjectType(lhs.exprType) Then
+		
+			If TNullExpr(rhs) And TObjectType(lhs.exprType).classDecl.IsStruct() Then
+				If op = "=" Then
+					ty=New TBoolType
+					exprType=New TBoolType
+					If Not IsPointerType(lhs.exprType, 0, TType.T_POINTER) Then
+						lhs = New TConstExpr.Create(New TIntType, 1).Semant()
+					End If
+					rhs = New TConstExpr.Create(New TIntType, 0).Semant()
+					Return Self
+				Else
+					op = "<>"
+					ty = New TBoolType
+					exprType=New TBoolType
+					If Not IsPointerType(lhs.exprType, 0, TType.T_POINTER) Then
+						lhs = New TConstExpr.Create(New TIntType, 1).Semant()
+					End If
+					rhs = New TConstExpr.Create(New TIntType, 0).Semant()
+					Return Self
+				End If
+			End If
+		
 			Local args:TExpr[] = [rhs]
 			Try
 				Local decl:TFuncDecl = TFuncDecl(TObjectType(lhs.exprType).classDecl.FindFuncDecl(op, args,,,,True,SCOPE_CLASS_HEIRARCHY))
@@ -2011,12 +2275,18 @@ Type TBinaryCompareExpr Extends TBinaryExpr
 					Return New TInvokeMemberExpr.Create( lhs, decl, args ).Semant()
 				End If
 			Catch error:String
-				' no overload, continue...
+				' Structs must define an operator overload for the given op
+				If TObjectType(lhs.exprType).classDecl.IsStruct() Then
+					Err "No overloaded operator '" + op + "' found for " + TObjectType(lhs.exprType).classDecl.ToString()
+				End If
+				' otherwise, no overload, continue...
 			End Try
+		Else If (TArrayType(lhs.exprType) And TArrayType(lhs.exprType).isStatic) Or (TArrayType(rhs.exprType) And TArrayType(rhs.exprType).isStatic) Then
+			Err "Static arrays cannot be compared"
 		End If
 
 
-		ty=BalanceTypes( lhs.exprType,rhs.exprType )
+		ty=BalanceTypes( lhs.exprType,rhs.exprType, False )
 
 		lhs=lhs.Cast( ty )
 		rhs=rhs.Cast( ty )
@@ -2048,7 +2318,7 @@ Type TBinaryCompareExpr Extends TBinaryExpr
 			Case ">"  r=(lhs> rhs)
 			Case ">=", "=>" r=(lhs>=rhs)
 			End Select
-		Else If TLongType( ty ) Or TSizeTType( ty ) Or TUIntType( ty ) Or TULongType( ty ) Or TInt128Type(ty) Or TWParamType(ty) Or TLParamType(ty)
+		Else If TLongType( ty ) Or TSizeTType( ty ) Or TUIntType( ty ) Or TULongType( ty ) Or TInt128Type(ty) Or TWParamType(ty) Or TLParamType(ty) Or TLongIntType(ty) Or TULongIntType(ty)
 			Local lhs:Long=Long( Self.lhs.Eval() )
 			Local rhs:Long=Long( Self.rhs.Eval() )
 			Select op
@@ -2113,7 +2383,7 @@ Type TBinaryLogicExpr Extends TBinaryExpr
 		Return New TBinaryLogicExpr.Create( op,CopyExpr(lhs),CopyExpr(rhs) )
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		If exprType Return Self
 
 		lhs=lhs.SemantAndCast( New TBoolType,CAST_EXPLICIT )
@@ -2177,7 +2447,7 @@ Type TIndexExpr Extends TExpr
 		Next
 		
 		' operator overload?
-		If TObjectType(expr.exprType) Then
+		If TObjectType(expr.exprType) And Not IsPointerType( expr.exprType, 0 , TType.T_POINTER | TType.T_VARPTR) Then
 			Local args:TExpr[]
 			Local op:String
 			If set Then
@@ -2244,7 +2514,11 @@ Type TIndexExpr Extends TExpr
 		Else If TNumericType(expr.exprType) And IsPointerType( expr.exprType, 0 , TType.T_POINTER | TType.T_VARPTR)' And Not TFunctionPtrType( expr.exprType )
 			exprType=TType.MapPointerToPrim(TNumericType(expr.exprType))
 		Else If TObjectType(expr.exprType) And TObjectType(expr.exprType).classDecl.IsStruct() And IsPointerType( expr.exprType, 0 , TType.T_POINTER | TType.T_VARPTR)' And Not TFunctionPtrType( expr.exprType )
-			exprType = expr.exprType
+			If IsPointerType( expr.exprType, 0 , TType.T_POINTER) Then
+				exprType = TType.MapFromPointer(expr.exprType)
+			Else
+				exprType = expr.exprType
+			End If
 		Else
 			Err "Expression of type '" + expr.exprType.ToString() + "' cannot be indexed"
 		EndIf
@@ -2252,19 +2526,25 @@ Type TIndexExpr Extends TExpr
 		Return Self
 	End Method
 	
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		Return _Semant(False, Null)
 	End Method
 
-	Method SemantSet:TExpr( op$,rhs:TExpr )
+	Method SemantSet:TExpr( op$,rhs:TExpr, options:Int = 0 )
 		Return _Semant(True, rhs)
 	End Method
 	
 	Method SemantFunc:TExpr( args:TExpr[] , throwError:Int = True, funcCall:Int = False )
 		Local ex:TExpr = Semant()
 		
-		If TArrayType( expr.exprType ) And TFunctionPtrType(exprType) Then
-			exprType = TFunctionPtrType(exprType).func.retType
+		If TArrayType( expr.exprType ) Then
+			If TFunctionPtrType(exprType) Then
+				exprType = TFunctionPtrType(exprType).func.retType
+			Else
+				If funcCall Then
+					Err "Expression of type '" + exprType.ToString() + "' cannot be invoked."
+				End If
+			End If
 		End If
 		
 		Return ex
@@ -2301,7 +2581,7 @@ Type TSliceExpr Extends TExpr
 		Return New TSliceExpr.Create( CopyExpr(expr),CopyExpr(from),CopyExpr(term) )
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		If exprType Return Self
 
 		expr=expr.Semant()
@@ -2355,7 +2635,7 @@ Type TArrayExpr Extends TExpr
 		Return expr
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		If exprType Return Self
 
 		If TIdentExpr(exprs[0]) Then
@@ -2401,6 +2681,7 @@ Type TArrayExpr Extends TExpr
 
 		Local comp:Int = True
 		Local last:TType
+		Local base:TType
 		For Local i:Int=0 Until exprs.Length
 
 			Local expr:TExpr = exprs[i]
@@ -2415,9 +2696,21 @@ Type TArrayExpr Extends TExpr
 				ety = New TIntType
 			End If
 			
+			If TObjectType(ety) And Not base Then
+				base = ety
+			End If
+			
 			If last <> Null And Not last.EqualsType(ety) Then
-				If (Not TConstExpr(expr) And Not IsNumericType(ety)) Or (TConstExpr(expr) And IsNumericType(ety) And Not TConstExpr(expr).CompatibleWithType(ty)) Then
-					Err "Auto array elements must have identical types : Index " + i
+				If TObjectType(ety) Then
+					If base.ExtendsType(ety) Then
+						base = ety
+					Else If Not ety.ExtendsType(base) Then
+						Err "Auto array elements must be compatible types : Index " + i
+					End If
+				Else
+					If (Not TConstExpr(expr) And Not IsNumericType(ety)) Or (TConstExpr(expr) And IsNumericType(ety) And Not TConstExpr(expr).CompatibleWithType(ty)) Then
+						Err "Auto array elements must have identical types : Index " + i
+					End If
 				End If
 			End If
 			
@@ -2465,7 +2758,7 @@ Type TArraySizeExpr Extends TExpr
 		Return New TArraySizeExpr.Create( CopyExpr(expr), val, ind )
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		If exprType Return Self
 
 		expr=expr.Semant()
@@ -2511,7 +2804,7 @@ Type TIdentTypeExpr Extends TExpr
 		If Not cdecl InternalErr "TIdentTypeExpr._Semant"
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		_Semant
 		Err "Expression can't be used in this way"
 	End Method
@@ -2605,6 +2898,8 @@ Type TIdentExpr Extends TExpr
 						e :+ "'" + expr.ToString() + "'"
 					End If
 					Err e
+				Else
+					scope.Semant
 				End If
 			End If
 			fixedScope = True
@@ -2650,162 +2945,149 @@ Type TIdentExpr Extends TExpr
 		InternalErr "TIdentExpr.IsVar"
 	End Method
 
-	Method Semant:TExpr()
-		Return SemantSet( "",Null )
+	Method Semant:TExpr(options:Int = 0)
+		Return SemantSet( "",Null, options )
 	End Method
 
-	Method SemantSet:TExpr( op$,rhs:TExpr )
+	Method SemantSet:TExpr( op$,rhs:TExpr, options:Int = 0 )
 		_Semant
 
-		'Local scope:TScopeDecl=IdentScope()
-		Local vdecl:TValDecl=scope.FindValDecl( IdentLower(), static )
-		
-		If TLocalDecl( vdecl )
-			' local variable should (at least) be in the same function scope.
-			If vdecl.FuncScope() <> scope.FuncScope() Then
-				' or the local can be in localmain..
-				If TModuleDecl(scope) And vdecl.FuncScope() And vdecl.FuncScope().ident = "__LocalMain" Then
-					' ok
-				Else
-					vdecl = Null
-				End If
+		Select options
+		Case OPTION_WANT_LOOP_LABEL
+			
+			Local loopLabel:String = "#" + IdentLower()
+	
+			' maybe it's a loop label?
+			Local stmt:TLoopStmt = TLoopStmt(scope.FindLoop(loopLabel))
+			
+			If stmt Then
+				Return New TLoopLabelExpr.Create(stmt)
 			End If
-		End If
 		
-		If vdecl And fixedScope And static Then
-			If TClassDecl(vdecl.scope) And TClassDecl(scope) Then
-				If Not TClassDecl(scope).ExtendsClass(TClassDecl(vdecl.scope)) Then
-					vdecl = Null
-				End If
-			Else
-				If vdecl.scope <> scope Then
-					vdecl = Null
-				End If
+			Return Self
+			
+		Case OPTION_WANT_DATA_LABEL
+
+			Local loopLabel:String = "#" + IdentLower()
+
+			' maybe it's a data label?
+			Local ddecl:TDefDataDecl = TDefDataDecl(_appInstance.FindDataLabel(loopLabel))
+			
+			If ddecl Then
+				Return New TDataLabelExpr.Create(ddecl)
 			End If
-		End If
-		
-		If vdecl
-		
-			If op And TLocalDecl( vdecl )
+			
+			Return Self
+			
+		Default
 
-				Local ldecl:TLocalDecl = TLocalDecl( vdecl )
-
-				If Not ldecl.volatile Then
-					Local tryStmtDecl:TTryStmtDecl = scope.FindTry()
-					If tryStmtDecl And (Not ldecl.declaredInTry Or tryStmtDecl <> ldecl.declaredInTry) Then
-						ldecl.volatile = True
+			'Local scope:TScopeDecl=IdentScope()
+			Local vdecl:TValDecl=scope.FindValDecl( IdentLower(), static )
+			
+			If TLocalDecl( vdecl )
+				' local variable should (at least) be in the same function scope.
+				If vdecl.FuncScope() <> scope.FuncScope() Then
+					' or the local can be in localmain..
+					If TModuleDecl(scope) And vdecl.FuncScope() And vdecl.FuncScope().ident = "__LocalMain" Then
+						' ok
+					Else
+						vdecl = Null
 					End If
 				End If
-
-			Else If TConstDecl( vdecl )
-'				If rhs Err "Constant '"+ident+"' cannot be modified."
-'				Return New TConstExpr.Create( vdecl.ty,TConstDecl( vdecl ).value ).Semant()
-				If rhs Err "Constant '"+ident+"' cannot be modified."
-				Local cexpr:TConstExpr =New TConstExpr.Create( vdecl.ty,TConstDecl( vdecl ).value )
-				If Not static And (TInvokeExpr( expr ) Or TInvokeMemberExpr( expr )) Return New TStmtExpr.Create( New TExprStmt.Create( expr ),cexpr ).Semant()
-				Return cexpr.Semant()
-
-			Else If TFieldDecl( vdecl ) 
-				If static Err "Field '"+ident+"' cannot be accessed from here."
-				If expr Return New TMemberVarExpr.Create( expr,TVarDecl( vdecl ) ).Semant()
-'				If expr Return New TMemberVarExpr.Create( expr,TVarDecl( vdecl ) ).Semant()
-'				If scope<>_env Or Not _env.FuncScope() Or _env.FuncScope().IsStatic() Err "Field '"+ident+"' cannot be accessed from here."
-
-			EndIf
-
-			Return New TVarExpr.Create( TVarDecl( vdecl ) ).Semant()
-		EndIf
-
-		If op And op<>"="
-
-			Local fdecl:TFuncDecl=scope.FindFuncDecl( IdentLower(),,,,,,SCOPE_ALL )
-			If Not fdecl IdentErr
-
-			If _env.ModuleScope().IsStrict() And Not fdecl.IsProperty() Err "Identifier '"+ident+"' cannot be used in this way."
-
-			Local lhs:TExpr
-
-			If fdecl.IsStatic() Or (scope=_env And Not _env.FuncScope().IsStatic())
-				lhs=New TInvokeExpr.Create( fdecl )
-			Else If expr
-				Local tmp:TLocalDecl=New TLocalDecl.Create( "",Null,expr,, True )
-				lhs=New TInvokeMemberExpr.Create( New TVarExpr.Create( tmp ),fdecl )
-				lhs=New TStmtExpr.Create( New TDeclStmt.Create( tmp ),lhs )
-			Else
-				Return Null
-			EndIf
-
-			Local bop$=op[..1]
-			Select bop
-			Case "*","/","shl","shr","+","-","&","|","~~"
-				rhs=New TBinaryMathExpr.Create( bop,lhs,rhs )
-			Default
-				InternalErr "TIdentExpr.SemantSet"
-			End Select
-			rhs=rhs.Semant()
-		EndIf
-
-		Local args:TExpr[]
-		If rhs args=[rhs]
-
-		Local fdecl:TFuncDecl
-		
-		Try
-			fdecl=scope.FindFuncDecl( IdentLower(),args, , isArg, True,True,SCOPE_ALL )
-		Catch errorMessage:String
-			If errorMessage.StartsWith("Compile Error") Then
-				Throw errorMessage
 			End If
-		End Try
-
-		If fdecl
-			If Not isArg And Not fdecl.maybeFunctionPtr Err "Identifier '"+ident+"' cannot be used in this way."
-
-			fdecl.maybeFunctionPtr = False
 			
-			If Not fdecl.IsStatic()
-				If expr Return New TInvokeMemberExpr.Create( expr,fdecl,args, False ).Semant()
-				If scope<>_env Or Not _env.FuncScope() Or _env.FuncScope().IsStatic() Err "Method '"+ident+"' cannot be accessed from here."
+			If vdecl And fixedScope And static Then
+				If TClassDecl(vdecl.scope) And TClassDecl(scope) Then
+					If Not TClassDecl(scope).ExtendsClass(TClassDecl(vdecl.scope)) Then
+						vdecl = Null
+					End If
+				Else
+					If vdecl.scope <> scope Then
+						vdecl = Null
+					End If
+				End If
+			End If
+			
+			If vdecl
+			
+				If op And TLocalDecl( vdecl )
+	
+					Local ldecl:TLocalDecl = TLocalDecl( vdecl )
+	
+					If Not ldecl.volatile Then
+						Local tryStmtDecl:TTryStmtDecl = scope.FindTry()
+						If tryStmtDecl And (Not ldecl.declaredInTry Or tryStmtDecl <> ldecl.declaredInTry) Then
+							ldecl.volatile = True
+						End If
+					End If
+	
+				Else If TConstDecl( vdecl )
+	'				If rhs Err "Constant '"+ident+"' cannot be modified."
+	'				Return New TConstExpr.Create( vdecl.ty,TConstDecl( vdecl ).value ).Semant()
+					If rhs Err "Constant '"+ident+"' cannot be modified."
+					Local cexpr:TConstExpr =New TConstExpr.Create( vdecl.ty,TConstDecl( vdecl ).value )
+					If Not static And (TInvokeExpr( expr ) Or TInvokeMemberExpr( expr )) Return New TStmtExpr.Create( New TExprStmt.Create( expr ),cexpr ).Semant()
+					Return cexpr.Semant()
+	
+				Else If TFieldDecl( vdecl ) 
+					If static Err "Field '"+ident+"' cannot be accessed from here."
+					If expr Return New TMemberVarExpr.Create( expr,TVarDecl( vdecl ) ).Semant()
+	'				If expr Return New TMemberVarExpr.Create( expr,TVarDecl( vdecl ) ).Semant()
+	'				If scope<>_env Or Not _env.FuncScope() Or _env.FuncScope().IsStatic() Err "Field '"+ident+"' cannot be accessed from here."
+	
+				EndIf
+	
+				Return New TVarExpr.Create( TVarDecl( vdecl ) ).Semant()
 			EndIf
 
-			Return New TInvokeExpr.Create( fdecl,args, False, isArg, isRhs ).Semant()
-		End If
+			Local args:TExpr[]
+			If rhs args=[rhs]
 
-		Local decl:TDecl = TDecl(scope.FindDecl(IdentLower()))
-		' maybe it's a classdecl?
-		Local cdecl:TClassDecl = TClassDecl(decl)
-		
-		If cdecl Then
-			Local e:TIdentTypeExpr = New TIdentTypeExpr.Create(cdecl.objectType)
-			e.cdecl = cdecl
-			Return e
-		End If
-		
-		' maybe it's an enum?
-		Local edecl:TEnumValueDecl = TEnumValueDecl(decl)
-		If edecl Then
-			Return New TIdentEnumExpr.Create(edecl)
-		End If
+			Local decl:TDecl = TDecl(scope.FindDecl(IdentLower()))
 
-		Local loopLabel:String = "#" + IdentLower()
+			' maybe it's an enum?
+			Local edecl:TEnumValueDecl = TEnumValueDecl(decl)
+			If edecl Then
+				Return New TIdentEnumExpr.Create(edecl)
+			End If
 
-		' maybe it's a loop label?
-		Local stmt:TLoopStmt = TLoopStmt(scope.FindLoop(loopLabel))
+			Local fdecl:TFuncDecl
+			
+			Try
+				fdecl=scope.FindFuncDecl( IdentLower(),args, , isArg, True,True,SCOPE_ALL )
+			Catch errorMessage:String
+				If errorMessage.StartsWith("Compile Error") Then
+					Throw errorMessage
+				End If
+			End Try
+	
+			If fdecl
+				If Not isArg And Not fdecl.maybeFunctionPtr Err "Identifier '"+ident+"' cannot be used in this way."
+	
+				fdecl.maybeFunctionPtr = False
+				
+				If Not fdecl.IsStatic()
+					If static Err "Method '"+ident+"' cannot be accessed from here."					
+					'If expr Return New TInvokeMemberExpr.Create( expr,fdecl,args, False ).Semant()
+				EndIf
+	
+				Return New TInvokeExpr.Create( fdecl,args, False, isArg, isRhs ).Semant()
+			End If
+	
+			' maybe it's a classdecl?
+			Local cdecl:TClassDecl = TClassDecl(decl)
+			
+			If cdecl Then
+				Local e:TIdentTypeExpr = New TIdentTypeExpr.Create(cdecl.objectType)
+				e.cdecl = cdecl
+				Return e
+			End If
+			
+			If unknownIdentsEvalFalse Then
+				Return New TConstExpr.Create( New TIntType, 0 ).Semant()
+			End If
 		
-		If stmt Then
-			Return New TLoopLabelExpr.Create(stmt)
-		End If
-		
-		' maybe it's a data label?
-		Local ddecl:TDefDataDecl = TDefDataDecl(_appInstance.FindDataLabel(loopLabel))
-		
-		If ddecl Then
-			Return New TDataLabelExpr.Create(ddecl)
-		End If
-		
-		If unknownIdentsEvalFalse Then
-			Return New TConstExpr.Create( New TIntType, 0 ).Semant()
-		End If
+		End Select
 		
 		IdentErr
 	End Method
@@ -2819,8 +3101,12 @@ Type TIdentExpr Extends TExpr
 
 		'Local scope:TScopeDecl=IdentScope()
 		Local initialScope:Int = SCOPE_ALL
-		If scope And TClassDecl(scope) Then
-			initialScope = SCOPE_CLASS_HEIRARCHY
+		If scope Then
+			If TClassDecl(scope) Then
+				initialScope = SCOPE_CLASS_HEIRARCHY
+			Else If TModuleDecl(scope) Then
+				initialScope = SCOPE_MODULE
+			End If
 		End If
 		
 		Local fdecl:TFuncDecl
@@ -2937,10 +3223,12 @@ Type TIdentExpr Extends TExpr
 		'	If cdecl Return args[0].Cast( New TObjectType.Create(cdecl),CAST_EXPLICIT )
 		'EndIf
 
-		Local ty:TType=scope.FindType( IdentLower(),Null )
-		If ty Then
-			If args.Length=1 And args[0] Return args[0].Cast( ty,CAST_EXPLICIT )
-			Err "Illegal number of arguments for type conversion"
+		If Not expr Then
+			Local ty:TType=scope.FindType( IdentLower(),Null )
+			If ty Then
+				If args.Length=1 And args[0] Return args[0].Cast( ty,CAST_EXPLICIT )
+				Err "Illegal number of arguments for type conversion"
+			End If
 		End If
 
 		If throwError Then
@@ -2978,7 +3266,7 @@ Type TBuiltinExpr Extends TExpr
 	Field id:String
 	Field expr:TExpr
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		If exprType Return Self
 
 		expr=expr.Semant()
@@ -3000,7 +3288,7 @@ Type TLenExpr Extends TBuiltinExpr
 		Return Self
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		If exprType Return Self
 
 		expr=expr.Semant()
@@ -3036,7 +3324,7 @@ Type TAscExpr Extends TBuiltinExpr
 		Return Self
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		If exprType Return Self
 
 		If TConstExpr(expr) Then
@@ -3069,10 +3357,10 @@ Type TSizeOfExpr Extends TBuiltinExpr
 		Return Self
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		If exprType Return Self
 		expr=expr.Semant()
-		exprType=New TIntType
+		exprType=New TSizeTType
 		Return Self
 	End Method
 
@@ -3094,7 +3382,7 @@ Type TChrExpr Extends TBuiltinExpr
 		Return Self
 	End Method
 	
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		If exprType Return Self
 
 		If TConstExpr(expr) Then
@@ -3146,7 +3434,7 @@ Type TFuncCallExpr Extends TExpr
 		Return t+")"
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		args=SemantArgs( args )
 		If TIndexExpr(expr) Then
 			expr = expr.SemantFunc( args, True, True )
@@ -3194,7 +3482,7 @@ Type TScopeExpr Extends TExpr
 		Return "TScopeExpr("+scope.ToString()+")"
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		Err "Syntax error."
 	End Method
 
@@ -3222,7 +3510,7 @@ Type TNewExpr Extends TExpr
 		Return New TNewExpr.Create(CopyArgs(args), isSuper)
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 
 		Local fdecl:TFuncDecl = _env.FuncScope()
 		If Not fdecl Or TNewDecl(fdecl) = Null Or Not _env.ClassScope() Then
@@ -3259,6 +3547,8 @@ Type TNewExpr Extends TExpr
 		End If
 		
 		ctor.Semant
+
+		args=CastArgs(args, ctor)
 		
 		' attach to ctor
 		TNewDecl(fdecl).chainedCtor = Self
@@ -3283,7 +3573,7 @@ Type TNullExpr Extends TExpr
 		Return New TNullExpr.Create(exprType)
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		Return Self
 	End Method
 
@@ -3310,12 +3600,11 @@ Type TLoopLabelExpr Extends TExpr
 		Return New TLoopLabelExpr.Create(loop)
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		Return Self
 	End Method
 
 	Method Trans$()
-		DebugStop
 	End Method
 
 	Method Eval$()
@@ -3337,12 +3626,11 @@ Type TDataLabelExpr Extends TExpr
 		Return New TDataLabelExpr.Create(dataDef)
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		Return Self
 	End Method
 
 	Method Trans$()
-		DebugStop
 	End Method
 
 	Method Eval$()
@@ -3364,7 +3652,7 @@ Type TIdentEnumExpr Extends TExpr
 		Return New TIdentEnumExpr.Create( value )
 	End Method
 
-	Method Semant:TExpr()
+	Method Semant:TExpr(options:Int = 0)
 		Return Self
 	End Method
 
@@ -3376,4 +3664,73 @@ Type TIdentEnumExpr Extends TExpr
 		Return value.Value()
 	End Method
 
+End Type
+
+Type TStackAllocExpr Extends TBuiltinExpr
+
+	Method Create:TStackAllocExpr( expr:TExpr )
+		Self.id="stackalloc"
+		Self.expr=expr
+		Return Self
+	End Method
+
+	Method Semant:TExpr(options:Int = 0)
+		If exprType Return Self
+
+		expr = expr.SemantAndCast( New TSizeTType )
+		exprType = TType.MapToPointerType(New TByteType)
+		Return Self
+	End Method
+
+	Method Copy:TExpr()
+		Return New TStackAllocExpr.Create( CopyExpr(expr) )
+	End Method
+
+	Method ToString$()
+		Return "TStackAllocExpr("+expr.ToString()+")"
+	End Method
+
+End Type
+
+Type TFieldOffsetExpr Extends TBuiltinExpr
+
+	Field typeExpr:TExpr
+	Field fieldExpr:TExpr
+
+	Method Create:TFieldOffsetExpr( typeExpr:TExpr, fieldExpr:TExpr )
+		Self.id="fieldoffset"
+		Self.typeExpr=typeExpr
+		Self.fieldExpr = fieldExpr
+		Return Self
+	End Method
+
+	Method Semant:TExpr(options:Int = 0)
+		If exprType Return Self
+		
+		' validate type and field
+		typeExpr = typeExpr.Semant()
+		
+		If Not TIdentTypeExpr(typeExpr) Then
+			Err "Expecting Type or Struct"
+		End If
+		
+		TIdentExpr(fieldExpr).scope = TIdentTypeExpr(typeExpr).cdecl
+
+		fieldExpr = fieldExpr.Semant()
+		
+		If Not TVarExpr(fieldExpr) Or Not TFieldDecl(TVarExpr(fieldExpr).decl) Then
+			Err "Expecting Field"
+		End If
+		
+		exprType = New TSizeTType
+		Return Self
+	End Method
+
+	Method Copy:TExpr()
+		Return New TFieldOffsetExpr.Create( typeExpr, fieldExpr )
+	End Method
+
+	Method ToString$()
+		Return "TFieldOffsetExpr("+typeExpr.ToString()+"," + fieldExpr.ToString() + ")"
+	End Method
 End Type

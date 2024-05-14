@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2019 Bruce A Henderson
+' Copyright (c) 2013-2023 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -24,8 +24,7 @@
 SuperStrict
 
 Import "base.configmap.bmx"
-
-Const version:String = "0.102"
+Import "version.bmx"
 
 Const BUILDTYPE_APP:Int = 0
 Const BUILDTYPE_MODULE:Int = 1
@@ -62,6 +61,7 @@ Global opt_arch:String
 '    android
 '    raspberrypi
 '    nx
+'    haiku
 Global opt_platform:String
 ' framework
 Global opt_framework:String
@@ -122,8 +122,19 @@ Global opt_require_override:Int = False
 ' overerr
 '    missing override is error
 Global opt_override_error:Int = False
+' ud
+'    user defines
+Global opt_userdefs:String
+' 
+Global opt_need_strict:Int = False
+'
+Global opt_legacy_incbin:Int = False
 
 Global opt_filepath:String
+
+Global opt_coverage:Int = False
+
+Global opt_no_auto_superstrict:Int = False
 
 Function CmdError(details:String = Null, fullUsage:Int = False)
 	Local s:String = "Compile Error"
@@ -227,6 +238,20 @@ Function ParseArgs:String[](args:String[])
 				opt_require_override=True
 			Case "overerr"
 				opt_override_error=True
+			Case "ud"
+				count:+1
+				If count = args.length Then
+					CmdError "Command line error - Missing arg for '-ud'"
+				End If
+				opt_userdefs = args[count].ToLower()
+			Case "strict"
+				opt_need_strict=True
+			Case "ib"
+				opt_legacy_incbin=True
+			Case "cov"
+				opt_coverage=True
+			Case "nas"
+				opt_no_auto_superstrict=True
 		End Select
 	
 		count:+ 1
@@ -236,8 +261,13 @@ Function ParseArgs:String[](args:String[])
 		opt_apptype = APPTYPE_NONE
 	End If
 	
-	If opt_arch = "x64" Or opt_arch = "arm64v8a" Or opt_arch = "arm64" Then
+	If opt_arch = "x64" Or opt_arch = "arm64v8a" Or opt_arch = "arm64" Or opt_arch = "riscv64" Then
 		WORD_SIZE = 8
+	End If
+	
+	' new incbin doesn't work on win32 x86
+	If opt_arch = "x86" And opt_platform = "win32" Then
+		opt_legacy_incbin = True
 	End If
 
 	If opt_makelib Then
@@ -272,6 +302,10 @@ Function DefaultOptions()
 	opt_arch = "arm64v8a"
 ?js
 	opt_arch = "js"
+?riscv32
+	opt_arch = "riscv32"
+?riscv64
+	opt_arch = "riscv64"
 ?
 
 ?win32
@@ -284,6 +318,8 @@ Function DefaultOptions()
 	opt_platform = "android"
 ?raspberrypi
 	opt_platform = "raspberrypi"
+?haiku
+	opt_platform = "haiku"
 ?emscripten
 	opt_platform = "emscripten"
 ?
@@ -313,6 +349,8 @@ Function CheckConfig()
 		If tmp Then
 			osBmxPath = tmp
 		End If
+	?haiku
+		osBmxPath = config.GetString("BMXPATH_HAIKU")
 	?
 	'load default/generic path
 	If osBmxPath = "" Then osBmxPath = config.GetString("BMXPATH")

@@ -1,4 +1,4 @@
-' Copyright (c) 2016-2019 Bruce A Henderson
+' Copyright (c) 2016-2023 Bruce A Henderson
 ' 
 ' Permission is hereby granted, free of charge, to any person obtaining a copy
 ' of this software and associated documentation files (the "Software"), to deal
@@ -143,6 +143,11 @@ Type TStringBuffer
 	End Rem
 	Method AppendShorts:TStringBuffer(shorts:Short Ptr, length:Int)
 		bmx_stringbuffer_append_shorts(buffer, shorts, length)
+		Return Self
+	End Method
+	
+	Method AppendChar:TStringBuffer(char:Int)
+		bmx_stringbuffer_append_char(buffer, char)
 		Return Self
 	End Method
 
