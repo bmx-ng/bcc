@@ -3103,7 +3103,7 @@ t:+"NULLNULLNULL"
 			Next
 			' globals
 			For Local gdecl:TGlobalDecl = EachIn _app.mainModule.Decls()
-				EmitGlobalDebugScope(gdecl)
+				EmitGlobalDebugScope(gdecl, scopeIndex)
 			Next
 		End If
 		
@@ -4489,7 +4489,7 @@ End Rem
 			ret = "()"
 		End If
 		
-		If Not classDecl.IsInterface() Then
+		If Not classDecl.IsInterface() And Not classDecl.IsStruct() Then
 			Local newDecl:TDecl = classGetFunction(classDecl, "New")
 			If newDecl Then
 				EmitClassStandardMethodDebugScope("New", ret + TransDebugScopeModifiers(newDecl) , "_" + classid + "_New")
@@ -6113,7 +6113,7 @@ End Rem
 				EmitIfcConstDecl(cDecl)
 			Next
 	
-				' global
+			' global
 			For Local gDecl:TGlobalDecl = EachIn classDecl.Decls()
 				gDecl.Semant()
 	
@@ -6121,7 +6121,7 @@ End Rem
 			Next
 	
 	
-				' field
+			' field
 			For Local fDecl:TFieldDecl = EachIn classDecl.Decls()
 				fDecl.Semant()
 	
@@ -6135,7 +6135,7 @@ End Rem
 		
 			If Not classDecl.templateSource Then
 
-				If Not (classDecl.attrs & CLASS_INTERFACE) And Not classDecl.IsStruct() And Not classHierarchyHasFunction(classDecl, "New") Then
+				If Not (classDecl.attrs & CLASS_INTERFACE) And Not classDecl.IsStruct() And Not classHierarchyGetFunction(classDecl, "New") Then
 					Emit "-New()=" + Enquote("_" + classDecl.munged + "_New")
 				End If
 
