@@ -3020,13 +3020,17 @@ t:+"NULLNULLNULL"
 		Local scopeIndex:Int
 		Local count:Int
 		For Local decl:TDecl = EachIn block.Decls()
-			If TLocalDecl(decl) Then
-				count :+ 1
-			End If
-			If TGlobalDecl(decl) Then
+			If TLocalDecl(decl) Or TConstDecl(decl) Or TGlobalDecl(decl) Then
 				count :+ 1
 			End If
 		Next
+		If _app.mainFunc = block Then
+			For Local decl:TDecl = EachIn _app.mainModule.Decls()
+				If TConstDecl(decl) Then
+					count :+ 1
+				End If
+			Next
+		End If
 		
 		' a method also includes "Self" reference back to parent Type
 		If TFuncDecl(block) And TFuncDecl(block).IsMethod() Then
@@ -3067,12 +3071,28 @@ t:+"NULLNULLNULL"
 			Emit ".var_address=" + prefix + "o,"
 			Emit "(void (*)(void**))0"
 			Emit "},"
-			scopeIndex:+ 1
+			scopeIndex :+ 1
 		End If
 		
-		' block globals
+		' add module consts
+		If _app.mainFunc = block Then
+			' consts
+			For Local cdecl:TConstDecl = EachIn _app.mainModule.Decls()
+				EmitConstDebugScope(cdecl)
+				scopeIndex :+ 1
+			Next
+		End If
+		
+		' block consts and globals
+		' consts
+		For Local cdecl:TConstDecl = EachIn block.Decls()
+			EmitConstDebugScope(cdecl)
+			scopeIndex :+ 1
+		Next
+		' globals
 		For Local gdecl:TGlobalDecl = EachIn block.Decls()
 			EmitGlobalDebugScope(gdecl, scopeIndex)
+			scopeIndex :+ 1
 		Next
 		
 		' iterate through decls and add as appropriate
@@ -3090,22 +3110,9 @@ t:+"NULLNULLNULL"
 				Emit ".var_address=&" + ldecl.munged + ","
 				Emit "(void (*)(void**))0"
 				Emit "},"
-				
-				Continue
+				scopeIndex :+ 1
 			End If
 		Next
-
-		' add module consts and globals
-		If _app.mainFunc = block Then
-			' consts
-			For Local cdecl:TConstDecl = EachIn _app.mainModule.Decls()
-				EmitConstDebugScope(cdecl)
-			Next
-			' globals
-			For Local gdecl:TGlobalDecl = EachIn _app.mainModule.Decls()
-				EmitGlobalDebugScope(gdecl, scopeIndex)
-			Next
-		End If
 		
 		Emit "{"
 		Emit "BBDEBUGDECL_END,"
@@ -4609,12 +4616,15 @@ End Rem
 	Method DebugScopeDeclCount:Int(classDecl:TClassDecl)
 		Local count:Int = 2 ' "New" counts as first one
 		
-		' but we don't use "New" for interfaces...
+		' but we don't use "New" for interfaces or for extern structs...
 		If classDecl.IsInterface() Or (classDecl.IsExtern() And classDecl.IsStruct()) Then
 			count :- 1
+		' ...or for regular structs, because GetAllFuncDecls returns New() but equalsBuiltInFunc returns False for it
+		Else If classDecl.IsStruct() Then
+			count :- 1
 		End If
-
-		' consts		
+		
+		' consts
 		CountClassConstsDebugScope(classDecl, count)
 
 		' fields
