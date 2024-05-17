@@ -453,7 +453,7 @@ Type TCTranslator Extends TTranslator
 		If decl.IsExtern()    Then modifiers :+ "E"
 		If decl.IsPrivate()   Then modifiers :+ "P"
 		If decl.IsProtected() Then modifiers :+ "R"
-		If modifiers Then modifiers = "|" + modifiers
+		If modifiers Then modifiers = "'" + modifiers
 		Return modifiers
 	End Method
 
@@ -4810,7 +4810,7 @@ End Rem
 		Else
 			Emit "BBDEBUGSCOPE_USERTYPE,"
 		End If
-		Emit Enquote(classDecl.ident + TransDebugMetaData(classDecl.metadata.metadataString)) + ","
+		Emit Enquote(classDecl.ident + TransDebugScopeModifiers(classDecl) + TransDebugMetaData(classDecl.metadata.metadataString)) + ","
 
 		Emit "{"
 		
