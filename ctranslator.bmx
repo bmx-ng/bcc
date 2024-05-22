@@ -1907,7 +1907,9 @@ t:+"NULLNULLNULL"
 		If expr.expr.length = 1 Then
 			If TObjectType(expr.ty) And TObjectType(expr.ty).classdecl.IsStruct() And Not IsPointerType(expr.ty) Then
 				Return "bbArrayNew1DStruct" + Bra(TransArrayType(expr.ty) + ", " + expr.expr[0].Trans() + ", sizeof" + ..
-						Bra(TransObject(TObjectType(expr.ty).classdecl)) + ", _" + TObjectType(expr.ty).classdecl.munged + "_New")
+					Bra(TransObject(TObjectType(expr.ty).classdecl)) + ", _" + TObjectType(expr.ty).classdecl.munged + "_New")
+			Else If TEnumType(expr.ty) Then
+				Return "bbArrayNew1DEnum" + Bra(TransArrayType(expr.ty) + ", " + expr.expr[0].Trans() + ", " + TEnumType(expr.ty).decl.munged + "_BBEnum_impl")
 			Else
 				Return "bbArrayNew1D" + Bra(TransArrayType(expr.ty) + ", " + expr.expr[0].Trans())
 			End If
@@ -1926,6 +1928,8 @@ t:+"NULLNULLNULL"
 			If TObjectType(expr.ty) And TObjectType(expr.ty).classdecl.IsStruct() And Not IsPointerType(expr.ty) Then
 				Return "bbArrayNewStruct" + Bra(TransArrayType(expr.ty) + ", sizeof" + Bra(TransObject(TObjectType(expr.ty).classdecl)) + ..
 					", _" + TObjectType(expr.ty).classdecl.munged + "_New, " + expr.expr.length + ", " + s)
+			Else If TEnumType(expr.ty) Then
+				Return "bbArrayNewEnum" + Bra(TransArrayType(expr.ty) + ", " + TEnumType(expr.ty).decl.munged + "_BBEnum_impl" + ", " + expr.expr.length + ", " + s)
 			Else
 				Return "bbArrayNew" + Bra(TransArrayType(expr.ty) + ", " + expr.expr.length + ", " + s)
 			End If
