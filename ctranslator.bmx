@@ -73,7 +73,7 @@ Type TCTranslator Extends TTranslator
 		If TULongType( ty ) Return "~q" + p + "y~q"
 		If TLongIntType( ty ) Return "~q" + p + "v~q"
 		If TULongIntType( ty ) Return "~q" + p + "e~q"
-		If TSizeTType( ty ) Return "~q" + p + "z~q"
+		If TSizeTType( ty ) Return "~q" + p + "t~q"
 		If TWParamType( ty ) Return "~q" + p + "w~q"
 		If TLParamType( ty ) Return "~q" + p + "x~q"
 		If TStringType( ty ) Return "~q$~q"
