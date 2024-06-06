@@ -189,7 +189,10 @@ Type TCTranslator Extends TTranslator
 	
 	Method TransDebugScopeType$(ty:TType)
 		Local p:String = TransSPointer(ty)
-
+		If ty._flags & TType.T_VAR Then
+			p = "&" + p
+		End If
+		
 		If TByteType( ty ) Return p + "b"
 		If TShortType( ty ) Return p + "s"
 		If TIntType( ty ) Return p + "i"
@@ -207,9 +210,9 @@ Type TCTranslator Extends TTranslator
 		If TFloat128Type( ty ) Return p + "k"
 		If TDouble128Type( ty ) Return p + "m"
 		If TFloat64Type( ty ) Return p + "h"
-		If TStringType( ty ) Return "$"
+		If TStringType( ty ) Return p + "$"
 		If TArrayType( ty ) Then
-			Local s:String = "["
+			Local s:String = p + "["
 			If TArrayType( ty ).isStatic Then
 				s :+ TArrayType( ty ).length
 			Else
@@ -224,7 +227,7 @@ Type TCTranslator Extends TTranslator
 			If TObjectType( ty ).classdecl.IsStruct() Then
 					Return p + "@" + TObjectType(ty).classDecl.ident
 			Else If Not TObjectType( ty ).classdecl.IsExtern()
-				Return ":" + TObjectType( ty ).classDecl.ident
+				Return p + ":" + TObjectType( ty ).classDecl.ident
 			Else
 				If TObjectType( ty ).classdecl.IsInterface() Then
 					Return p + "*#" + TObjectType(ty).classDecl.ident
@@ -235,7 +238,7 @@ Type TCTranslator Extends TTranslator
 		End If
 		If TFunctionPtrType( ty ) Then
 			Local func:TFuncDecl = TFunctionPtrType( ty ).func
-			Local s:String = "("
+			Local s:String = p + "("
 			For Local i:Int = 0 Until func.argDecls.length
 				If i Then
 					s :+ ","
@@ -245,7 +248,7 @@ Type TCTranslator Extends TTranslator
 			Return s + ")" + TransDebugScopeType(func.retType)
 		End If
 		If TEnumType( ty ) Then
-			Return "/" + TEnumType( ty ).decl.ident
+			Return p + "/" + TEnumType( ty ).decl.ident
 		End If
 
 	End Method
