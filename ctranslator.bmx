@@ -557,7 +557,7 @@ Type TCTranslator Extends TTranslator
 					End If
 				End If
 			End If
-			If TFunctionPtrType( ty) Return "(&" + TransNullFunctionErrorWrapper(TFunctionPtrType(ty)) + ")"
+			If TFunctionPtrType( ty) Return "(&brl_blitz_NullFunctionError)" ' todo ??
 			If TEnumType( ty ) Then
 				If TEnumType( ty ).decl.isFlags Then
 					Return "0"
@@ -997,7 +997,7 @@ t:+"NULLNULLNULL"
 					End If
 				Else
 					If TFunctionPtrType(gdecl.ty) Then
-						glob :+ "&" + TransNullFunctionErrorWrapper(TFunctionPtrType(gdecl.ty))
+						glob :+ "&brl_blitz_NullFunctionError"
 					Else
 						glob :+ "0"
 					End If
@@ -3538,45 +3538,6 @@ End Rem
 		EndLocalScope
 	End Method
 
-	Method TransFuncDeclArgs:String(decl:TFuncDecl, argCasts:TStack, odecl:TFuncDecl)
-		Local args:String
-
-		' pass object for method
-		If decl.IsMethod() Then
-			args :+ TransObject(decl.scope, True) + " o"
-		End If
-
-		'Local argCasts:TStack =New TStack
-		For Local i:Int=0 Until decl.argDecls.Length
-			Local arg:TArgDecl=decl.argDecls[i]
-			Local oarg:TArgDecl=odecl.argDecls[i]
-			MungDecl arg, True
-			If args args:+","
-			If Not TFunctionPtrType(oarg.ty) Then
-				If Not odecl.castTo Then
-					args:+TransType( oarg.ty, arg.munged )+" "+arg.munged
-					If TArrayType(oarg.ty) And TArrayType(oarg.ty).isStatic Then
-						args :+ "[" + TArrayType(oarg.ty).length + "]"
-					End If
-				Else
-					args:+ oarg.castTo + " " + arg.munged
-				End If
-			Else
-				If Not odecl.castTo Then
-					args:+TransType( oarg.ty, arg.munged )
-				Else
-					args:+ oarg.castTo
-				End If
-			End If
-			If arg.ty.EqualsType( oarg.ty ) Continue
-			Local t$=arg.munged
-			arg.munged=""
-			MungDecl arg
-			argCasts.Push TransType( arg.ty, arg.munged )+" "+arg.munged+"=static_cast<"+TransType(arg.ty, "")+" >"+Bra(t)+";"
-		Next
-
-		Return args
-	End Method
 
 
 	Method EmitFuncDecl( decl:TFuncDecl, proto:Int = False, classFunc:Int = False )
@@ -3626,10 +3587,42 @@ End Rem
 			odecl=odecl.overrides
 		Wend
 
-		Local argCasts:TStack =New TStack
-
 		'Generate 'args' string and arg casts
-		Local args:String = TransFuncDeclArgs(decl, argCasts, odecl)
+		Local args$
+
+		' pass object for method
+		If decl.IsMethod() Then
+			args :+ TransObject(decl.scope, True) + " o"
+		End If
+
+		Local argCasts:TStack =New TStack
+		For Local i:Int=0 Until decl.argDecls.Length
+			Local arg:TArgDecl=decl.argDecls[i]
+			Local oarg:TArgDecl=odecl.argDecls[i]
+			MungDecl arg, True
+			If args args:+","
+			If Not TFunctionPtrType(oarg.ty) Then
+				If Not odecl.castTo Then
+					args:+TransType( oarg.ty, arg.munged )+" "+arg.munged
+					If TArrayType(oarg.ty) And TArrayType(oarg.ty).isStatic Then
+						args :+ "[" + TArrayType(oarg.ty).length + "]"
+					End If
+				Else
+					args:+ oarg.castTo + " " + arg.munged
+				End If
+			Else
+				If Not odecl.castTo Then
+					args:+TransType( oarg.ty, arg.munged )
+				Else
+					args:+ oarg.castTo
+				End If
+			End If
+			If arg.ty.EqualsType( oarg.ty ) Continue
+			Local t$=arg.munged
+			arg.munged=""
+			MungDecl arg
+			argCasts.Push TransType( arg.ty, arg.munged )+" "+arg.munged+"=static_cast<"+TransType(arg.ty, "")+" >"+Bra(t)+";"
+		Next
 
 		Local id$=decl.munged
 
@@ -5185,7 +5178,7 @@ End Rem
 							fld :+ "= &bbNullObject;"
 						End If
 					Else If TFunctionPtrType(decl.ty) Then
-						fld :+ "= &" + TransNullFunctionErrorWrapper(TFunctionPtrType(decl.ty)) + ";"
+						fld :+ "= &brl_blitz_NullFunctionError;"
 					Else If TStringType(decl.ty) Then
 						fld :+ "= &bbEmptyString;"
 					Else If TArrayType(decl.ty) Then
@@ -5218,27 +5211,6 @@ End Rem
 
 		'
 		Emit "}"
-	End Method
-
-	Method TransNullFunctionErrorWrapper:String(fptr:TFunctionPtrType)
-
-		Local odecl:TFuncDecl=fptr.func
-		While odecl.overrides
-			odecl=odecl.overrides
-		Wend
-		Local argCasts:TStack =New TStack
-
-		Local id:String = fptr.ToString()
-
-		Local args:String = TransFuncDeclArgs(fptr.func, argCasts, odecl)
-
-		_appInstance.MapFuncErrorPtrWrapper(args, fptr)
-
-		Local fp:TFuncErrorPtrWrapper = TFuncErrorPtrWrapper(_app.funcErrorPtrWrappers.ValueForKey(id))
-		fp.used = 1
-
-		Return fp.id
-
 	End Method
 
 	Method EmitClassDeclNewList( classDecl:TClassDecl )
@@ -6955,27 +6927,6 @@ End If
 
 					Emit "};"
 				End If
-			End If
-		Next
-
-		' function ptr wrappers
-		For Local f:String = EachIn app.funcErrorPtrWrappers.Keys()
-			Local wrapper:TFuncErrorPtrWrapper = TFuncErrorPtrWrapper(app.funcErrorPtrWrappers.ValueForKey(f))
-			
-			If wrapper Then
-				Local odecl:TFuncDecl=wrapper.fptr.func
-				While odecl.overrides
-					odecl=odecl.overrides
-				Wend
-
-				Local argCasts:TStack =New TStack
-				
-				Emit "static " + TransType(wrapper.fptr.func.retType, "") + " " + wrapper.id + "(" + TransFuncDeclArgs(wrapper.fptr.func, argCasts, odecl) + ") {"
-				Emit "brl_blitz_NullFunctionError();"
-				If wrapper.fptr.func.retType And Not TVoidType(wrapper.fptr.func.retType) Then
-					Emit "return " + TransValue(wrapper.fptr.func.retType, Null) + ";"
-				End If
-				Emit "}"
 			End If
 		Next
 		
