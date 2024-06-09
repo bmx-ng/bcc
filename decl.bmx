@@ -4265,9 +4265,6 @@ Type TAppDecl Extends TScopeDecl
 	
 	Field stringConsts:TMap = New TMap
 	Field stringConstCount:Int
-
-	Field funcErrorPtrWrappers:TMap = New TMap
-	Field funcErrorPtrWrapperCount:Int
 	
 	Field incbins:TList = New TList
 	Field genIncBinHeader:Int = False
@@ -4450,27 +4447,7 @@ Type TAppDecl Extends TScopeDecl
 			End If
 		Next
 	End Method
-
-	Method MapFuncErrorPtrWrapper(id:String, fptr:TFunctionPtrType)
-
-		Local value:String = fptr.ToString()
-
-		Local fp:TFuncErrorPtrWrapper = TFuncErrorPtrWrapper(funcErrorPtrWrappers.ValueForKey(value))
-		
-		If Not fp Then
-			Local fp:TFuncErrorPtrWrapper = New TFuncErrorPtrWrapper
-			fp.fptr = fptr
-			fp.count = 1
-			fp.id = "_fpw" + funcErrorPtrWrapperCount
-
-			funcErrorPtrWrappers.Insert(value, fp)
-
-			funcErrorPtrWrapperCount:+ 1
-		Else
-			fp.count :+ 1
-		End If
-	End Method
-
+	
 End Type
 
 Type TStringConst
@@ -4479,13 +4456,6 @@ Type TStringConst
 	Field count:Int
 	Field used:Int
 
-End Type
-
-Type TFuncErrorPtrWrapper
-	Field fptr:TFunctionPtrType
-	Field id:String
-	Field count:Int
-	Field used:Int
 End Type
 
 Type TTemplateDets
