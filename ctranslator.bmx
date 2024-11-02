@@ -557,7 +557,7 @@ Type TCTranslator Extends TTranslator
 					End If
 				End If
 			End If
-			If TFunctionPtrType( ty) Return "(&brl_blitz_NullFunctionError)" ' todo ??
+			If TFunctionPtrType( ty) Return Bra(TransType(ty, "*")) + "(&brl_blitz_NullFunctionError)"
 			If TEnumType( ty ) Then
 				If TEnumType( ty ).decl.isFlags Then
 					Return "0"
@@ -1869,8 +1869,7 @@ t:+"NULLNULLNULL"
 
 		If expr.expr.length = 1 Then
 			If TObjectType(expr.ty) And TObjectType(expr.ty).classdecl.IsStruct() And Not IsPointerType(expr.ty) Then
-				Return "bbArrayNew1DStruct" + Bra(TransArrayType(expr.ty) + ", " + expr.expr[0].Trans() + ", sizeof" + ..
-						Bra(TransObject(TObjectType(expr.ty).classdecl)) + ", _" + TObjectType(expr.ty).classdecl.munged + "_New")
+				Return "bbArrayNew1DStruct_" + TObjectType(expr.ty).classdecl.munged + Bra(expr.expr[0].Trans())
 			Else
 				Return "bbArrayNew1D" + Bra(TransArrayType(expr.ty) + ", " + expr.expr[0].Trans())
 			End If
@@ -2717,8 +2716,7 @@ t:+"NULLNULLNULL"
 		If TArrayType(expr.exprType) Then
 			Local ty:TType = TArrayType(expr.exprType).elemType
 			If TObjectType(ty) And TObjectType(ty).classDecl.IsStruct() Then
-				Return "bbArraySliceStruct" + Bra(TransArrayType(ty) + "," + t_expr + "," + t_args + ", sizeof" + ..
-						Bra(TransObject(TObjectType(ty).classdecl)) + ", _" + TObjectType(ty).classdecl.munged + "_New")
+				Return "bbArraySliceStruct_" + TObjectType(ty).classdecl.munged + Bra( t_expr + "," + t_args )
 			Else
 				Return "bbArraySlice" + Bra(TransArrayType(ty) + "," + t_expr + "," + t_args)
 			End If
@@ -4129,6 +4127,10 @@ End Rem
 
 		EmitClassGlobalsProto(classDecl);
 
+		' struct arrays
+		Emit "BBArray *bbArrayNew1DStruct_" + classDecl.munged + "(int length);"
+		Emit "BBArray *bbArraySliceStruct_" + classDecl.munged + "(BBArray *inarr, int beg, int end);"
+
 	End Method
 
 	Method classHasFunction:Int(classDecl:TClassDecl, func:String)
@@ -4600,6 +4602,11 @@ End Rem
 	
 			reserved = ",New,Delete,ToString,Compare,SendMessage,_reserved1_,_reserved2_,_reserved3_,".ToLower()
 
+			If (classDecl.attrs & CLASS_STRUCT) Then
+				Emit "BBARRAYNEW1DSTRUCT_FUNC" + Bra(classid + "," + classid + ", _" + classid + "_New" + ", " + EnQuote("@" + classDecl.ident))
+				Emit "BBARRAYSLICESTRUCT_FUNC" + Bra(classid + "," + classid + ", _" + classid + "_New" + ", " + EnQuote("@" + classDecl.ident))
+			End If
+
 		End If
 
 			
@@ -4681,6 +4688,8 @@ End Rem
 						For Local func:TFuncDecl = EachIn ifc.GetImplementedFuncs()
 						
 							If func.IsMethod() Then
+
+								Local cast:String = Bra( func.munged + "_m" )
 							
 								For Local f:TFuncDecl = EachIn fdecls
 
@@ -4695,7 +4704,7 @@ End Rem
 										
 										If Not dups.ValueForKey(id) Then
 
-											Emit "_" + f.munged + ","
+											Emit cast + "_" + f.munged + ","
 										
 											dups.Insert(id, "")
 										End If
