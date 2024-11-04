@@ -569,14 +569,18 @@ Type TCTranslator Extends TTranslator
 		InternalErr "TCTranslator.TransValue"
 	End Method
 	
-	Method TransArgs$( args:TExpr[],decl:TFuncDecl, objParam:String = Null )
+	Method TransArgs$( args:TExpr[],decl:TFuncDecl, objParam:String = Null, objectNew:Int = False )
 'If decl.ident="AddS" DebugStop
 
 		Local t$
 		If objParam And (decl.IsMethod() Or decl.isCtor()) And ((Not decl.IsExtern()) Or (decl.IsExtern() And TClassDecl(decl.scope) And Not TClassDecl(decl.scope).IsStruct())) Then
 			' object cast to match param type
-			If TClassDecl(decl.scope) Then
-				t :+ Bra(TransObject(TClassDecl(decl.scope).GetLatestFuncDecl(decl).scope, TClassDecl(decl.scope).IsStruct()))
+			If objectNew Then
+				t :+ Bra("BBClass *")
+			Else
+				If TClassDecl(decl.scope) Then
+					t :+ Bra(TransObject(TClassDecl(decl.scope).GetLatestFuncDecl(decl).scope, TClassDecl(decl.scope).IsStruct()))
+				End If
 			End If
 			t:+ objParam
 		End If
@@ -1850,12 +1854,12 @@ t:+"NULLNULLNULL"
 				End If
 			Else
 				If ClassHasObjectField(expr.classDecl) And Not expr.classDecl.IsStruct() Then
-					t = "_" + ctorMunged + "_ObjectNew" + TransArgs( expr.args,expr.ctor, "&" + expr.classDecl.actual.munged )
+					t = "_" + ctorMunged + "_ObjectNew" + TransArgs( expr.args,expr.ctor, "&" + expr.classDecl.actual.munged, True )
 				Else
 					If expr.classDecl.IsStruct() Then
 						t = ctorMunged + "_ObjectNew" + TransArgs( expr.args,expr.ctor)
 					Else
-						t = "_" + ctorMunged + "_ObjectNew" + TransArgs( expr.args,expr.ctor, "&" + expr.classDecl.actual.munged)
+						t = "_" + ctorMunged + "_ObjectNew" + TransArgs( expr.args,expr.ctor, "&" + expr.classDecl.actual.munged, True)
 					End If
 				End If
 			End If
