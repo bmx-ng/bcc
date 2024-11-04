@@ -878,7 +878,7 @@ op = mapSymbol(op)
 	
 	Method TransIntrinsicExpr$( decl:TDecl,expr:TExpr,args:TExpr[]=Null ) Abstract
 	
-	Method TransArgs$( args:TExpr[],decl:TFuncDecl, objParam:String = Null ) Abstract
+	Method TransArgs$( args:TExpr[],decl:TFuncDecl, objParam:String = Null, objectNew:Int = False ) Abstract
 
 	Method EmitDebugEnterScope(block:TBlockDecl) Abstract
 	
