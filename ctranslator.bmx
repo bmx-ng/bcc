@@ -1969,7 +1969,7 @@ t:+"NULLNULLNULL"
 
 			If TArrayType(src) Then
 				If TArrayType(src).isStatic Then
-					Return Bra("&" + Bra(t))
+					Return Bra(t)
 				Else
 					Return Bra(Bra(TransType(dst, "")) + "BBARRAYDATA(" + t + ",1)")
 				End If
@@ -2425,12 +2425,12 @@ t:+"NULLNULLNULL"
 					' if we are casting to Object[], don't actually cast.
 					Return Bra(t)
 				Else
-					Return "bbArrayCastFromObject" + Bra(t + "," + TransArrayType(TArrayType( dst ).elemType))
+					Return "bbArrayCastFromObject" + Bra("(BBOBJECT)" + t + "," + TransArrayType(TArrayType( dst ).elemType))
 				End If
 			End If
 			
 			If TObjectType( src) And (TObjectType( src ).classDecl.ident = "___Array" Or TObjectType( src ).classDecl.ident = "Object") Then
-				Return "bbArrayCastFromObject" + Bra(t + "," + TransArrayType(TArrayType( dst ).elemType))
+				Return "bbArrayCastFromObject" + Bra("(BBOBJECT)" + t + "," + TransArrayType(TArrayType( dst ).elemType))
 			End If
 		Else If TObjectType( dst )
 			'If TArrayType( src ) Return Bra("(BBOBJECT)"+t)
@@ -3950,7 +3950,11 @@ End Rem
 		Emit "unsigned int instance_size;"
 		Emit "void      (*ctor)( BBOBJECT o );"
 		Emit "void      (*dtor)( BBOBJECT o );"
-		Emit "BBSTRING  (*ToString)( BBOBJECT x );"
+		If classHierarchyHasFunction(classDecl, "ToString") Then
+			Emit "BBSTRING  (*ToString)( struct " + classidForFunction(classDecl, "ToString") + "_obj* x );"
+		Else
+			Emit "BBSTRING  (*ToString)( BBOBJECT x );"
+		End If
 		Emit "int       (*Compare)( BBOBJECT x,BBOBJECT y );"
 		Emit "BBOBJECT  (*SendMessage)( BBOBJECT o,BBOBJECT m,BBOBJECT s );"
 		Emit "BBINTERFACETABLE itable;"
@@ -4750,7 +4754,7 @@ End Rem
 			End If
 	
 			If classHierarchyHasFunction(classDecl, "ToString") Then
-				Emit "(BBSTRING (*)(BBOBJECT))_" + classidForFunction(classDecl, "ToString") + "_ToString,"
+				Emit "_" + classidForFunction(classDecl, "ToString") + "_ToString,"
 			Else
 				Emit "bbObjectToString,"
 			End If
