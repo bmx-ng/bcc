@@ -3955,8 +3955,16 @@ End Rem
 		Else
 			Emit "BBSTRING  (*ToString)( BBOBJECT x );"
 		End If
-		Emit "int       (*Compare)( BBOBJECT x,BBOBJECT y );"
-		Emit "BBOBJECT  (*SendMessage)( BBOBJECT o,BBOBJECT m,BBOBJECT s );"
+		If classHierarchyHasFunction(classDecl, "Compare") Then
+			Emit "BBINT     (*Compare)( struct " + classidForFunction(classDecl, "Compare") + "_obj* x, BBOBJECT y );"
+		Else
+			Emit "int       (*Compare)( BBOBJECT x,BBOBJECT y );"
+		End If
+		If classHierarchyHasFunction(classDecl, "SendMessage") Then
+			Emit "BBOBJECT  (*SendMessage)( struct " + classidForFunction(classDecl, "SendMessage") + "_obj* x, BBOBJECT m, BBOBJECT s );"
+		Else
+			Emit "BBOBJECT  (*SendMessage)( BBOBJECT o,BBOBJECT m,BBOBJECT s );"
+		End If
 		Emit "BBINTERFACETABLE itable;"
 		Emit "void*     extra;"
 		Emit "unsigned int obj_size;"
@@ -4760,13 +4768,13 @@ End Rem
 			End If
 	
 			If classHierarchyHasFunction(classDecl, "Compare") Then
-				Emit "(int (*)(BBOBJECT, BBOBJECT))_" + classidForFunction(classDecl, "Compare") + "_Compare,"
+				Emit "_" + classidForFunction(classDecl, "Compare") + "_Compare,"
 			Else
 				Emit "bbObjectCompare,"
 			End If
 	
 			If classHierarchyHasFunction(classDecl, "SendMessage") Then
-				Emit "(BBOBJECT (*)(BBOBJECT, BBOBJECT, BBOBJECT))_" + classidForFunction(classDecl, "SendMessage") + "_SendMessage,"
+				Emit "_" + classidForFunction(classDecl, "SendMessage") + "_SendMessage,"
 			Else
 				Emit "bbObjectSendMessage,"
 			End If
