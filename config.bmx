@@ -26,7 +26,6 @@ SuperStrict
 Import BRL.LinkedList
 Import BRL.Map
 Import BRL.FileSystem
-Import Pub.zlib
 Import BRL.Math
 
 Import "options.bmx"
@@ -35,6 +34,7 @@ Import "base64.bmx"
 Import "enums.c"
 Import "hash.c"
 Import "math.c"
+Import "zlib/zlib.bmx"
 
 ' debugging help
 Const DEBUG:Int = False
