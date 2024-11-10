@@ -829,7 +829,7 @@ t:+"NULLNULLNULL"
 		Local initTrans:String
 		If outputInit Then
 			Local cast:String
-			If TObjectType(decl.ty) And Not TObjectType(decl.ty).classDecl.IsStruct() Then
+			If (TObjectType(decl.ty) And Not TObjectType(decl.ty).classDecl.IsStruct()) Or TFunctionPtrType(decl.ty) Then
 				cast = Bra(TransType(decl.ty, ""))
 			End If
 		
