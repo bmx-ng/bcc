@@ -557,7 +557,7 @@ Type TCTranslator Extends TTranslator
 					End If
 				End If
 			End If
-			If TFunctionPtrType( ty) Return Bra(TransType(ty, "*")) + "(&brl_blitz_NullFunctionError)"
+			If TFunctionPtrType( ty) Return Bra(TransType(ty, "")) + "(&brl_blitz_NullFunctionError)"
 			If TEnumType( ty ) Then
 				If TEnumType( ty ).decl.isFlags Then
 					Return "0"
@@ -593,7 +593,7 @@ Type TCTranslator Extends TTranslator
 				Local arg:TExpr = args[i]
 				
 				' object cast to match param type
-				If TObjectType(ty) And Not TObjectType(ty).classDecl.IsStruct() Then
+				If TObjectType(ty) And Not TObjectType(ty).classDecl.IsStruct() And Not argDecl.castTo Then
 					Local fdecl:TFuncDecl = decl
 					If TClassDecl(decl.scope) Then
 						fdecl = TClassDecl(decl.scope).GetOriginalFuncDecl(decl)
@@ -671,6 +671,12 @@ Type TCTranslator Extends TTranslator
 						Continue
 					End If
 
+					If TCastExpr(arg) And TVarExpr(TCastExpr(arg).expr) Then
+						t:+ varRef
+						t:+ TransCast(TFunctionPtrType(ty)) + Bra(arg.Trans())
+						Continue
+					End If
+
 					' Object -> Byte Ptr
 					If IsPointerType(ty, TType.T_BYTE) And TObjectType(arg.exprType) Then
 						t:+ varRef + Bra("bbObjectToFieldOffset" + Bra("(BBObject*)" + arg.Trans()))
@@ -743,6 +749,30 @@ t:+"NULLNULLNULL"
 		Next
 
 		Return Bra(t)
+	End Method
+
+	' translate to C cast
+	Method TransCast:String(funcPtr:TFunctionPtrType)
+		If Not funcPtr Then
+			Return ""
+		End If
+
+		Local s:String = "("
+		s:+ TransType(funcPtr.func.retType, "")
+		s:+ "(*)("
+
+		For Local i:Int=0 Until funcPtr.func.argDecls.Length
+			If i Then
+				s:+ ","
+			End If
+
+			s:+ TransType(funcPtr.func.argDecls[i].ty, "")
+
+		Next
+
+		s:+ ")"
+		s:+ ")"
+		Return s
 	End Method
 
 	Method TransArgsTypes$( args:TExpr[],declArgTypes:TType[])
@@ -3152,11 +3182,18 @@ t:+"NULLNULLNULL"
 				s :+ lhs+TransAssignOp( stmt.op )+cast+rhs
 			End If
 		Else If (TFunctionPtrType(stmt.lhs.exprType) <> Null Or IsPointerType(stmt.lhs.exprType, TType.T_BYTE)) And TInvokeExpr(stmt.rhs) And Not TInvokeExpr(stmt.rhs).invokedWithBraces Then
+
+			If Not cast And TFunctionPtrType(stmt.lhs.exprType) Then
+				Local fp:TFunctionPtrType = TFunctionPtrType(stmt.lhs.exprType)
+				If fp.func.cdets Then
+					cast = fp.func.cdets.TransCast()
+				End If
+			End If
 			rhs = TInvokeExpr(stmt.rhs).decl.munged
 			s :+ lhs+TransAssignOp( stmt.op )+cast+rhs
 		Else If TObjectType(stmt.lhs.exprType) And TObjectType(stmt.lhs.exprType).classDecl.IsStruct() And rhs = "&bbNullObject" Then
 			s :+ lhs+TransAssignOp( stmt.op )+cast+"{}"
-		Else 
+		Else
 			s :+ lhs+TransAssignOp( stmt.op )+cast+rhs
 		End If
 
