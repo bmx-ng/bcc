@@ -1011,9 +1011,9 @@ t:+"NULLNULLNULL"
 				If gdecl.init Then
 					If TFunctionPtrType(gdecl.ty) Then
 						If TInvokeExpr(gdecl.init) And Not TInvokeExpr(gdecl.init).invokedWithBraces Then
-							glob :+ TInvokeExpr(gdecl.init).decl.munged
+							glob :+ TransCast(TFunctionPtrType(gdecl.ty)) + TInvokeExpr(gdecl.init).decl.munged
 						Else
-							glob :+ gdecl.init.Trans()
+							glob :+ TransCast(TFunctionPtrType(gdecl.ty)) + gdecl.init.Trans()
 						End If
 					Else If Not TConstExpr(gdecl.init) And Not (gdecl.attrs & DECL_INITONLY) Then
 						' for non const, we need to add an initialiser
