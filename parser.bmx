@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2023 Bruce A Henderson
+' Copyright (c) 2013-2024 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -2703,6 +2703,7 @@ End Rem
 					End If
 					
 					If cdets Then
+						TFunctionPtrType(ty).func.cdets = cdets
 						TFunctionPtrType(ty).func.castTo = cdets.retType
 						If cdets.noGen Then
 							TFunctionPtrType(ty).func.noCastGen = True
@@ -4826,13 +4827,3 @@ Function EvalS$( source$,ty:TType )
 	
 	Return val
 End Function
-
-Type TCastDets
-
-	Field name:String
-	Field retType:String
-	Field noGen:Int
-	Field args:String[0]
-	Field api:String
-	
-End Type

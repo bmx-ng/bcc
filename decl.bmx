@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2023 Bruce A Henderson
+' Copyright (c) 2013-2024 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -1930,6 +1930,7 @@ Type TFuncDecl Extends TBlockDecl
 	
 	Field castTo:String
 	Field noCastGen:Int
+	Field cdets:TCastDets
 	
 	Field maybeFunctionPtr:Int
 	
@@ -4483,6 +4484,32 @@ Type TGenProcessor Abstract
 	Global processor:TGenProcessor
 
 	Method ParseGeneric:Object(templ:TTemplateRecord, dets:TTemplateDets)
+	End Method
+	
+End Type
+
+Type TCastDets
+
+	Field name:String
+	Field retType:String
+	Field noGen:Int
+	Field args:String[0]
+	Field api:String
+
+	Method TransCast:String()
+		Local s:String = "(" + retType + " (*)"
+
+		s :+ "("
+		For Local i:Int = 0 Until args.length
+			s :+ args[i]
+			If i < args.length - 1 Then
+				s :+ ","
+			End If
+		Next
+		s :+ ")"
+
+		s :+ ")"
+		Return s
 	End Method
 	
 End Type

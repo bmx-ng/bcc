@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2023 Bruce A Henderson
+' Copyright (c) 2013-2024 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -26,7 +26,6 @@ SuperStrict
 Import BRL.LinkedList
 Import BRL.Map
 Import BRL.FileSystem
-Import Pub.zlib
 Import BRL.Math
 
 Import "options.bmx"
@@ -35,6 +34,7 @@ Import "base64.bmx"
 Import "enums.c"
 Import "hash.c"
 Import "math.c"
+Import "zlib/zlib.bmx"
 
 ' debugging help
 Const DEBUG:Int = False
@@ -623,15 +623,13 @@ Type TTemplateRecord
 ?Not bmxng
 		Local slen:Int = strlen_(s)
 ?bmxng
-		Local slen:UInt = strlen_(s)
+		Local slen:ULongInt = strlen_(s)
 ?
 
 ?Not bmxng		
 		Local dlen:Int = slen + 12
-?bmxng And (win32 Or ptr32)
-		Local dlen:UInt = slen + 12
-?bmxng And ptr64 And Not win32
-		Local dlen:ULong = slen + 12
+?bmxng
+		Local dlen:ULongInt = slen + 12
 ?
 		Local data:Byte[dlen]
 		
@@ -651,10 +649,8 @@ Type TTemplateRecord
 		
 ?Not bmxng		
 		Local dlen:Int = size + 1
-?bmxng And (win32 Or ptr32)
-		Local dlen:UInt = size + 1
-?bmxng And ptr64 And Not win32
-		Local dlen:ULong = size + 1
+?bmxng
+		Local dlen:ULongInt = size + 1
 ?
 		Local data:Byte[dlen]
 		
@@ -662,7 +658,7 @@ Type TTemplateRecord
 ?Not bmxng
 		uncompress(data, dlen, s, s.length)
 ?bmxng
-		uncompress(data, dlen, s, UInt(s.length))
+		uncompress(data, dlen, s, ULongInt(s.length))
 ?	
 		Return New TTemplateRecord.Create(start, file, String.FromUTF8String(data))
 	End Function

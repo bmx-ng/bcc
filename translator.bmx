@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2023 Bruce A Henderson
+' Copyright (c) 2013-2024 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -878,7 +878,7 @@ op = mapSymbol(op)
 	
 	Method TransIntrinsicExpr$( decl:TDecl,expr:TExpr,args:TExpr[]=Null ) Abstract
 	
-	Method TransArgs$( args:TExpr[],decl:TFuncDecl, objParam:String = Null ) Abstract
+	Method TransArgs$( args:TExpr[],decl:TFuncDecl, objParam:String = Null, objectNew:Int = False ) Abstract
 
 	Method EmitDebugEnterScope(block:TBlockDecl) Abstract
 	
