@@ -17,6 +17,7 @@ Import "trees.c"
 Import "uncompr.c"
 Import "zutil.c"
 
+? BmxNG
 Extern
 
 Rem
@@ -35,3 +36,24 @@ end rem
 Function uncompress:Int( dest:Byte Ptr,dest_len:ULongInt Var,source:Byte Ptr,source_len:ULongInt )="int uncompress(void *, unsigned long *, const void *, unsigned long)"
 
 End Extern
+
+? Not BmxNG
+Extern
+
+Rem
+bbdoc: Compress a block of data at default compression level
+End Rem
+Function compress:Int( dest:Byte Ptr,dest_len:Int Var,source:Byte Ptr,source_len:Int )
+
+Rem
+bbdoc: Compress a block of data at specified compression level
+end rem
+Function compress2:Int( dest:Byte Ptr,dest_len:Int Var,source:Byte Ptr,source_len:Int,level:Int )
+
+Rem
+bbdoc: Uncompress a block of data
+end rem
+Function uncompress:Int( dest:Byte Ptr,dest_len:Int Var,source:Byte Ptr,source_len:Int )
+
+End Extern
+?

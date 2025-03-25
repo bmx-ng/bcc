@@ -7159,15 +7159,15 @@ End If
 
 		' strings
 		' generate sized structs
-		Local sizes:TIntMap = New TIntMap
+		Local sizes:TMap = New TMap
 		For Local s:String = EachIn app.stringConsts.Keys()
 			If s Then
 				Local key:TStringConst = TStringConst(app.stringConsts.ValueForKey(s))
 
 				If key.used > 0 Then
-					If Not sizes.Contains(s.length) Then
+					If Not sizes.Contains(String s.length) Then
 						Emit "struct BBString_" + s.length + "{BBClass_String* clas;BBULONG hash;int length;BBChar buf[" + s.length + "];};"
-						sizes.Insert(s.length, "")
+						sizes.Insert(String s.length, "")
 					End If
 				End If
 			End If

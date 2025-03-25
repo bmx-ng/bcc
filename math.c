@@ -159,7 +159,12 @@ BBString * bmx_bitwise_not_longint(BBString * value, int size) {
 		int v = bbStringToInt(value);
 		return bbStringFromInt(~v);
 	} else { // 8
+#ifdef BMX_NG
 		BBInt64 v = bbStringToLong(value);
+#else
+		BBInt64 v;
+		bbStringToLong(value, &v);
+#endif
 		return bbStringFromLong(~v);
 	}
 }
@@ -335,8 +340,15 @@ BBString * bmx_binarymathexpr_longint(enum binaryOps op, BBString * slhs, BBStri
 		}
 		return bbStringFromInt(res);
 	} else { // 8
+#ifdef BMX_NG
 		BBInt64 lhs = bbStringToLong(slhs);
 		BBInt64 rhs = bbStringToLong(srhs);
+#else
+		BBInt64 lhs;
+		bbStringToLong(slhs, &lhs);
+		BBInt64 rhs;
+		bbStringToLong(srhs, &rhs);
+#endif
 		BBInt64 res = 0;
 		switch (op) {
 			case OP_MUL:
