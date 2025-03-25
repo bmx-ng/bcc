@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2019 Bruce A Henderson
+' Copyright (c) 2013-2024 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -39,6 +39,7 @@ Type TTranslator
 	
 	'Munging needs a big cleanup!
 	
+	Field globalMungScope:TMap = New TMap
 	Field mungScope:TMap=New TMap'<TDecl>
 	Field mungStack:TStack=New TStack'< StringMap<TDecl> >
 	Field funcMungs:TMap=New TMap'<FuncDeclList>
@@ -57,6 +58,9 @@ Type TTranslator
 	Field debugOut:String
 	
 	Field processingReturnStatement:Int
+
+	Field coverageFileInfo:TMap = New TMap
+	Field coverageFunctionFileInfo:TMap = New TMap
 
 	Method PushVarScope()
 		varStack.Push customVarStack
@@ -202,7 +206,7 @@ Type TTranslator
 		Next
 	End Method
 
-	Method TransManglePointer$( ty:TType )
+	Function TransManglePointer$( ty:TType )
 		Local p:String
 		
 		If ty
@@ -222,9 +226,9 @@ Type TTranslator
 		End If
 		
 		Return p
-	End Method
+	End Function
 
-	Method TransMangleType:String(ty:TType)
+	Function TransMangleType:String(ty:TType)
 		Local p:String = TransManglePointer(ty)
 
 		If TVoidType( ty ) Return "v"
@@ -244,6 +248,8 @@ Type TTranslator
 		If TStringType( ty ) Return p + "S"
 		If TWParamType( ty ) Return p + "W"
 		If TLParamType( ty ) Return p + "L"
+		If TLongIntType( ty ) Return p + "g"
+		If TULongIntType( ty ) Return p + "G"
 		If TArrayType( ty ) Then
 			Return p + "a" + TransMangleType(TArrayType( ty ).elemType)
 		End If
@@ -271,7 +277,7 @@ Type TTranslator
 		If TEnumType( ty ) Return p + "e" + TEnumType( ty ).decl.ident
 		
 		Err "Unsupported type for name mangling : " + ty.ToString()
-	End Method
+	End Function
 
 	Method MangleMethod:String(fdecl:TFuncDecl)
 		If (fdecl.IsMethod() And Not fdecl.ClassScope().IsStruct())Or fdecl.IsCtor() Then
@@ -289,7 +295,7 @@ Type TTranslator
 		End If
 	End Method
 	
-	Method MangleMethodArgs:String(fdecl:TFuncDecl)
+	Function MangleMethodArgs:String(fdecl:TFuncDecl)
 		Local s:String
 		For Local arg:TArgDecl = EachIn fdecl.argDecls
 			If Not s Then
@@ -298,7 +304,7 @@ Type TTranslator
 			s :+ TransMangleType(arg.ty)
 		Next
 		Return s
-	End Method
+	End Function
 
 	Method equalsTorFunc:Int(classDecl:TClassDecl, func:TFuncDecl)
 		If func.IdentLower() = "new" Or func.IdentLower() = "delete" Then
@@ -336,7 +342,7 @@ Type TTranslator
 	End Method
 
 	Method equalsIfcBuiltInFunc:Int(classDecl:TClassDecl, func:TFuncDecl, checked:Int = False)
-		If checked Or func.IdentLower() = "new" Or func.IdentLower() = "delete" Then
+		If checked Or func.IdentLower() = "delete" Then
 			If classDecl.munged = "bbObjectClass" Then
 				For Local decl:TFuncDecl = EachIn classDecl.Decls()
 					If Not decl.IsSemanted() Then
@@ -361,7 +367,7 @@ Type TTranslator
 		Local funcs:TFuncDeclList=TFuncDeclList(funcMungs.ValueForKey( fdecl.ident ))
 		If funcs
 			For Local tdecl:TFuncDecl=EachIn funcs
-				If fdecl.EqualsArgs( tdecl ) And fdecl.scope = tdecl.scope
+				If fdecl.EqualsArgs( tdecl, True ) And fdecl.scope = tdecl.scope
 					fdecl.munged=tdecl.munged
 					Return
 				EndIf
@@ -508,7 +514,7 @@ Type TTranslator
 			munged = id
 		Else
 
-			If TModuleDecl( decl.scope )
+			If TModuleDecl( decl.scope ) Or (TGlobalDecl(decl) And TModuleDecl(TGlobalDecl(decl).mscope))
 				munged=decl.ModuleScope().munged+"_"+id
 				
 				If TClassDecl(decl) And TClassDecl(decl).instArgs Then
@@ -554,9 +560,13 @@ Type TTranslator
 		'sanitize non-mung-able characters
 		munged = TStringHelper.Sanitize(munged)
 
+		Local scopeSearch:Int = 0
+		If fdecl And Not fdecl.ClassScope() And Not (fdecl.attrs & FUNC_PTR)
+			scopeSearch = 1
+		End If
 
 		'add an increasing number to identifier if already used  
-		If mungScope.Contains( munged )
+		If MungScopeContains( munged, scopeSearch )
 			If TFuncDecl(decl) And TFuncDecl(decl).exported Then
 				Err "Cannot export duplicate identifiers : " + decl.ident 
 			End If
@@ -564,11 +574,14 @@ Type TTranslator
 			Local i:Int=1
 			Repeat
 				i:+1
-			Until Not mungScope.Contains( munged + i )
+			Until Not MungScopeContains( munged + i, scopeSearch )
 			munged :+ i
 		EndIf
 
 		mungScope.Insert(munged, decl)
+		If scopeSearch Then
+			globalMungScope.Insert(munged, decl)
+		End If
 		decl.munged=munged
 		
 		' a function pointers' real function is stored in "func" - need to set its munged to match the parent.
@@ -578,6 +591,14 @@ Type TTranslator
 			End If
 		End If
 		
+	End Method
+	
+	Method MungScopeContains:Int( munged:String, scopeSearch:Int )
+		If Not scopeSearch Then
+			Return mungScope.Contains( munged )
+		End If
+		
+		Return globalMungScope.Contains( munged )
 	End Method
 
 Rem
@@ -799,6 +820,7 @@ op = mapSymbol(op)
 		MungDecl tmp
 		Emit TransLocalDecl( tmp,expr, True, init )+";"
 
+		EmitCoverage(_errInfo)
 		EmitGDBDebug(_errInfo)
 		
 		Return tmp.munged
@@ -856,7 +878,7 @@ op = mapSymbol(op)
 	
 	Method TransIntrinsicExpr$( decl:TDecl,expr:TExpr,args:TExpr[]=Null ) Abstract
 	
-	Method TransArgs$( args:TExpr[],decl:TFuncDecl, objParam:String = Null ) Abstract
+	Method TransArgs$( args:TExpr[],decl:TFuncDecl, objParam:String = Null, objectNew:Int = False ) Abstract
 
 	Method EmitDebugEnterScope(block:TBlockDecl) Abstract
 	
@@ -1050,6 +1072,12 @@ End Rem
 			expr.args=expr.CastArgs( expr.args,TFuncDecl(decl) )
 			Return expr.expr.Trans() + TransArgs(expr.args, TFuncDecl(decl))
 		End If
+
+		If TInvokeMemberExpr(expr.expr) Then
+			Local decl:TFuncDecl = TFuncDecl(TInvokeMemberExpr(expr.expr).decl.actual)
+			decl.Semant()
+			Return expr.expr.Trans()
+		End If
 		
 		InternalErr "TTranslator.TransFuncCallExpr"
 	End Method
@@ -1090,8 +1118,8 @@ End Rem
 					Local s:String
 					
 					' cast to function return type
-					If TObjectType(stmt.fRetType) Then
-						s :+ Bra(transObject(TObjectType(stmt.fRetType).classDecl))
+					If TObjectType(stmt.fRetType) And Not TObjectType(stmt.fRetType).classDecl.IsStruct() Then
+						s :+ Bra(TransType(stmt.fRetType, ""))
 					End If
 
 					s :+ stmt.expr.Trans()
@@ -1321,6 +1349,8 @@ End Rem
 		If TChrExpr(expr) Return TransChrExpr(TChrExpr(expr))
 		If TLenExpr(expr) Return TransLenExpr(TLenExpr(expr))
 		If TSizeOfExpr(expr) Return TransSizeOfExpr(TSizeOfExpr(expr))
+		If TStackAllocExpr(expr) Return TransStackAllocExpr(TStackAllocExpr(expr))
+		If TFieldOffsetExpr(expr) Return TransFieldOffsetExpr(TFieldOffsetExpr(expr))
 		Err "TODO : TransBuiltinExpr()"
 	End Method
 	
@@ -1334,6 +1364,12 @@ End Rem
 	End Method
 
 	Method TransSizeOfExpr:String(expr:TSizeOfExpr)
+	End Method
+
+	Method TransStackAllocExpr:String(expr:TStackAllocExpr)
+	End Method
+
+	Method TransFieldOffsetExpr:String(expr:TFieldOffsetExpr)
 	End Method
 	
 	Method TransIdentTypeExpr:String(expr:TIdentTypeExpr) Abstract
@@ -1395,9 +1431,11 @@ End Rem
 	Method JoinLines$( file:String )
 		Local _lines:TStringList = TStringList(outputFiles.ValueForKey(file))
 		
-		Local code$=_lines.Join( "~n" )
-		_lines.Clear
-		Return code
+		If _lines Then
+			Local code$=_lines.Join( "~n" )
+			_lines.Clear
+			Return code
+		End If
 	End Method
 	
 	'returns and resets unreachable status
@@ -1455,6 +1493,7 @@ End Rem
 			
 			End If
 
+			EmitCoverage(stmt)
 			EmitGDBDebug(stmt)
 			
 			If TReturnStmt(stmt) And Not tryStack.IsEmpty() Then
@@ -1941,7 +1980,7 @@ End Rem
 		Local infoArray:String[] = info.Split(";")
 
 		Local dbg:String = "struct BBDebugStm __stmt_" + count + " = {"
-		dbg :+ Enquote(infoArray[0]) + ", "
+		dbg :+ GenHash(infoArray[0]) + ", "
 		dbg :+ infoArray[1] + ", "
 		dbg :+ infoArray[2] + "};"
 		Emit dbg
@@ -1967,10 +2006,85 @@ End Rem
 			End If
 		End If
 	End Method
-	
+
+	Method EmitCoverage(obj:Object)
+		If opt_coverage Then
+			If TStmt(obj) Then
+				Local stmt:TStmt = TStmt(obj)
+				Local infoArray:String[] = stmt.errInfo[1..stmt.errInfo.length-1].Split(";")
+				If Not stmt.generated Then
+					GenerateCoverageLine(infoArray)
+				End If
+			Else If TDecl(obj) Then
+				Local decl:TDecl = TDecl(obj)
+				Local infoArray:String[] = decl.errInfo[1..decl.errInfo.length-1].Split(";")
+				GenerateCoverageLine(infoArray)
+			Else If String(obj) Then
+				Local errInfo:String = String(obj)
+				Local infoArray:String[] = errInfo[1..errInfo.length-1].Split(";")
+				GenerateCoverageLine(infoArray)
+			End If
+		End If
+	End Method
+
+	Method GenerateCoverageLine(infoArray:String[])
+		Emit "bbCoverageUpdateLineInfo(" + Enquote(infoArray[0]) + ", " + infoArray[1] + ");"
+
+		Local filename:String = infoArray[0]
+		Local line:Int = Int(infoArray[1])
+		Local lineInfo:TCoverageLineInfo = TCoverageLineInfo(coverageFileInfo.ValueForKey(filename))
+		If Not lineInfo Then
+			lineInfo = New TCoverageLineInfo
+			lineInfo.lines = New Int[0]
+			coverageFileInfo.Insert(filename, lineInfo)
+		End If
+		' Don't add duplicate lines
+		If Not lineInfo.lines.Length Or lineInfo.lines[lineInfo.lines.Length-1] <> line Then
+			lineInfo.lines :+ [line]
+		End If
+	End Method
+
+	Method EmitCoverageFunction(decl:TFuncDecl)
+		If opt_coverage Then
+			Local infoArray:String[] = decl.errInfo[1..decl.errInfo.length-1].Split(";")
+			GenerateCoverageFunctionLine(infoArray, decl.ident)
+		End If
+	End Method
+
+	Method GenerateCoverageFunctionLine(infoArray:String[], name:String)
+		Emit "bbCoverageUpdateFunctionLineInfo(" + Enquote(infoArray[0]) + ", " + Enquote(name) + ", " + infoArray[1] + ");"
+
+		Local filename:String = infoArray[0]
+		Local line:Int = Int(infoArray[1])
+		Local funcInfo:TCoverageFunctionLineInfo = TCoverageFunctionLineInfo(coverageFunctionFileInfo.ValueForKey(filename))
+		If Not funcInfo Then
+			funcInfo = New TCoverageFunctionLineInfo
+			coverageFunctionFileInfo.Insert(filename, funcInfo)
+		End If
+
+		Local func:TCoverageFunctionInfo = New TCoverageFunctionInfo
+		func.name = name
+		func.line = line
+
+		funcInfo.funcs :+ [func]
+	End Method
+
 	Method EmitClassDeclDeleteDtor( classDecl:TClassDecl )
 	End Method
 	
+End Type
+
+Type TCoverageLineInfo
+	Field lines:Int[]
+End Type
+
+Type TCoverageFunctionLineInfo
+	Field funcs:TCoverageFunctionInfo[]
+End Type
+
+Type TCoverageFunctionInfo
+	Field name:String
+	Field line:Int
 End Type
 
 Type TTryBreakCheck

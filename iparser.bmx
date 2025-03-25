@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2019 Bruce A Henderson
+' Copyright (c) 2013-2024 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 ' 
@@ -42,7 +42,7 @@ Type TIParser
 	Field _tokeSpace:Int
 	Field _tokerStack:TList=New TList'<TToker>
 
-	Method ParseModuleImport:Int(pmod:TModuleDecl, modpath:String, path:String, imp:String = Null, iData:String = Null, attrs:Int = 0, relPath:String = "", isFileImport:Int = 0)
+	Method ParseModuleImport:Int(pmod:TModuleDecl, modpath:String, path:String, imp:String = Null, iData:String = Null, attrs:Long = 0, relPath:String = "", isFileImport:Int = 0)
 
 		Const STATE_CLASS:Int = 1
 
@@ -246,6 +246,11 @@ Type TIParser
 				toker.nextToke()
 				If toker.TokeType()=TOKE_SPACE toker.NextToke()
 				Continue
+			case "#"
+				toker.nextToke()
+				Parse("pragma")
+				toker.nextToke()
+				Continue
 			Case "~r", "~n"
 				Continue
 			Default
@@ -281,8 +286,10 @@ Type TIParser
 									ApplyFunctionAttributes(class, DECL_EXTERN)
 									parsed = True
 								Case Asc("W")
-									class.attrs :| DECL_API_STDCALL
-									ApplyFunctionAttributes(class, DECL_API_STDCALL)
+									If opt_platform = "win32" Then
+										class.attrs :| DECL_API_STDCALL
+										ApplyFunctionAttributes(class, DECL_API_STDCALL)
+									End If
 									parsed = True
 								Case Asc("I")
 									class.attrs :| CLASS_INTERFACE
@@ -290,6 +297,9 @@ Type TIParser
 									parsed = True
 								Case Asc("G")
 									class.attrs :| CLASS_GENERIC
+									parsed = True
+								Case Asc("P")
+									class.attrs :| DECL_PRIVATE
 									parsed = True
 							End Select
 						Next
@@ -406,9 +416,18 @@ Type TIParser
 										
 											cdecl = genDecl.GenClassInstance(args, True)
 
-											cdecl.scope.munged = class.munged
+											Local scopeMunged:String = class.munged
+
+											If class.munged.Find("|") >= 0 Then
+												Local mung:String[] = class.munged.Split("|")
+												scopeMunged = mung[0]
+												
+												cdecl.munged = mung[1]
+											End If
+
+											cdecl.scope.munged = scopeMunged
 											cdecl.scope.scope = _appInstance
-										
+
 										End If
 									
 										' don't add to module
@@ -446,7 +465,7 @@ Type TIParser
 
 						'state = STATE_CLASS
 						'Exit
-				Case "/"
+				Case "\"
 					toker.rollback(pos)
 					toker.NextToke()
 
@@ -472,7 +491,7 @@ Type TIParser
 						Exit
 					End If
 
-					Local a:Int
+					Local a:Long
 					Local ty:TType = ParseDeclType(a)
 
 					If CParse("(") Then
@@ -484,6 +503,10 @@ Type TIParser
 
 						' an array of function pointers?
 						If CParse( "&" ) Then
+						End If
+
+						If IstStaticArrayDef() Then
+							attrs :| DECL_STATIC
 						End If
 
 						While IsArrayDef()
@@ -576,6 +599,13 @@ Type TIParser
 			
 		Forever
 		
+		' semant imported classes
+		For Local cdecl:TClassDecl = EachIn _mod.Decls()
+			cdecl.Semant()
+			If Not cdecl.args Then
+				cdecl.FinalizeClass()
+			End If
+		Next
 		
 		Return True
 		
@@ -618,7 +648,7 @@ Type TIParser
 					expr=New TConstExpr.Create( New TFloatType,value )
 				End If
 			Case TOKE_STRINGLIT
-				expr=New TConstExpr.Create( New TStringType,BmxUnquote( _toke, True ) )
+				expr=New TConstExpr.Create( New TStringType,BmxUnquote( _toke ) )
 				NextToke
 			Case TOKE_IDENT
 				If _toke = "nan" Or _toke = "inf" Then
@@ -648,7 +678,7 @@ Type TIParser
 		
 	End Method
 
-	Method ParseClassDecl:TClassDecl( toke$,attrs:Int )
+	Method ParseClassDecl:TClassDecl( toke$,attrs:Long )
 		SetErr
 
 		'If toke Parse toke
@@ -694,9 +724,9 @@ Type TIParser
 		
 		'If classDecl.IsTemplateArg() Return classDecl
 
-		Local decl_attrs:Int=(attrs & DECL_EXTERN)
+		Local decl_attrs:Long=(attrs & DECL_EXTERN)
 		
-		Local method_attrs:Int=decl_attrs
+		Local method_attrs:Long=decl_attrs
 		If attrs & CLASS_INTERFACE method_attrs:|DECL_ABSTRACT
 
 		Repeat
@@ -719,6 +749,7 @@ Type TIParser
 				NextToke
 				
 				Local decl:TFuncDecl = ParseFuncDecl( _toke,method_attrs|FUNC_METHOD, ,classDecl )
+				decl.declImported = True
 				'If decl.IsCtor() decl.retTypeExpr=New TObjectType.Create( classDecl )
 				classDecl.InsertDecl decl
 				
@@ -726,16 +757,26 @@ Type TIParser
 				NextToke
 				
 				Local decl:TFuncDecl = ParseFuncDecl( _toke,method_attrs )
+				decl.declImported = True
 				'If decl.IsCtor() decl.retTypeExpr=New TObjectType.Create( classDecl )
 				classDecl.InsertDecl decl
 
-			Case ".", "@" ' field
-				If _toker._toke = "@" Then
-					decl_attrs :| DECL_READ_ONLY
+			Case ".", "@", "~~" ' field			
+				Local d_attrs:Long = decl_attrs | DECL_FIELD
+				If _toker._toke = "." Then
+					NextToke
+				Else
+					While _toker._toke = "@" Or _toker._toke = "~~"
+						If _toker._toke = "@" Then
+							d_attrs :| DECL_READ_ONLY
+						End If
+						If _toker._toke = "~~" Then
+							d_attrs :| DECL_STATIC
+						End If
+						NextToke
+					Wend
 				End If
-				NextToke
-				decl_attrs :| DECL_FIELD
-				Local decl:TDecl= ParseDecl( _toke,decl_attrs )
+				Local decl:TDecl= ParseDecl( _toke,d_attrs )
 				classDecl.InsertDecl decl
 			Rem
 			Case "private"
@@ -788,9 +829,9 @@ Type TIParser
 
 		Local id$=ParseIdent()
 		Local ty:TType
-		Local attrs:Int
+		Local attrs:Long
 
-		Parse( "/" )
+		Parse( "\" )
 		ty=ParseDeclType(attrs, False)
 
 		Local enumDecl:TEnumDecl=New TEnumDecl.Create( id, ty, False, Null )
@@ -827,7 +868,13 @@ Type TIParser
 		
 		Parse("=")
 
-		Local expr:TExpr = New TConstExpr.Create( enumTy.Copy(), _toke )
+		Local op:String
+		If _toke = "-" Then
+			op = "-"
+			NextToke
+		End If
+
+		Local expr:TExpr = New TConstExpr.Create( enumTy.Copy(), op + _toke )
 
 		Local valDecl:TEnumValueDecl = New TEnumValueDecl.Create(id, index, expr)		
 		
@@ -940,20 +987,20 @@ Type TIParser
 
 	Method ParseStringLit$()
 		If _toker._tokeType<>TOKE_STRINGLIT Err "Expecting string literal."
-		Local str$=BmxUnquote( _toker._toke, True )
+		Local str$=BmxUnquote( _toker._toke )
 		'_toker.
 		NextToke
 		Return str
 	End Method
 
-	Method ParseFuncDecl:TFuncDecl( toke$,attrs:Int, returnType:TType = Null, classDecl:TClassDecl = Null )
+	Method ParseFuncDecl:TFuncDecl( toke$,attrs:Long, returnType:TType = Null, classDecl:TClassDecl = Null )
 		SetErr
 
 		'If toke Parse toke
 	
 		Local id$
 		Local ty:TType
-		Local meth:Int = attrs & FUNC_METHOD
+		Local meth:Long = attrs & FUNC_METHOD
 
 		If Not returnType Then		
 			If attrs & FUNC_METHOD
@@ -1245,7 +1292,7 @@ Type TIParser
 		
 	End Method
 	
-	Method ParseDecl:TDecl( toke$,attrs:Int )
+	Method ParseDecl:TDecl( toke$,attrs:Long )
 		SetErr
 		Local pos:Int, tokeType:Int
 		pos = _toker._tokePos
@@ -1282,8 +1329,12 @@ Type TIParser
 					If CParse( "&" ) Then
 					End If
 
-					While IsArrayDef()
-						ty = ParseArrayType(ty)
+					If IstStaticArrayDef() Then
+						attrs :| DECL_STATIC
+					End If
+
+					While IsArrayDef(attrs & DECL_STATIC > 0)
+						ty = ParseArrayType(ty, attrs & DECL_STATIC > 0)
 			
 						If CParse( "&" ) Then
 						End If
@@ -1403,7 +1454,17 @@ End Rem
 	End Method
 
 	' replaces While CParse( "[]" ) sections, with support for multi-dimension arrays
-	Method ParseArrayType:TType(ty:TType)
+	Method ParseArrayType:TType(ty:TType, isStatic:Int = False)
+		If isStatic Then
+			Parse("[")
+			Local expr:TExpr = ParseUnaryExpr()
+			ty = New TArrayType.Create( ty )
+			TArrayType(ty).isStatic = True
+			TArrayType(ty).length = expr.Eval()
+			Parse("]")
+			Return ty
+		End If
+		
 		While True
 			Local dims:Int = 1
 			
@@ -1428,9 +1489,34 @@ End Rem
 		Return ty
 	End Method
 
-	Method IsArrayDef:Int()
+	Method IstStaticArrayDef:Int()
+		Local toker:TToker=New TToker.Copy(_toker)
+		If Not CParseToker(toker, "[") Then
+			Return False
+		End If
+		If toker.TokeType() <> TOKE_INTLIT Then
+			Return False
+		End If
+		NextTokeToker(toker)
+		If Not CParseToker(toker, "]") Then
+			Return False
+		End If
+		Return True
+	End Method
+
+	Method IsArrayDef:Int(isStatic:Int = False)
 		Local isDef:Int = True
 		Local toker:TToker=New TToker.Copy(_toker)
+		If isStatic Then
+			If Not CParseToker(toker, "[") Then
+				Return False
+			End If
+			NextTokeToker(toker)
+			If Not CParseToker(toker, "]") Then
+				Return False
+			End If
+			Return True
+		End If
 		While True
 			If CParseToker(toker, "[]") Then
 				Exit
@@ -1453,7 +1539,7 @@ End Rem
 		Return isDef
 	End Method
 
-	Method ParseDeclType:TType(attrs:Int Var, fn:Int = False)
+	Method ParseDeclType:TType(attrs:Long Var, fn:Int = False)
 		Local ty:TType
 		Select _toker._toke
 		'Case "?"
@@ -1467,6 +1553,10 @@ End Rem
 				ty = New TLongType
 			ElseIf CParse("z") Then
 				ty = New TSizetType
+			ElseIf CParse("v") Then
+				ty = New TLongIntType
+			ElseIf CParse("e") Then
+				ty = New TULongIntType
 			ElseIf CParse("j") Then
 				ty = New TInt128Type
 			ElseIf CParse("w") Then
@@ -1628,6 +1718,23 @@ End Rem
 			While CParse( "*" )
 				ty = TType.MapToPointerType(ty)
 			Wend
+		Case "/"
+			NextToke
+			ty=ParseNewType()
+
+			If CParse("*") Then
+				If TIdentType(ty) Then
+					ty = TType.MapToPointerType(ty)
+
+					While CParse( "*" )
+						ty = TType.MapToPointerType(ty)
+					Wend
+
+				End If
+			End If
+			
+			CParse("&")
+
 ' TODO
 '		Case "!" ' BaH Double
 '			NextToke
@@ -1643,8 +1750,13 @@ End Rem
 		If CParse( "&" ) Then
 		End If
 
-		While IsArrayDef()
-			ty = ParseArrayType(ty)
+		If IstStaticArrayDef() Then
+			attrs :| DECL_STATIC
+		End If
+		
+		While IsArrayDef(attrs & DECL_STATIC > 0)
+
+			ty = ParseArrayType(ty, attrs & DECL_STATIC > 0)
 
 			If CParse( "&" ) Then
 			End If
@@ -1721,6 +1833,26 @@ End Rem
 		End If
 		If CParse( "ulong" )
 			Local ty:TType = New TULongType
+			While CParse("ptr")
+				ty = TType.MapToPointerType(ty)
+			Wend
+			While CParse( "*" )
+				ty = TType.MapToPointerType(ty)
+			Wend
+			Return ty
+		End If
+		If CParse( "longint" )
+			Local ty:TType = New TLongType
+			While CParse("ptr")
+				ty = TType.MapToPointerType(ty)
+			Wend
+			While CParse( "*" )
+				ty = TType.MapToPointerType(ty)
+			Wend
+			Return ty
+		End If
+		If CParse( "ulongint" )
+			Local ty:TType = New TULongIntType
 			While CParse("ptr")
 				ty = TType.MapToPointerType(ty)
 			Wend
@@ -1812,7 +1944,7 @@ End Rem
 		Return ParseIdentType()
 	End Method
 	
-	Method ApplyFunctionAttributes(classDecl:TClassDecl, attrs:Int)
+	Method ApplyFunctionAttributes(classDecl:TClassDecl, attrs:Long)
 		For Local decl:TFuncDecl = EachIn classDecl._decls
 			decl.attrs :| attrs
 		Next
@@ -1849,6 +1981,10 @@ End Rem
 			ty = New TLongType
 		Else If CParse( "ulong" )
 			ty = New TULongType
+		Else If CParse( "longint" )
+			ty = New TLongIntType
+		Else If CParse( "ulongint" )
+			ty = New TULongIntType
 		Else If CParse( "double" )
 			ty = New TDoubleType
 		Else If CParse( "size_t" )

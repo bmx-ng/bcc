@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2019 Bruce A Henderson
+' Copyright (c) 2013-2024 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -163,6 +163,10 @@ Type TType
 	End Function
 	
 	Function MapPointerToPrim:TType(ty:TNumericType)
+		Return MapFromPointer(ty)
+	End Function
+
+	Function MapFromPointer:TType(ty:TType)
 		Local nty:TType = ty.Copy()
 
 		If ty._flags & T_PTRPTRPTR Then
@@ -215,6 +219,8 @@ Type TType
 	Const T_LPARAM:Int      =$10000
 	Const T_WPARAM:Int      =$20000
 	Const T_ENUM:Int        =$40000
+	Const T_LONGINT:Int     =$80000
+	Const T_ULONGINT:Int    =$100000
 
 	Const T_MAX_DISTANCE:Int = $FFFF
 
@@ -239,8 +245,20 @@ Type TType
 		If _flags & T_VAR Then
 			s:+ " Var"
 		End If
-		
+
+		If _flags & T_VARPTR Then
+			s:+ " VarPtr"
+		End If
+	
 		Return s
+	End Method
+	
+	Method IsFlagEquivalent:Int(ty:TType)
+		Return _flags = ty._flags Or ..
+			(Not IsPointerType(Self, 0, TType.T_POINTER) And (ty._flags & T_VAR)) Or ..
+			(Not IsPointerType(ty, 0, TType.T_POINTER) And (_flags & T_VAR)) Or ..
+			(IsPointerType(Self, 0, TType.T_POINTER) And (ty._flags & T_VARPTR)) Or ..
+			(IsPointerType(ty, 0, TType.T_POINTER) And (_flags & T_VARPTR))
 	End Method
 	
 End Type
@@ -283,6 +301,10 @@ Function NewType:TType(kind:Int = 0)
 			ty = New TFunctionPtrType
 		Case TType.T_ENUM
 			ty = New TEnumType
+		Case TType.T_LONGINT
+			ty = New TLongIntType
+		Case TType.T_ULONGINT
+			ty = New TULongIntType
 		Default
 			Err "Don't have a pointer type for " + kind
 	End Select
@@ -350,6 +372,10 @@ Function IsType:Int(ty:TType, kind:Int)
 			Return TFunctionPtrType(ty) <> Null
 		Case TType.T_ENUM
 			Return TEnumType(ty) <> Null
+		Case TType.T_LONGINT
+			Return TLongIntType(ty) <> Null
+		Case TType.T_ULONGINT
+			Return TULongIntType(ty) <> Null
 	End Select
 
 	Return False
@@ -407,6 +433,19 @@ Type TBoolType Extends TType
 
 	Method WidensToType:Int( ty:TType )
 		Return IsNumericType(ty)
+	End Method
+
+	Method DistanceToType:Int(ty:TType)
+
+		If TBoolType(ty)<>Null Then
+			Return 0
+		End If
+		
+		If TIntType(ty)<>Null Then
+			Return 1
+		End If
+		
+		Return 4
 	End Method
 	
 	Method ToString$()
@@ -1014,6 +1053,194 @@ Type TULongType Extends TIntegralType
 	End Method
 End Type
 
+Type TLongIntType Extends TIntegralType
+	
+	Method EqualsType:Int( ty:TType )
+		Return TLongIntType( ty )<>Null And (_flags = ty._flags Or ..
+			(_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR) Or (_flags & T_VAR))
+	End Method
+	
+	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
+		If _flags & T_VARPTR And (TLongIntType(ty) <> Null Or IsPointerType(ty, 0, T_POINTER)) Return True
+		Return (widensTest And WidensToType(ty)) Or (Not widensTest And TNumericType( ty )<>Null) Or (Not noExtendString And TStringType( ty )<>Null) Or (WORD_SIZE=4 And TLParamType(ty)<>Null)
+	End Method
+
+	Method WidensToType:Int( ty:TType )
+		Return (IsPointerType(ty, 0, T_POINTER) And IsPointerType(Self, 0, T_POINTER)) Or (TLongIntType(ty)<>Null And (ty._flags & T_VAR)) Or TLongType(ty)<>Null Or TFloatType(ty)<>Null Or TDoubleType(ty)<>Null Or (WORD_SIZE=8 And TLParamType(ty)<>Null)
+	End Method
+	
+	Method DistanceToType:Int(ty:TType)
+		If IsPointerType(ty, 0, T_POINTER) Then
+			If IsPointerType(Self, 0, T_POINTER) Then
+				Return 0
+			Else
+				Return T_MAX_DISTANCE
+			End If
+		End If
+
+		If TLongIntType(ty)<>Null Then
+			Return 0
+		End If
+
+		Local longIntSize:Int = GetSize()
+
+		If longIntSize = 4 And TIntType(ty)<>Null Then
+			Return 1
+		End If
+
+		If longIntSize = 4 And TLParamType(ty)<>Null Then
+			Return 1
+		End If
+		
+		If longIntSize = 4 And TLongType(ty)<>Null Then
+			Return 2
+		End If
+
+		If longIntSize = 8 And TLParamType(ty)<>Null Then
+			Return 3
+		End If
+
+		If longIntSize = 8 And TIntType(ty)<>Null Then
+			Return 2
+		End If
+
+		If longIntSize = 8 And TLongType(ty)<>Null Then
+			Return 1
+		End If
+
+		If TFloatType(ty)<>Null Then
+			Return 4
+		End If
+
+		If TDoubleType(ty)<>Null Then
+			Return 6
+		End If
+		
+		Return T_MAX_DISTANCE
+	End Method
+	
+	Method OnCopy:TType()
+		Return New TLongIntType
+	End Method
+
+	Method ToString$()
+		Return "LongInt" + ToStringParts()
+	End Method
+
+	Method GetSize:Int()
+		If WORD_SIZE = 4 Then
+			Return 4
+		Else
+			If opt_platform = "linux" or opt_platform = "macos" Then
+				Return 8
+			Else
+				Return 4
+			End If
+		End If
+	End Method
+
+End Type
+
+Type TULongIntType Extends TIntegralType
+	
+	Method EqualsType:Int( ty:TType )
+		Return TULongIntType( ty )<>Null And (_flags = ty._flags Or ..
+			(_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR) Or (_flags & T_VAR))
+	End Method
+	
+	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
+		If _flags & T_VARPTR And (TULongIntType(ty) <> Null Or IsPointerType(ty, 0, T_POINTER)) Return True
+		Return (widensTest And WidensToType(ty)) Or (Not widensTest And TNumericType( ty )<>Null) Or (Not noExtendString And TStringType( ty )<>Null) Or (WORD_SIZE=4 And TLParamType(ty)<>Null)
+	End Method
+
+	Method WidensToType:Int( ty:TType )
+		Return (IsPointerType(ty, 0, T_POINTER) And IsPointerType(Self, 0, T_POINTER)) Or (TULongIntType(ty)<>Null And (ty._flags & T_VAR)) Or TULongType(ty)<>Null Or TFloatType(ty)<>Null Or TDoubleType(ty)<>Null Or (WORD_SIZE=8 And TLParamType(ty)<>Null)
+	End Method
+	
+	Method DistanceToType:Int(ty:TType)
+		If IsPointerType(ty, 0, T_POINTER) Then
+			If IsPointerType(Self, 0, T_POINTER) Then
+				Return 0
+			Else
+				Return T_MAX_DISTANCE
+			End If
+		End If
+
+		If TULongIntType(ty)<>Null Then
+			Return 0
+		End If
+
+		Local longIntSize:Int = GetSize()
+
+		If longIntSize = 4 And TIntType(ty)<>Null Then
+			Return 2
+		End If
+
+		If longIntSize = 4 And TUIntType(ty)<>Null Then
+			Return 1
+		End If
+
+		If longIntSize = 4 And TLParamType(ty)<>Null Then
+			Return 3
+		End If
+		
+		If longIntSize = 4 And TLongType(ty)<>Null Then
+			Return 4
+		End If
+
+		If longIntSize = 8 And TLParamType(ty)<>Null Then
+			Return 3
+		End If
+
+		If longIntSize = 8 And TIntType(ty)<>Null Then
+			Return 4
+		End If
+
+		If longIntSize = 8 And TUIntType(ty)<>Null Then
+			Return 3
+		End If
+
+		If longIntSize = 8 And TLongType(ty)<>Null Then
+			Return 1
+		End If
+
+		If longIntSize = 8 And TULongType(ty)<>Null Then
+			Return 2
+		End If
+
+		If TFloatType(ty)<>Null Then
+			Return 5
+		End If
+
+		If TDoubleType(ty)<>Null Then
+			Return 6
+		End If
+		
+		Return T_MAX_DISTANCE
+	End Method
+	
+	Method OnCopy:TType()
+		Return New TULongIntType
+	End Method
+
+	Method ToString$()
+		Return "ULongInt" + ToStringParts()
+	End Method
+
+	Method GetSize:Int()
+		If WORD_SIZE = 4 Then
+			Return 4
+		Else
+			If opt_platform = "linux" or opt_platform = "macos" Then
+				Return 8
+			Else
+				Return 4
+			End If
+		End If
+	End Method
+
+End Type
+
 Type TDecimalType Extends TNumericType
 End Type
 
@@ -1381,16 +1608,36 @@ Type TStringType Extends TType
 	Method ToString$()
 		Return "String" + ToStringParts()
 	End Method
+	
+	Method DistanceToType:Int(ty:TType)
+		If TStringType(ty) Then
+			Return 0
+		End If
+		
+		' prefer Object
+		If TObjectType(ty)
+			If TObjectType(ty).classDecl.ident = "Object" Then
+				Return $F
+			End If
+		End If
+
+		Return T_MAX_DISTANCE
+	End Method
+	
 End Type
 
 Type TArrayType Extends TType
 	Field elemType:TType
 	Field dims:Int
+	Field isStatic:Int
+	Field length:String
 	
-	Method Create:TArrayType( elemType:TType, dims:Int = 1, flags:Int = 0 )
+	Method Create:TArrayType( elemType:TType, dims:Int = 1, flags:Int = 0, isStatic:Int = False, length:Int = 0 )
 		Self.elemType=elemType
 		Self.dims = dims
 		Self._flags = flags
+		Self.isStatic = isStatic
+		Self.length = length
 		Return Self
 	End Method
 	
@@ -1402,17 +1649,26 @@ Type TArrayType Extends TType
 		
 	Method EqualsType:Int( ty:TType )
 		Local arrayType:TArrayType=TArrayType( ty )
-		Return arrayType And elemType.EqualsType( arrayType.elemType ) And dims = arrayType.dims
+		Return arrayType And elemType.EqualsType( arrayType.elemType ) And dims = arrayType.dims And arrayType.isStatic = isStatic And arrayType.length = length
 	End Method
 	
 	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
 		Local arrayType:TArrayType=TArrayType( ty )
-		Return (arrayType And dims = arrayType.dims And ( TVoidType( elemType ) Or (TObjectType(elemType) And elemType.EqualsType( arrayType.elemType ) Or elemType.ExtendsType( arrayType.elemType )))) Or IsPointerType(ty, 0, TType.T_POINTER) <> Null Or (TObjectType( ty ) And TObjectType( ty ).classDecl.ident="Object")
+		Return (arrayType And dims = arrayType.dims And ..
+			(arrayType.isStatic = isStatic And arrayType.length = length) And ..
+			( TVoidType( elemType ) ..
+				Or elemType.EqualsType( arrayType.elemType ) ..
+				Or ((TObjectType(elemType) Or TStringType(elemType) Or TArrayType(elemType)) And ..
+					(elemType.ExtendsType( arrayType.elemType ) ..
+						Or (TObjectType(arrayType.elemType) And TObjectType( arrayType.elemType ).classDecl.ident="Object") ..
+					))) ..
+					) ..
+				Or IsPointerType(ty, 0, TType.T_POINTER) <> Null Or (TObjectType( ty ) And TObjectType( ty ).classDecl.ident="Object")
 	End Method
 	
 	Method Semant:TType(option:Int = False, callback:TCallback = Null)
 		Local ty:TType=elemType.Semant(option, callback)
-		If ty<>elemType Return New TArrayType.Create( ty, dims, _flags )
+		If ty<>elemType Return New TArrayType.Create( ty, dims, _flags, isStatic, Int(length) )
 		Return Self
 	End Method
 	
@@ -1425,12 +1681,36 @@ Type TArrayType Extends TType
 		Local ty:TArrayType = New TArrayType
 		ty.elemType = elemType
 		ty.dims = dims
+		ty.isStatic = isStatic
+		ty.length = length
 		Return ty
 	End Method
 
 	Method ToString$()
-		Return elemType.ToString()+" Array"
+		Local t:String = elemType.ToString()
+		If isStatic Then
+			t = "Static " + t + " Array[" + length + "]"
+		Else
+			t :+ " Array"
+		End If
+		Return t
 	End Method
+	
+	Method DistanceToType:Int(ty:TType)
+		If TArrayType(ty) Then
+			Return 0
+		End If
+		
+		' prefer Object
+		If TObjectType(ty)
+			If TObjectType(ty).classDecl.ident = "Object" Then
+				Return $F
+			End If
+		End If
+
+		Return T_MAX_DISTANCE
+	End Method
+
 End Type
 
 Type TObjectType Extends TType
@@ -1449,11 +1729,16 @@ Type TObjectType Extends TType
 	
 	Method EqualsType:Int( ty:TType )
 		Local objty:TObjectType=TObjectType( ty )
-		Return TNullDecl(classDecl) <> Null Or (objty And (classDecl=objty.classDecl))' Or classDecl.ExtendsClass( objty.classDecl ))) 'Or TObjectVarPtrType(ty) <> Null
+		Return TNullDecl(classDecl) <> Null Or (objty And (classDecl=objty.classDecl) And (Not classDecl.IsStruct() Or IsFlagEquivalent(ty)))' Or classDecl.ExtendsClass( objty.classDecl ))) 'Or TObjectVarPtrType(ty) <> Null
 	End Method
 	
 	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
-		If classDecl.IsStruct() Return False
+		If classDecl.IsStruct() Then
+			If (_flags & T_VARPTR Or IsPointerType(Self, 0, T_POINTER)) And (TNumericType(ty) <> Null) And IsPointerType(ty, 0, T_POINTER) Then
+				Return True
+			End If
+			Return False
+		End If
 		Local objty:TObjectType=TObjectType( ty )
 		If objty Return classDecl.ExtendsClass( objty.classDecl )
 		If IsPointerType( ty, T_BYTE ) Return True
@@ -1464,7 +1749,7 @@ Type TObjectType Extends TType
 	End Method
 	
 	Method ToString$()
-		Return classDecl.ToTypeString()
+		Return classDecl.ToTypeString() + ToStringParts()
 	End Method
 
 	Method OnCopy:TType()
@@ -1472,6 +1757,26 @@ Type TObjectType Extends TType
 		ty.classDecl = classDecl
 		ty.instance = instance
 		Return ty
+	End Method
+
+	Method DistanceToType:Int(ty:TType)
+		If TObjectType(ty) Then
+			If classDecl = TObjectType(ty).classDecl Then
+				Return 0
+			End If
+			
+			If classDecl.ExtendsClass(TObjectType(ty).classDecl) Then
+				Return $F
+			End If
+		End If
+		
+		If classDecl.IsStruct() Then
+			If (_flags & T_VARPTR Or IsPointerType(Self, 0, T_POINTER)) And (TNumericType(ty) <> Null) And IsPointerType(ty, 0, T_POINTER) Then
+				Return $10
+			End If
+		End If
+
+		Return T_MAX_DISTANCE
 	End Method
 
 End Type
@@ -1590,6 +1895,8 @@ Type TIdentType Extends TType
 					ty=mdecl.FindType( tyid,targs, callback )
 					If ty Exit
 				Next
+			Else If TIdentType(ty) Then
+				ty = ty.Semant()
 			End If
 		Else
 			Local id:String = ident.ToLower()
@@ -1649,6 +1956,9 @@ Type TIdentType Extends TType
 				ty._flags :| T_VAR
 			Else If TEnumType(ty) Then
 				ty = New TEnumType.Create(TEnumType(ty).decl)
+				ty._flags :| T_VAR
+			Else
+				ty = ty.Copy()
 				ty._flags :| T_VAR
 			End If
 		End If
@@ -2042,6 +2352,7 @@ Type TEnumType Extends TType
 
 	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
 		If _flags & T_VARPTR And (TEnumType(ty) <> Null Or IsPointerType(ty, 0, T_POINTER)) Return True
+		Return (widensTest And WidensToType(ty))
 	End Method
 
 	Method WidensToType:Int( ty:TType )

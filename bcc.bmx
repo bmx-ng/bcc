@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2019 Bruce A Henderson
+' Copyright (c) 2013-2024 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -30,7 +30,7 @@ Import "ctranslator.bmx"
 Local args:String[] = ParseArgs(AppArgs[1..])
 
 If args.length = 0 Then
-	Print "bcc[ng] Release Version " + version
+	Print "bcc[ng] Release Version " + BCC_VERSION
 	End
 End If
 
@@ -147,16 +147,28 @@ Function SaveSource(file:String, trans:TCTranslator, mung:String)
 	Local path:String = OutputFilePath(file, mung, "c")
 
 	Local pre:String = trans.JoinLines("pre_source")
+	Local def_data:String = trans.JoinLines("def_data")
 	Local src:String = trans.JoinLines("source")
 
-	SaveText(pre + "~n" + src, path)
+	Local txt:String = pre + "~n"
+	If def_data Then
+		txt :+ def_data + "~n"
+	End If
+	txt :+ src
+	SaveText(txt, path)
 
 End Function
 
 Function SaveIncBinHeader(file:String, trans:TCTranslator, mung:String, app:TAppDecl)
 
 	If app.genIncBinHeader Then
-		Local path:String = OutputFilePath(file, mung, "incbin.c")
+		Local ibFile:String = "incbin"
+		If opt_legacy_incbin Then
+			ibFile :+ ".c"
+		Else
+			ibFile :+ "2.c"
+		End If
+		Local path:String = OutputFilePath(file, mung, ibFile)
 
 		SaveText(trans.JoinLines("incbin"), path)
 	End If

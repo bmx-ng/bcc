@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2019 Bruce A Henderson
+' Copyright (c) 2013-2024 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -22,38 +22,42 @@
 '    distribution.
 '
 
-Const DECL_EXTERN:Int=      $010000
-Const DECL_PRIVATE:Int=     $020000
-Const DECL_ABSTRACT:Int=    $040000
-Const DECL_FINAL:Int=       $080000
-Const DECL_READ_ONLY:Int=     $000100
-Const DECL_OVERRIDE:Int=    $40000000
+Const DECL_EXTERN:Long=        $010000
+Const DECL_PRIVATE:Long=       $020000
+Const DECL_ABSTRACT:Long=      $040000
+Const DECL_FINAL:Long=         $080000
+Const DECL_READ_ONLY:Long=     $000100
+Const DECL_STATIC:Long=      $20000000
+Const DECL_OVERRIDE:Long=    $40000000
+Const DECL_INLINE:Long=      $80000000
+Const DECL_THREADED:Long=   $100000000:Long
+Const DECL_NO_VAR:Long=     $200000000:Long
 
-Const DECL_SEMANTED:Int=    $100000
-Const DECL_SEMANTING:Int=   $200000
-Const DECL_CYCLIC:Int=       $8000000
+Const DECL_SEMANTED:Long=      $100000
+Const DECL_SEMANTING:Long=     $200000
+Const DECL_CYCLIC:Long=       $8000000
 
-Const DECL_POINTER:Int=     $400000
+Const DECL_POINTER:Long=       $400000
 
-Const DECL_ARG:Int=         $800000
-Const DECL_INITONLY:Int=   $1000000
+Const DECL_ARG:Long=           $800000
+Const DECL_INITONLY:Long=     $1000000
 
-Const DECL_NODEBUG:Int=    $2000000
-Const DECL_PROTECTED:Int=  $4000000
-Const DECL_EXPORT:Int=       $8000000
+Const DECL_NODEBUG:Long=      $2000000
+Const DECL_PROTECTED:Long=    $4000000
+Const DECL_EXPORT:Long=       $8000000
 
-Const DECL_API_CDECL:Int=   $00000000
-Const DECL_API_STDCALL:Int= $10000000
-Const DECL_API_DEFAULT:Int=DECL_API_CDECL
-Const DECL_API_FLAGS:Int=   DECL_API_CDECL | DECL_API_STDCALL
+Const DECL_API_CDECL:Long=   $00000000
+Const DECL_API_STDCALL:Long= $10000000
+Const DECL_API_DEFAULT:Long=DECL_API_CDECL
+Const DECL_API_FLAGS:Long=   DECL_API_CDECL | DECL_API_STDCALL
 
-Const DECL_NESTED:Int=      $20000000
+Const DECL_NESTED:Long=      $20000000
 
-Const CLASS_INTERFACE:Int=    $002000
-Const CLASS_THROWABLE:Int=    $004000
-Const CLASS_STRUCT:Int=       $008000
-Const CLASS_GENERIC:Int=      $001000
-Const CLASS_FLAGS:Int = CLASS_INTERFACE | CLASS_THROWABLE | CLASS_STRUCT | CLASS_GENERIC
+Const CLASS_INTERFACE:Long=    $002000
+Const CLASS_THROWABLE:Long=    $004000
+Const CLASS_STRUCT:Long=       $008000
+Const CLASS_GENERIC:Long=      $001000
+Const CLASS_FLAGS:Long = CLASS_INTERFACE | CLASS_THROWABLE | CLASS_STRUCT | CLASS_GENERIC
 
 Const SCOPE_FUNC:Int = 0
 Const SCOPE_CLASS_LOCAL:Int = 1
@@ -72,6 +76,9 @@ Const BLOCK_FUNCTION:Int =  $040
 
 Const BLOCK_TRY_CATCH:Int = BLOCK_TRY | BLOCK_CATCH
 Const BLOCK_IF_ELSE:Int =   BLOCK_IF | BLOCK_ELSE
+
+Const OPTION_WANT_LOOP_LABEL:Int = 1
+Const OPTION_WANT_DATA_LABEL:Int = 2
 
 'Const CALL_CONV_CDECL:Int = 0
 'Const CALL_CONV_STDCALL:Int = 1
@@ -103,6 +110,13 @@ Type TFuncDeclList Extends TList
 		End If
 		Return _identLower
 	End Method
+
+	Method AddLast:TLink( value:Object )
+		If Not Contains(value) Then
+			Return Super.AddLast(value)
+		End If
+	End Method
+
 End Type
 
 Type TMetadata
@@ -132,13 +146,14 @@ Type TDecl
 	Field errInfo$
 	Field actual:TDecl
 	Field scope:TScopeDecl
-	Field attrs:Int
+	Field attrs:Long
 	Field metadata:TMetadata = New TMetadata
 	
 	Field declImported:Int = False
 	Field generated:Int
 	
 	Field _identLower:String
+	Field scopeIndex:Int = -1
 	
 	Method New()
 		errInfo=_errInfo
@@ -189,6 +204,10 @@ Type TDecl
 	Method IsAbstract:Int()
 		Return (attrs & DECL_ABSTRACT)<>0
 	End Method
+
+	Method IsStatic:Int()
+		Return (attrs & DECL_STATIC)<>0
+	End Method
 	
 	Method IsSemanted:Int()
 		Return (attrs & DECL_SEMANTED)<>0
@@ -200,6 +219,10 @@ Type TDecl
 	
 	Method IsNoDebug:Int()
 		Return (attrs & DECL_NODEBUG)<>0
+	End Method
+	
+	Method IsThreaded:Int()
+		Return (attrs & DECL_THREADED)<>0
 	End Method
 	
 	Method FuncScope:TFuncDecl()
@@ -313,18 +336,20 @@ Type TDecl
 				If TGlobalDecl( Self )
 					' FIXME
 					If AppScope() Then
+						If TGlobalDecl( Self ).mscope Then
+							AppScope()._semanted.AddLast Self
+						End If
 						AppScope().semantedGlobals.AddLast TGlobalDecl( Self )
 					End If
-				EndIf
-				
-				If TModuleDecl( scope )
-					' FIXME
-					Local app:TAppDecl = AppScope()
-					If app Then
-						app._semanted.AddLast Self
-					End If
-				EndIf
-			
+				Else
+					If TModuleDecl( scope )
+						' FIXME
+						Local app:TAppDecl = AppScope()
+						If app Then
+							app._semanted.AddLast Self
+						End If
+					EndIf
+				End If
 			EndIf
 			
 			If TValDecl(Self) And TValDecl(Self).deferInit Then
@@ -337,8 +362,25 @@ Type TDecl
 				TValDecl(Self).SemantInit
 			End If
 		EndIf
-		
-		
+
+		Semant2()
+		PopErr
+	End Method
+
+	Method Semant2()
+
+		PushErr errInfo
+	
+		If scope
+			PushEnv scope
+		EndIf
+
+		OnSemant2()
+
+		If scope 
+			PopEnv
+		End If
+
 		PopErr
 	End Method
 	
@@ -357,6 +399,8 @@ Type TDecl
 	End Method
 	
 	Method OnSemant() Abstract
+	Method OnSemant2()
+	End Method
 	
 	Method Clear()
 	End Method
@@ -441,12 +485,25 @@ Type TValDecl Extends TDecl
 		' for field initialisation, create a stub New() method to use as current scope
 		' since fields are initialised in New(). Otherwise the scope would be "class", which is
 		' incorrect for processing field inits.
-		If TFieldDecl(Self) And declInit Then
-			Local newScope:TFuncDecl = New TFuncDecl.CreateF( "new", Null,Null,FUNC_METHOD )
-			newScope.scope = _env
-			PushEnv(newScope)
+		If TFieldDecl(Self) Then
+			
+			If Not declInit  And TClassDecl(scope) And Not TClassDecl(scope).IsStruct() Then
+				declInit=New TConstExpr.Create( ty,"" )
+			End If
+			
+			If declInit Then
+				Local newScope:TFuncDecl = New TFuncDecl.CreateF( "new", Null,Null,FUNC_METHOD )
+				newScope.scope = _env
+				PushEnv(newScope)
+			End If
 		End If
 	
+		' for imported enum args with a default value, we need to set the type of the value to the enum
+		' since at this point it's just a number with no context
+		If TArgDecl(Self) And declInit And scope And scope.declImported And TEnumType(ty) Then
+			declInit = New TConstExpr.Create(ty, TConstExpr(declInit).value).Semant()
+		End If
+			
 		If declTy
 			If declInit Then
 				If TFunctionPtrType(ty) Then
@@ -496,33 +553,27 @@ Type TValDecl Extends TDecl
 					
 					
 				Else
-					If TArrayExpr(declInit) And TArrayType(ty) And TNumericType(TArrayType(ty).elemType) Then
-						TArrayExpr(declInit).toType = TArrayType(ty).elemType
-					End If
-				
-					init=declInit.Copy().SemantAndCast(ty)
+					If TArrayType(ty) And TArrayType(ty).isStatic Then
+						init = declInit.Copy().Semant()
+						If Not TConstExpr(init) and not TIdentEnumExpr(init) Then
+							Err "Static array initialiser must be constant"
+						End If
+						If Not Int(TArrayType(ty).length) Then
+							TArrayType(ty).length = init.Eval()
+						End If
+					Else
+						If TArrayExpr(declInit) And TArrayType(ty) And TNumericType(TArrayType(ty).elemType) Then
+							TArrayExpr(declInit).toType = TArrayType(ty).elemType
+						End If
 					
-					' check if struct has been initialised
-					If TObjectType(ty) And TObjectType(ty).classDecl.IsStruct() Then
-					
-						' new not used
-						If TConstExpr(init) And Not TConstExpr(init).value Then
-							
-							Local found:Int = False
-							' struct contains any objects?
-							For Local fld:TFieldDecl = EachIn TObjectType(ty).classDecl._decls
-								If Not fld.IsSemanted() Then
-									fld.Semant()
-								End If
-							
-								If TObjectType(fld.ty) Or TStringType(fld.ty) Or TArrayType(fld.ty) Then
-									found = True
-									Exit
-								End If
-							Next
+						init=declInit.Copy().SemantAndCast(ty)
 						
-							' we need to initialise object fields, so we'll call the default constructor
-							If found Then
+						' check if struct has been initialised
+						If TObjectType(ty) And TObjectType(ty).classDecl.IsStruct() And Not TObjectType(ty).classDecl.IsExtern() Then
+						
+							' new not used
+							If TConstExpr(init) And Not TConstExpr(init).value And Not IsPointerType(ty,0,TType.T_POINTER) Then
+								' always call the default constructor to init all the fields correctly
 								init = New TNewObjectExpr.Create(ty, Null).Semant()
 							End If
 						End If
@@ -531,7 +582,10 @@ Type TValDecl Extends TDecl
 			End If
 		Else If declInit
 			init=declInit.Copy().Semant()
-			ty=init.exprType
+			ty=init.exprType.Copy()
+			If attrs & DECL_NO_VAR And ty._flags & TType.T_VAR Then 
+				ty._flags :~ TType.T_VAR ' remove var for variable 
+			End If 
 		End If
 		
 		If init Then
@@ -558,7 +612,7 @@ End Type
 Type TConstDecl Extends TValDecl
 	Field value$
 	
-	Method Create:TConstDecl( ident$,ty:TType,init:TExpr,attrs:Int )
+	Method Create:TConstDecl( ident$,ty:TType,init:TExpr,attrs:Long )
 		Self.ident=ident
 		Self.munged=ident
 		Self.declTy=ty
@@ -577,7 +631,7 @@ Type TConstDecl Extends TValDecl
 
 	Method OnCopy:TDecl(deep:Int = True)
 		If IsSemanted() Then
-		Return New TConstDecl.Create( ident,ty,CopyInit(), attrs )
+			Return New TConstDecl.Create( ident,ty,CopyInit(), attrs )
 		Else
 			Return New TConstDecl.Create( ident, declTy, declInit, attrs)
 		End If
@@ -610,7 +664,7 @@ Type TLocalDecl Extends TVarDecl
 	Field volatile:Int = False
 	Field declaredInTry:TTryStmtDecl
 
-	Method Create:TLocalDecl( ident$,ty:TType,init:TExpr,attrs:Int=0, generated:Int = False, volatile:Int = False )
+	Method Create:TLocalDecl( ident$,ty:TType,init:TExpr,attrs:Long=0, generated:Int = False, volatile:Int = False )
 		Self.ident=ident
 		Self.declTy=ty
 		Self.declInit=init
@@ -635,7 +689,7 @@ Type TLocalDecl Extends TVarDecl
 
 	Method OnSemant()
 		If declTy Then
-			If TObjectType(declTy) Or TArrayType(declTy) Then
+			If TObjectType(declTy) Then
 				volatile = True
 			End If
 		End If
@@ -656,7 +710,7 @@ Type TArgDecl Extends TLocalDecl
 
 	Field castTo:String
 	
-	Method Create:TArgDecl( ident$,ty:TType,init:TExpr,attrs:Int=0, generated:Int = False, volatile:Int = True )
+	Method Create:TArgDecl( ident$,ty:TType,init:TExpr,attrs:Long=0, generated:Int = False, volatile:Int = True )
 		Self.ident=ident
 		Self.declTy=ty
 		Self.declInit=init
@@ -687,6 +741,21 @@ Type TArgDecl Extends TLocalDecl
 
 	Method OnSemant()
 		Super.OnSemant()
+		If ty Then
+			ty = ty.Semant()
+		End If
+		
+		If attrs & DECL_STATIC Then
+			If Not TArrayType(ty) Then
+				Err "Expecting array"
+			End If
+			
+			Local et:TType = TArrayType(ty).elemType
+			If Not TNumericType(et) And Not (TObjectType(et) And TObjectType(et).classDecl.IsStruct()) Then
+				Err "Static array elements must be numeric or a Struct"
+			End If
+		End If
+		
 		If init And Not TConstExpr(init) Then
 			If TCastExpr(init) Then
 				If TConstExpr(TCastExpr(init).expr) Or TNullExpr(TCastExpr(init).expr) Then
@@ -694,6 +763,9 @@ Type TArgDecl Extends TLocalDecl
 				End If
 			End If
 			If TInvokeExpr(init) And TFunctionPtrType(TInvokeExpr(init).exprType) Then
+				Return
+			End If
+			If TIdentEnumExpr(init) Then
 				Return
 			End If
 			Err "Function defaults must be constant"
@@ -710,8 +782,9 @@ Type TGlobalDecl Extends TVarDecl
 
 	Field inited:Int
 	Field funcGlobal:Int
+	Field mscope:TScopeDecl
 	
-	Method Create:TGlobalDecl( ident$,ty:TType,init:TExpr,attrs:Int=0,funcGlobal:Int=False )
+	Method Create:TGlobalDecl( ident$,ty:TType,init:TExpr,attrs:Long=0,funcGlobal:Int=False )
 		Self.deferInit = True
 		Self.ident=ident
 		Self.declTy=ty
@@ -725,6 +798,7 @@ Type TGlobalDecl Extends TVarDecl
 		Local g:TGlobalDecl = New TGlobalDecl.Create( ident,declTy,declInit,attrs,funcGlobal )
 		g.ty = ty
 		g.init = init
+		g.mscope = mscope
 		Return g
 	End Method
 	
@@ -764,7 +838,7 @@ Type TFieldDecl Extends TVarDecl
 	' location offset in object variable data
 	Field offset:Int
 
-	Method Create:TFieldDecl( ident$,ty:TType,init:TExpr,attrs:Int=0 )
+	Method Create:TFieldDecl( ident$,ty:TType,init:TExpr,attrs:Long=0 )
 		Self.ident=ident
 		Self.declTy=ty
 		Self.declInit=init
@@ -807,7 +881,7 @@ Type TFieldDecl Extends TVarDecl
 
 				If cs = ec Then
 					Return True
-		End If
+				End If
 				
 				ec = ec.scope.ClassScope()
 			Wend
@@ -821,7 +895,7 @@ Type TFieldDecl Extends TVarDecl
 			
 			While ec
 				If ec.ExtendsClass(cs) Then
-		Return True
+					Return True
 				End If
 				
 				ec = ec.scope.ClassScope()
@@ -833,6 +907,14 @@ Type TFieldDecl Extends TVarDecl
 		End If
 		Return True
 	End Method
+	
+	Method OnSemant()
+		Super.OnSemant()
+		
+		If TObjectType(ty) And TObjectType(ty).classDecl.IsStruct() Then
+			TObjectType(ty).classDecl.exposed = True
+		End If
+	End Method
 
 End Type
 
@@ -840,7 +922,7 @@ Type TAliasDecl Extends TDecl
 
 	Field decl:Object
 	
-	Method Create:TAliasDecl( ident$,decl:Object,attrs:Int=0 )
+	Method Create:TAliasDecl( ident$,decl:Object,attrs:Long=0 )
 		Self.ident=ident
 		Self.decl=decl
 		Self.attrs=attrs
@@ -1148,7 +1230,9 @@ Type TScopeDecl Extends TDecl
 			End If
 		End If
 		
-		If Not decl Then
+		' if scope isn't static, and we didn't find it yet, look no further
+		' otherwise, look harder...
+		If Not decl And static Then
 			' try scope search
 			decl = TValDecl( FindDecl( ident, True ) )
 			
@@ -1199,7 +1283,7 @@ Type TScopeDecl Extends TDecl
 				cdecl.AssertAccess
 				If Not cdecl.instanceof Then
 					cdecl=cdecl.GenClassInstance( args, False, callback, Null )
-				cdecl.Semant
+					cdecl.Semant
 				End If
 				Return cdecl.objectType
 			EndIf
@@ -1297,10 +1381,12 @@ End Rem
 		Local tot:Int = -1
 		index = 0
 		Local i:Int
+		Local minArgs:Int
 		For Local func:TFuncDecl = EachIn matches
 			If tot = -1 Or totals[i] < tot Then
 				tot = totals[i]
 				bestMatch = func
+				minArgs = func.argDecls.Length
 			Else If tot = totals[i] Then
 				If bestMatch.IsMethod() And Not func.IsMethod() Then
 					' 
@@ -1309,6 +1395,15 @@ End Rem
 				Else If (bestMatch.scope <> func.scope) And (TClassDecl(bestMatch.scope).ExtendsClass(TClassDecl(func.scope))) Then
 					' match is in different level of class hierarchy
 					Exit
+				Else If func.generated <> bestMatch.generated Then
+					If Not func.generated Then
+						bestMatch = func
+					End If
+				Else If minArgs <> func.argDecls.Length
+					If minArgs > func.argDecls.Length Then
+						bestMatch = func
+						minArgs = func.argDecls.Length
+					End If
 				Else
 					' a tie?
 					Err "Unable to determine overload to use: "+ bestMatch.ToString()+" or "+func.ToString()+"."
@@ -1425,13 +1520,13 @@ End Rem
 					generateWarnings = True
 				End If
 			End If
-		
+			
 			errorDetails = ""
 			
 			If n Then
 				noExtendString = False
 			End If
-
+			
 			For Local iDecl:TDecl = EachIn funcs
 			
 				Local func:TFuncDecl = TFuncDecl(iDecl)
@@ -1452,6 +1547,8 @@ End Rem
 							End If
 							'funcs.AddLast fp
 							func = fp
+						Else
+							Err "Expression of type '" + TVarDecl(iDecl).ty.ToString() + "' cannot be invoked."
 						End If
 					End If
 					
@@ -1554,7 +1651,7 @@ End Rem
 	
 					Else ' for case of argdecls having default args
 						exact=False
-						If Not explicit Exit
+						Continue ' carry on to the next arg
 					EndIf
 				
 					possible=False
@@ -1565,23 +1662,23 @@ End Rem
 				
 				If exact
 					If isexact
-						Err "Unable to determine overload to use: "+match.ToString()+" or "+func.ToString()+"."
+						'Err "Unable to determine overload to use: "+match.ToString()+" or "+func.ToString()+"."
 					Else
 						_err=""
-						'match=func
+						match=func
 						matches.AddLast(func)
 						isexact=True
-						Exit
+						'Exit
 					EndIf
 				Else
-					If Not isexact
+					'If Not isexact
 						'If match 
 						'	_err="Unable to determine overload to use: "+match.ToString()+" or "+func.ToString()+"."
 						'Else
 							'match=func
 							matches.AddLast(func)
 						'EndIf
-					EndIf
+					'EndIf
 				EndIf
 				'Exit
 			Next
@@ -1670,7 +1767,7 @@ End Rem
 		If TFuncDecl(scope) Or TModuleDecl(scope)
 			Return Null
 		End If
-	
+		
 		If scope Return scope.FindTry()
 	End Method
 
@@ -1730,6 +1827,12 @@ Type TBlockDecl Extends TScopeDecl
 		
 		For Local stmt:TStmt=EachIn stmts
 			stmt.Semant
+
+			If opt_debug And Not IsNoDebug() Then
+				If Not stmt.generated Then
+					GenHash(stmt.errInfo[1..].Split(";")[0])
+				End If
+			End If
 			
 			If TReturnStmt(stmt) Then
 				If SurroundingFinallyBlock(Self) Then PushErr stmt.errInfo; Err "Return cannot be used inside a Finally block."
@@ -1801,16 +1904,16 @@ Type TBlockDecl Extends TScopeDecl
 	End Method
 End Type
 
-Const FUNC_METHOD:Int=   $0001			'mutually exclusive with ctor
-Const FUNC_CTOR:Int=     $0002
-Const FUNC_PROPERTY:Int= $0004
-Const FUNC_DTOR:Int=     $0008
-Const FUNC_BUILTIN:Int = $0080
-Const FUNC_PTR:Int=      $0100
-Const FUNC_INIT:Int =    $0200
-Const FUNC_NESTED:Int =  $0400
-Const FUNC_OPERATOR:Int= $0800
-Const FUNC_FIELD:Int=    $1000
+Const FUNC_METHOD:Long=   $0001			'mutually exclusive with ctor
+Const FUNC_CTOR:Long=     $0002
+Const FUNC_PROPERTY:Long= $0004
+Const FUNC_DTOR:Long=     $0008
+Const FUNC_BUILTIN:Long = $0080
+Const FUNC_PTR:Long=      $0100
+Const FUNC_INIT:Long =    $0200
+Const FUNC_NESTED:Long =  $0400
+Const FUNC_OPERATOR:Long= $0800
+Const FUNC_FIELD:Long=    $1000
 ' ^ beware of collisions between these constants and the ones declared at the top of this file
 
 
@@ -1827,6 +1930,7 @@ Type TFuncDecl Extends TBlockDecl
 	
 	Field castTo:String
 	Field noCastGen:Int
+	Field cdets:TCastDets
 	
 	Field maybeFunctionPtr:Int
 	
@@ -1837,8 +1941,9 @@ Type TFuncDecl Extends TBlockDecl
 	Field exported:Int
 	
 	Field equalsBuiltIn:Int = -1
+	field idx:Int
 	
-	Method CreateF:TFuncDecl( ident$,ty:TType,argDecls:TArgDecl[],attrs:Int )
+	Method CreateF:TFuncDecl( ident$,ty:TType,argDecls:TArgDecl[],attrs:Long )
 		Self.ident=ident
 		Self.retTypeExpr=ty
 		If argDecls
@@ -1970,7 +2075,12 @@ Type TFuncDecl Extends TBlockDecl
 		If argDecls.Length<>decl.argDecls.Length Return False
 		For Local i:Int=0 Until argDecls.Length
 			' ensure arg decls have been semanted
+			decl.argDecls[i].scope = decl
+			decl.argDecls[i].attrs :| DECL_INITONLY
 			decl.argDecls[i].Semant()
+
+			argDecls[i].scope = Self
+			argDecls[i].attrs :| DECL_INITONLY
 			argDecls[i].Semant()
 			
 			' objects can be subclasses as well as the same.
@@ -2006,11 +2116,16 @@ Type TFuncDecl Extends TBlockDecl
 		Local strictVoidToInt:Int = False
 
 		If isCtor() Or isDtor() Then
-			If retTypeExpr And Not TVoidType(retTypeExpr) Then
+			If retTypeExpr And Not TVoidType(retTypeExpr) And Not generated Then
 				Err ident + "() cannot specify a return type"
 			End If
-			If ClassScope() And ClassScope().IsInterface() Then
-				Err ident + "() cannot be declared in an Interface."
+			Local sc:TClassDecl = ClassScope()
+			If sc Then
+				If sc.IsInterface() Then
+					Err ident + "() cannot be declared in an Interface."
+				Else If sc.IsStruct() And isDtor() Then
+					Err ident + "() cannot be declared in a Struct."
+				End If
 			End If
 			If IsCtor() retTypeExpr=New TObjectType.Create( TNewDecl(Self).cDecl )
 		End If
@@ -2052,14 +2167,24 @@ Type TFuncDecl Extends TBlockDecl
 			End If
 		End If
 		
+		retType = retType.Semant()
+		
 		If TArrayType( retType ) And Not retType.EqualsType( retType.ActualType() )
 '			Err "Return type cannot be an array of generic objects."
 		EndIf
+
+		If ClassScope() And TObjectType(retType) And TObjectType(retType).classDecl.IsStruct() And TObjectType(retType).classDecl.IsPrivate() Then
+			TObjectType(retType).classDecl.exposed = True
+		End If
 
 		'semant args
 		For Local arg:TArgDecl=EachIn argDecls
 			InsertDecl arg
 			arg.Semant
+
+			If ClassScope() And TObjectType(arg.ty) And TObjectType(arg.ty).classDecl.IsStruct() And TObjectType(arg.ty).classDecl.IsPrivate() Then
+				TObjectType(arg.ty).classDecl.exposed = True
+			End If
 		Next
 
 		' if we are a function pointer declaration, we just want to semant the args here.
@@ -2070,7 +2195,7 @@ Type TFuncDecl Extends TBlockDecl
 		'check for duplicate decl
 		If ident Then
 			For Local decl:TFuncDecl=EachIn scope.SemantedFuncs( ident )
-				If decl<>Self And EqualsArgs( decl, True ) And Not decl.IsCTOR()
+				If decl<>Self And EqualsArgs( decl, True )
 					Err "Duplicate declaration "+ToString()
 				EndIf
 				If noMangle Then
@@ -2309,10 +2434,16 @@ Type TFuncDecl Extends TBlockDecl
 		Return decl.ToString() + " clashes with " + decl2.ToString() + ". Attempt to assign weaker access privileges ('" + p + "'), was '" + dp + "'."
 	End Function
 	
+	Method NextIdx:Int()
+		Local i:Int = idx
+		idx :+ 1
+		return i
+	End Method
+
 End Type
 
 Type TNewDecl Extends TFuncDecl
-
+	
 	Field chainedCtor:TNewExpr
 	Field cdecl:TClassDecl
 	
@@ -2344,11 +2475,12 @@ Type TNewDecl Extends TFuncDecl
 		t.mangled = mangled
 		t.noMangle = noMangle
 		t.chainedCtor = chainedCtor
-
+		t.cdecl = cdecl
+		
 		Return  t
 	End Method
-
-
+	
+	
 End Type
 
 
@@ -2394,10 +2526,12 @@ Type TClassDecl Extends TScopeDecl
 	Field objectType:TObjectType '"canned" objectType
 	Field globInit:Int
 	Field templateSource:TTemplateRecord
+	
+	Field exposed:Int
 
 	'Global nullObjectClass:TClassDecl=New TNullDecl.Create( "{NULL}",Null,Null,Null,DECL_ABSTRACT|DECL_EXTERN )
 	
-	Method Create:TClassDecl( ident$,args:TTemplateArg[],superTy:TIdentType,impls:TIdentType[],attrs:Int )
+	Method Create:TClassDecl( ident$,args:TTemplateArg[],superTy:TIdentType,impls:TIdentType[],attrs:Long )
 		Self.ident=ident
 		Self.args=args
 		Self.superTy=superTy
@@ -2418,7 +2552,7 @@ Type TClassDecl Extends TScopeDecl
 		Local t$
 
 		If args Then
-				For Local i:Int=0 Until args.Length
+			For Local i:Int=0 Until args.Length
 				If i Then
 					t :+ ","
 				End If
@@ -2428,7 +2562,7 @@ Type TClassDecl Extends TScopeDecl
 			For Local i:Int=0 Until instargs.Length
 				If i Then
 					t :+ ","
-		End If
+				End If
 				t :+ instargs[i].ToString()
 			Next
 		End If
@@ -2515,7 +2649,7 @@ End Rem
 		'check number of args
 		If args.Length<>instArgs.Length Then
 			If Not templateDets Or args.Length > instArgs.Length Then
-			Err "Wrong number of type arguments for class "+ToString()
+				Err "Wrong number of type arguments for class "+ToString()
 			Else
 				' create new instArgs with matched aliases
 				Local newInstArgs:TType[] = New TType[args.length]
@@ -2544,7 +2678,13 @@ End Rem
 		For Local inst:TClassDecl=EachIn instances
 			Local equal:Int=True
 			For Local i:Int=0 Until args.Length
-				If Not inst.instArgs[i].EqualsType( instArgs[i] )
+				Local instArg:TType = inst.instArgs[i].Semant()
+				inst.instArgs[i] = instArg
+				
+				Local otherInstArg:TType = instArgs[i].Semant()
+				instArgs[i] = otherInstArg
+				
+				If Not instArg.EqualsType( otherInstArg )
 					equal=False
 					Exit
 				EndIf
@@ -2609,7 +2749,7 @@ End Rem
 					If Not instArgs[i].EqualsType(arg.superTy[n]) And Not instArgs[i].ExtendsType(arg.superTy[n]) Then
 						Err "Type parameter '" + instArgs[i].ToString() + "' is not within its bound; should extend '" + arg.superTy[n].ToString() + "'"
 					End If
-		Next
+				Next
 			End If
 		
 		Next
@@ -2758,25 +2898,10 @@ End Rem
 		Return Super.FindFuncDecl( ident,args,explicit,,isIdentExpr,0,0 )
 	End Method
 	
-	Method GetAllFuncDecls:TFuncDecl[](funcs:TFuncDecl[] = Null, includeSuper:Int = True, includeImplicitConstructors:Int = False)
+	Method GetAllFuncDecls:TFuncDecl[](funcs:TFuncDecl[] = Null, includeSuper:Int = True, onlyCtors:Int = False)
 
 		If superClass And includeSuper Then
 			funcs = superClass.GetAllFuncDecls(funcs)
-		Else If includeImplicitConstructors Then
-			' find all (parameterized) constructors from base class that haven't been explicitly
-			' overridden and add a synthetic override for each of them to the collection of decls
-			#AddImplicitConstructors
-			For Local constrDecl:TFuncDecl = EachIn TFuncDeclList(FindDeclList("new"))
-				' if constructor is already in funcs, skip it
-				For Local f:TFuncDecl = EachIn funcs
-					If constrDecl = f Then Continue AddImplicitConstructors
-				Next
-				' otherwise, add a copy of it
-				Local constrDeclImplicitCopy:TFuncDecl = TFuncDecl(constrDecl.Copy(False))
-				constrDeclImplicitCopy.attrs :& ~(DECL_ABSTRACT | DECL_FINAL)
-				constrDeclImplicitCopy.metadata = New TMetaData
-				funcs :+ [constrDeclImplicitCopy]
-			Next
 		End If
 
 		' interface methods
@@ -2787,19 +2912,27 @@ End Rem
 		End If
 		
 		For Local func:TFuncDecl = EachIn _decls
-		
+
+			If onlyCtors And Not func.IsCtor() Then
+				Continue
+			End If
+
 			Local matched:Int = False
 			
 			For Local i:Int = 0 Until funcs.length
+				Local ofunc:TFuncDecl = funcs[i]
 				' found a match - we are overriding it
-				If func.IdentLower() = funcs[i].IdentLower() And func.EqualsArgs(funcs[i]) Then
+				If func.IdentLower() = ofunc.IdentLower() And func.EqualsArgs(ofunc) Then
 					matched = True
-					' but don't override if we are an interface and the function is implemented
-					If IsInterface() And Not funcs[i].ClassScope().IsInterface() Then
-						Exit
+					
+					If func.scope <> ofunc.scope Then
+						' but don't override if we are an interface and the function is implemented
+						If IsInterface() And Not ofunc.ClassScope().IsInterface() Then
+							Exit
+						End If
+						' set this to our own func
+						funcs[i] = func
 					End If
-					' set this to our own func
-					funcs[i] = func
 					Exit
 				End If
 			Next
@@ -2872,7 +3005,7 @@ End Rem
 		If Not TClassDecl(Self) Then
 			Return fdecl
 		End If
-	
+		
 		If superClass Then
 			Local decl:TFuncDecl = superClass.GetOriginalFuncDecl(fdecl)
 			If decl <> fdecl Then
@@ -2898,7 +3031,7 @@ End Rem
 		
 		For Local func:TFuncDecl = EachIn _decls
 		
-			If func.IdentLower() = fdecl.IdentLower() And func.EqualsArgs(fdecl) Then
+			If func.IdentLower() = fdecl.IdentLower() And func.EqualsArgs(fdecl, True) Then
 				Return func
 			End If
 		
@@ -3029,43 +3162,50 @@ End Rem
 			GetFieldOffset(decl)
 		Next
 
-		If Not IsExtern() And Not IsInterface()
-			Local fdecl:TFuncDecl
-			For Local decl:TFuncDecl=EachIn FuncDecls()
-				If Not decl.IsCtor() Continue
-				Local nargs:Int
-				For Local arg:TArgDecl=EachIn decl.argDecls
-					If Not arg.init nargs:+1
-				Next
-				If nargs Continue
-				fdecl=decl
-				Exit
-			Next
-			
-			
-			' Don't need default new?
-			'If Not fdecl
-			'	fdecl=New TFuncDecl.CreateF( "new",New TObjectType.Create( Self ),Null,FUNC_CTOR )
-			'	fdecl.AddStmt New TReturnStmt.Create( Null )
-			'	InsertDecl fdecl
-			'EndIf
-		EndIf
-
 		For Local decl:TDecl=EachIn _decls
 			If TClassDecl(decl) Then
 				TClassDecl(decl).Semant
 			End If
 		Next
 
-		' structs have a default New
+		' structs have a default New and Compare
 		' if we haven't defined one, create one
-		If attrs & CLASS_STRUCT Then
+		If attrs & CLASS_STRUCT And Not IsExtern() And Not declImported Then
+			attrs :| DECL_CYCLIC
 			Local func:TFuncDecl = FindFuncDecl("new", Null,True,,,,0)
 			If Not func Then
-				func = New TNewDecl.CreateF("New", Null, Null, FUNC_CTOR | FUNC_METHOD)
+				func = New TNewDecl.CreateF("New", Null, Null, FUNC_CTOR)
+				func.generated = True
 				TNewDecl(func).cdecl = Self
 				InsertDecl(func)
 			End If
+			
+			' add default compare if required
+			Local list:TFuncDeclList = TFuncDeclList(FindDeclList("compare", , , SCOPE_CLASS_LOCAL))
+			
+			Local arg:TArgDecl = New TArgDecl.Create("o1", TType.MapToVarType(New TObjectType.Create(Self)), Null)
+			func = New TFuncDecl.CreateF("Compare", New TIntType, [arg], FUNC_METHOD)
+			func.generated = True
+			func.retType = New TIntType
+			BuildStructCompareStatements(func)
+			
+			Local found:Int
+			If list And list.Count() Then
+				For Local fdecl:TFuncDecl = EachIn list
+					If fdecl.EqualsFunc(func, True) Then
+						found = True
+						Exit
+					End If
+				Next
+			End If
+			If Not found Then
+				InsertDecl(func)
+			End If
+			
+			' generate default comparator compare
+			BuildStructDefaultComparatorCompare(attrs & DECL_PRIVATE <> 0)
+			
+			attrs :~ DECL_CYCLIC
 		End If
 		
 		'NOTE: do this AFTER super semant so UpdateAttrs order is cool.
@@ -3073,6 +3213,129 @@ End Rem
 		If AppScope() Then
 			AppScope().semantedClasses.AddLast Self
 		End If
+	End Method
+
+	Method OnSemant2()
+
+		If args or instargs Then
+			Return
+		End If
+
+		If Not IsExtern() And Not IsInterface()
+			Local fdecl:TFuncDecl
+			For Local decl:TFuncDecl=EachIn GetAllFuncDecls(Null, True, True)
+				If Not decl.IsCtor() Continue
+
+				' only non default ctors
+				If decl.argDecls.Length > 0 Then
+
+					' method belongs to super? implement default
+					If decl.Scope <> Self Then
+
+						fdecl = TFuncDecl(decl.OnCopy(False))
+						fdecl.generated = True
+						fdecl.scope = Null
+						fdecl.overrides = decl
+						fdecl.castTo = Null
+						fdecl.noCastGen = Null
+						fdecl.munged = Null
+						fdecl.metadata = metadata
+						fdecl.mangled = Null
+						fdecl.noMangle = Null
+				
+						TNewDecl(fdecl).cdecl = Self
+						InsertDecl(fdecl)
+
+					End If
+
+				End If
+
+			Next
+			
+
+			' Don't need default new?
+			'If Not fdecl
+			'	fdecl=New TFuncDecl.CreateF( "new",New TObjectType.Create( Self ),Null,FUNC_CTOR )
+			'	fdecl.AddStmt New TReturnStmt.Create( Null )
+			'	InsertDecl fdecl
+			'EndIf
+		EndIf
+	End Method
+	
+	Method BuildStructCompareStatements(func:TFuncDecl)
+		func.attrs :| DECL_NODEBUG
+	
+		'
+		' Local cmp:Int = 0
+		'
+		Local cmp:TLocalDecl=New TLocalDecl.Create( "cmp",Null,New TConstExpr.Create( New TIntType,"0" ),,True )
+		func.AddStmt New TDeclStmt.Create(cmp)
+		Local cmpVar:TVarExpr = New TVarExpr.Create(cmp)
+		
+		' iterate fields
+		For Local fdecl:TFieldDecl = EachIn _decls
+			fdecl.Semant()
+			
+			'
+			' If cmp <> 0 Then
+			'    Return cmp
+			' End If
+			'
+			Local ifExpr:TExpr = New TBinaryCompareExpr.Create( "<>",cmpVar, New TConstExpr.Create( New TIntType,"0" ))
+			Local thenBlock:TBlockDecl=New TBlockDecl.Create( func, , BLOCK_IF )
+			Local elseBlock:TBlockDecl=New TBlockDecl.Create( func, , BLOCK_ELSE )
+			Local returnStmt:TReturnStmt = New TReturnStmt.Create( cmpVar )
+			returnStmt.generated = True
+			returnStmt.errInfo=errInfo
+			thenBlock.AddStmt returnStmt
+			func.AddStmt New TIfStmt.Create( ifExpr,thenBlock,elseBlock )
+			
+			'
+			' cmp = DefaultComparator_Compare( _field, o1._field )
+			'
+			Local expr1:TExpr = New TIdentExpr.Create( fdecl.ident )
+			Local expr2:TExpr = New TIdentExpr.Create( "o1")
+			expr2 = New TIdentExpr.Create( fdecl.ident, expr2)
+			
+			If TEnumType(fdecl.ty) Then
+				expr1 = New TFuncCallExpr.Create(New TIdentExpr.Create("Ordinal", expr1))
+				expr2 = New TFuncCallExpr.Create(New TIdentExpr.Create("Ordinal", expr2))
+			End If
+			
+			Local fcExpr:TExpr = New TIdentExpr.Create( "DefaultComparator_Compare")
+			fcExpr = New TFuncCallExpr.Create( fcExpr, [expr1, expr2])
+	
+			func.AddStmt New TAssignStmt.Create( "=",cmpVar,fcExpr)
+			
+		Next
+		
+		'
+		' Return cmp
+		'
+		Local returnStmt:TReturnStmt = New TReturnStmt.Create( cmpVar )
+		returnStmt.generated = True
+		returnStmt.errInfo=errInfo
+		func.stmts.AddLast returnStmt
+	End Method
+
+	Method BuildStructDefaultComparatorCompare(isPrivate:Int = False)
+		Local arg1:TArgDecl = New TArgDecl.Create("o1", TType.MapToVarType(New TObjectType.Create(Self)), Null)
+		Local arg2:TArgDecl = New TArgDecl.Create("o2", TType.MapToVarType(New TObjectType.Create(Self)), Null)
+		Local func:TFuncDecl = New TFuncDecl.CreateF("DefaultComparator_Compare", New TIntType, [arg1, arg2], 0)
+		If isPrivate Then
+			func.attrs :| DECL_PRIVATE
+		End If
+
+		Local expr:TExpr = New TIdentExpr.Create( "o1")
+		expr = New TIdentExpr.Create( "Compare" ,expr )
+		expr = New TFuncCallExpr.Create( expr, [New TIdentExpr.Create("o2")])
+		
+		Local returnStmt:TReturnStmt = New TReturnStmt.Create( expr )
+		returnStmt.generated = True
+		returnStmt.errInfo=errInfo
+		func.stmts.AddLast returnStmt		
+		
+		ModuleScope().InsertDecl func
 	End Method
 	
 	Method SemantParts()
@@ -3189,8 +3452,8 @@ End Rem
 					If fdecl.IsAbstract() Then
 						Err "Can't create instance of type "+ToString()+" due to abstract "+fdecl.ToString()+"."
 					End If
-							Next
-							EndIf
+				Next
+			EndIf
 			'
 			'Check we implement all interface methods!
 			'
@@ -3389,9 +3652,14 @@ Type TLoopLabelDecl Extends TDecl ' also used internally for Try constructs
 
 	Field realIdent:String
 
-	Method Create:TLoopLabelDecl( ident$, attrs:Int=0 )
-		Self.ident="#" + ident
-		Self.realIdent = ident
+	Method Create:TLoopLabelDecl( ident$, attrs:Long=0 )
+		If Not ident.StartsWith("#") Then
+			Self.ident="#" + ident
+			Self.realIdent = ident
+		Else
+			Self.ident = ident
+			Self.realIdent = ident[1..]
+		End If
 		Self.attrs=attrs
 		Return Self
 	End Method
@@ -3410,9 +3678,14 @@ Type TDataLabelDecl Extends TDecl
 	Field realIdent:String
 	Field index:Int
 
-	Method Create:TDataLabelDecl( ident$, attrs:Int=0 )
-		Self.ident="#" + ident
-		Self.realIdent = ident
+	Method Create:TDataLabelDecl( ident$, attrs:Long=0 )
+		If Not ident.StartsWith("#") Then
+			Self.ident="#" + ident
+			Self.realIdent = ident
+		Else
+			Self.ident = ident
+			Self.realIdent = ident[1..]
+		End If
 		Self.attrs=attrs
 		Return Self
 	End Method
@@ -3433,7 +3706,7 @@ Type TDefDataDecl Extends TDecl
 	Field label:TDataLabelDecl
 	Field data:TExpr[]
 
-	Method Create:TDefDataDecl(data:TExpr[], label:TDataLabelDecl = Null, attrs:Int=0 )
+	Method Create:TDefDataDecl(data:TExpr[], label:TDataLabelDecl = Null, attrs:Long=0 )
 		Self.data=data
 		Self.label=label
 		Self.attrs=attrs
@@ -3515,7 +3788,40 @@ Type TEnumDecl Extends TScopeDecl
 		Return Super.GetDecl(ident)
 	End Method
 	
+	Method CastsToEnum:Int(expr:TConstExpr)
+		Local value:Long = StringToLong(expr.value)
+		
+		If isFlags Then
+			' zero value special case
+			If value = 0 Then
+				For Local val:TEnumValueDecl = EachIn values
+					If val.longValue = 0 Then
+						Return True
+					End If
+				Next
+				Return False
+			End If
+		
+			Local result:Long
+			For Local val:TEnumValueDecl = EachIn values
+				value :~ val.longValue
+			Next
+
+			Return value = 0
+		Else
+			For Local val:TEnumValueDecl = EachIn values
+				If value = val.longValue Then
+					Return True
+				End If
+			Next
+		End If
+		
+		Return False
+	End Method
+	
 	Method GenerateFuncs()
+		Local enumType:TEnumType = New TEnumType.Create(Self)
+	
 		Local fdecl:TFuncDecl = New TFuncDecl.CreateF("ToString", New TStringType, Null, FUNC_METHOD)
 		InsertDecl fdecl
 		fdecl.Semant()
@@ -3524,9 +3830,18 @@ Type TEnumDecl Extends TScopeDecl
 		InsertDecl fdecl
 		fdecl.Semant()
 
-		fdecl = New TFuncDecl.CreateF("Values", New TArrayType.Create(New TEnumType.Create(Self), 1), Null, 0)
+		fdecl = New TFuncDecl.CreateF("Values", New TArrayType.Create(enumType, 1), Null, 0)
 		InsertDecl fdecl
 		fdecl.Semant()
+		
+		Local args:TArgDecl[2]
+		args[0] = New TArgDecl.Create("value", ty, Null)
+		args[1] = New TArgDecl.Create("result", TType.MapToVarType(enumType.Copy()), Null, 0)
+		
+		fdecl = New TFuncDecl.CreateF("TryConvert", New TIntType, args, 0)
+		InsertDecl fdecl
+		fdecl.Semant()
+
 	End Method
 	
 	Method ToString:String()
@@ -3538,7 +3853,7 @@ Type TEnumValueDecl Extends TDecl
 
 	Field expr:TExpr
 	Field index:Int
-	
+	Field longValue:Long
 	
 	Method Create:TEnumValueDecl(id:String, index:Int, expr:TExpr)
 		Self.ident = id
@@ -3556,6 +3871,10 @@ Type TEnumValueDecl Extends TDecl
 
 		If expr Then
 
+			If TConstExpr(expr) And Not TConstExpr(expr).ty.EqualsType(parent.ty) Then
+				TConstExpr(expr).UpdateType(parent.ty)
+			End If
+
 			expr = expr.Semant()
 
 			' 			
@@ -3572,6 +3891,8 @@ Type TEnumValueDecl Extends TDecl
 			If Not TConstExpr(expr) Or Not TIntegralType(TConstExpr(expr).ty) Then
 				Err "Enum values must be integral constants."
 			End If
+			
+			longValue = StringToLong(TConstExpr(expr).value)
 		Else
 			Local val:Long
 			
@@ -3614,7 +3935,8 @@ Type TEnumValueDecl Extends TDecl
 			End If
 
 			expr = New TConstExpr.Create( parent.ty.Copy(), val).Semant()
-		
+			longValue = val
+			
 		End If
 	End Method
 
@@ -3644,6 +3966,8 @@ End Type
 Const MODULE_STRICT:Int=1
 Const MODULE_SUPERSTRICT:Int=2
 Const MODULE_ACTUALMOD:Int=4
+Const MODULE_FRAMEWORK:Int=8
+Const MODULE_MODULE:Int=16
 
 Type TNamespaceDecl Extends TScopeDecl
 
@@ -3674,6 +3998,8 @@ Type TModuleDecl Extends TScopeDecl
 	
 	' cache of ModuleInfo lines
 	Field modInfo:TList = New TList
+	' cache of pragma lines
+	Field pragmas:TList = New TList
 
 	Field _getDeclTreeCache:TList
 	
@@ -3684,7 +4010,7 @@ Type TModuleDecl Extends TScopeDecl
 		Return "Module "+munged
 	End Method
 	
-	Method Create:TModuleDecl( ident$,munged$,filepath$,attrs:Int )
+	Method Create:TModuleDecl( ident$,munged$,filepath$,attrs:Long )
 		Self.ident=ident
 		Self.munged=munged
 		Self.filepath=filepath
@@ -3915,7 +4241,7 @@ Type TModuleDecl Extends TScopeDecl
 					Next
 				Next
 			Else
-			cdecl.Semant
+				cdecl.Semant
 			End If
 		Next
 
@@ -3999,7 +4325,9 @@ Type TAppDecl Extends TScopeDecl
 'DebugStop		
 		_env=Null
 		pushenv Self
-		
+	
+		SemantImports()
+
 		SemantDataDefs()	
 
 		mainModule.Semant
@@ -4022,6 +4350,17 @@ Type TAppDecl Extends TScopeDecl
 		
 		For Local cdecl:TClassDecl=EachIn semantedClasses
 			cdecl.FinalizeClass
+		Next
+	End Method
+	
+	Method SemantImports()
+		For Local decl:TModuleDecl = EachIn globalImports.Values()
+			For Local cdecl:TClassDecl = EachIn decl._decls
+				If Not cdecl.IsSemanted() Then
+					cdecl.Semant()
+					cdecl.SemantParts()
+				End If
+			Next
 		Next
 	End Method
 	
@@ -4123,6 +4462,7 @@ Type TStringConst
 
 	Field id:String
 	Field count:Int
+	Field used:Int
 
 End Type
 
@@ -4144,6 +4484,32 @@ Type TGenProcessor Abstract
 	Global processor:TGenProcessor
 
 	Method ParseGeneric:Object(templ:TTemplateRecord, dets:TTemplateDets)
+	End Method
+	
+End Type
+
+Type TCastDets
+
+	Field name:String
+	Field retType:String
+	Field noGen:Int
+	Field args:String[0]
+	Field api:String
+
+	Method TransCast:String()
+		Local s:String = "(" + retType + " (*)"
+
+		s :+ "("
+		For Local i:Int = 0 Until args.length
+			s :+ args[i]
+			If i < args.length - 1 Then
+				s :+ ","
+			End If
+		Next
+		s :+ ")"
+
+		s :+ ")"
+		Return s
 	End Method
 	
 End Type
