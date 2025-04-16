@@ -501,7 +501,11 @@ Type TValDecl Extends TDecl
 		' for imported enum args with a default value, we need to set the type of the value to the enum
 		' since at this point it's just a number with no context
 		If TArgDecl(Self) And declInit And scope And scope.declImported And TEnumType(ty) Then
-			declInit = New TConstExpr.Create(ty, TConstExpr(declInit).value).Semant()
+			If TConstExpr(declInit) Then
+				declInit = New TConstExpr.Create(ty, TConstExpr(declInit).value).Semant()
+			Else If TUnaryExpr(declInit) Then
+				declInit = New TConstExpr.Create(ty, TUnaryExpr(declInit).Eval()).Semant()
+			End If
 		End If
 			
 		If declTy
