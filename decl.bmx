@@ -699,7 +699,7 @@ Type TLocalDecl Extends TVarDecl
 		End If
 		Super.OnSemant()
 	End Method
-		
+	
 	Method ToString$()
 		Return GetDeclPrefix() + Super.ToString()
 	End Method
@@ -1524,13 +1524,13 @@ End Rem
 					generateWarnings = True
 				End If
 			End If
-		
+			
 			errorDetails = ""
-		
+			
 			If n Then
 				noExtendString = False
 			End If
-
+			
 			For Local iDecl:TDecl = EachIn funcs
 			
 				Local func:TFuncDecl = TFuncDecl(iDecl)
@@ -1631,7 +1631,7 @@ End Rem
 									' but passes non-widen test
 									If exprTy.ExtendsType( declTy, noExtendString, False ) Then
 										' generate a warning, and accept it
-										Warn "In call to " + func.ToString()+ ". Argument #"+(i+1)+" is ~q" + exprTy.ToString()+"~q but declaration is ~q"+declTy.ToString()+"~q. "
+										Warn "In call to " + func.ToString()+ ": Argument #"+(i+1)+" is ~q" + exprTy.ToString()+"~q but declaration is ~q"+declTy.ToString()+"~q. "
 										Continue
 									End If
 								Else
@@ -1641,7 +1641,7 @@ End Rem
 						End If
 	
 						' make a more helpful error message
-						errorDetails :+ "Argument #"+(i+1)+" is ~q" + exprTy.ToString()+"~q but declaration is ~q"+declTy.ToString()+"~q. "
+						errorDetails :+ "~nArgument #"+(i+1)+" is ~q" + exprTy.ToString() + "~q but declaration is ~q" + declTy.ToString() + "~q."
 
 					Else If Not argDecls[i].init
 	
@@ -1719,14 +1719,14 @@ End Rem
 		If Not match
 			Local t$
 			For Local i:Int=0 Until argExprs.Length
-				If t t:+","
+				If t t:+", "
 				If argExprs[i] t:+argExprs[i].exprType.ToString()
 			Next
 			If foundIdentMatch Then
 				If throwOnNotMatched Then
-					Throw "Unable to find overload for "+ident+"("+t+"). " + errorDetails
+					Throw "Unable to find overload for "+ident+"("+t+")." + errorDetails
 				Else
-					Err "Unable to find overload for "+ident+"("+t+"). " + errorDetails
+					Err "Unable to find overload for "+ident+"("+t+")." + errorDetails
 				End If
 			Else
 				If throwOnNotMatched Then
@@ -1918,6 +1918,8 @@ Const FUNC_INIT:Long =    $0200
 Const FUNC_NESTED:Long =  $0400
 Const FUNC_OPERATOR:Long= $0800
 Const FUNC_FIELD:Long=    $1000
+' ^ beware of collisions between these constants and the ones declared at the top of this file
+
 
 'Fix! A func is NOT a block/scope!
 '
@@ -2071,7 +2073,7 @@ Type TFuncDecl Extends TBlockDecl
 	Method IsField:Int()
 		Return (attrs & FUNC_FIELD)<>0
 	End Method
-		
+	
 	' exactMatch requires args to be equal. If an arg is a subclass, that is not a match.
 	Method EqualsArgs:Int( decl:TFuncDecl, exactMatch:Int = False ) ' careful, this is not commutative!
 		If argDecls.Length<>decl.argDecls.Length Return False
@@ -2445,7 +2447,7 @@ Type TFuncDecl Extends TBlockDecl
 End Type
 
 Type TNewDecl Extends TFuncDecl
-
+	
 	Field chainedCtor:TNewExpr
 	Field cdecl:TClassDecl
 	
@@ -2454,7 +2456,13 @@ Type TNewDecl Extends TFuncDecl
 		For Local i:Int=0 Until args.Length
 			args[i]=TArgDecl( args[i].Copy() )
 		Next
-		Local t:TNewDecl = TNewDecl(New TNewDecl.CreateF( ident,retType,args,attrs &~DECL_SEMANTED ))
+		Local retTypeCopy:TType
+		If IsSemanted() Then
+			retTypeCopy = Null
+		Else
+			retTypeCopy = retType
+		End If
+		Local t:TNewDecl = TNewDecl(New TNewDecl.CreateF( ident,retTypeCopy,args,attrs &~DECL_SEMANTED ))
 		If deep Then
 			For Local stmt:TStmt=EachIn stmts
 				t.AddStmt stmt.Copy(t)
@@ -2471,11 +2479,12 @@ Type TNewDecl Extends TFuncDecl
 		t.mangled = mangled
 		t.noMangle = noMangle
 		t.chainedCtor = chainedCtor
-
+		t.cdecl = cdecl
+		
 		Return  t
 	End Method
-
-
+	
+	
 End Type
 
 
@@ -2895,18 +2904,16 @@ End Rem
 	
 	Method GetAllFuncDecls:TFuncDecl[](funcs:TFuncDecl[] = Null, includeSuper:Int = True, onlyCtors:Int = False)
 
-		If Not funcs Then
-			funcs = New TFuncDecl[0]
-		End If
-		
 		If superClass And includeSuper Then
 			funcs = superClass.GetAllFuncDecls(funcs)
 		End If
 
 		' interface methods
-		For Local iface:TClassDecl=EachIn implmentsAll
-			funcs = iface.GetAllFuncDecls(funcs)
-		Next
+		If includeSuper Then
+			For Local iface:TClassDecl=EachIn implmentsAll
+				funcs = iface.GetAllFuncDecls(funcs)
+			Next
+		End If
 		
 		For Local func:TFuncDecl = EachIn _decls
 
@@ -3150,7 +3157,7 @@ End Rem
 		'If IsTemplateInst()
 		'	Return
 		'EndIf
-				
+		
 		If Not lastOffset And superClass Then
 			lastOffset = superClass.LastOffset
 		End If
@@ -3530,7 +3537,7 @@ End Rem
 				For Local decl2:TFuncDecl=EachIn impls
 					If decl.IdentLower() = decl2.IdentLower()
 						If decl2.argDecls.Length = decl.argDecls.Length And Not decl2.EqualsFunc( decl )
-						'	Err "Cannot mix incompatible method signatures." + decl2.ToString() + " vs " + decl.ToString() + "."
+						'	Err "Cannot mix incompatible method signatures. " + decl2.ToString() + " vs " + decl.ToString() + "."
 						Else
 							found = True
 						End If

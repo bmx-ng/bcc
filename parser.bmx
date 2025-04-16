@@ -148,13 +148,13 @@ Type TForEachinStmt Extends TLoopStmt
 					If Not isStruct And Not varObjTmp Then
 						' var = Null
 						expr=New TBinaryCompareExpr.Create( "=",expr, New TNullExpr.Create(TType.nullObjectType))
-	
+						
 						' then continue
 						Local thenBlock:TBlockDecl=New TBlockDecl.Create( block.scope, , BLOCK_IF )
 						Local elseBlock:TBlockDecl=New TBlockDecl.Create( block.scope, , BLOCK_ELSE )
 						cont = New TContinueStmt
 						thenBlock.AddStmt cont
-	
+						
 						block.stmts.AddFirst New TIfStmt.Create( expr,thenBlock,elseBlock )
 					End If
 					block.stmts.AddFirst New TAssignStmt.Create( "=",New TVarExpr.Create( indexTmp ),addExpr )
@@ -192,13 +192,13 @@ Type TForEachinStmt Extends TLoopStmt
 
 					If Not isStruct Then
 						expr=New TBinaryCompareExpr.Create( "=",varExpr, New TNullExpr.Create(TType.nullObjectType))
-		
+						
 						' then continue
 						Local thenBlock:TBlockDecl=New TBlockDecl.Create( block.scope, , BLOCK_IF )
 						Local elseBlock:TBlockDecl=New TBlockDecl.Create( block.scope, , BLOCK_ELSE )
 						cont = New TContinueStmt
 						thenBlock.AddStmt cont
-		
+						
 						block.stmts.AddFirst New TIfStmt.Create( expr,thenBlock,elseBlock )
 					End If
 					'block.stmts.AddFirst New TDeclStmt.Create( varTmp )
@@ -2604,7 +2604,6 @@ End Rem
 		Local ty:TType
 		Local init:TExpr
 		
-		
 		If attrs & DECL_EXTERN
 			ty=ParseDeclType(attrs & (DECL_STATIC | DECL_API_STDCALL))
 			
@@ -3560,10 +3559,6 @@ End Rem
 		Local classDecl:TClassDecl=New TClassDecl.Create( id,sargs,superTy,imps,attrs )
 		
 		If meta Then
-			If attrs & CLASS_STRUCT
-				Err "Structs cannot store metadata."
-			EndIf
-
 			classDecl.metadata = meta
 		End If
 
@@ -3652,13 +3647,13 @@ End Rem
 					Err "Interfaces can only contain constants and methods."
 				EndIf
 				If (attrs & CLASS_STRUCT) And _toke<>"field" And _toke<>"global" And _toke<>"threadedglobal"
-					Err "Structs can only contain fields."
+					Err "Structs can not contain constants."
 				EndIf
 				
 				classDecl.InsertDecls ParseDecls( _toke,decl_attrs | extra_attrs, _toke = "field")
 			Case "method"
 				If (attrs & CLASS_STRUCT) And (attrs & DECL_EXTERN) Then
-					Err "Structs can only contain fields."
+					Err "Extern Structs can only contain fields."
 				EndIf
 				Local decl:TFuncDecl=ParseFuncDecl( _toke,method_attrs | abst_attrs,classDecl )
 				classDecl.InsertDecl decl
@@ -3668,7 +3663,7 @@ End Rem
 				'EndIf
 				If attrs & CLASS_STRUCT Then
 					If (attrs & DECL_EXTERN) Then
-						Err "Structs can only contain fields."
+						Err "Extern Structs can only contain fields."
 					End If
 				EndIf
 				If attrs & DECL_EXTERN Then
@@ -4778,7 +4773,7 @@ Function EvalS$( source$,ty:TType )
 	' nx / switch
 	env.InsertDecl New TConstDecl.Create( "nx",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="nx" ),0 )
 	env.InsertDecl New TConstDecl.Create( "nxarm64",New TIntType,New TConstExpr.Create( New TIntType,opt_platform="nx" And opt_arch="arm64"),0 )	
-		
+	
 	' new compiler
 	env.InsertDecl New TConstDecl.Create( "bmxng",New TIntType,New TConstExpr.Create( New TIntType, True ),0 )
 	' coverage
@@ -4818,11 +4813,11 @@ Function EvalS$( source$,ty:TType )
 	Local val:String
 	Try
 		Local expr:TExpr=parser.ParseExpr()
-	
+		
 		expr=expr.Semant()
-	
+		
 		If ty expr=expr.Cast( ty )
-	
+		
 		val=expr.Eval()
 	Catch error:String
 		val = "0"
