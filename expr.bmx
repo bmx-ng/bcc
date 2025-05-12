@@ -2490,6 +2490,10 @@ Type TIndexExpr Extends TExpr
 		Else If TArrayType( expr.exprType )
 			exprType= TArrayType( expr.exprType ).elemType
 
+			If index.Length <> TArrayType( expr.exprType ).dims Then
+				Err "Wrong number of indices for array. Expected " + TArrayType( expr.exprType ).dims + ", got " + index.Length
+			End If
+
 			If TArrayType( expr.exprType ).dims > 1 Then
 
 				' a multi-dimensional array of arrays is slightly more complex
