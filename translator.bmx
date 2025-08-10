@@ -1531,12 +1531,12 @@ End Rem
 						count :+ 1
 					Next
 				Else
-					If opt_debug And Not block.IsNoDebug() Then
-						For Local b:TBlockDecl = EachIn localScope
-							Emit "bbOnDebugLeaveScope();"
-						Next
-					End If
+			If opt_debug And Not block.IsNoDebug() Then
+					For Local b:TBlockDecl = EachIn localScope
+						Emit "bbOnDebugLeaveScope();"
+					Next
 				End If
+			End If
 			End If
 			
 			If t Emit t+";"
