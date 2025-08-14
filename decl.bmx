@@ -1599,12 +1599,7 @@ End Rem
 						End If
 						
 						Local widensTest:Int = True
-						
-						' for numeric constants, allow them to be auto-cast unless
-						If TConstExpr(arg) And IsNumericType(exprTy) And Not TConstExpr(arg).typeSpecific And TConstExpr(arg).CompatibleWithType(declTy) Then
-							widensTest = False
-						End If
-	
+
 						If TFunctionPtrType(declTy) And TInvokeExpr(arg) Then
 							If TFunctionPtrType(declTy).equalsDecl(TInvokeExpr(arg).decl) Continue
 						End If
@@ -1616,6 +1611,16 @@ End Rem
 						
 						If TFunctionPtrType(declTy) And IsPointerType(exprTy, TType.T_BYTE) Then
 							Continue
+						End If
+
+						' for numeric constants, allow them to be auto-cast
+						If TConstExpr(arg) And IsNumericType(exprTy) And IsNumericType(declTy) And Not TConstExpr(arg).typeSpecific Then
+							If TConstExpr(arg).CompatibleWithType(declTy) Then
+								arg.exprType = declTy
+								Continue
+							Else
+								errorDetails :+ "~nArgument #"+(i+1)+" is not implicitly compatible with declared type ~q" + declTy.ToString() + "~q. Consider casting or explicitly typing it with ~q:" + declTy.ToString() + "~q if you want to use it as is."
+							End If
 						End If
 						
 						If exprTy.EqualsType( declTy ) Continue
