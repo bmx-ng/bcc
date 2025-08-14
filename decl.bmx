@@ -3774,6 +3774,10 @@ Type TEnumDecl Extends TScopeDecl
 		If Not TIntegralType(ty) Then
 			Err "Invalid type '" + ty.ToString() + "'. Enums can only be declared as integral types."
 		End If
+
+		If values.Length = 0 Then
+			Err "Enum '" + ident + "' must contain at least one value."
+		End If
 		
 		For Local val:TEnumValueDecl = EachIn values
 			val.scope = Self
