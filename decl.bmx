@@ -1599,7 +1599,12 @@ End Rem
 						End If
 						
 						Local widensTest:Int = True
-
+											 
+						' for numeric constants, allow them to be auto-cast unless 
+						If TConstExpr(arg) And IsNumericType(exprTy) And Not TConstExpr(arg).typeSpecific And TConstExpr(arg).CompatibleWithType(declTy) Then 
+							widensTest = False 
+						End If 
+	 
 						If TFunctionPtrType(declTy) And TInvokeExpr(arg) Then
 							If TFunctionPtrType(declTy).equalsDecl(TInvokeExpr(arg).decl) Continue
 						End If
@@ -1613,14 +1618,11 @@ End Rem
 							Continue
 						End If
 
-						' for numeric constants, allow them to be auto-cast
+						' Give more detailed message for some const use cases. 
 						If TConstExpr(arg) And IsNumericType(exprTy) And IsNumericType(declTy) And Not TConstExpr(arg).typeSpecific Then
-							If TConstExpr(arg).CompatibleWithType(declTy) Then
-								arg.exprType = declTy
-								Continue
-							Else
-								errorDetails :+ "~nArgument #"+(i+1)+" is not implicitly compatible with declared type ~q" + declTy.ToString() + "~q. Consider casting or explicitly typing it with ~q:" + declTy.ToString() + "~q if you want to use it as is."
-							End If
+						 	If Not TConstExpr(arg).CompatibleWithType(declTy) Then
+						 		errorDetails :+ "~nArgument #"+(i+1)+" is not implicitly compatible with declared type ~q" + declTy.ToString() + "~q. Consider casting or explicitly typing it with ~q:" + declTy.ToString() + "~q if you want to use it as is."
+						 	End If
 						End If
 						
 						If exprTy.EqualsType( declTy ) Continue
@@ -1743,6 +1745,18 @@ End Rem
 		EndIf
 		
 		match.AssertAccess
+
+		' ensure any const arg expressions are converted to the correct type once we've found a match
+		Local argDecls:TArgDecl[]=match.argDecls
+		For Local i:Int=0 Until argExprs.Length
+			Local arg:TExpr = argExprs[i]
+			Local declTy:TType=argDecls[i].ty
+			Local exprTy:TType=arg.exprType
+
+			If TConstExpr(arg) And IsNumericType(exprTy) And IsNumericType(declTy) And Not TConstExpr(arg).typeSpecific And TConstExpr(arg).CompatibleWithType(declTy) Then
+				arg.exprType = declTy
+			End If
+		Next
 
 		Return match
 	End Method
