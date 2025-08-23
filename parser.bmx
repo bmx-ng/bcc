@@ -4377,13 +4377,13 @@ End Rem
 				Local info:String = ParseStringLit()
 				_module.modInfo.AddLast(info)
 			Default
-				Exit
+				If _tokeType = TOKE_PRAGMA Then
+					ParsePragmaStmt()
+					NextToke
+				Else
+					Exit
+				End If
 			End Select
-
-			If _tokeType = TOKE_PRAGMA Then
-				ParsePragmaStmt()
-				NextToke
-			End If
 		Wend
 
 		' app code
