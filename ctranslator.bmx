@@ -7137,6 +7137,10 @@ End If
 			End If
 		Next
 
+		If opt_buildtype = BUILDTYPE_APP Then
+			Emit "bbRunAtstart();"
+		End If
+
 		' now do the local main stuff
 		app.mainFunc.Semant()
 		EmitLocalDeclarations(app.mainFunc)
