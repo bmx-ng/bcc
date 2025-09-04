@@ -7137,7 +7137,7 @@ End If
 			End If
 		Next
 
-		If opt_buildtype = BUILDTYPE_APP Then
+		If opt_apptype Then
 			Emit "bbRunAtstart();"
 		End If
 
