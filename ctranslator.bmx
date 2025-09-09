@@ -636,7 +636,7 @@ Type TCTranslator Extends TTranslator
 				If TObjectType(ty) And Not TObjectType(ty).classDecl.IsStruct() And Not argDecl.castTo Then
 					Local fdecl:TFuncDecl = decl
 					If TClassDecl(decl.scope) Then
-						fdecl = TClassDecl(decl.scope).GetOriginalFuncDecl(decl)
+						fdecl = TClassDecl(decl.scope).GetLatestFuncDecl(decl)
 					End If
 					t :+ Bra(TransObject(TObjectType(TArgDecl(fdecl.argDecls[i].actual).ty).classDecl))
 				End If
