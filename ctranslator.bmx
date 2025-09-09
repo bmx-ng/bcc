@@ -5371,7 +5371,7 @@ End Rem
 					Emit "bbObjectCtor((BBOBJECT)o);"
 				Else
 					If fdecl And fdecl.scope <> classDecl And fdecl.argDecls.Length Then
-						Local t:String = "o"
+						Local t:String = Bra(TransObject(classDecl.superClass)) + "o"
 						For Local i:Int=0 Until fdecl.argDecls.Length
 							Local arg:TArgDecl=fdecl.argDecls[i]
 							t :+ ", " + arg.munged
