@@ -3869,6 +3869,14 @@ Type TEnumDecl Extends TScopeDecl
 		InsertDecl fdecl
 		fdecl.Semant()
 
+		' FromString, returning ordinal, or throws TIllegalArgumentException if not found
+		args = New TArgDecl[1]
+		args[0] = New TArgDecl.Create("name", New TStringType, Null)
+
+		fdecl = New TFuncDecl.CreateF("FromString", enumType, args, 0)
+		InsertDecl fdecl
+		fdecl.Semant()
+
 	End Method
 	
 	Method ToString:String()
