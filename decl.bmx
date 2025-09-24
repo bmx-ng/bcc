@@ -3798,6 +3798,17 @@ Type TEnumDecl Extends TScopeDecl
 			val.Semant()
 		Next
 
+		' prevent duplicate names
+		If values.Length > 1 Then
+			For Local i:Int = 0 Until values.Length
+				For Local j:Int = i + 1 Until values.Length
+					If values[i].IdentLower() = values[j].IdentLower() Then
+						Err "Duplicate enum value name: " + values[i].Ident
+					End If
+				Next
+			Next
+		End If
+
 		GenerateFuncs()
 	End Method
 
@@ -3866,6 +3877,14 @@ Type TEnumDecl Extends TScopeDecl
 		args[1] = New TArgDecl.Create("result", TType.MapToVarType(enumType.Copy()), Null, 0)
 		
 		fdecl = New TFuncDecl.CreateF("TryConvert", New TIntType, args, 0)
+		InsertDecl fdecl
+		fdecl.Semant()
+
+		' FromString, returning ordinal, or throws TIllegalArgumentException if not found
+		args = New TArgDecl[1]
+		args[0] = New TArgDecl.Create("name", New TStringType, Null)
+
+		fdecl = New TFuncDecl.CreateF("FromString", enumType, args, 0)
 		InsertDecl fdecl
 		fdecl.Semant()
 

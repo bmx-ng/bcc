@@ -5232,6 +5232,10 @@ End Rem
 					Emit "BBINT " + fdecl.munged + Bra(TransType(decl.ty, "") + " ordinalValue, " + TransType(decl.ty, "") + " * ordinalResult") + " {"
 					Emit "return bbEnumTryConvert_" + TransDebugScopeType(decl.ty) + Bra(decl.munged + "_BBEnum_impl, ordinalValue, ordinalResult") + ";"
 					Emit "}"
+				Case "FromString"
+					Emit TransType(decl.ty, "") + " " + fdecl.munged + Bra("BBSTRING name") + " {"
+					Emit "return bbEnumFromString_" + TransDebugScopeType(decl.ty) + Bra(decl.munged + "_BBEnum_impl, name") + ";"
+					Emit "}"
 			End Select
 		Next
 
@@ -5248,6 +5252,8 @@ End Rem
 					Emit "BBSTRING " + fdecl.munged + Bra(TransType(decl.ty, "")) + ";"
 				Case "TryConvert"
 					Emit "BBINT " + fdecl.munged + Bra(TransType(decl.ty, "") + " ordinalValue, " + TransType(decl.ty, "") + " * ordinalResult") + ";"
+				Case "FromString"
+					Emit TransType(decl.ty, "") + " " + fdecl.munged + Bra("BBSTRING name") + ";"
 				Case "Ordinal"
 					' nothing to generate
 			End Select
