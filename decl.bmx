@@ -3798,6 +3798,17 @@ Type TEnumDecl Extends TScopeDecl
 			val.Semant()
 		Next
 
+		' prevent duplicate names
+		If values.Length > 1 Then
+			For Local i:Int = 0 Until values.Length
+				For Local j:Int = i + 1 Until values.Length
+					If values[i].IdentLower() = values[j].IdentLower() Then
+						Err "Duplicate enum value name: " + values[i].Ident
+					End If
+				Next
+			Next
+		End If
+
 		GenerateFuncs()
 	End Method
 
