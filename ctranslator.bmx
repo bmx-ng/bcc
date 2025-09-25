@@ -287,7 +287,7 @@ Type TCTranslator Extends TTranslator
 		End If
 		If TArrayType( ty ) Then
 			If TArrayType( ty ).isStatic Then
-				Return TransType(TArrayType( ty ).elemType, ident)
+				Return TransType(TArrayType( ty ).elemType, ident) + p
 			Else
 				Return "BBARRAY" + p
 			End If
@@ -3921,7 +3921,15 @@ End Rem
 				argPtrTypeStr = argTypeStr + "*"
 			Else
 				argTypeStr = TransType(decl.argDecls[a].ty, "")
-				argPtrTypeStr = TransType(TType.MapToPointerType(decl.argDecls[a].ty.Copy()), "")
+
+				Local ty:TType = decl.argDecls[a].ty
+				' for static arrays we need to spin up an extra level of indirection
+				' as the array is passed as a pointer to the array
+				If TArrayType(ty) And TArrayType(ty).isStatic Then
+					ty = TType.MapToPointerType(ty.Copy())
+				End If
+
+				argPtrTypeStr = TransType(TType.MapToPointerType(ty.Copy()), "")
 			End If
 			
 			Local argStr:String = "~t*" + Bra(argPtrTypeStr)
