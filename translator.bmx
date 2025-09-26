@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2024 Bruce A Henderson
+' Copyright (c) 2013-2025 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -515,7 +515,12 @@ Type TTranslator
 		Else
 
 			If TModuleDecl( decl.scope ) Or (TGlobalDecl(decl) And TModuleDecl(TGlobalDecl(decl).mscope))
-				munged=decl.ModuleScope().munged+"_"+id
+
+				If TClassDecl(decl) And TClassDecl(decl).instArgs Then
+					munged = "gimpl" + "_" + id
+				Else
+					munged=decl.ModuleScope().munged+"_"+id
+				End If
 				
 				If TClassDecl(decl) And TClassDecl(decl).instArgs Then
 					For Local ty:TType = EachIn TClassDecl(decl).instArgs
@@ -538,7 +543,11 @@ Type TTranslator
 				munged = "_" + TLoopLabelDecl(decl).realIdent
 			Else
 				If decl.scope Then
-					munged = decl.scope.munged + "_" + id
+					If TClassDecl(decl) And TClassDecl(decl).instArgs Then
+						munged = "gimpl" + "_" + id
+					Else
+						munged = decl.scope.munged + "_" + id
+					End If
 					
 					If TClassDecl(decl) And TClassDecl(decl).instArgs Then
 						For Local ty:TType = EachIn TClassDecl(decl).instArgs
