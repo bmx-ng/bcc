@@ -394,7 +394,7 @@ Function BmxProcessMultiString:String( str:String )
 	Return BmxUnquote(sb.ToString(), True)
 End Function
 
-Type TStack Extends TList
+Type TStackList Extends TList
 
 	Method Push(obj:Object)
 		AddFirst(obj)

@@ -41,19 +41,19 @@ Type TTranslator
 	
 	Field globalMungScope:TMap = New TMap
 	Field mungScope:TMap=New TMap'<TDecl>
-	Field mungStack:TStack=New TStack'< StringMap<TDecl> >
+	Field mungStack:TStackList=New TStackList'< StringMap<TDecl> >
 	Field funcMungs:TMap=New TMap'<FuncDeclList>
-	Field customVarStack:TStack = New TStack
-	Field varStack:TStack = New TStack
+	Field customVarStack:TStackList = New TStackList
+	Field varStack:TStackList = New TStackList
 
-	Field tryStack:TStack = New TStack
-	Field loopTryStack:TStack = New TStack
+	Field tryStack:TStackList = New TStackList
+	Field loopTryStack:TStackList = New TStackList
 
 	Field mungedScopes:TMap=New TMap'<StringSet>
 	'Field funcMungs:TFuncDeclList=New TFuncDeclList
 	'Field mungedFuncs:TMap=New Map
-	Field localScopeStack:TStack = New TStack
-	Field localScope:TStack = New TStack
+	Field localScopeStack:TStackList = New TStackList
+	Field localScope:TStackList = New TStackList
 	Field ind:Int
 	Field debugOut:String
 	
@@ -64,11 +64,11 @@ Type TTranslator
 
 	Method PushVarScope()
 		varStack.Push customVarStack
-		customVarStack = New TStack
+		customVarStack = New TStackList
 	End Method
 	
 	Method PopVarScope()
-		customVarStack=TStack(varStack.Pop())
+		customVarStack=TStackList(varStack.Pop())
 	End Method
 	
 	Method PushLoopLocalStack(stmt:Object)
@@ -913,7 +913,7 @@ op = mapSymbol(op)
 		
 		If opt_debug Then
 			localScopeStack.Push localScope
-			localScope = New TStack
+			localScope = New TStackList
 		End If
 	End Method
 	
@@ -922,7 +922,7 @@ op = mapSymbol(op)
 '		mungedScopes.Insert "$",Null
 
 		If opt_debug Then
-			localScope = TStack(localScopeStack.Pop())
+			localScope = TStackList(localScopeStack.Pop())
 		End If
 	End Method
 

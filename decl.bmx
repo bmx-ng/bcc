@@ -3142,7 +3142,7 @@ End Rem
 
 		'Semant implemented interfaces
 		Local impls:TClassDecl[]=New TClassDecl[impltys.Length]
-		Local implsall:TStack=New TStack
+		Local implsall:TStackList=New TStackList
 		For Local i:Int=0 Until impltys.Length
 			attrs :| DECL_CYCLIC
 			Local cdecl:TClassDecl=impltys[i].SemantClass()

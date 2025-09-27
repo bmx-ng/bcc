@@ -3541,7 +3541,7 @@ End Rem
 			args :+ TransObject(decl.scope, True)
 		End If
 
-		Local argCasts:TStack =New TStack
+		Local argCasts:TStackList =New TStackList
 		For Local i:Int=0 Until decl.argDecls.Length
 			Local arg:TArgDecl=decl.argDecls[i]
 			Local oarg:TArgDecl=odecl.argDecls[i]
@@ -3703,7 +3703,7 @@ End Rem
 			args :+ TransObject(decl.scope, True) + " o"
 		End If
 
-		Local argCasts:TStack =New TStack
+		Local argCasts:TStackList =New TStackList
 		For Local i:Int=0 Until decl.argDecls.Length
 			Local arg:TArgDecl=decl.argDecls[i]
 			Local oarg:TArgDecl=odecl.argDecls[i]
