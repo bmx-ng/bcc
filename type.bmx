@@ -40,7 +40,7 @@ Type TType
 		Return False
 	End Method
 	
-	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
+	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False, ignoreObjectSubclasses:Int = False)
 		Return EqualsType( ty )
 	End Method
 	
@@ -407,7 +407,7 @@ Type TNullType Extends TType
 		Return False
 	End Method
 	
-	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
+	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False, ignoreObjectSubclasses:Int = False)
 		Return True
 	End Method
 	
@@ -427,7 +427,7 @@ Type TBoolType Extends TType
 		Return TBoolType( ty )<>Null
 	End Method
 	
-	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
+	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False, ignoreObjectSubclasses:Int = False)
 		Return (widensTest And WidensToType(ty)) Or (Not widensTest And TNumericType( ty )<>Null) Or TBoolType( ty )<>Null Or (Not noExtendString And TStringType( ty )<>Null)
 	End Method
 
@@ -481,7 +481,7 @@ Type TIntType Extends TIntegralType
 			(_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR) Or (_flags & T_VAR))
 	End Method
 	
-	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
+	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False, ignoreObjectSubclasses:Int = False)
 		'If TObjectType( ty )
 		'	Local expr:TExpr=New TConstExpr.Create( Self,"" ).Semant()
 		'	Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True,,,,SCOPE_CLASS_HEIRARCHY )
@@ -552,7 +552,7 @@ Type TUIntType Extends TIntegralType
 			(_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR) Or (_flags & T_VAR))
 	End Method
 	
-	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
+	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False, ignoreObjectSubclasses:Int = False)
 		'If TObjectType( ty )
 		'	Local expr:TExpr=New TConstExpr.Create( Self,"" ).Semant()
 		'	Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
@@ -631,7 +631,7 @@ Type TSizeTType Extends TIntegralType
 			(_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR) Or (_flags & T_VAR))
 	End Method
 	
-	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
+	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False, ignoreObjectSubclasses:Int = False)
 		'If TObjectType( ty )
 		'	Local expr:TExpr=New TConstExpr.Create( Self,"" ).Semant()
 		'	Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
@@ -746,7 +746,7 @@ Type TByteType Extends TIntegralType
 			(_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR) Or (_flags & T_VAR))
 	End Method
 	
-	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
+	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False, ignoreObjectSubclasses:Int = False)
 		'If TObjectType( ty )
 		'	Local expr:TExpr=New TConstExpr.Create( Self,"" ).Semant()
 		'	Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
@@ -841,7 +841,7 @@ Type TShortType Extends TIntegralType
 			(_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR) Or (_flags & T_VAR))
 	End Method
 	
-	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
+	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False, ignoreObjectSubclasses:Int = False)
 		'If TObjectType( ty )
 		'	Local expr:TExpr=New TConstExpr.Create( Self,"" ).Semant()
 		'	Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
@@ -932,7 +932,7 @@ Type TLongType Extends TIntegralType ' BaH Long
 			(_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR) Or (_flags & T_VAR))
 	End Method
 	
-	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
+	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False, ignoreObjectSubclasses:Int = False)
 		'If TObjectType( ty )
 		'	Local expr:TExpr=New TConstExpr.Create( Self,"" ).Semant()
 		'	Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
@@ -994,7 +994,7 @@ Type TULongType Extends TIntegralType
 			(_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR) Or (_flags & T_VAR))
 	End Method
 	
-	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
+	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False, ignoreObjectSubclasses:Int = False)
 		'If TObjectType( ty )
 		'	Local expr:TExpr=New TConstExpr.Create( Self,"" ).Semant()
 		'	Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
@@ -1060,7 +1060,7 @@ Type TLongIntType Extends TIntegralType
 			(_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR) Or (_flags & T_VAR))
 	End Method
 	
-	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
+	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False, ignoreObjectSubclasses:Int = False)
 		If _flags & T_VARPTR And (TLongIntType(ty) <> Null Or IsPointerType(ty, 0, T_POINTER)) Return True
 		Return (widensTest And WidensToType(ty)) Or (Not widensTest And TNumericType( ty )<>Null) Or (Not noExtendString And TStringType( ty )<>Null) Or (WORD_SIZE=4 And TLParamType(ty)<>Null)
 	End Method
@@ -1148,7 +1148,7 @@ Type TULongIntType Extends TIntegralType
 			(_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR) Or (_flags & T_VAR))
 	End Method
 	
-	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
+	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False, ignoreObjectSubclasses:Int = False)
 		If _flags & T_VARPTR And (TULongIntType(ty) <> Null Or IsPointerType(ty, 0, T_POINTER)) Return True
 		Return (widensTest And WidensToType(ty)) Or (Not widensTest And TNumericType( ty )<>Null) Or (Not noExtendString And TStringType( ty )<>Null) Or (WORD_SIZE=4 And TLParamType(ty)<>Null)
 	End Method
@@ -1251,7 +1251,7 @@ Type TFloatType Extends TDecimalType
 			(_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR) Or (_flags & T_VAR))
 	End Method
 	
-	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
+	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False, ignoreObjectSubclasses:Int = False)
 		'If TObjectType( ty )
 		'	Local expr:TExpr=New TConstExpr.Create( Self,"" ).Semant()
 		'	Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
@@ -1306,7 +1306,7 @@ Type TDoubleType Extends TDecimalType
 			(_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR) Or (_flags & T_VAR))
 	End Method
 	
-	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
+	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False, ignoreObjectSubclasses:Int = False)
 		'If TObjectType( ty )
 		'	Local expr:TExpr=New TConstExpr.Create( Self,"" ).Semant()
 		'	Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
@@ -1356,7 +1356,7 @@ Type TInt128Type Extends TIntrinsicType
 			(_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR) Or (_flags & T_VAR))
 	End Method
 	
-	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
+	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False, ignoreObjectSubclasses:Int = False)
 		'If TObjectType( ty )
 		'	Local expr:TExpr=New TConstExpr.Create( Self,"" ).Semant()
 		'	Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
@@ -1410,7 +1410,7 @@ Type TFloat64Type Extends TIntrinsicType
 			(_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR) Or (_flags & T_VAR))
 	End Method
 	
-	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
+	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False, ignoreObjectSubclasses:Int = False)
 		'If TObjectType( ty )
 		'	Local expr:TExpr=New TConstExpr.Create( Self,"" ).Semant()
 		'	Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
@@ -1457,7 +1457,7 @@ Type TFloat128Type Extends TIntrinsicType
 			(_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR) Or (_flags & T_VAR))
 	End Method
 	
-	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
+	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False, ignoreObjectSubclasses:Int = False)
 		'If TObjectType( ty )
 		'	Local expr:TExpr=New TConstExpr.Create( Self,"" ).Semant()
 		'	Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
@@ -1512,7 +1512,7 @@ Type TDouble128Type Extends TIntrinsicType
 			(_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR) Or (_flags & T_VAR))
 	End Method
 	
-	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
+	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False, ignoreObjectSubclasses:Int = False)
 		'If TObjectType( ty )
 		'	Local expr:TExpr=New TConstExpr.Create( Self,"" ).Semant()
 		'	Local ctor:TFuncDecl=ty.GetClass().FindFuncDecl( "new",[expr],True )
@@ -1568,7 +1568,7 @@ Type TStringType Extends TType
 		Return TStringType( ty )<>Null And (_flags = ty._flags Or (_flags & T_VAR))
 	End Method
 
-	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )	
+	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False, ignoreObjectSubclasses:Int = False)	
 		Return EqualsType( ty ) Or (TObjectType( ty ) And TObjectType( ty ).classDecl.ident="Object") Or (TStringType(ty) And (_flags & T_VAR)) ..
 			Or (TStringType(ty) And (ty._flags & T_VAR)) Or (TStringType(ty) And (ty._flags & T_CHAR_PTR)) Or (TStringType(ty) And (ty._flags & T_SHORT_PTR)) ..
 			Or IsPointerType(ty) Or (TStringType(ty) And (_flags & T_CHAR_PTR)) Or (TStringType(ty) And (_flags & T_SHORT_PTR))
@@ -1652,7 +1652,7 @@ Type TArrayType Extends TType
 		Return arrayType And elemType.EqualsType( arrayType.elemType ) And dims = arrayType.dims And arrayType.isStatic = isStatic And arrayType.length = length
 	End Method
 	
-	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
+	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False, ignoreObjectSubclasses:Int = False)
 		Local arrayType:TArrayType=TArrayType( ty )
 		Return (arrayType And dims = arrayType.dims And ..
 			(arrayType.isStatic = isStatic And arrayType.length = length) And ..
@@ -1732,7 +1732,7 @@ Type TObjectType Extends TType
 		Return TNullDecl(classDecl) <> Null Or (objty And (classDecl=objty.classDecl) And (Not classDecl.IsStruct() Or IsFlagEquivalent(ty)))' Or classDecl.ExtendsClass( objty.classDecl ))) 'Or TObjectVarPtrType(ty) <> Null
 	End Method
 	
-	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
+	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False, ignoreObjectSubclasses:Int = False )
 		If classDecl.IsStruct() Then
 			If (_flags & T_VARPTR Or IsPointerType(Self, 0, T_POINTER)) And (TNumericType(ty) <> Null) And IsPointerType(ty, 0, T_POINTER) Then
 				Return True
@@ -1740,7 +1740,7 @@ Type TObjectType Extends TType
 			Return False
 		End If
 		Local objty:TObjectType=TObjectType( ty )
-		If objty Return classDecl.ExtendsClass( objty.classDecl )
+		If objty Return classDecl.ExtendsClass( objty.classDecl, ignoreObjectSubclasses )
 		If IsPointerType( ty, T_BYTE ) Return True
 	End Method
 	
@@ -1843,7 +1843,7 @@ Type TIdentType Extends TType
 		InternalErr "TIdentType.EqualsType"
 	End Method
 	
-	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
+	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False, ignoreObjectSubclasses:Int = False)
 		InternalErr "TIdentType.ExtendsType"
 	End Method
 	
@@ -2018,7 +2018,7 @@ Type TExternObjectType Extends TType
 		Return TNullDecl(classDecl) <> Null Or (objty And (classDecl=objty.classDecl Or classDecl.ExtendsClass( objty.classDecl ))) Or TObjectType(ty)
 	End Method
 	
-	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
+	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False, ignoreObjectSubclasses:Int = False)
 		Local objty:TObjectType=TObjectType( ty )
 		If objty Return classDecl.ExtendsClass( objty.classDecl )
 		If IsPointerType( ty, T_BYTE ) Return True
@@ -2077,7 +2077,7 @@ Type TFunctionPtrType Extends TType
 		Return True
 	End Method
 	
-	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
+	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False, ignoreObjectSubclasses:Int = False)
 		If TFunctionPtrType( ty )
 			' declared function pointer
 			Local tyfunc:TFuncDecl = TFunctionPtrType(ty).func
@@ -2153,7 +2153,7 @@ Type TWParamType Extends TParamType
 			(_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR) Or (_flags & T_VAR))
 	End Method
 	
-	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
+	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False, ignoreObjectSubclasses:Int = False)
 		If _flags & T_VARPTR And (TWParamType(ty) <> Null Or IsPointerType(ty, 0, T_POINTER)) Return True
 		Return (widensTest And WidensToType(ty)) Or (Not widensTest And TNumericType( ty )<>Null) Or (Not noExtendString And TStringType( ty )<>Null) 'Or TIntVarPtrType( ty )<> Null
 	End Method
@@ -2255,7 +2255,7 @@ Type TLParamType Extends TParamType
 			(_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR) Or (_flags & T_VAR))
 	End Method
 	
-	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
+	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False, ignoreObjectSubclasses:Int = False)
 		If _flags & T_VARPTR And (TLParamType(ty) <> Null Or IsPointerType(ty, 0, T_POINTER)) Return True
 		Return (widensTest And WidensToType(ty)) Or (Not widensTest And TNumericType( ty )<>Null) Or (Not noExtendString And TStringType( ty )<>Null) 'Or TIntVarPtrType( ty )<> Null
 	End Method
@@ -2350,7 +2350,7 @@ Type TEnumType Extends TType
 			(_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR) Or (_flags & T_VAR))
 	End Method
 
-	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False )
+	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False, ignoreObjectSubclasses:Int = False)
 		If _flags & T_VARPTR And (TEnumType(ty) <> Null Or IsPointerType(ty, 0, T_POINTER)) Return True
 		Return (widensTest And WidensToType(ty))
 	End Method

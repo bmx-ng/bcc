@@ -2098,7 +2098,7 @@ Type TFuncDecl Extends TBlockDecl
 	End Method
 	
 	' exactMatch requires args to be equal. If an arg is a subclass, that is not a match.
-	Method EqualsArgs:Int( decl:TFuncDecl, exactMatch:Int = False ) ' careful, this is not commutative!
+	Method EqualsArgs:Int( decl:TFuncDecl, exactMatch:Int = False, ignoreObjectSubclasses:Int = False ) ' careful, this is not commutative!
 		If argDecls.Length<>decl.argDecls.Length Return False
 		For Local i:Int=0 Until argDecls.Length
 			' ensure arg decls have been semanted
@@ -2112,7 +2112,8 @@ Type TFuncDecl Extends TBlockDecl
 			
 			' objects can be subclasses as well as the same.
 			If TObjectType(decl.argDecls[i].ty) Then
-				If Not decl.argDecls[i].ty.EqualsType( argDecls[i].ty ) And (exactMatch Or Not decl.argDecls[i].ty.ExtendsType( argDecls[i].ty )) Return False
+				Local ty:TObjectType = TObjectType(decl.argDecls[i].ty)
+				If Not ty.EqualsType( argDecls[i].ty ) And (exactMatch Or Not ty.ExtendsType( argDecls[i].ty, false , false, ignoreObjectSubclasses )) Return False
 			Else
 				If Not decl.argDecls[i].ty.EqualsType( argDecls[i].ty ) Return False
 			End If
@@ -2953,7 +2954,7 @@ End Rem
 			For Local i:Int = 0 Until funcs.length
 				Local ofunc:TFuncDecl = funcs[i]
 				' found a match - we are overriding it
-				If func.IdentLower() = ofunc.IdentLower() And func.EqualsArgs(ofunc) Then
+				If func.IdentLower() = ofunc.IdentLower() And func.EqualsArgs(ofunc,,True) Then
 					matched = True
 					
 					If func.scope <> ofunc.scope Then
@@ -3079,7 +3080,7 @@ End Rem
 		Return fdecl
 	End Method
 	
-	Method ExtendsClass:Int( cdecl:TClassDecl )
+	Method ExtendsClass:Int( cdecl:TClassDecl, ignoreObjectSubclasses:Int = False )
 		'If Self=nullObjectClass Return True
 		
 '		If cdecl.IsTemplateArg()
@@ -3088,7 +3089,13 @@ End Rem
 		
 		Local tdecl_:TClassDecl=Self
 		While tdecl_
-			If tdecl_=cdecl Return True
+			If tdecl_=cdecl Then
+				If ignoreObjectSubclasses And tdecl_.ident = "Object"
+					Return False
+				Else
+					Return True
+				End If
+			End If
 			If cdecl.IsInterface()
 				For Local iface:TClassDecl=EachIn tdecl_.implmentsAll
 					If iface=cdecl Return True
