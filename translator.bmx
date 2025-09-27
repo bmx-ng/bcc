@@ -255,7 +255,16 @@ Type TTranslator
 		End If
 		If TObjectType( ty ) Then
 			If Not TObjectType( ty ).classdecl.IsExtern()
-				Return p + "T" + TObjectType( ty ).classDecl.ident
+				Local t:String = p + "T" + TObjectType( ty ).classDecl.ident
+				
+				' handle case where class is also a template instance... and so on
+				If TClassDecl(TObjectType(ty).classDecl) And TClassDecl(TObjectType(ty).classDecl).instArgs Then
+					For Local ity:TType = EachIn TClassDecl(TObjectType(ty).classDecl).instArgs
+						t :+ TransMangleType(ity)
+					Next
+				End If
+
+				Return t
 			Else
 				If TObjectType( ty ).classdecl.IsInterface() Then
 					Return p + "I" + TObjectType(ty).classDecl.ident
