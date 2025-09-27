@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2024 Bruce A Henderson
+' Copyright (c) 2013-2025 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -41,19 +41,19 @@ Type TTranslator
 	
 	Field globalMungScope:TMap = New TMap
 	Field mungScope:TMap=New TMap'<TDecl>
-	Field mungStack:TStack=New TStack'< StringMap<TDecl> >
+	Field mungStack:TStackList=New TStackList'< StringMap<TDecl> >
 	Field funcMungs:TMap=New TMap'<FuncDeclList>
-	Field customVarStack:TStack = New TStack
-	Field varStack:TStack = New TStack
+	Field customVarStack:TStackList = New TStackList
+	Field varStack:TStackList = New TStackList
 
-	Field tryStack:TStack = New TStack
-	Field loopTryStack:TStack = New TStack
+	Field tryStack:TStackList = New TStackList
+	Field loopTryStack:TStackList = New TStackList
 
 	Field mungedScopes:TMap=New TMap'<StringSet>
 	'Field funcMungs:TFuncDeclList=New TFuncDeclList
 	'Field mungedFuncs:TMap=New Map
-	Field localScopeStack:TStack = New TStack
-	Field localScope:TStack = New TStack
+	Field localScopeStack:TStackList = New TStackList
+	Field localScope:TStackList = New TStackList
 	Field ind:Int
 	Field debugOut:String
 	
@@ -64,11 +64,11 @@ Type TTranslator
 
 	Method PushVarScope()
 		varStack.Push customVarStack
-		customVarStack = New TStack
+		customVarStack = New TStackList
 	End Method
 	
 	Method PopVarScope()
-		customVarStack=TStack(varStack.Pop())
+		customVarStack=TStackList(varStack.Pop())
 	End Method
 	
 	Method PushLoopLocalStack(stmt:Object)
@@ -255,7 +255,16 @@ Type TTranslator
 		End If
 		If TObjectType( ty ) Then
 			If Not TObjectType( ty ).classdecl.IsExtern()
-				Return p + "T" + TObjectType( ty ).classDecl.ident
+				Local t:String = p + "T" + TObjectType( ty ).classDecl.ident
+				
+				' handle case where class is also a template instance... and so on
+				If TClassDecl(TObjectType(ty).classDecl) And TClassDecl(TObjectType(ty).classDecl).instArgs Then
+					For Local ity:TType = EachIn TClassDecl(TObjectType(ty).classDecl).instArgs
+						t :+ TransMangleType(ity)
+					Next
+				End If
+
+				Return t
 			Else
 				If TObjectType( ty ).classdecl.IsInterface() Then
 					Return p + "I" + TObjectType(ty).classDecl.ident
@@ -515,7 +524,12 @@ Type TTranslator
 		Else
 
 			If TModuleDecl( decl.scope ) Or (TGlobalDecl(decl) And TModuleDecl(TGlobalDecl(decl).mscope))
-				munged=decl.ModuleScope().munged+"_"+id
+
+				If TClassDecl(decl) And TClassDecl(decl).instArgs Then
+					munged = "gimpl" + "_" + id
+				Else
+					munged=decl.ModuleScope().munged+"_"+id
+				End If
 				
 				If TClassDecl(decl) And TClassDecl(decl).instArgs Then
 					For Local ty:TType = EachIn TClassDecl(decl).instArgs
@@ -538,7 +552,11 @@ Type TTranslator
 				munged = "_" + TLoopLabelDecl(decl).realIdent
 			Else
 				If decl.scope Then
-					munged = decl.scope.munged + "_" + id
+					If TClassDecl(decl) And TClassDecl(decl).instArgs Then
+						munged = "gimpl" + "_" + id
+					Else
+						munged = decl.scope.munged + "_" + id
+					End If
 					
 					If TClassDecl(decl) And TClassDecl(decl).instArgs Then
 						For Local ty:TType = EachIn TClassDecl(decl).instArgs
@@ -895,7 +913,7 @@ op = mapSymbol(op)
 		
 		If opt_debug Then
 			localScopeStack.Push localScope
-			localScope = New TStack
+			localScope = New TStackList
 		End If
 	End Method
 	
@@ -904,7 +922,7 @@ op = mapSymbol(op)
 '		mungedScopes.Insert "$",Null
 
 		If opt_debug Then
-			localScope = TStack(localScopeStack.Pop())
+			localScope = TStackList(localScopeStack.Pop())
 		End If
 	End Method
 

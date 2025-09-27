@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2023 Bruce A Henderson
+' Copyright (c) 2013-2025 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -3541,7 +3541,7 @@ End Rem
 			args :+ TransObject(decl.scope, True)
 		End If
 
-		Local argCasts:TStack =New TStack
+		Local argCasts:TStackList =New TStackList
 		For Local i:Int=0 Until decl.argDecls.Length
 			Local arg:TArgDecl=decl.argDecls[i]
 			Local oarg:TArgDecl=odecl.argDecls[i]
@@ -3703,7 +3703,7 @@ End Rem
 			args :+ TransObject(decl.scope, True) + " o"
 		End If
 
-		Local argCasts:TStack =New TStack
+		Local argCasts:TStackList =New TStackList
 		For Local i:Int=0 Until decl.argDecls.Length
 			Local arg:TArgDecl=decl.argDecls[i]
 			Local oarg:TArgDecl=odecl.argDecls[i]
@@ -4116,6 +4116,8 @@ End Rem
 		Emit ""
 
 		' emit the class structure
+		Emit "#ifndef DEF_BBClass_" + classid + "_STRUCT"
+		Emit "#define DEF_BBClass_" + classid + "_STRUCT"
 		Emit "struct BBClass_" + classid + " {"
 		If classDecl.superClass.ident = "Object" Then
 			Emit "BBClass*  super;"
@@ -4166,6 +4168,8 @@ End Rem
 		EndLocalScope
 
 		Emit "};"
+
+		Emit "#endif~n"
 
 		Emit "extern struct BBClass_" + classid + " " + classid + ";"
 
@@ -4279,7 +4283,7 @@ End Rem
 
 	Method EmitStructClassProto( classDecl:TClassDecl )
 
-		If classDecl.declImported Return
+		If classDecl.IsImported() Return
 		If emittedStructs.Contains(classDecl) Return
 		
 		emittedStructs.AddLast(classDecl)
@@ -4727,6 +4731,11 @@ End Rem
 	Method EmitClassDecl( classDecl:TClassDecl )
 
 		If classDecl.args Then
+			Return
+		End If
+
+		' don't emit instanceof classes unless opt_apptype is set
+		If classDecl.instanceof And Not opt_apptype Then
 			Return
 		End If
 
@@ -6394,6 +6403,18 @@ End Rem
 		End If
 	End Method
 
+	Method EmitModuleRegisterInit(moduleDecl:TModuleDecl)
+		If moduleDecl.filepath Then
+			' a module import
+			If FileType(moduleDecl.filepath) = FILETYPE_DIR Then
+				Emit MungModuleName(moduleDecl) + "_register();"
+			Else
+				' maybe a file import...
+				Emit MungImportFromFile(moduleDecl) + "_register();"
+			End If
+		End If
+	End Method
+
 	Method EmitIncBinFile(ib:TIncbin)
 
 		If FileType(ib.path) = FILETYPE_FILE Then
@@ -6492,9 +6513,10 @@ End Rem
 		Next
 
 		Emit "int " + app.munged + "();"
+		Emit "void " + app.munged + "_register();"
 		For Local decl:TDecl=EachIn app.Semanted()
 
-			If decl.declImported And decl.munged Continue
+			If decl.IsImported() And decl.munged Continue
 
 			MungDecl decl
 
@@ -6520,7 +6542,7 @@ End Rem
 
 		' forward declarations
 		For Local decl:TClassDecl=EachIn app.Semanted()
-			If decl.declImported Or (decl.IsExtern() And Not decl.IsStruct()) Continue
+			If decl.IsImported() Or (decl.IsExtern() And Not decl.IsStruct()) Continue
 			If Not decl.IsStruct()
 				Emit "struct " + decl.munged + "_obj;"
 			Else
@@ -6534,7 +6556,7 @@ End Rem
 		'prototypes/header! - structs first
 		For Local decl:TDecl=EachIn app.Semanted()
 
-			If decl.declImported Continue
+			If decl.IsImported() Continue
 
 			Local cdecl:TClassDecl=TClassDecl( decl )
 			If cdecl
@@ -6546,7 +6568,7 @@ End Rem
 		
 		' prototypes/header - typedefs
 		For Local cdecl:TClassDecl=EachIn app.Semanted()
-			If cdecl.declImported Continue
+			If cdecl.IsImported() Continue
 			
 			If Not cdecl.IsStruct() And cdecl.IsExtern() Then
 				EmitExternClassProtoTypedef(cdecl)
@@ -6556,7 +6578,7 @@ End Rem
 		'prototypes/header!
 		For Local decl:TDecl=EachIn app.Semanted()
 
-			If decl.declImported Continue
+			If decl.IsImported() Continue
 
 			Local gdecl:TGlobalDecl=TGlobalDecl( decl )
 			If gdecl
@@ -6784,7 +6806,7 @@ End If
 			For Local cdecl:TClassDecl = EachIn decl._decls
 				MungDecl decl
 				MungDecl cdecl
-				If cdecl.declImported Or (cdecl.IsExtern() And Not cdecl.IsStruct()) Continue
+				If cdecl.IsImported() Or (cdecl.IsExtern() And Not cdecl.IsStruct()) Continue
 				If Not cdecl.IsStruct()
 					Emit "struct " + cdecl.munged + "_obj;"
 				Else
@@ -6800,7 +6822,7 @@ End If
 		' since we don't declare them in the header, they need to be near the top of the source
 		For Local decl:TDecl=EachIn app.Semanted()
 
-			If decl.declImported Continue
+			If decl.IsImported() Continue
 
 			Local gdecl:TGlobalDecl=TGlobalDecl( decl )
 			If gdecl And gdecl.IsPrivate() Then
@@ -6844,7 +6866,9 @@ End If
 		'definitions!
 		For Local decl:TDecl=EachIn app.Semanted()
 
-			If decl.declImported Continue
+			Local isImportedClassImpl:Int = TClassDecl( decl ) And decl.declImported And TClassDecl( decl ).instanceof And opt_apptype
+
+			If decl.IsImported() And Not isImportedClassImpl Continue
 
 			Local gdecl:TGlobalDecl=TGlobalDecl( decl )
 			If gdecl
@@ -6986,6 +7010,81 @@ End If
 			End If
 		End If
 
+		' registrations
+		Emit "static int " + app.munged + "_reg_inited" + " = 0;"
+		Emit "void " + app.munged + "_register(){"
+		
+		Emit "if (!" + app.munged + "_reg_inited) {"
+		Emit app.munged + "_reg_inited = 1;"
+
+		Local registerOnce:TMap = New TMap
+		' call any imported mod registers
+		For Local decl:TModuleDecl=EachIn app.imported.Values()
+			For Local mdecl:TDecl=EachIn decl.imported.Values()
+				If TModuleDecl(mdecl) And app.mainModule <> mdecl And mdecl.ident <> "brl.classes" And mdecl.ident <> "brl.blitzkeywords" Then
+					If Not registerOnce.Contains(mdecl.ident) Then
+						EmitModuleRegisterInit(TModuleDecl(mdecl))
+						registerOnce.Insert(mdecl.ident, "")
+					End If
+				End If
+			Next
+		Next
+
+		' initialise coverage
+		If opt_coverage And covCount Then
+			Emit "bbCoverageRegisterFile(coverage_files);"
+		End If
+
+		' initialise enums
+		For Local decl:TEnumDecl = EachIn app.Semanted()
+
+			If decl.IsImported() Continue
+			
+			Emit decl.munged + "_BBEnum_impl = (BBEnum *)&" + decl.munged + "_BBEnum;"
+		Next
+
+		' register types
+		For Local decl:TDecl=EachIn app.Semanted()
+
+			If decl.IsImported() Continue
+
+			Local cdecl:TClassDecl=TClassDecl( decl )
+			If cdecl And Not cdecl.IsExtern() And Not cdecl.args
+				If cdecl.instanceof And Not opt_apptype
+					' ony generated class implementations in main app
+					Continue
+				End If
+				If Not cdecl.IsInterface() Then
+					If Not cdecl.IsStruct() Then
+						Emit "bbObjectRegisterType((BBCLASS)&" + cdecl.munged + ");"
+					Else
+						Emit "bbObjectRegisterStruct((BBDebugScope *)&" + cdecl.munged + "_scope);"
+					End If
+				Else
+					Emit "bbObjectRegisterInterface((BBInterface *)&" + cdecl.munged + "_ifc);"
+				End If
+				Continue
+			EndIf
+			Local edecl:TEnumDecl = TEnumDecl( decl )
+			If edecl Then
+				Emit "bbEnumRegister((BBEnum *)" + decl.munged + "_BBEnum_impl, (BBDebugScope *)&" + edecl.munged + "_scope);"
+			End If
+		Next
+		'
+		
+		' register files
+		If opt_debug Then
+			For Local Hash:String = EachIn fileRegister.Keys()
+				Local file:String = String(fileRegister.ValueForKey(Hash))
+				file = file.Replace("\", "\\")
+				Emit "bbRegisterSource(" + Hash + ", ~q" + file + "~q);"
+			Next
+		End If
+
+		Emit "}"
+		Emit "}"
+
+		' main init
 		Emit "static int " + app.munged + "_inited" + " = 0;"
 
 		Emit "int " + app.munged + "(){"
@@ -6994,13 +7093,18 @@ End If
 		Emit "if (!" + app.munged + "_inited) {"
 		Emit app.munged + "_inited = 1;"
 
+		' only for main app
+		If opt_apptype Then
+			Emit app.munged + "_register();"
+		End If
+
 		' add global roots
 		Local first:TGlobalDecl
 		Local last:TGlobalDecl
 				
 		For Local decl:TGlobalDecl=EachIn app.semantedGlobals
 
-			If decl.declImported Continue
+			If decl.IsImported() Continue
 
 			decl.Semant
 
@@ -7018,7 +7122,7 @@ End If
 		' threaded global scope assignments
 		For Local decl:TDecl=EachIn app.Semanted()
 
-			If decl.declImported Continue
+			If decl.IsImported() Continue
 
 			Local cdecl:TClassDecl=TClassDecl( decl )
 			If cdecl
@@ -7050,53 +7154,6 @@ End If
 			Next
 		Next
 
-		' initialise enums
-		For Local decl:TEnumDecl = EachIn app.Semanted()
-
-			If decl.declImported Continue
-			
-			Emit decl.munged + "_BBEnum_impl = (BBEnum *)&" + decl.munged + "_BBEnum;"
-		Next
-
-		' initialise coverage
-		If opt_coverage And covCount Then
-			Emit "bbCoverageRegisterFile(coverage_files);"
-		End If
-
-		' register types
-		For Local decl:TDecl=EachIn app.Semanted()
-
-			If decl.declImported Continue
-
-			Local cdecl:TClassDecl=TClassDecl( decl )
-			If cdecl And Not cdecl.IsExtern() And Not cdecl.args
-				If Not cdecl.IsInterface() Then
-					If Not cdecl.IsStruct() Then
-						Emit "bbObjectRegisterType((BBCLASS)&" + cdecl.munged + ");"
-					Else
-						Emit "bbObjectRegisterStruct((BBDebugScope *)&" + cdecl.munged + "_scope);"
-					End If
-				Else
-					Emit "bbObjectRegisterInterface((BBInterface *)&" + cdecl.munged + "_ifc);"
-				End If
-				Continue
-			EndIf
-			Local edecl:TEnumDecl = TEnumDecl( decl )
-			If edecl Then
-				Emit "bbEnumRegister((BBEnum *)" + decl.munged + "_BBEnum_impl, (BBDebugScope *)&" + edecl.munged + "_scope);"
-			End If
-		Next
-		'
-		
-		' register files
-		If opt_debug Then
-			For Local Hash:String = EachIn fileRegister.Keys()
-				Local file:String = String(fileRegister.ValueForKey(Hash))
-				file = file.Replace("\", "\\")
-				Emit "bbRegisterSource(" + Hash + ", ~q" + file + "~q);"
-			Next
-		End If
-
 		' defdata init
 		If Not app.dataDefs.IsEmpty() Then
 			Emit "_defDataOffset = &_defData;"
@@ -7104,7 +7161,7 @@ End If
 
 		' initialise globals
 		For Local decl:TGlobalDecl=EachIn app.semantedGlobals
-			If decl.declImported Continue
+			If decl.IsImported() Continue
 			
 			decl.Semant
 			
@@ -7116,7 +7173,7 @@ End If
 		' initialise globals
 		For Local decl:TGlobalDecl=EachIn app.semantedGlobals
 
-			If decl.declImported Continue
+			If decl.IsImported() Continue
 
 			'decl.Semant
 
@@ -7134,7 +7191,7 @@ End If
 					
 						For Local gdecl:TGlobalDecl = EachIn decl.scope._decls
 						
-							If gdecl.declImported Continue
+							If gdecl.IsImported() Continue
 							
 							gdecl.Semant
 							
@@ -7350,7 +7407,7 @@ End If
 		Local name:String = StripAll(mdecl.filepath)
 		Local dir:String = ExtractDir(mdecl.filePath)
 
-		Local file:String = name + ".bmx" + FileMung(opt_apptype And (Not mdecl.declImported)) + ".h"
+		Local file:String = name + ".bmx" + FileMung(opt_apptype And (Not mdecl.IsImported())) + ".h"
 
 		If mdecl.relPath Then
 			Local dir:String = ExtractDir(mdecl.relPath)
@@ -7446,7 +7503,7 @@ End If
 			If decl.IsPrivate() Continue
 
 			Local cdecl:TConstDecl=TConstDecl( decl )
-			If cdecl And Not cdecl.declImported
+			If cdecl And Not cdecl.IsImported()
 				EmitIfcConstDecl(cdecl)
 			End If
 		Next
@@ -7460,7 +7517,7 @@ End If
 				Continue
 			End If
 			
-			If cdecl And Not cdecl.declImported
+			If cdecl And Not cdecl.IsImported()
 				EmitIfcClassDecl(cdecl)
 			EndIf
 		Next
@@ -7470,7 +7527,7 @@ End If
 			If decl.IsPrivate() Continue
 
 			Local fdecl:TFuncDecl=TFuncDecl( decl )
-			If fdecl And fdecl <> app.mainFunc  And Not fdecl.declImported Then
+			If fdecl And fdecl <> app.mainFunc  And Not fdecl.IsImported() Then
 				EmitIfcFuncDecl(fdecl)
 			End If
 		Next
@@ -7480,7 +7537,7 @@ End If
 			If decl.IsPrivate() Continue
 
 			Local gdecl:TGlobalDecl=TGlobalDecl( decl )
-			If gdecl And Not gdecl.declImported
+			If gdecl And Not gdecl.IsImported()
 				EmitIfcGlobalDecl(gdecl)
 			End If
 		Next
@@ -7490,7 +7547,7 @@ End If
 			If decl.IsPrivate() Continue
 			
 			Local edecl:TEnumDecl=TEnumDecl( decl )
-			If edecl And Not edecl.declImported
+			If edecl And Not edecl.IsImported()
 				EmitIfcEnumDecl(edecl)
 			End If
 		Next

@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2024 Bruce A Henderson
+' Copyright (c) 2013-2025 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -223,6 +223,10 @@ Type TDecl
 	
 	Method IsThreaded:Int()
 		Return (attrs & DECL_THREADED)<>0
+	End Method
+
+	Method IsImported:Int()
+		Return declImported
 	End Method
 	
 	Method FuncScope:TFuncDecl()
@@ -500,7 +504,7 @@ Type TValDecl Extends TDecl
 	
 		' for imported enum args with a default value, we need to set the type of the value to the enum
 		' since at this point it's just a number with no context
-		If TArgDecl(Self) And declInit And scope And scope.declImported And TEnumType(ty) Then
+		If TArgDecl(Self) And declInit And scope And scope.IsImported() And TEnumType(ty) Then
 			If TConstExpr(declInit) Then
 				declInit = New TConstExpr.Create(ty, TConstExpr(declInit).value).Semant()
 			Else If TUnaryExpr(declInit) Then
@@ -1331,7 +1335,7 @@ End Rem
 		decl.AssertAccess
 		
 		' only semant on "real" module
-		If Not decl.declImported Then
+		If Not decl.IsImported() Then
 			decl.Semant
 		End If
 		Return decl
@@ -2094,7 +2098,7 @@ Type TFuncDecl Extends TBlockDecl
 	End Method
 	
 	' exactMatch requires args to be equal. If an arg is a subclass, that is not a match.
-	Method EqualsArgs:Int( decl:TFuncDecl, exactMatch:Int = False ) ' careful, this is not commutative!
+	Method EqualsArgs:Int( decl:TFuncDecl, exactMatch:Int = False, ignoreObjectSubclasses:Int = False ) ' careful, this is not commutative!
 		If argDecls.Length<>decl.argDecls.Length Return False
 		For Local i:Int=0 Until argDecls.Length
 			' ensure arg decls have been semanted
@@ -2108,7 +2112,8 @@ Type TFuncDecl Extends TBlockDecl
 			
 			' objects can be subclasses as well as the same.
 			If TObjectType(decl.argDecls[i].ty) Then
-				If Not decl.argDecls[i].ty.EqualsType( argDecls[i].ty ) And (exactMatch Or Not decl.argDecls[i].ty.ExtendsType( argDecls[i].ty )) Return False
+				Local ty:TObjectType = TObjectType(decl.argDecls[i].ty)
+				If Not ty.EqualsType( argDecls[i].ty ) And (exactMatch Or Not ty.ExtendsType( argDecls[i].ty, false , false, ignoreObjectSubclasses )) Return False
 			Else
 				If Not decl.argDecls[i].ty.EqualsType( argDecls[i].ty ) Return False
 			End If
@@ -2283,7 +2288,7 @@ Type TFuncDecl Extends TBlockDecl
 				If found
 					If Not overrides Err "Overriding method does not match any overridden method. (Detail: " + errorDetails+")"
 					If overrides.IsFinal() Err "Final methods cannot be overridden."
-					If Not (attrs & DECL_OVERRIDE) And opt_require_override And Not declImported Then
+					If Not (attrs & DECL_OVERRIDE) And opt_require_override And Not IsImported() Then
 						Local msg:String = "Overriding method '" + ident + "' must be declared with 'Override'."
 						If Not opt_override_error Then
 							Warn msg
@@ -2817,6 +2822,10 @@ End Rem
 	Method IsInstanced:Int()
 		Return (attrs & CLASS_INSTANCED)<>0
 	End Method
+
+	Method IsImported:Int()
+		Return declImported And Not (instanceof And opt_apptype)
+	End Method
 	
 	Method GetDecl:Object( ident$ )
 	
@@ -2945,7 +2954,7 @@ End Rem
 			For Local i:Int = 0 Until funcs.length
 				Local ofunc:TFuncDecl = funcs[i]
 				' found a match - we are overriding it
-				If func.IdentLower() = ofunc.IdentLower() And func.EqualsArgs(ofunc) Then
+				If func.IdentLower() = ofunc.IdentLower() And func.EqualsArgs(ofunc,,True) Then
 					matched = True
 					
 					If func.scope <> ofunc.scope Then
@@ -3071,7 +3080,7 @@ End Rem
 		Return fdecl
 	End Method
 	
-	Method ExtendsClass:Int( cdecl:TClassDecl )
+	Method ExtendsClass:Int( cdecl:TClassDecl, ignoreObjectSubclasses:Int = False )
 		'If Self=nullObjectClass Return True
 		
 '		If cdecl.IsTemplateArg()
@@ -3080,7 +3089,13 @@ End Rem
 		
 		Local tdecl_:TClassDecl=Self
 		While tdecl_
-			If tdecl_=cdecl Return True
+			If tdecl_=cdecl Then
+				If ignoreObjectSubclasses And tdecl_.ident = "Object"
+					Return False
+				Else
+					Return True
+				End If
+			End If
 			If cdecl.IsInterface()
 				For Local iface:TClassDecl=EachIn tdecl_.implmentsAll
 					If iface=cdecl Return True
@@ -3127,7 +3142,7 @@ End Rem
 
 		'Semant implemented interfaces
 		Local impls:TClassDecl[]=New TClassDecl[impltys.Length]
-		Local implsall:TStack=New TStack
+		Local implsall:TStackList=New TStackList
 		For Local i:Int=0 Until impltys.Length
 			attrs :| DECL_CYCLIC
 			Local cdecl:TClassDecl=impltys[i].SemantClass()
@@ -3193,7 +3208,7 @@ End Rem
 
 		' structs have a default New and Compare
 		' if we haven't defined one, create one
-		If attrs & CLASS_STRUCT And Not IsExtern() And Not declImported Then
+		If attrs & CLASS_STRUCT And Not IsExtern() And Not IsImported() Then
 			attrs :| DECL_CYCLIC
 			Local func:TFuncDecl = FindFuncDecl("new", Null,True,,,,0)
 			If Not func Then

@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2024 Bruce A Henderson
+' Copyright (c) 2013-2025 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -394,7 +394,7 @@ Function BmxProcessMultiString:String( str:String )
 	Return BmxUnquote(sb.ToString(), True)
 End Function
 
-Type TStack Extends TList
+Type TStackList Extends TList
 
 	Method Push(obj:Object)
 		AddFirst(obj)
