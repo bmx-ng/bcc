@@ -753,6 +753,7 @@ Extern
 	Function strlen_:Int(s:Byte Ptr)="strlen"
 	Function bmx_enum_next_power(char:Int, val:Long Var, ret:Long Var)
 	Function bmx_gen_hash:String(txt:String)
+	Function bmx_gen_hash32:String(txt:String)
 	Function bmx_hash_createState:Byte Ptr()
 	Function bmx_hash_reset(state:Byte Ptr)
 	Function bmx_hash_update(state:Byte Ptr, data:Byte Ptr, length:Int)

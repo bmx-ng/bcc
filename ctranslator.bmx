@@ -31,7 +31,7 @@ Type TCTranslator Extends TTranslator
 
 	Field prefix:String
 	
-	Field reserved_methods:String = ",New,Delete,ToString,Compare,SendMessage,_reserved1_,_reserved2_,_reserved3_,".ToLower()
+	Field reserved_methods:String = ",New,Delete,ToString,Compare,SendMessage,HashCode,_reserved2_,_reserved3_,".ToLower()
 	
 	Method New()
 		_trans = Self
@@ -4088,6 +4088,10 @@ End Rem
 				Emit "BBOBJECT _" + classid + "_SendMessage(" + TransObject(classdecl) + " o, BBOBJECT message, BBOBJECT source);"
 			End If
 
+			If classGetFunction(classDecl, "HashCode") Then
+				Emit "BBUINT _" + classid + "_HashCode(" + TransObject(classdecl) + " o);"
+			End If
+
 		End If
 		'Local reserved:String = ",New,Delete,ToString,Compare,SendMessage,_reserved1_,_reserved2_,_reserved3_,".ToLower()
 
@@ -4143,6 +4147,11 @@ End Rem
 			Emit "BBOBJECT  (*SendMessage)( struct " + classidForFunction(classDecl, "SendMessage") + "_obj* x, BBOBJECT m, BBOBJECT s );"
 		Else
 			Emit "BBOBJECT  (*SendMessage)( BBOBJECT o,BBOBJECT m,BBOBJECT s );"
+		End If
+		If classHierarchyGetFunction(classDecl, "HashCode") Then
+			Emit "BBUINT  (*HashCode)( struct " + classidForFunction(classDecl, "HashCode") + "_obj* x );"
+		Else
+			Emit "BBUINT  (*HashCode)( BBOBJECT o );"
 		End If
 		Emit "BBINTERFACETABLE itable;"
 		Emit "void*     extra;"
@@ -4590,6 +4599,11 @@ End Rem
 			'Emit "_" + classid + "_SendMessage,"
 		End If
 
+		Local hashCodeDecl:TDecl = classGetFunction(classDecl, "HashCode")
+		If hashCodeDecl Then
+			EmitClassStandardMethodDebugScope("HashCode", "(:Object):UInt" + TransDebugScopeModifiers(hashCodeDecl), "_" + classidForFunction(classDecl, "HashCode") + "_HashCode")
+		End If
+
 		EmitBBClassClassFuncsDebugScope(classDecl)
 
 	End Method
@@ -4716,7 +4730,11 @@ End Rem
 		If classGetFunction(classDecl, "SendMessage") Then
 			count :+ 1
 		End If
-		
+
+		If classGetFunction(classDecl, "HashCode") Then
+			count :+ 1
+		End If
+
 		' methods and functions
 		CountBBClassClassFuncsDebugScope(classDecl, count)
 		
@@ -4860,7 +4878,7 @@ End Rem
 				EndIf
 			Next
 	
-			reserved = ",New,Delete,ToString,Compare,SendMessage,_reserved1_,_reserved2_,_reserved3_,".ToLower()
+			reserved = ",New,Delete,ToString,Compare,SendMessage,HashCode,_reserved2_,_reserved3_,".ToLower()
 
 			If (classDecl.attrs & CLASS_STRUCT) Then
 				Emit "BBARRAYNEW1DSTRUCT_FUNC" + Bra(classid + "," + classid + ", _" + classid + "_New" + ", " + EnQuote("@" + classDecl.ident))
@@ -5038,7 +5056,13 @@ End Rem
 			Else
 				Emit "bbObjectSendMessage,"
 			End If
-	
+
+			If classHierarchyGetFunction(classDecl, "HashCode") Then
+				Emit "_" + classidForFunction(classDecl, "HashCode") + "_HashCode,"
+			Else
+				Emit "bbObjectHashCode,"
+			End If
+
 			'Emit "public:"
 	
 			'fields
@@ -7241,7 +7265,7 @@ End If
 
 				If key.used > 0 Then
 					If Not sizes.Contains(String s.length) Then
-						Emit "struct BBString_" + s.length + "{BBClass_String* clas;BBULONG hash;int length;BBChar buf[" + s.length + "];};"
+						Emit "struct BBString_" + s.length + "{BBClass_String* clas;BBUINT hash;int length;BBChar buf[" + s.length + "];};"
 						sizes.Insert(String s.length, "")
 					End If
 				End If
@@ -7256,7 +7280,7 @@ End If
 						
 					Emit "static struct BBString_" + s.length + " " + key.id + "={"
 					Emit "&bbStringClass,"
-					Emit bmx_gen_hash(s) + ","
+					Emit bmx_gen_hash32(s) + ","
 					Emit s.length + ","
 
 					Local t:String = "{"
