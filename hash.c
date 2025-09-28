@@ -14,6 +14,13 @@ BBString * bmx_gen_hash(BBString * txt) {
 	return bbStringFromCString(buf);
 }
 
+BBString * bmx_gen_hash32(BBString * txt) {
+	char buf[64];
+	XXH64_hash_t hash = XXH3_64bits(txt->buf, txt->length * sizeof(BBChar));
+	snprintf(buf, 64, "0x%x", (uint32_t)(hash ^ (hash >> 32)));
+	return bbStringFromCString(buf);
+}
+
 XXH3_state_t * bmx_hash_createState() {
 	return XXH3_createState();
 }
