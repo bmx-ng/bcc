@@ -257,9 +257,7 @@ Function ParseArgs:String[](args:String[])
 			Case "allocstats"
 				opt_alloc_stats=True
 				CountObjectInstances = True
-?bmxng
-				CountObjectInstanceTotals = True
-?
+				'CountObjectInstanceTotals = True
 		End Select
 	
 		count:+ 1
