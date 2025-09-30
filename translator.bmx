@@ -228,64 +228,147 @@ Type TTranslator
 		Return p
 	End Function
 
-	Function TransMangleType:String(ty:TType)
+' 	Function TransMangleType:String(ty:TType)
+' 		Local p:String = TransManglePointer(ty)
+
+' 		If TVoidType( ty ) Return "v"
+' 		If TByteType( ty ) Return p + "b"
+' 		If TShortType( ty ) Return p + "s"
+' 		If TIntType( ty ) Return p + "i"
+' 		If TUIntType( ty ) Return p + "u"
+' 		If TFloatType( ty ) Return p + "f"
+' 		If TDoubleType( ty ) Return p + "d"
+' 		If TLongType( ty ) Return p + "l"
+' 		If TULongType( ty ) Return p + "y"
+' 		If TSizeTType( ty ) Return p + "z"
+' 		If TFloat64Type( ty ) Return p + "h"
+' 		If TFloat128Type( ty ) Return p + "k"
+' 		If TInt128Type( ty ) Return p + "j"
+' 		If TDouble128Type( ty ) Return p + "m"
+' 		If TStringType( ty ) Return p + "S"
+' 		If TWParamType( ty ) Return p + "W"
+' 		If TLParamType( ty ) Return p + "L"
+' 		If TLongIntType( ty ) Return p + "g"
+' 		If TULongIntType( ty ) Return p + "G"
+' 		If TArrayType( ty ) Then
+' 			Return p + "a" + TransMangleType(TArrayType( ty ).elemType)
+' 		End If
+' 		If TObjectType( ty ) Then
+' 			If Not TObjectType( ty ).classdecl.IsExtern()
+' 				Local t:String = p + "T" + TObjectType( ty ).classDecl.ident
+				
+' 				' handle case where class is also a template instance... and so on
+' 				If TClassDecl(TObjectType(ty).classDecl) And TClassDecl(TObjectType(ty).classDecl).instArgs Then
+' 					For Local ity:TType = EachIn TClassDecl(TObjectType(ty).classDecl).instArgs
+' 						t :+ TransMangleType(ity)
+' 					Next
+' 				End If
+
+' 				Return t
+' 			Else
+' 				If TObjectType( ty ).classdecl.IsInterface() Then
+' 					Return p + "I" + TObjectType(ty).classDecl.ident
+' 				ElseIf TObjectType( ty ).classdecl.IsStruct() Then
+' 					Return p + "R" + TObjectType(ty).classDecl.ident
+' 				Else
+' 					Return p + "E" + TObjectType(ty).classDecl.ident
+' 				End If
+' 			End If
+' 		End If
+' 		If TFunctionPtrType( ty ) Then
+' 			Local func:TFuncDecl = TFunctionPtrType( ty ).func
+' 			Local s:String = "F" + MangleMethodArgs(func)
+' '			For Local i:Int = 0 Until func.argDecls.length
+' '				s :+ TransMangleType(func.argDecls[i].ty)
+' '			Next
+' 			Return s + "_" + TransMangleType(func.retType) + "_"
+' 		End If
+' 		If TEnumType( ty ) Return p + "e" + TEnumType( ty ).decl.ident
+		
+' 		Err "Unsupported type for name mangling : " + ty.ToString()
+' 	End Function
+
+	' New internal, buffer-based worker
+	Function TransMangleTypeToBuf(ty:TType, buf:TStringBuffer)
 		Local p:String = TransManglePointer(ty)
 
-		If TVoidType( ty ) Return "v"
-		If TByteType( ty ) Return p + "b"
-		If TShortType( ty ) Return p + "s"
-		If TIntType( ty ) Return p + "i"
-		If TUIntType( ty ) Return p + "u"
-		If TFloatType( ty ) Return p + "f"
-		If TDoubleType( ty ) Return p + "d"
-		If TLongType( ty ) Return p + "l"
-		If TULongType( ty ) Return p + "y"
-		If TSizeTType( ty ) Return p + "z"
-		If TFloat64Type( ty ) Return p + "h"
-		If TFloat128Type( ty ) Return p + "k"
-		If TInt128Type( ty ) Return p + "j"
-		If TDouble128Type( ty ) Return p + "m"
-		If TStringType( ty ) Return p + "S"
-		If TWParamType( ty ) Return p + "W"
-		If TLParamType( ty ) Return p + "L"
-		If TLongIntType( ty ) Return p + "g"
-		If TULongIntType( ty ) Return p + "G"
-		If TArrayType( ty ) Then
-			Return p + "a" + TransMangleType(TArrayType( ty ).elemType)
+		' NOTE: Void does not get the pointer prefix (same behavior as original)
+		If TVoidType(ty) Then
+			buf.Append("v")
+			Return
 		End If
-		If TObjectType( ty ) Then
-			If Not TObjectType( ty ).classdecl.IsExtern()
-				Local t:String = p + "T" + TObjectType( ty ).classDecl.ident
-				
-				' handle case where class is also a template instance... and so on
-				If TClassDecl(TObjectType(ty).classDecl) And TClassDecl(TObjectType(ty).classDecl).instArgs Then
-					For Local ity:TType = EachIn TClassDecl(TObjectType(ty).classDecl).instArgs
-						t :+ TransMangleType(ity)
+
+		If TByteType(ty)    Then buf.Append(p).Append("b"); Return
+		If TShortType(ty)   Then buf.Append(p).Append("s"); Return
+		If TIntType(ty)     Then buf.Append(p).Append("i"); Return
+		If TUIntType(ty)    Then buf.Append(p).Append("u"); Return
+		If TFloatType(ty)   Then buf.Append(p).Append("f"); Return
+		If TDoubleType(ty)  Then buf.Append(p).Append("d"); Return
+		If TLongType(ty)    Then buf.Append(p).Append("l"); Return
+		If TULongType(ty)   Then buf.Append(p).Append("y"); Return
+		If TSizeTType(ty)   Then buf.Append(p).Append("z"); Return
+		If TFloat64Type(ty) Then buf.Append(p).Append("h"); Return
+		If TFloat128Type(ty) Then buf.Append(p).Append("k"); Return
+		If TInt128Type(ty)  Then buf.Append(p).Append("j"); Return
+		If TDouble128Type(ty) Then buf.Append(p).Append("m"); Return
+		If TStringType(ty)  Then buf.Append(p).Append("S"); Return
+		If TWParamType(ty)  Then buf.Append(p).Append("W"); Return
+		If TLParamType(ty)  Then buf.Append(p).Append("L"); Return
+		If TLongIntType(ty) Then buf.Append(p).Append("g"); Return
+		If TULongIntType(ty) Then buf.Append(p).Append("G"); Return
+
+		If TArrayType(ty) Then
+			buf.Append(p).Append("a")
+			TransMangleTypeToBuf(TArrayType(ty).elemType, buf)
+			Return
+		End If
+
+		If TObjectType(ty) Then
+			Local o:TObjectType = TObjectType(ty)
+			If Not o.classDecl.IsExtern() Then
+				buf.Append(p).Append("T").Append(o.classDecl.ident)
+
+				' If class is a template instance, append its instantiation argument manglings
+				If TClassDecl(o.classDecl) And TClassDecl(o.classDecl).instArgs Then
+					For Local ity:TType = EachIn TClassDecl(o.classDecl).instArgs
+						TransMangleTypeToBuf(ity, buf)
 					Next
 				End If
 
-				Return t
+				Return
 			Else
-				If TObjectType( ty ).classdecl.IsInterface() Then
-					Return p + "I" + TObjectType(ty).classDecl.ident
-				ElseIf TObjectType( ty ).classdecl.IsStruct() Then
-					Return p + "R" + TObjectType(ty).classDecl.ident
+				If o.classDecl.IsInterface() Then
+					buf.Append(p).Append("I").Append(o.classDecl.ident)
+				ElseIf o.classDecl.IsStruct() Then
+					buf.Append(p).Append("R").Append(o.classDecl.ident)
 				Else
-					Return p + "E" + TObjectType(ty).classDecl.ident
+					buf.Append(p).Append("E").Append(o.classDecl.ident)
 				End If
+				Return
 			End If
 		End If
-		If TFunctionPtrType( ty ) Then
-			Local func:TFuncDecl = TFunctionPtrType( ty ).func
-			Local s:String = "F" + MangleMethodArgs(func)
-'			For Local i:Int = 0 Until func.argDecls.length
-'				s :+ TransMangleType(func.argDecls[i].ty)
-'			Next
-			Return s + "_" + TransMangleType(func.retType) + "_"
+
+		If TFunctionPtrType(ty) Then
+			Local func:TFuncDecl = TFunctionPtrType(ty).func
+			buf.Append("F").Append(MangleMethodArgs(func)).Append("_")
+			TransMangleTypeToBuf(func.retType, buf)
+			buf.Append("_")
+			Return
 		End If
-		If TEnumType( ty ) Return p + "e" + TEnumType( ty ).decl.ident
-		
+
+		If TEnumType(ty) Then
+			buf.Append(p).Append("e").Append(TEnumType(ty).decl.ident)
+			Return
+		End If
+
 		Err "Unsupported type for name mangling : " + ty.ToString()
+	End Function
+
+	' Backwards-compatible wrapper that still returns a String.
+	Function TransMangleType:String(ty:TType)
+		Local sb:TStringBuffer = New TStringBuffer
+		TransMangleTypeToBuf(ty, sb)
+		Return sb.ToString()
 	End Function
 
 	Method MangleMethod:String(fdecl:TFuncDecl)
@@ -305,14 +388,15 @@ Type TTranslator
 	End Method
 	
 	Function MangleMethodArgs:String(fdecl:TFuncDecl)
-		Local s:String
+		Local s:TStringBuffer = New TStringBuffer
 		For Local arg:TArgDecl = EachIn fdecl.argDecls
-			If Not s Then
-				s = "_"
+			If Not s.Length() Then
+				s.Append( "_" )
 			End If
-			s :+ TransMangleType(arg.ty)
+			' s.Append( TransMangleType(arg.ty) )
+			TransMangleTypeToBuf(arg.ty, s)
 		Next
-		Return s
+		Return s.ToString()
 	End Function
 
 	Method equalsTorFunc:Int(classDecl:TClassDecl, func:TFuncDecl)
@@ -498,7 +582,8 @@ Type TTranslator
 			Return
 		End If
 		
-		Local id$=decl.ident,munged$
+		Local id$=decl.ident
+		Local munged:String
 		
 		'this lot just makes output a bit more readable...
 '		Select ENV_LANG
@@ -553,15 +638,15 @@ Type TTranslator
 			Else
 				If decl.scope Then
 					If TClassDecl(decl) And TClassDecl(decl).instArgs Then
-						munged = "gimpl" + "_" + id
+						Local m:TStringBuffer = New TStringBuffer
+						m.Append("gimpl").Append("_").Append(id)
+						For Local ty:TType = EachIn TClassDecl(decl).instArgs
+							' m.Append(TransMangleType(ty))
+							TransMangleTypeToBuf(ty, m)
+						Next
+						munged = m.ToString()
 					Else
 						munged = decl.scope.munged + "_" + id
-					End If
-					
-					If TClassDecl(decl) And TClassDecl(decl).instArgs Then
-						For Local ty:TType = EachIn TClassDecl(decl).instArgs
-							munged :+ TransMangleType(ty)
-						Next
 					End If
 					
 					' fields are lowercase with underscore prefix.
@@ -689,10 +774,10 @@ End Rem
 		If str.StartsWith( "(" ) And str.EndsWith( ")" )
 			Local n:Int=1
 			For Local i:Int=1 Until str.Length-1
-				Select str[i..i+1]
-				Case "("
+				Select str[i]
+				Case Asc("(")
 					n:+1
-				Case ")"
+				Case Asc(")")
 					n:-1
 					If Not n Return "("+str+")"
 				End Select
@@ -1111,26 +1196,27 @@ End Rem
 	
 	Method TransReturnStmt$( stmt:TReturnStmt )
 
-		Local t$="return"
+		Local t:TStringBuffer = New TStringBuffer(128)
+		t.Append( "return" )
 		unreachable=True
 		If stmt.expr Then
 
 			If TObjectType(stmt.expr.exprType) And TNullDecl(TObjectType(stmt.expr.exprType).classDecl) Then
 				If IsPointerType(stmt.fRetType, 0, TType.T_POINTER) Or IsNumericType(stmt.fRetType) Then
-					t:+ " 0"
+					t.Append( " 0" )
 				End If
 				If TStringType(stmt.fRetType) Then
-					t:+ " &bbEmptyString"
+					t.Append( " &bbEmptyString" )
 				End If
 				If TArrayType(stmt.fRetType) Then
-					t:+ " &bbEmptyArray"
+					t.Append( " &bbEmptyArray" )
 				End If
 
 			Else
 				
 				If TObjectType(stmt.expr.exprType) And TObjectType(stmt.expr.exprType).classDecl.IsStruct() And TConstExpr(stmt.expr) And Not TConstExpr(stmt.expr).value Then
 					Local lvar:String = CreateLocal(stmt.expr)
-					t :+ " " + lvar
+					t.Append( " " ).Append( lvar )
 				Else
 
 					Local s:String
@@ -1150,9 +1236,9 @@ End Rem
 						Else
 							Emit TransType(stmt.expr.exprType, "rt_") + " = " + s + ";"
 						End If
-						t:+ " rt_"
+						t.Append( " rt_" )
 					Else
-						t:+" " + s
+						t.Append( " " ).Append( s )
 					End If
 				End If
 			End If
@@ -1170,7 +1256,7 @@ End Rem
 			End If
 		End If
 		
-		Return t
+		Return t.ToString()
 	End Method
 	
 	Method NextExitId:Int(bc:TTryBreakCheck)

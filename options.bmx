@@ -136,6 +136,8 @@ Global opt_coverage:Int = False
 
 Global opt_no_auto_superstrict:Int = False
 
+Global opt_alloc_stats:Int = False
+
 Function CmdError(details:String = Null, fullUsage:Int = False)
 	Local s:String = "Compile Error"
 	If details Then
@@ -252,6 +254,10 @@ Function ParseArgs:String[](args:String[])
 				opt_coverage=True
 			Case "nas"
 				opt_no_auto_superstrict=True
+			Case "allocstats"
+				opt_alloc_stats=True
+				CountObjectInstances = True
+				CountObjectInstanceTotals = True
 		End Select
 	
 		count:+ 1

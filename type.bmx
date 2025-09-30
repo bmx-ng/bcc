@@ -1991,6 +1991,16 @@ Type TIdentType Extends TType
 		Return "$"+ident
 	End Method
 
+	Method AsString:String()
+		Local t:String
+		For Local arg:TIdentType=EachIn args
+			If t t:+","
+			t:+arg.ToString()
+		Next
+		If t Return ident+"<"+t.Replace("$","")+">"
+		Return ident
+	End Method
+
 	Method OnCopy:TType()
 		Local ty:TIdentType = New TIdentType
 		ty.ident = ident

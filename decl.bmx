@@ -2548,7 +2548,8 @@ Type TClassDecl Extends TScopeDecl
 	Field implmentsAll:TClassDecl[]		'all interfaces implemented
 	
 	Field instanceof:TClassDecl			'for instances
-	Field instances:TList		'for actual (non-arg, non-instance)
+	Field instances:TList
+	Field instanceIdents:TList		'for actual (non-arg, non-instance)
 	Field instArgs:TType[]
 
 	Field objectType:TObjectType '"canned" objectType
@@ -2568,6 +2569,7 @@ Type TClassDecl Extends TScopeDecl
 		Self.objectType=New TObjectType.Create( Self )
 		If args
 			instances=New TList
+			instanceIdents=New TList
 		EndIf
 		Return Self
 	End Method
@@ -2660,7 +2662,17 @@ Rem
 		Return inst
 	End Method
 End Rem
-	Method GenClassInstance:TClassDecl( instArgs:TType[], declImported:Int = False, callback:TCallback = Null, templateDets:TTemplateDets = Null )
+
+	Method HasClassInstance:Int(instanceIdent:String)
+		If Not instances Return False
+		Local identLower:String = instanceIdent.ToLower()
+		For Local ident:String=EachIn instanceIdents
+			If ident=identLower Return True
+		Next
+		Return False
+	End Method
+
+	Method GenClassInstance:TClassDecl( instArgs:TType[], declImported:Int = False, callback:TCallback = Null, templateDets:TTemplateDets = Null, instanceIdent:String = Null )
 
 		If instanceof InternalErr "TClassDecl.GenClassInstance"
 		
@@ -2717,7 +2729,16 @@ End Rem
 					Exit
 				EndIf
 			Next
-			If equal Return inst
+			If equal Then
+				If Not instanceIdent Then
+					instanceIdent = inst.ToString().ToLower()
+				End If
+
+				If Not HasClassInstance(instanceIdent) Then
+					instanceIdents.AddLast instanceIdent.ToLower()
+				End If
+				Return inst
+			End If
 		Next
 		
 		If Not templateDets Then
@@ -2742,6 +2763,10 @@ End Rem
 		inst.instArgs=instArgs
 		inst.templateSource = templateSource
 		instances.AddLast inst
+
+		If instanceIdent Then
+			instanceIdents.AddLast instanceIdent.ToLower()
+		End If
 		
 		inst.declImported = declImported
 

@@ -341,6 +341,20 @@ Type TIParser
 									args=args[..nargs]
 									Parse ">"
 
+									Local sb:TStringBuffer = New TStringBuffer(64)
+									sb.Append(class.ident).Append("<")
+									For Local i:Int = 0 Until args.Length
+										If i>0 sb.Append(",")
+										If TIdentType(args[i]) Then
+											sb.Append(TIdentType(args[i]).AsString())
+										Else
+											sb.Append(args[i].ToString())
+										End If
+									Next
+									sb.Append(">")
+
+									Local instanceIdent:String = sb.ToString().ToLower().Replace("brl.classes.object", "object")
+
 									Parse "{"
 									' line no
 									
@@ -385,6 +399,18 @@ Type TIParser
 
 									Parse "}"
 
+									' check if we already have an instance of this class
+									Local existingDecl:TClassDecl = TClassDecl(_mod.GetDecl(class.ident.ToLower()))
+									If existingDecl Then
+
+										If existingDecl.HasClassInstance(instanceIdent) Then
+											' already have this instance
+											class = Null
+											line :+ 1
+											Continue
+										End If
+									End If
+
 									class.templateSource = TTemplateRecord.Load(line, path, size, source)
 
 									Local toker:TToker = New TToker.Create(path, class.templateSource.source, False, line)
@@ -414,7 +440,7 @@ Type TIParser
 									
 										If Not TIdentType(ty) Or (TIdentType(ty) And TIdentType(ty).ident <> "?") Then
 										
-											cdecl = genDecl.GenClassInstance(args, True)
+											cdecl = genDecl.GenClassInstance(args, True,,, instanceIdent)
 
 											Local scopeMunged:String = class.munged
 
@@ -440,7 +466,7 @@ Type TIParser
 										
 										If Not TIdentType(ty) Or (TIdentType(ty) And TIdentType(ty).ident <> "?") Then
 										
-											cdecl = class.GenClassInstance(args)
+											cdecl = class.GenClassInstance(args,,,, instanceIdent)
 											cdecl.declImported = True
 											
 											_mod.munged = class.munged
