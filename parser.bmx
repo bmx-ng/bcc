@@ -75,7 +75,7 @@ Type TForEachinStmt Extends TLoopStmt
 
 			Local exprTmp:TLocalDecl
 			Local exprVar:TExpr
-			If TArrayType( expr.exprType ).isStatic And (TVarExpr(expr) Or TMemberVarExpr(expr)) Then ' TODO TSliceExpr
+			If TArrayType( expr.exprType ) And TArrayType( expr.exprType ).isStatic And (TVarExpr(expr) Or TMemberVarExpr(expr)) Then ' TODO TSliceExpr
 				exprVar = expr
 			Else
 				exprTmp = New TLocalDecl.Create( "",Null,expr,,True )
