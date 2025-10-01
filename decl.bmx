@@ -1754,11 +1754,13 @@ End Rem
 		Local argDecls:TArgDecl[]=match.argDecls
 		For Local i:Int=0 Until argExprs.Length
 			Local arg:TExpr = argExprs[i]
-			Local declTy:TType=argDecls[i].ty
-			Local exprTy:TType=arg.exprType
+			If arg Then
+				Local declTy:TType=argDecls[i].ty
+				Local exprTy:TType=arg.exprType
 
-			If TConstExpr(arg) And IsNumericType(exprTy) And IsNumericType(declTy) And Not TConstExpr(arg).typeSpecific And TConstExpr(arg).CompatibleWithType(declTy) Then
-				arg.exprType = declTy
+				If TConstExpr(arg) And IsNumericType(exprTy) And IsNumericType(declTy) And Not TConstExpr(arg).typeSpecific And TConstExpr(arg).CompatibleWithType(declTy) Then
+					arg.exprType = declTy
+				End If
 			End If
 		Next
 

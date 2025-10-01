@@ -85,11 +85,13 @@ SaveSource(opt_filepath, trans, mung)
 SaveIncBinHeader(opt_filepath, trans, FileMung(False), app)
 SaveDef(opt_filepath, trans, mung, app)
 
+?bmxng
 If opt_alloc_stats Then
 	Local buf:Byte[16384]
 	DumpObjectCounts(buf, buf.Length, False)
 	Print String.FromCString(buf)
 End If
+?
 
 Function SaveInterface(file:String, trans:TCTranslator, mung:String)
 

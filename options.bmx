@@ -255,9 +255,11 @@ Function ParseArgs:String[](args:String[])
 			Case "nas"
 				opt_no_auto_superstrict=True
 			Case "allocstats"
+?bmxng
 				opt_alloc_stats=True
 				CountObjectInstances = True
 				'CountObjectInstanceTotals = True
+?
 		End Select
 	
 		count:+ 1
