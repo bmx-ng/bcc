@@ -3662,6 +3662,7 @@ End Rem
 						Emit sb.ToString()
 					End If
 					If emitFuncProtos
+						sb.SetLength(0)
 						If decl.IsMethod() Then
 							sb.Append( TransType(decl.retType, "") ).Append( " _" ).Append( decl.munged )
 							sb.Append( "(" ).Append( argStr ).Append( ")" )
