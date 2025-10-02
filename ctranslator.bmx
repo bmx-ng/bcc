@@ -2558,7 +2558,7 @@ Type TCTranslator Extends TTranslator
 						sb.Append(")")
 						sb.Append("bbObjectDowncast")
 						sb.Append("(")
-						sb.Append("(BBObject*)")
+						sb.Append("(BBOBJECT)")
 						sb.Append(t)
 						sb.Append(",(BBClass*)&")
 						sb.Append(TObjectType(dst).classDecl.munged)
@@ -3712,7 +3712,7 @@ End Rem
 						argStr = " "
 					End If
 					' emit function ptr typedef
-					sb.Append( pre ).Append( TransType( decl.retType, id + "x" ) ).Append( "bk" )
+					sb.Append( pre ).Append( TransType( decl.retType, id + "x" ) ).Append( bk )
 					Emit sb.ToString()
 					sb.SetLength(0)
 					' emit actual typedef (with return type of above typedef)
@@ -7280,6 +7280,8 @@ End If
 			Emit app.munged + "_register();"
 		End If
 
+		Emit "bb_init_strings();"
+
 		' add global roots
 		Local first:TGlobalDecl
 		Local last:TGlobalDecl
@@ -7438,7 +7440,7 @@ End If
 						
 					Emit "static struct BBString_" + s.length + " " + key.id + "={"
 					Emit "&bbStringClass,"
-					Emit bmx_gen_hash32(s) + ","
+					Emit "0,"
 					Emit s.length + ","
 
 					Local t:String = "{"
@@ -7469,6 +7471,19 @@ End If
 				Emit "struct BBDebugScope_" + i + "{int kind; const char *name; BBDebugDecl decls[" + (i + 1) + "]; };"
 			Next
 		End If
+
+		' init strings
+		Emit "static void bb_init_strings() {"
+		For Local s:String = EachIn app.stringConsts.Keys()
+			If s Then
+				Local key:TStringConst = TStringConst(app.stringConsts.ValueForKey(s))
+
+				If key.used > 0 Then
+					Emit "bbStringHash(&" + key.id + ");"
+				End If
+			End If
+		Next
+		Emit "}"
 
 	End Method
 	
