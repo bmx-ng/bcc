@@ -4043,7 +4043,9 @@ Type TEnumValueDecl Extends TDecl
 		If TUIntType( ty ) Return "u"
 		If TLongType( ty ) Return "l"
 		If TULongType( ty ) Return "y"
-		If TSizeTType( ty ) Return "z"
+		If TSizeTType( ty ) Return "t"
+		If TLongIntType( ty ) Return "v"
+		If TULongIntType( ty ) Return "e"
 	End Method
 	
 	Method ToString:String()
