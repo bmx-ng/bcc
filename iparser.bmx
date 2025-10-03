@@ -40,7 +40,7 @@ Type TIParser
 	Field _toke$
 	Field _tokeType:Int
 	Field _tokeSpace:Int
-	Field _tokerStack:TList=New TList'<TToker>
+	Field _tokerStack:TBCCObjectList=New TBCCObjectList'<TToker>
 
 	Method ParseModuleImport:Int(pmod:TModuleDecl, modpath:String, path:String, imp:String = Null, iData:String = Null, attrs:Long = 0, relPath:String = "", isFileImport:Int = 0)
 

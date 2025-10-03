@@ -85,7 +85,7 @@ Const OPTION_WANT_DATA_LABEL:Int = 2
 'Const CALL_CONV_DEFAULT:Int = CALL_CONV_CDECL
 
 Global _env:TScopeDecl
-Global _envStack:TList=New TList
+Global _envStack:TBCCObjectList=New TBCCObjectList
 
 Global _appInstance:TAppDecl
 
@@ -100,7 +100,7 @@ Function PopEnv()
 	_env=TScopeDecl( _envStack.RemoveLast() )
 End Function
 
-Type TFuncDeclList Extends TList
+Type TFuncDeclList Extends TBCCObjectList
 	Field ident:String
 	Field _identLower:String
 	
@@ -111,9 +111,9 @@ Type TFuncDeclList Extends TList
 		Return _identLower
 	End Method
 
-	Method AddLast:TLink( value:Object )
+	Method AddLast( value:Object )
 		If Not Contains(value) Then
-			Return Super.AddLast(value)
+			Super.AddLast(value)
 		End If
 	End Method
 
@@ -953,8 +953,8 @@ Type TScopeDecl Extends TDecl
 
 'Private
 
-	Field _decls:TList=New TList'<TDecl>
-	Field _semanted:TList=New TList'<TDecl>
+	Field _decls:TBCCObjectList=New TBCCObjectList'<TDecl>
+	Field _semanted:TBCCObjectList=New TBCCObjectList'<TDecl>
 
 	Field declsMap:TMap=New TMap'<Object>
 
@@ -964,16 +964,16 @@ Type TScopeDecl Extends TDecl
 		InternalErr "TScopeDecl.OnCopy"
 	End Method
 
-	Method Decls:TList()
+	Method Decls:TBCCObjectList()
 		Return _decls
 	End Method
 	
-	Method Semanted:TList()
+	Method Semanted:TBCCObjectList()
 		Return _semanted
 	End Method
 	
-	Method FuncDecls:TList( id$="" )
-		Local fdecls:TList=New TList
+	Method FuncDecls:TBCCObjectList( id$="" )
+		Local fdecls:TBCCObjectList=New TBCCObjectList
 		For Local decl:TDecl=EachIn _decls
 			If id And decl.ident<>id Continue
 			Local fdecl:TFuncDecl=TFuncDecl( decl )
@@ -982,8 +982,8 @@ Type TScopeDecl Extends TDecl
 		Return fdecls
 	End Method
 	
-	Method MethodDecls:TList( id$="" )
-		Local fdecls:TList=New TList
+	Method MethodDecls:TBCCObjectList( id$="" )
+		Local fdecls:TBCCObjectList=New TBCCObjectList
 		For Local decl:TDecl=EachIn _decls
 			If id And decl.ident<>id Continue
 			Local fdecl:TFuncDecl=TFuncDecl( decl )
@@ -992,8 +992,8 @@ Type TScopeDecl Extends TDecl
 		Return fdecls
 	End Method
 	
-	Method SemantedFuncs:TList( id$="" )
-		Local fdecls:TList=New TList
+	Method SemantedFuncs:TBCCObjectList( id$="" )
+		Local fdecls:TBCCObjectList=New TBCCObjectList
 		For Local decl:TDecl=EachIn _semanted
 			If id And decl.ident<>id Continue
 			Local fdecl:TFuncDecl=TFuncDecl( decl )
@@ -1002,8 +1002,8 @@ Type TScopeDecl Extends TDecl
 		Return fdecls
 	End Method
 	
-	Method SemantedMethods:TList( id$="" )
-		Local fdecls:TList=New TList
+	Method SemantedMethods:TBCCObjectList( id$="" )
+		Local fdecls:TBCCObjectList=New TBCCObjectList
 		For Local decl:TDecl=EachIn _decls
 			If id And decl.ident<>id Continue
 			Local fdecl:TFuncDecl=TFuncDecl( decl )
@@ -1054,7 +1054,7 @@ Type TScopeDecl Extends TDecl
 
 	End Method
 
-	Method InsertDecls( _decls:TList )
+	Method InsertDecls( _decls:TBCCObjectList )
 		For Local decl:TDecl=EachIn _decls
 			InsertDecl decl
 		Next
@@ -1341,7 +1341,7 @@ End Rem
 		Return decl
 	End Method
 	
-	Method FindBestMatchForArgs:TFuncDecl(argExprs:TExpr[], matches:TList)
+	Method FindBestMatchForArgs:TFuncDecl(argExprs:TExpr[], matches:TBCCObjectList)
 
 		Local bestMatch:TFuncDecl = Null
 		Local totals:Int[] = New Int[matches.count()]
@@ -1506,7 +1506,7 @@ End Rem
 		Local match:TFuncDecl,isexact:Int
 		Local _err$
 		Local errorDetails:String
-		Local matches:TList = New TList
+		Local matches:TBCCObjectList = New TBCCObjectList
 
 		Local noExtendString:Int = True
 		Local generateWarnings:Int = False
@@ -1809,7 +1809,7 @@ End Rem
 End Type
 
 Type TBlockDecl Extends TScopeDecl
-	Field stmts:TList=New TList
+	Field stmts:TBCCObjectList=New TBCCObjectList
 	Field extra:Object
 	Field blockType:Int
 	
@@ -2550,8 +2550,8 @@ Type TClassDecl Extends TScopeDecl
 	Field implmentsAll:TClassDecl[]		'all interfaces implemented
 	
 	Field instanceof:TClassDecl			'for instances
-	Field instances:TList
-	Field instanceIdents:TList		'for actual (non-arg, non-instance)
+	Field instances:TBCCObjectList
+	Field instanceIdents:TBCCObjectList		'for actual (non-arg, non-instance)
 	Field instArgs:TType[]
 
 	Field objectType:TObjectType '"canned" objectType
@@ -2570,8 +2570,8 @@ Type TClassDecl Extends TScopeDecl
 		Self.attrs=attrs
 		Self.objectType=New TObjectType.Create( Self )
 		If args
-			instances=New TList
-			instanceIdents=New TList
+			instances=New TBCCObjectList
+			instanceIdents=New TBCCObjectList
 		EndIf
 		Return Self
 	End Method
@@ -3447,7 +3447,7 @@ End Rem
 			If decl.IsSemanted() Continue
 			
 			Local live:Int
-			Local unsem:TList=New TList'<TFuncDecl>
+			Local unsem:TBCCObjectList=New TBCCObjectList'<TFuncDecl>
 			
 			unsem.AddLast decl
 			
@@ -3581,7 +3581,7 @@ End Rem
 		Else
 			' check for compatible overloads, etc.
 
-			Local impls:TList=New TList
+			Local impls:TBCCObjectList=New TBCCObjectList
 
 			CheckInterface(Self, impls)
 			
@@ -3591,7 +3591,7 @@ End Rem
 		
 	End Method
 	
-	Method CheckInterface(cdecl:TClassDecl, impls:TList)
+	Method CheckInterface(cdecl:TClassDecl, impls:TBCCObjectList)
 		While cdecl
 			For Local decl:TFuncDecl=EachIn cdecl.SemantedMethods()
 				Local found:Int
@@ -3695,9 +3695,9 @@ End Rem
 		Return map
 	End Method
 	
-	Method GetImplementedFuncs:TList(list:TList = Null)
+	Method GetImplementedFuncs:TBCCObjectList(list:TBCCObjectList = Null)
 		If Not list Then
-			list = New TList
+			list = New TBCCObjectList
 		End If
 		
 		For Local idecl:TClassDecl = EachIn implmentsAll
@@ -4082,14 +4082,14 @@ Type TModuleDecl Extends TScopeDecl
 
 	Field pmod:TModuleDecl
 
-	Field fileImports:TList=New TList'StringList
+	Field fileImports:TBCCObjectList=New TBCCObjectList'StringList
 	
 	' cache of ModuleInfo lines
-	Field modInfo:TList = New TList
+	Field modInfo:TBCCObjectList = New TBCCObjectList
 	' cache of pragma lines
-	Field pragmas:TList = New TList
+	Field pragmas:TBCCObjectList = New TBCCObjectList
 
-	Field _getDeclTreeCache:TList
+	Field _getDeclTreeCache:TBCCObjectList
 	
 	Field _getDeclCache:TMap = New TMap
 	Field _getDeclListCache:TMap = New TMap
@@ -4186,9 +4186,9 @@ Type TModuleDecl Extends TScopeDecl
 		
 		Else
 		
-			_getDeclTreeCache = New TList
+			_getDeclTreeCache = New TBCCObjectList
 	
-			Local todo:TList=New TList'<TModuleDecl>
+			Local todo:TBCCObjectList=New TBCCObjectList'<TModuleDecl>
 			'Local done:TIntMap=New TIntMap'<TModuleDecl>
 			Local done:TMap = New TMap
 			
@@ -4272,9 +4272,9 @@ Type TModuleDecl Extends TScopeDecl
 		
 		Else
 
-			_getDeclTreeCache = New TList
+			_getDeclTreeCache = New TBCCObjectList
 	
-			Local todo:TList=New TList'<TModuleDecl>
+			Local todo:TBCCObjectList=New TBCCObjectList'<TModuleDecl>
 			Local done:TMap=New TMap'<TModuleDecl>
 			
 			todo.AddLast Self
@@ -4353,22 +4353,22 @@ Type TAppDecl Extends TScopeDecl
 	Field mainModule:TModuleDecl
 	Field mainFunc:TFuncDecl	
 		
-	Field semantedClasses:TList=New TList'<TClassDecl>			'in-order (ie: base before derived) list of _semanted classes
-	Field semantedGlobals:TList=New TList'<TGlobalDecl>			'in-order (ie: dependancy sorted) list of _semanted globals
+	Field semantedClasses:TBCCObjectList=New TBCCObjectList'<TClassDecl>			'in-order (ie: base before derived) list of _semanted classes
+	Field semantedGlobals:TBCCObjectList=New TBCCObjectList'<TGlobalDecl>			'in-order (ie: dependancy sorted) list of _semanted globals
 
-	Field fileImports:TList=New TList'StringList
-	Field headers:TList = New TList
+	Field fileImports:TBCCObjectList=New TBCCObjectList'StringList
+	Field headers:TBCCObjectList = New TBCCObjectList
 	
 	Field stringConsts:TMap = New TMap
 	Field stringConstCount:Int
 	
-	Field incbins:TList = New TList
+	Field incbins:TBCCObjectList = New TBCCObjectList
 	Field genIncBinHeader:Int = False
 	
-	Field dataDefs:TList = New TList
+	Field dataDefs:TBCCObjectList = New TBCCObjectList
 	Field scopeDefs:TMap = New TMap
 	
-	Field exportDefs:TList = New TList
+	Field exportDefs:TBCCObjectList = New TBCCObjectList
 	
 	Method GetPathPrefix:String()
 		If opt_buildtype = BUILDTYPE_MODULE Then

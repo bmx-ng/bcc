@@ -35,6 +35,7 @@ Import "enums.c"
 Import "hash.c"
 Import "math.c"
 Import "zlib/zlib.bmx"
+Import "base.bccobjectlist.bmx"
 
 ' debugging help
 Const DEBUG:Int = False
@@ -46,7 +47,7 @@ Const SHOW_INTERNALERR_LOCATION:Int = True
 Global ENV_LANG$
 
 Global _errInfo$
-Global _errStack:TList = New TList
+Global _errStack:TBCCObjectList = New TBCCObjectList
 
 ' bytes offset to the first field
 Global OBJECT_BASE_OFFSET:Int = 8
@@ -394,7 +395,7 @@ Function BmxProcessMultiString:String( str:String )
 	Return BmxUnquote(sb.ToString(), True)
 End Function
 
-Type TStackList Extends TList
+Type TStackList Extends TBCCObjectList
 
 	Method Push(obj:Object)
 		AddFirst(obj)
@@ -414,7 +415,7 @@ Type TStackList Extends TList
 	
 End Type
 
-Type TStringList Extends TList
+Type TStringList Extends TBCCObjectList
 	Method Join:String(s:String)
 		Local arr:String[] = New String[count()]
 		Local index:Int
@@ -446,10 +447,10 @@ End Type
 
 Type TUnorderedMap
 
-	Field list:TList = New TList
+	Field list:TBCCObjectList = New TBCCObjectList
 	Field map:TMap = New TMap
 	
-	Field valuesList:TList = New TList
+	Field valuesList:TBCCObjectList = New TBCCObjectList
 
 	Method Insert( key:Object,value:Object )
 		list.AddLAst(New TKeyValue.Create(key, value))
@@ -457,16 +458,16 @@ Type TUnorderedMap
 		map.Insert(key, value)
 	End Method
 	
-	Method Keys:TList()
-		Local klist:TList = New TList
+	Method Keys:TBCCObjectList()
+		Local klist:TBCCObjectList = New TBCCObjectList
 		For Local kv:TKeyValue = EachIn list
 			klist.AddLast(kv.key)
 		Next
 		Return klist
 	End Method
 	
-	Method Values:TList()
-		'Local vlist:TList = New TList
+	Method Values:TBCCObjectList()
+		'Local vlist:TBCCObjectList = New TBCCObjectList
 		'For Local kv:TKeyValue = EachIn list
 		'	vlist.AddLast(kv.value)
 		'Next
