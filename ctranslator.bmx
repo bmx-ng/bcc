@@ -4749,7 +4749,7 @@ End Rem
 
 		Local hashCodeDecl:TDecl = classGetFunction(classDecl, "HashCode")
 		If hashCodeDecl Then
-			EmitClassStandardMethodDebugScope("HashCode", "(:Object):UInt" + TransDebugScopeModifiers(hashCodeDecl), "_" + classidForFunction(classDecl, "HashCode") + "_HashCode")
+			EmitClassStandardMethodDebugScope("HashCode", "()u" + TransDebugScopeModifiers(hashCodeDecl), "_" + classidForFunction(classDecl, "HashCode") + "_HashCode")
 		End If
 
 		EmitBBClassClassFuncsDebugScope(classDecl)
