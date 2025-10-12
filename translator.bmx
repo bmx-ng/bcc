@@ -1705,13 +1705,13 @@ End Rem
 				EmitLocalDeclarations(stmt.thenBlock)
 				If EmitBlock( stmt.thenBlock ) unreachable=True
 				Emit "}"
-			Else If stmt.elseBlock.stmts.First()
+			Else If stmt.elseBlock And stmt.elseBlock.stmts.First()
 				Emit "{"
 				EmitLocalDeclarations(stmt.elseBlock)
 				If EmitBlock( stmt.elseBlock ) unreachable=True
 				Emit "}"
 			EndIf
-		Else If stmt.elseBlock.stmts.First()
+		Else If stmt.elseBlock And stmt.elseBlock.stmts.First()
 			Emit "if"+Bra( stmt.expr.Trans() )+"{"
 			EmitLocalDeclarations(stmt.thenBlock)
 			FreeVarsIfRequired(False)

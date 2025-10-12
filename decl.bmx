@@ -3930,6 +3930,48 @@ Type TEnumDecl Extends TScopeDecl
 		InsertDecl fdecl
 		fdecl.Semant()
 
+		If Not IsExtern() And Not IsImported() Then
+			BuildDefaultComparatorCompare()
+		End If
+	End Method
+
+	Method BuildDefaultComparatorCompare()
+		Local enumType:TEnumType = New TEnumType.Create(Self)
+
+		Local arg1:TArgDecl = New TArgDecl.Create("e1", enumType.Copy(), Null)
+		Local arg2:TArgDecl = New TArgDecl.Create("e2", enumType.Copy(), Null)
+		Local func:TFuncDecl = New TFuncDecl.CreateF("DefaultComparator_Compare", New TIntType, [arg1, arg2], 0)
+
+		' 
+		' If e1 < e2 Then Return -1
+		' If e1 > e2 Then Return 1
+		' Return 0
+		'
+		Local e1Var:TVarExpr = New TVarExpr.Create(arg1)
+		Local e2Var:TVarExpr = New TVarExpr.Create(arg2)
+
+		Local ifExpr:TExpr = New TBinaryCompareExpr.Create( "<",e1Var, e2Var )
+		Local thenBlock:TBlockDecl=New TBlockDecl.Create( func, , BLOCK_IF )
+		Local returnStmt:TReturnStmt = New TReturnStmt.Create( New TConstExpr.Create( New TIntType,"-1" ) )
+		returnStmt.generated = True
+		returnStmt.errInfo=errInfo
+		thenBlock.AddStmt returnStmt
+		func.AddStmt New TIfStmt.Create( ifExpr,thenBlock, Null )
+
+		ifExpr = New TBinaryCompareExpr.Create( ">",e1Var, e2Var )
+		thenBlock= New TBlockDecl.Create( func, , BLOCK_IF )
+		returnStmt = New TReturnStmt.Create( New TConstExpr.Create( New TIntType,"1" ) )
+		returnStmt.generated = True
+		returnStmt.errInfo=errInfo
+		thenBlock.AddStmt returnStmt
+		func.AddStmt New TIfStmt.Create( ifExpr,thenBlock, Null )
+		
+		returnStmt = New TReturnStmt.Create( New TConstExpr.Create( New TIntType,"0" ) )
+		returnStmt.generated = True
+		returnStmt.errInfo=errInfo
+		func.stmts.AddLast returnStmt
+		
+		ModuleScope().InsertDecl func
 	End Method
 	
 	Method ToString:String()

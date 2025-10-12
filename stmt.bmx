@@ -528,13 +528,21 @@ Type TIfStmt Extends TStmt
 	End Method
 
 	Method OnCopy:TStmt( scope:TScopeDecl )
-		Return New TIfStmt.Create( expr.Copy(),thenBlock.CopyBlock( scope ),elseBlock.CopyBlock( scope ), generated )
+		Local eb:TBlockDecl
+		If elseBlock Then
+			eb = elseBlock.CopyBlock( scope )
+		Else
+			eb = Null
+		End If
+		Return New TIfStmt.Create( expr.Copy(),thenBlock.CopyBlock( scope ),eb, generated )
 	End Method
 	
 	Method OnSemant()
 		expr=expr.SemantAndCast( New TBoolType,CAST_EXPLICIT )
 		thenBlock.Semant
-		elseBlock.Semant
+		If elseBlock Then	
+			elseBlock.Semant
+		End If
 	End Method
 	
 	Method Trans$()

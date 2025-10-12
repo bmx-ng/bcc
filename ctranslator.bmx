@@ -7558,6 +7558,13 @@ End If
 
 						decl.Semant
 						
+						' enums
+						Local edecl:TEnumDecl=TEnumDecl( decl )
+						If edecl
+							EmitIfcEnumDecl(edecl)
+							Continue
+						EndIf
+
 						' consts
 						Local cdecl:TConstDecl=TConstDecl( decl )
 						If cdecl
@@ -7585,13 +7592,6 @@ End If
 							EmitIfcGlobalDecl(gdecl)
 							Continue
 						End If
-
-						' enums
-						Local edecl:TEnumDecl=TEnumDecl( decl )
-						If edecl
-							EmitIfcEnumDecl(edecl)
-							Continue
-						EndIf
 					Next
 
 				End If
@@ -7695,6 +7695,16 @@ End If
 		If opt_buildtype = BUILDTYPE_MODULE And opt_ismain Then
 			EmitIfcStructImports(app.mainModule, processed)
 		End If
+				
+		' enums
+		For Local decl:TDecl=EachIn app.Semanted()
+			If decl.IsPrivate() Continue
+			
+			Local edecl:TEnumDecl=TEnumDecl( decl )
+			If edecl And Not edecl.IsImported()
+				EmitIfcEnumDecl(edecl)
+			End If
+		Next
 
 		' consts
 		For Local decl:TDecl=EachIn app.Semanted()
@@ -7739,16 +7749,7 @@ End If
 				EmitIfcGlobalDecl(gdecl)
 			End If
 		Next
-		
-		' enums
-		For Local decl:TDecl=EachIn app.Semanted()
-			If decl.IsPrivate() Continue
-			
-			Local edecl:TEnumDecl=TEnumDecl( decl )
-			If edecl And Not edecl.IsImported()
-				EmitIfcEnumDecl(edecl)
-			End If
-		Next
+
 	End Method
 	
 	Method TransDef(app:TAppDecl)
