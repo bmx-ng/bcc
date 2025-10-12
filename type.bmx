@@ -2366,7 +2366,7 @@ Type TEnumType Extends TType
 	End Method
 
 	Method WidensToType:Int( ty:TType )
-		Return (IsPointerType(ty, 0, T_POINTER) And IsPointerType(Self, 0, T_POINTER)) Or (TEnumType(ty)<>Null And (ty._flags & T_VAR))
+		Return (IsPointerType(ty, 0, T_POINTER) And IsPointerType(Self, 0, T_POINTER)) Or (TEnumType(ty)<>Null And TEnumType(ty).decl = decl And (ty._flags & T_VAR))
 	End Method
 	
 	Method OnCopy:TType()
@@ -2384,7 +2384,7 @@ Type TEnumType Extends TType
 	End Method
 
 	Method ToString$()
-		Return "Enum " + decl.ident + " " + ToStringParts()
+		Return decl.ident ' + " " + ToStringParts()
 	End Method
 
 	Method GetClassScope:TScopeDecl()
