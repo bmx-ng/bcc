@@ -2345,8 +2345,8 @@ Type TCTranslator Extends TTranslator
 			If TULongIntType( src ) Return "bbStringFromULongInt"+Bra( t )
 			If TWParamType( src ) Return "bbStringFromWParam"+Bra( t )
 			If TLParamType( src ) Return "bbStringFromLParam"+Bra( t )
-			If TFloatType( src ) Return "bbStringFromFloat"+Bra( t )
-			If TDoubleType( src ) Return "bbStringFromDouble"+Bra( t )
+			If TFloatType( src ) Return "bbStringFromFloat"+Bra( t + ",0" )
+			If TDoubleType( src ) Return "bbStringFromDouble"+Bra( t + ",0" )
 			If TStringType( src ) Then
 				If src._flags & TType.T_CHAR_PTR Then
 					Return "bbStringFromCString"+Bra( t )
@@ -5131,6 +5131,7 @@ End Rem
 						For Local func:TFuncDecl = EachIn ifc.GetImplementedFuncs()
 						
 							If func.IsMethod() Then
+								MungDecl func
 
 								Local cast:String = Bra( func.munged + "_m" )
 							
@@ -6353,6 +6354,21 @@ End Rem
 					head :+ ","
 				End If
 				head :+ classDecl.implments[i].ident
+
+				' interface inst args
+				Local idecl:TClassDecl = classDecl.implments[i]
+				If idecl.instArgs Then
+					head :+ "<"
+					Local s:String
+					For Local ty:TType = EachIn idecl.instArgs
+						If s Then
+							s :+ ","
+						End If
+						s :+ ty.ToString()
+					Next
+					head :+ s
+					head :+ ">"
+				End If
 			Next
 		End If
 		
