@@ -480,7 +480,7 @@ Type TParser Extends TGenProcessor
 	Field _tokeType:Int
 
 	Field _block:TBlockDecl
-	Field _blockStack:TList=New TList'<TBlockDecl>
+	Field _blockStack:TBCCObjectList=New TBCCObjectList'<TBlockDecl>
 	Field _errStack:TStringList=New TStringList
 
 	Field _app:TAppDecl
@@ -2228,7 +2228,7 @@ End Rem
 		PushBlock tryStmtDecl
 
 		Local block:TBlockDecl=New TBlockDecl.Create( tryStmtDecl, , BLOCK_TRY )
-		Local catches:TList=New TList
+		Local catches:TBCCObjectList=New TBCCObjectList
 		Local finallyStmt:TFinallyStmt = Null
 
 		PushBlock block
@@ -2735,7 +2735,7 @@ End Rem
 		Return decl
 	End Method
 
-	Method ParseDecls:TList( toke$,attrs:Long, isField:Int = False )
+	Method ParseDecls:TBCCObjectList( toke$,attrs:Long, isField:Int = False )
 		If toke Parse toke
 
 		If isField Then
@@ -2759,7 +2759,7 @@ End Rem
 			Forever
 		End If
 
-		Local decls:TList=New TList'<Decl>
+		Local decls:TBCCObjectList=New TBCCObjectList'<Decl>
 		Repeat
 			Local decl:TDecl=ParseDecl( toke,attrs )
 			decls.AddLast decl
@@ -3364,7 +3364,7 @@ End Rem
 
 		Local id$=ParseIdent()
 
-		Local args:TList = New TList
+		Local args:TBCCObjectList = New TBCCObjectList
 		Local superTy:TIdentType
 		Local imps:TIdentType[]
 		Local meta:TMetadata

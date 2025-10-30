@@ -4149,7 +4149,7 @@ End Rem
 
 	End Method
 
-	Method BBClassClassFuncProtoBuildList( classDecl:TClassDecl, list:TList )
+	Method BBClassClassFuncProtoBuildList( classDecl:TClassDecl, list:TBCCObjectList )
 
 		Local fdecls:TFuncDecl[] = classDecl.GetAllFuncDecls()
 
@@ -4172,7 +4172,7 @@ End Rem
 
 	Method EmitBBClassClassFuncProto( classDecl:TClassDecl )
 
-		Local list:TList = New TList
+		Local list:TBCCObjectList = New TBCCObjectList
 		
 		BBClassClassFuncProtoBuildList(classDecl, list)
 
@@ -4432,7 +4432,7 @@ End Rem
 
 	End Method
 
-	Field emittedStructs:TList = New TList
+	Field emittedStructs:TBCCObjectList = New TBCCObjectList
 
 	Method EmitStructClassProto( classDecl:TClassDecl )
 
@@ -4658,7 +4658,7 @@ End Rem
 		Emit "},"
 	End Method
 
-	Method BBClassClassFuncsDebugScopeBuildList(classDecl:TClassDecl, list:TList)
+	Method BBClassClassFuncsDebugScopeBuildList(classDecl:TClassDecl, list:TBCCObjectList)
 		'Local reserved:String = ",New,Delete,ToString,Compare,SendMessage,_reserved1_,_reserved2_,_reserved3_,".ToLower()
 		
 		Local funcDecls:TFuncDecl[] = classDecl.GetAllFuncDecls(Null, False)
@@ -4670,18 +4670,18 @@ End Rem
 			
 			If Not equalsBuiltInFunc(classDecl, fdecl) Then
 				Local ignore:Int
-				Local link:TLink=list._head._succ
-				While link<>list._head
-					Local ofdecl:TFuncDecl = TFuncDecl(link._value)
+
+				Local dataIndex:Int =0
+				For Local ofdecl:TFuncDecl = EachIn list
 					If fdecl.ident = ofdecl.ident And fdecl.EqualsArgs(ofdecl) And fdecl.scope <> ofdecl.scope Then
 						If fdecl.overrides Then
-							link._value = fdecl
+							list.data[dataIndex] = fdecl
 							ignore = True
 							Exit
-						End If
+						EndIf
 					EndIf
-					link = link._succ
-				Wend
+					dataIndex :+ 1
+				Next
 
 				If Not ignore Then
 					list.AddLast(fdecl)
@@ -4695,7 +4695,7 @@ End Rem
 
 	Method EmitBBClassClassFuncsDebugScope(classDecl:TClassDecl)
 	
-		Local list:TList = New TList
+		Local list:TBCCObjectList = New TBCCObjectList
 		
 		BBClassClassFuncsDebugScopeBuildList(classDecl, list)
 		
@@ -4766,7 +4766,7 @@ End Rem
 			superid = classDecl.superClass.actual.munged
 		End If
 		
-		Local list:TList = New TList
+		Local list:TBCCObjectList = New TBCCObjectList
 		
 		BBClassClassFuncsDebugScopeBuildList(classDecl, list)
 		
@@ -6833,7 +6833,7 @@ End If
 
 	End Method
 
-	Method IncBinRequiresRebuild:Int(file:String, incbins:TList)
+	Method IncBinRequiresRebuild:Int(file:String, incbins:TBCCObjectList)
 
 		' file doesn't exist?
 		If Not FileType(file) Then
@@ -6845,7 +6845,7 @@ End If
 		' file exists... read header and compare names
 		' read lines until "// ----"
 		' TODO
-		Local files:TList = New TList
+		Local files:TBCCObjectList = New TBCCObjectList
 		Local hashes:TMap = New TMap
 		Local stream:TStream = ReadFile(file)
 		While True
