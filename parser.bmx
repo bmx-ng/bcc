@@ -4760,6 +4760,16 @@ Function EvalS$( source$,ty:TType )
 	env.InsertDecl New TConstDecl.Create( "ptr32",New TIntType,New TConstExpr.Create( New TIntType,opt_arch="x86" Or opt_arch="ppc" Or opt_arch="armv7" Or opt_arch="arm" Or opt_arch="armeabi" Or opt_arch="armeabiv7a" Or opt_arch="riscv32" ),0 )
 	env.InsertDecl New TConstDecl.Create( "ptr64",New TIntType,New TConstExpr.Create( New TIntType,opt_arch="x64" Or opt_arch="arm64" Or opt_arch="arm64v8a" Or opt_arch="riscv64" ),0 )
 
+	Local longInt8:Int = True
+	' on windows and 32-bit platforms longint is 4 bytes
+	If opt_platform="win32" Or opt_platform="win64" Or opt_arch="x86" Or opt_arch="ppc" Then
+		longInt8 = False
+	End If
+	env.InsertDecl New TConstDecl.Create( "longint8",New TIntType,New TConstExpr.Create( New TIntType, longInt8 ),0 )
+	env.InsertDecl New TConstDecl.Create( "longint4",New TIntType,New TConstExpr.Create( New TIntType, Not longInt8 ),0 )
+	env.InsertDecl New TConstDecl.Create( "ulongint8",New TIntType,New TConstExpr.Create( New TIntType, longInt8 ),0 )
+	env.InsertDecl New TConstDecl.Create( "ulongint4",New TIntType,New TConstExpr.Create( New TIntType, Not longInt8 ),0 )
+
 	' endian
 	env.InsertDecl New TConstDecl.Create( "bigendian",New TIntType,New TConstExpr.Create( New TIntType,opt_arch="ppc" ),0 )
 	env.InsertDecl New TConstDecl.Create( "littleendian",New TIntType,New TConstExpr.Create( New TIntType,opt_arch<>"ppc" ),0 )
