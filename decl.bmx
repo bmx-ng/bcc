@@ -3932,6 +3932,7 @@ Type TEnumDecl Extends TScopeDecl
 
 		If Not IsExtern() And Not IsImported() Then
 			BuildDefaultComparatorCompare()
+			BuildDefaultHashCode()
 		End If
 	End Method
 
@@ -3971,6 +3972,25 @@ Type TEnumDecl Extends TScopeDecl
 		returnStmt.errInfo=errInfo
 		func.stmts.AddLast returnStmt
 		
+		ModuleScope().InsertDecl func
+	End Method
+
+	Method BuildDefaultHashCode()
+		Local enumType:TEnumType = New TEnumType.Create(Self)
+
+		Local arg:TArgDecl = New TArgDecl.Create("e", enumType.Copy(), Null)
+		Local func:TFuncDecl = New TFuncDecl.CreateF("Default_HashCode", New TUIntType, [arg], 0)
+
+		' Return Default_HashCode( e.Ordinal() )
+		
+		Local eVar:TVarExpr = New TVarExpr.Create(arg)
+
+		Local ordinalCall:TExpr = New TFuncCallExpr.Create( New TIdentExpr.Create("Ordinal", eVar) )
+		Local returnStmt:TReturnStmt = New TReturnStmt.Create( New TFuncCallExpr.Create( New TIdentExpr.Create("Default_HashCode"), [ordinalCall] ) )
+		returnStmt.generated = True
+		returnStmt.errInfo=errInfo
+		func.stmts.AddLast returnStmt
+
 		ModuleScope().InsertDecl func
 	End Method
 	
