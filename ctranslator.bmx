@@ -31,7 +31,7 @@ Type TCTranslator Extends TTranslator
 
 	Field prefix:String
 	
-	Field reserved_methods:String = ",New,Delete,ToString,Compare,SendMessage,HashCode,_reserved2_,_reserved3_,".ToLower()
+	Field reserved_methods:String = ",New,Delete,ToString,Compare,SendMessage,HashCode,Equals,_reserved3_,".ToLower()
 	
 	Method New()
 		_trans = Self
@@ -4234,6 +4234,13 @@ End Rem
 				Emit sb.ToString()
 			End If
 
+			If classGetFunction(classDecl, "Equals") Then
+				sb.SetLength(0)
+				sb.Append("BBINT _").Append(classid).Append("_Equals(")
+				sb.Append(TransObject(classDecl)).Append(" o, BBOBJECT otherObject);")
+				Emit sb.ToString()
+			End If
+
 		End If
 		'Local reserved:String = ",New,Delete,ToString,Compare,SendMessage,_reserved1_,_reserved2_,_reserved3_,".ToLower()
 
@@ -4294,6 +4301,11 @@ End Rem
 			Emit "BBUINT  (*HashCode)( struct " + classidForFunction(classDecl, "HashCode") + "_obj* x );"
 		Else
 			Emit "BBUINT  (*HashCode)( BBOBJECT o );"
+		End If
+		If classHierarchyGetFunction(classDecl, "Equals") Then
+			Emit "BBINT   (*Equals)( struct " + classidForFunction(classDecl, "Equals") + "_obj* x, BBOBJECT y );"
+		Else
+			Emit "BBINT   (*Equals)( BBOBJECT o, BBOBJECT y );"
 		End If
 		Emit "BBINTERFACETABLE itable;"
 		Emit "void*     extra;"
@@ -4752,6 +4764,11 @@ End Rem
 			EmitClassStandardMethodDebugScope("HashCode", "()u" + TransDebugScopeModifiers(hashCodeDecl), "_" + classidForFunction(classDecl, "HashCode") + "_HashCode")
 		End If
 
+		Local equalsDecl:TDecl = classGetFunction(classDecl, "Equals")
+		If equalsDecl Then
+			EmitClassStandardMethodDebugScope("Equals", "()u" + TransDebugScopeModifiers(equalsDecl), "_" + classidForFunction(classDecl, "Equals") + "_Equals")
+		End If
+
 		EmitBBClassClassFuncsDebugScope(classDecl)
 
 	End Method
@@ -4880,6 +4897,10 @@ End Rem
 		End If
 
 		If classGetFunction(classDecl, "HashCode") Then
+			count :+ 1
+		End If
+
+		If classGetFunction(classDecl, "Equals") Then
 			count :+ 1
 		End If
 
@@ -5026,7 +5047,7 @@ End Rem
 				EndIf
 			Next
 	
-			reserved = ",New,Delete,ToString,Compare,SendMessage,HashCode,_reserved2_,_reserved3_,".ToLower()
+			reserved = ",New,Delete,ToString,Compare,SendMessage,HashCode,Equals,_reserved3_,".ToLower()
 
 			If (classDecl.attrs & CLASS_STRUCT) Then
 				Emit "BBARRAYNEW1DSTRUCT_FUNC" + Bra(classid + "," + classid + ", _" + classid + "_New" + ", " + EnQuote("@" + classDecl.ident))
@@ -5216,6 +5237,12 @@ End Rem
 				Emit "_" + classidForFunction(classDecl, "HashCode") + "_HashCode,"
 			Else
 				Emit "bbObjectHashCode,"
+			End If
+
+			If classHierarchyGetFunction(classDecl, "Equals") Then
+				Emit "_" + classidForFunction(classDecl, "Equals") + "_Equals,"
+			Else
+				Emit "bbObjectEquals,"
 			End If
 
 			'Emit "public:"

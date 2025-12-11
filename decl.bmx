@@ -3932,7 +3932,8 @@ Type TEnumDecl Extends TScopeDecl
 
 		If Not IsExtern() And Not IsImported() Then
 			BuildDefaultComparatorCompare()
-			BuildDefaultHashCode()
+			BuildDefaultComparatorHashCode()
+			BuildDefaultComparatorEquals()
 		End If
 	End Method
 
@@ -3975,18 +3976,39 @@ Type TEnumDecl Extends TScopeDecl
 		ModuleScope().InsertDecl func
 	End Method
 
-	Method BuildDefaultHashCode()
+	Method BuildDefaultComparatorHashCode()
 		Local enumType:TEnumType = New TEnumType.Create(Self)
 
 		Local arg:TArgDecl = New TArgDecl.Create("e", enumType.Copy(), Null)
-		Local func:TFuncDecl = New TFuncDecl.CreateF("Default_HashCode", New TUIntType, [arg], 0)
+		Local func:TFuncDecl = New TFuncDecl.CreateF("DefaultComparator_HashCode", New TUIntType, [arg], 0)
 
-		' Return Default_HashCode( e.Ordinal() )
+		' Return DefaultComparator_HashCode( e.Ordinal() )
 		
 		Local eVar:TVarExpr = New TVarExpr.Create(arg)
 
 		Local ordinalCall:TExpr = New TFuncCallExpr.Create( New TIdentExpr.Create("Ordinal", eVar) )
-		Local returnStmt:TReturnStmt = New TReturnStmt.Create( New TFuncCallExpr.Create( New TIdentExpr.Create("Default_HashCode"), [ordinalCall] ) )
+		Local returnStmt:TReturnStmt = New TReturnStmt.Create( New TFuncCallExpr.Create( New TIdentExpr.Create("DefaultComparator_HashCode"), [ordinalCall] ) )
+		returnStmt.generated = True
+		returnStmt.errInfo=errInfo
+		func.stmts.AddLast returnStmt
+
+		ModuleScope().InsertDecl func
+	End Method
+
+	Method BuildDefaultComparatorEquals()
+		Local enumType:TEnumType = New TEnumType.Create(Self)
+
+		Local arg1:TArgDecl = New TArgDecl.Create("e1", enumType.Copy(), Null)
+		Local arg2:TArgDecl = New TArgDecl.Create("e2", enumType.Copy(), Null)
+		Local func:TFuncDecl = New TFuncDecl.CreateF("DefaultComparator_Equals", New TIntType, [arg1, arg2], 0)
+
+		' Return e1 = e2
+
+		Local e1Var:TVarExpr = New TVarExpr.Create(arg1)
+		Local e2Var:TVarExpr = New TVarExpr.Create(arg2)
+
+		Local eqExpr:TExpr = New TBinaryCompareExpr.Create( "=",e1Var, e2Var )
+		Local returnStmt:TReturnStmt = New TReturnStmt.Create( eqExpr )
 		returnStmt.generated = True
 		returnStmt.errInfo=errInfo
 		func.stmts.AddLast returnStmt
