@@ -411,7 +411,7 @@ Type TTranslator
 			Return func.equalsBuiltIn
 		End If
 	
-		If checked Or func.IdentLower() = "tostring" Or func.IdentLower() = "compare" Or func.IdentLower() = "sendmessage" Or func.IdentLower() = "new" Or func.IdentLower() = "delete" Or func.IdentLower() = "hashcode" Then
+		If checked Or func.IdentLower() = "tostring" Or func.IdentLower() = "compare" Or func.IdentLower() = "sendmessage" Or func.IdentLower() = "new" Or func.IdentLower() = "delete" Or func.IdentLower() = "hashcode" Or func.IdentLower() = "equals" Then
 			If classDecl.munged = "bbObjectClass" Then
 				For Local decl:TFuncDecl = EachIn classDecl.Decls()
 					If Not decl.IsSemanted() Then
