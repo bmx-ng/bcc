@@ -2687,6 +2687,17 @@ End Rem
 		EndIf
 		
 		Local originalInstArgs:TType[] = instArgs
+
+		' check for null args
+		For Local i:Int = 0 Until instArgs.Length
+			If Not instArgs[i] Then
+				If i < args.Length Then
+					Err "Unknown type argument for parameter '" + args[i].ident + "' for class " + ToString()
+				Else
+					InternalErr "Null type argument for class " + ToString()
+				End If
+			End If
+		Next
 		
 		'check number of args
 		If args.Length<>instArgs.Length Then
@@ -3126,6 +3137,10 @@ End Rem
 			If cdecl.IsInterface()
 				For Local iface:TClassDecl=EachIn tdecl_.implmentsAll
 					If iface=cdecl Return True
+					' interface is generic and does impl match or extend cdecl?
+					If iface.instanceof And cdecl.instanceof
+						If iface.instanceof.ExtendsClass(cdecl.instanceof, ignoreObjectSubclasses) Return True
+					End If
 				Next
 			EndIf
 			tdecl_=tdecl_.superClass
