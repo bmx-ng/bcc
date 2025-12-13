@@ -2115,7 +2115,9 @@ Type TFuncDecl Extends TBlockDecl
 			' objects can be subclasses as well as the same.
 			If TObjectType(decl.argDecls[i].ty) Then
 				Local ty:TObjectType = TObjectType(decl.argDecls[i].ty)
-				If Not ty.EqualsType( argDecls[i].ty ) And (exactMatch Or Not ty.ExtendsType( argDecls[i].ty, false , false, ignoreObjectSubclasses )) Return False
+				If Not ty.EqualsType( argDecls[i].ty ) And (exactMatch Or Not ty.ExtendsType( argDecls[i].ty, false , false, ignoreObjectSubclasses )) Then
+					Return False
+				End If
 			Else
 				If Not decl.argDecls[i].ty.EqualsType( argDecls[i].ty ) Return False
 			End If
@@ -2379,7 +2381,7 @@ Type TFuncDecl Extends TBlockDecl
 					End If
 				End If
 
-				If EqualsFunc( decl ) And Not voidReturnTypeFail
+				If EqualsFunc( decl, True ) And Not voidReturnTypeFail
 
 					' check we aren't attempting to assign weaker access modifiers
 					If (IsProtected() And decl.IsPublic()) Or (IsPrivate() And (decl.IsProtected() Or decl.IsPublic())) Then
