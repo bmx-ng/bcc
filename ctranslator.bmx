@@ -3624,7 +3624,7 @@ End Rem
 			Local t$=arg.munged
 			arg.munged=""
 			MungDecl arg
-			argCasts.Push TransType( arg.ty, arg.munged )+" "+arg.munged+"=static_cast<"+TransType(arg.ty, "")+" >"+Bra(t)+";"
+			'argCasts.Push TransType( arg.ty, arg.munged )+" "+arg.munged+"=("+TransType(arg.ty, "")+")"+Bra(t)+";"
 		Next
 
 		Local id$=decl.munged
@@ -3823,7 +3823,7 @@ End Rem
 			Local t$=arg.munged
 			arg.munged=""
 			MungDecl arg
-			argCasts.Push TransType( arg.ty, arg.munged )+" "+arg.munged+"=static_cast<"+TransType(arg.ty, "")+" >"+Bra(t)+";"
+			argCasts.Push TransType( arg.ty, arg.munged )+" "+arg.munged+"=("+TransType(arg.ty, "")+")"+Bra(t)+";"
 		Next
 
 		Local id$=decl.munged
@@ -4685,7 +4685,7 @@ End Rem
 				Local link:TLink=list._head._succ
 				While link<>list._head
 					Local ofdecl:TFuncDecl = TFuncDecl(link._value)
-					If fdecl.ident = ofdecl.ident And fdecl.EqualsArgs(ofdecl) And fdecl.scope <> ofdecl.scope Then
+					If fdecl.ident = ofdecl.ident And fdecl.EqualsArgs(ofdecl, True) And fdecl.scope <> ofdecl.scope Then
 						If fdecl.overrides Then
 							link._value = fdecl
 							ignore = True
