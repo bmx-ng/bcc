@@ -418,7 +418,7 @@ Type TTranslator
 						decl.Semant
 					End If
 					If decl.IdentLower() = func.IdentLower() Then
-						Local res:Int = decl.EqualsFunc(func)
+						Local res:Int = decl.EqualsFunc(func, True)
 						If res Then
 							func.equalsBuiltIn = True
 						End If
