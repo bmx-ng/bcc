@@ -2898,6 +2898,24 @@ End Rem
 				declList.AddLast(decl)
 			End If
 
+			' check for interfaces before moving up the heirarchy
+			If cdecl.implments Then
+				For Local idecl:TScopeDecl = EachIn cdecl.implments
+					decl=idecl.GetDeclList( ident, declList, maxSearchDepth )
+					If decl Then
+						If TFuncDeclList(decl) Then
+							If TFuncDeclList(decl) <> declList Then
+								For Local d:TDecl = EachIn TFuncDeclList(decl)
+									declList.AddLast(d)
+								Next
+							End If
+						Else
+							declList.AddLast(decl)
+						End If
+					End If
+				Next
+			End If 
+
 			cdecl=cdecl.superClass
 			
 			If maxSearchDepth < SCOPE_CLASS_HEIRARCHY Then
