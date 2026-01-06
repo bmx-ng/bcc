@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2025 Bruce A Henderson
+' Copyright (c) 2013-2026 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -3109,6 +3109,13 @@ Type TCTranslator Extends TTranslator
 		Emit "{"
 		EmitLocalDeclarations f.block
 		EmitBlock f.block
+		Emit "}"
+	End Method
+
+	Method TransUsingStmt$( stmt:TUsingStmt )
+		Emit "{"
+		EmitLocalDeclarations stmt.wrapperBlock
+		EmitBlock stmt.wrapperBlock
 		Emit "}"
 	End Method
 

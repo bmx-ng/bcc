@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2024 Bruce A Henderson
+' Copyright (c) 2013-2026 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -52,7 +52,7 @@ Type TToker
 		"next,return,alias,rem,endrem,throw,assert,try,catch,finally,nodebug,incbin,endselect,endmethod," + ..
 		"endfunction,endtype,endextern,endtry,endwhile,pi,release,defdata,readdata,restoredata,interface," + ..
 		"endinterface,implements,size_t,uint,ulong,struct,endstruct,operator,where,readonly,export,override," + ..
-		"enum,endenum,stackalloc,inline,fieldoffset,staticarray,threadedglobal,longint,ulongint"
+		"enum,endenum,stackalloc,inline,fieldoffset,staticarray,threadedglobal,longint,ulongint,using,endusing,do"
 	Global _keywords:TMap
 
 	Field _path$
