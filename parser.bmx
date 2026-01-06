@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2025 Bruce A Henderson
+' Copyright (c) 2013-2026 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -2298,6 +2298,57 @@ End Rem
 		_block.AddStmt New TThrowStmt.Create( expr )
 	End Method
 
+	Method ParseUsingStmt()
+		Parse "using"
+		SkipEols
+
+		Local wrapperBlock:TBlockDecl = New TBlockDecl.Create(_block, , BLOCK_USING)
+		PushBlock wrapperBlock
+
+		Local localDecls:TList=New TList
+
+		While Not CParse("do")
+			ParseDeclStmts( False, 0, Null, True, localDecls )
+			SkipEols
+		Wend
+
+		If localDecls.Count() = 0 Then
+			Err "'Using' statement must declare at least one local variable."
+		End If
+
+		Local block:TBlockDecl = New TBlockDecl.Create(_block, , BLOCK_USING)
+		PushBlock block
+
+		While _toke<>"end" And _toke<>"endusing"
+
+			ParseStmt
+
+			If _toke = "end" Then
+				NextToke
+				If _toke = "using" Then
+					' we are done with the using statement
+					Exit
+				Else
+					ParseEndStmt(False)
+				End If
+			End If
+		Wend
+
+		If Not CParse("endusing") Then
+			NextToke
+			CParse "using"
+		End If
+
+		PopBlock
+
+		PopBlock ' wrapperBlock
+
+		Local usingStmt:TUsingStmt = New TUsingStmt.Create( TLocalDecl[](localDecls.ToArray()), wrapperBlock, block )
+
+		_block.AddStmt usingStmt
+
+	End Method
+
 	Method ParseReleaseStmt()
 		Parse "release"
 		Local expr:TExpr = ParseExpr()
@@ -2512,6 +2563,8 @@ End Rem
 				ParseEndStmt()
 			Case "extern"
 				ParseExternBlock(_module, 0)
+			Case "using"
+				ParseUsingStmt()
 			Case "#"
 				Local decl:TLoopLabelDecl = ParseLoopLabelDecl()
 				NextToke
@@ -2767,13 +2820,22 @@ End Rem
 		Forever
 	End Method
 
-	Method ParseDeclStmts(initOnly:Int = False, attrs:Long = 0, mdecl:TModuleDecl  = Null)
+	Method ParseDeclStmts(initOnly:Int = False, attrs:Long = 0, mdecl:TModuleDecl  = Null, localOnly:Int = False, decls:TList = Null)
 		Local toke$=_toke
 		NextToke
 		Repeat
 			Local decl:TDecl=ParseDecl( toke,attrs )
+
+			If localOnly And Not TLocalDecl(decl) Then
+				Err "Only local declarations are allowed here."
+			End If
+
 			If Not (attrs & DECL_EXTERN) Then
-				_block.AddStmt New TDeclStmt.Create( decl )
+				If Not decls Then
+					_block.AddStmt New TDeclStmt.Create( decl )
+				Else
+					decls.AddLast decl
+				End If
 			End If
 			
 			' reset the decl scope, adding decl to the block decl list.

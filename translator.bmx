@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2025 Bruce A Henderson
+' Copyright (c) 2013-2026 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -1446,6 +1446,9 @@ End Rem
 	Method EmitFinallyJmp(stmt:TFinallyStmt, returnLabel:TLoopLabelDecl) Abstract
 	
 	Method TransThrowStmt$( stmt:TThrowStmt )
+	End Method
+
+	Method TransUsingStmt$( stmt:TUsingStmt )
 	End Method
 
 	Method TransBuiltinExpr$( expr:TBuiltinExpr )

@@ -1,4 +1,4 @@
-' Copyright (c) 2013-2025 Bruce A Henderson
+' Copyright (c) 2013-2026 Bruce A Henderson
 '
 ' Based on the public domain Monkey "trans" by Mark Sibly
 '
@@ -73,6 +73,7 @@ Const BLOCK_FINALLY:Int =   $008
 Const BLOCK_IF:Int =        $010
 Const BLOCK_ELSE:Int =      $020
 Const BLOCK_FUNCTION:Int =  $040
+Const BLOCK_USING:Int =     $080
 
 Const BLOCK_TRY_CATCH:Int = BLOCK_TRY | BLOCK_CATCH
 Const BLOCK_IF_ELSE:Int =   BLOCK_IF | BLOCK_ELSE
@@ -227,6 +228,10 @@ Type TDecl
 
 	Method IsImported:Int()
 		Return declImported
+	End Method
+
+	Method IsCloseable:Int()
+		Return False
 	End Method
 	
 	Method FuncScope:TFuncDecl()
@@ -2865,6 +2870,22 @@ End Rem
 
 	Method IsImported:Int()
 		Return declImported And Not (instanceof And opt_apptype)
+	End Method
+
+	Method IsCloseable:Int()
+
+		' implements or extends interface "ICloseable"
+		Local cdecl:TClassDecl=Self
+		While cdecl
+			For Local idecl:TClassDecl = EachIn cdecl.implmentsAll
+				If idecl.ident.ToLower() = "icloseable" Then
+					Return True
+				End If
+			Next
+			cdecl=cdecl.superClass
+		Wend
+
+		Return False
 	End Method
 	
 	Method GetDecl:Object( ident$ )
