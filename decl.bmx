@@ -3707,6 +3707,10 @@ End Rem
 			If iface.IdentLower() = ident Then
 				Return True
 			End If
+			' check interface hierarchy
+			If iface.ImplementsInterface(ident) Then
+				Return True
+			End If
 		Next
 		
 		' check hierarchy
