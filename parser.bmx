@@ -67,7 +67,7 @@ Type TForEachinStmt Extends TLoopStmt
 	End Method
 
 	Method OnSemant()
-		Const NotIterableError:String = "EachIn requires a type that implements IIterable or has a suitable ObjectEnumerator method."
+		Const NotIterableError:String = "EachIn requires a type that implements IIterable, IIterator or has a suitable ObjectEnumerator method."
 		
 		expr=expr.Semant()
 
@@ -230,12 +230,15 @@ Type TForEachinStmt Extends TLoopStmt
 		Else If TObjectType( expr.exprType )
 			Local tmpDecl:TDeclStmt
 			Local iterable:Int
+			Local iterator:Int
 
 			' ensure semanted
 			TObjectType(expr.exprType).classDecl.Semant()
 			
 			If TObjectType(expr.exprType).classDecl.ImplementsInterface("iiterable") Or (TObjectType(expr.exprType).classDecl.ident="IIterable" And TObjectType(expr.exprType).classDecl.IsInterface()) Then
 				iterable = True
+			ElseIf TObjectType(expr.exprType).classDecl.ImplementsInterface("iiterator") Or (TObjectType(expr.exprType).classDecl.ident="IIterator" And TObjectType(expr.exprType).classDecl.IsInterface()) Then
+				iterator = True
 			Else
 				Local declList:TFuncDeclList = TFuncDeclList(TObjectType(expr.exprType).classDecl.GetDecl("objectenumerator"))
 				If Not declList Then
@@ -253,6 +256,8 @@ Type TForEachinStmt Extends TLoopStmt
 			Local enumerInit:TExpr
 			If iterable Then
 				enumerInit = New TFuncCallExpr.Create( New TIdentExpr.Create( "GetIterator",expr ) )
+			ElseIf iterator Then
+				enumerInit = expr
 			Else
 				enumerInit = New TFuncCallExpr.Create( New TIdentExpr.Create( "ObjectEnumerator",expr ) )
 			End If
@@ -260,14 +265,14 @@ Type TForEachinStmt Extends TLoopStmt
 			enumerTmp.Semant()
 
 			Local hasNextExpr:TExpr
-			If iterable Then
+			If iterable Or iterator Then
 				hasNextExpr = New TFuncCallExpr.Create( New TIdentExpr.Create( "MoveNext",New TVarExpr.Create( enumerTmp ) ) )
 			Else
 				hasNextExpr = New TFuncCallExpr.Create( New TIdentExpr.Create( "HasNext",New TVarExpr.Create( enumerTmp ) ) )
 			End If
 			
 			Local nextObjExpr:TExpr
-			If iterable Then
+			If iterable Or iterator Then
 				nextObjExpr = New TFuncCallExpr.Create( New TIdentExpr.Create( "Current",New TVarExpr.Create( enumerTmp ) ) )
 			Else
 				nextObjExpr = New TFuncCallExpr.Create( New TIdentExpr.Create( "NextObject",New TVarExpr.Create( enumerTmp ) ) )
@@ -284,7 +289,7 @@ Type TForEachinStmt Extends TLoopStmt
 				Local varObjTmp:TLocalDecl
 				Local varObjStmt:TStmt
 				
-				If iterable Or (TIdentType(varty) And TIdentType(varty).ident = "Object") Then
+				If iterable Or iterator Or (TIdentType(varty) And TIdentType(varty).ident = "Object") Then
 					cExpr = nextObjExpr
 				Else
 					If TStringType(varty) Then
@@ -313,7 +318,7 @@ Type TForEachinStmt Extends TLoopStmt
 				Local varTmp:TLocalDecl=New TLocalDecl.Create( varid,varty,cExpr)
 
 				If Not TNumericType(varty) And Not varObjTmp Then
-					If iterable Then
+					If iterable Or iterator Then
 						'
 					Else
 						' local var as expression
@@ -380,7 +385,7 @@ Type TForEachinStmt Extends TLoopStmt
 				' var = Null
 '				Local expr:TExpr=New TBinaryCompareExpr.Create( "=",New TIdentExpr.Create( varid ), New TNullExpr.Create(TType.nullObjectType))
 				If Not TNumericType(varty) And Not varObjTmp Then
-					If iterable Then
+					If iterable Or iterator Then
 						'
 					Else
 						Local expr:TExpr=New TBinaryCompareExpr.Create( "=",varExpr, New TNullExpr.Create(TType.nullObjectType))
