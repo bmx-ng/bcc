@@ -2942,6 +2942,12 @@ End Rem
 			
 			'append current token to metaDataString
 			Local key:String = _toke
+
+			' don't add if it's already there
+			If meta.HasMeta(key) Then
+				Err "Duplicate metadata key '"+key+"'"
+			End If
+
 			meta.metadataString :+ key
 
 			'read next token
