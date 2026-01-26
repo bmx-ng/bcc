@@ -4866,6 +4866,9 @@ Function EvalS$( source$,ty:TType )
 	env.InsertDecl New TConstDecl.Create( "console",New TIntType,New TConstExpr.Create( New TIntType, opt_apptype = APPTYPE_CONSOLE ),0 )
 	env.InsertDecl New TConstDecl.Create( "gui",New TIntType,New TConstExpr.Create( New TIntType, opt_apptype = APPTYPE_GUI ),0 )
 
+	' shared library?
+	env.InsertDecl New TConstDecl.Create( "sharedlibrary",New TIntType,New TConstExpr.Create( New TIntType, opt_makelib = True ),0 )
+	
 	' user defines
 	If opt_userdefs Then
 		Local defs:String[] = opt_userdefs.ToLower().Split(",")
