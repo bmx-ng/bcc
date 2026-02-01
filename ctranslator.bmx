@@ -1616,6 +1616,13 @@ Type TCTranslator Extends TTranslator
 				If Not scope Then
 					scope = decl.scope
 
+					' prefer the current class scope for interface calls
+					If TClassDecl(scope) And TClassDecl(scope).IsInterface() Then
+						If _env.ClassScope() Then
+							scope = _env.ClassScope()
+						End If
+					End If
+
 					If TClassDecl(scope) And Not TClassDecl(scope).IsStruct() Then
 						Local obj:String = Bra(TransObject(scope))
 						class = "(" + obj + "o)->clas" + tSuper
@@ -1645,7 +1652,14 @@ Type TCTranslator Extends TTranslator
 					If TClassDecl(scope).IsStruct() Then
 						Return "_" + decl.munged+TransArgs( args,decl, "o" )
 					Else
-						Return class + "->" + TransFuncPrefix(scope, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, "o" )
+						Local cdecl:TClassDecl = TClassDecl(scope)
+						If cdecl And (cdecl.IsInterface() And Not equalsBuiltInFunc(cdecl, decl)) Then
+							Local obj:String = Bra(TransObject(cdecl))
+							Local ifc:String = Bra("(struct " + cdecl.munged + "_methods*)" + Bra("bbObjectInterface((BBObject*)" + obj + "o, " + "(BBInterface*)&" + cdecl.munged + "_ifc)"))
+							Return ifc + "->" + TransFuncPrefix(cdecl, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, "o" )
+						Else
+							Return class + "->" + TransFuncPrefix(scope, decl) + FuncDeclMangleIdent(decl)+TransArgs( args,decl, "o" )
+						End If
 					End If
 				End If
 				
@@ -7530,7 +7544,7 @@ End If
 				Local key:TStringConst = TStringConst(app.stringConsts.ValueForKey(s))
 
 				If key.used > 0 Then
-					Emit "bbStringHash(&" + key.id + ");"
+					Emit "bbStringHash((BBString*)&" + key.id + ");"
 				End If
 			End If
 		Next
