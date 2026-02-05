@@ -525,27 +525,27 @@ Type TIntType Extends TIntegralType
 		End If
 		
 		If WORD_SIZE = 4 And TLParamType(ty)<>Null Then
-			Return 1
+			Return 2
 		End If
 		
 		If TLongType(ty)<>Null Then
-			Return 2
+			Return 3
 		End If
 
 		If TLongIntType(ty)<>Null And ty.GetSize()=8 Then
-			Return 2
-		End If
-
-		If WORD_SIZE = 8 And TLParamType(ty)<>Null Then
-			Return 3
-		End If
-		
-		If TFloatType(ty)<>Null Then
 			Return 4
 		End If
 
+		If WORD_SIZE = 8 And TLParamType(ty)<>Null Then
+			Return 5
+		End If
+		
+		If TFloatType(ty)<>Null Then
+			Return 8
+		End If
+
 		If TDoubleType(ty)<>Null Then
-			Return 6
+			Return 10
 		End If
 		
 		Return T_MAX_DISTANCE
@@ -604,43 +604,43 @@ Type TUIntType Extends TIntegralType
 		End If
 
 		If TULongIntType(ty)<>Null And ty.GetSize()=4 Then
-			Return 1
+			Return 2
 		End If
 		
 		If TIntType(ty)<>Null Then
-			Return 2
+			Return 3
 		End If
 
 		If TLongIntType(ty)<>Null And ty.GetSize()=4 Then
-			Return 2
+			Return 4
 		End If
 		
 		If WORD_SIZE = 8 And (TSizeTType(ty)<>Null Or TWParamType(ty)<>Null) Then
-			Return 3
+			Return 5
 		End If
 		
 		If TULongType(ty)<>Null Then
-			Return 3
+			Return 6
 		End If
 
 		If TULongIntType(ty)<>Null And ty.GetSize()=8 Then
-			Return 3
+			Return 7
 		End If
 
 		If TLongType(ty)<>Null Then
-			Return 4
+			Return 8
 		End If
 
 		If TLongIntType(ty)<>Null And ty.GetSize()=8 Then
-			Return 4
+			Return 9
 		End If
 
 		If TFloatType(ty)<>Null Then
-			Return 5
+			Return 12
 		End If
 
 		If TDoubleType(ty)<>Null Then
-			Return 6
+			Return 14
 		End If
 		
 		Return T_MAX_DISTANCE
@@ -704,47 +704,47 @@ Type TSizeTType Extends TIntegralType
 
 		If WORD_SIZE = 4 Then
 			If TUIntType(ty)<>Null Then
-				Return 1
+				Return 2
 			End If
 
 			If TULongIntType(ty)<>Null And ty.GetSize()=4 Then
-				Return 1
+				Return 3
 			End If
 
 			If TIntType(ty)<>Null Then
-				Return 2
+				Return 4
 			End If
 
 			If TLongIntType(ty)<>Null And ty.GetSize()=4 Then
-				Return 2
+				Return 5
 			End If
 			
 			If TLParamType(ty)<>Null Then
-				Return 2
+				Return 6
 			End If
 
 			If TULongType(ty)<>Null Then
-				Return 3
+				Return 7
 			End If
 
 			If TULongIntType(ty)<>Null And ty.GetSize()=8 Then
-				Return 3
+				Return 8
 			End If
 
 			If TLongType(ty)<>Null Then
-				Return 4
+				Return 9
 			End If
 
 			If TLongIntType(ty)<>Null And ty.GetSize()=8 Then
-				Return 4
+				Return 10
 			End If
 
 			If TFloatType(ty)<>Null Then
-				Return 5
+				Return 12
 			End If
 	
 			If TDoubleType(ty)<>Null Then
-				Return 6
+				Return 14
 			End If
 			
 		Else
@@ -753,31 +753,31 @@ Type TSizeTType Extends TIntegralType
 			End If
 
 			If TULongIntType(ty)<>Null And ty.GetSize()=8 Then
-				Return 1
+				Return 2
 			End If
 
 			If TLongType(ty)<>Null Then
-				Return 2
+				Return 3
 			End If
 
 			If TLongIntType(ty)<>Null And ty.GetSize()=8 Then
-				Return 2
+				Return 4
 			End If
 
 			If TLParamType(ty)<>Null Then
-				Return 2
+				Return 5
 			End If
 
 			If TFloatType(ty)<>Null Then
-				Return 4
+				Return 8
 			End If
 	
 			If TDoubleType(ty)<>Null Then
-				Return 6
+				Return 10
 			End If
 
 			If TFloat64Type(ty)<>Null Then
-				Return 8
+				Return 12
 			End If
 
 		End If
@@ -842,55 +842,55 @@ Type TByteType Extends TIntegralType
 		End If
 
 		If TULongIntType(ty) <> Null And ty.GetSize() = 4 Then
-			Return 4
+			Return 5
 		End If
 		
 		If TUIntType(ty)<>Null Then
-			Return 4
+			Return 6
 		End If
 
 		If TIntType(ty)<>Null Then
-			Return 5
+			Return 7
 		End If
 
 		If TLongIntType(ty) <> Null And ty.GetSize() = 4 Then
-			Return 5
-		End If
-
-		If WORD_SIZE = 4 And TLParamType(ty)<>Null Then
-			Return 5
-		End If
-		
-		If WORD_SIZE = 8 And (TSizeTType(ty)<>Null Or TWParamType(ty)<>Null) Then
-			Return 6
-		End If
-		
-		If TULongType(ty)<>Null Then
-			Return 6
-		End If
-
-		If TULongIntType(ty) <> Null And ty.GetSize() = 8 Then
-			Return 6
-		End If
-
-		If TLongType(ty)<>Null Then
-			Return 7
-		End If
-
-		If TLongIntType(ty) <> Null And ty.GetSize() = 8 Then
-			Return 7
-		End If
-
-		If WORD_SIZE = 8 And TLParamType(ty)<>Null Then
-			Return 7
-		End If
-
-		If TFloatType(ty)<>Null Then
 			Return 8
 		End If
 
-		If TDoubleType(ty)<>Null Then
+		If WORD_SIZE = 4 And TLParamType(ty)<>Null Then
+			Return 9
+		End If
+		
+		If WORD_SIZE = 8 And (TSizeTType(ty)<>Null Or TWParamType(ty)<>Null) Then
 			Return 10
+		End If
+		
+		If TULongType(ty)<>Null Then
+			Return 11
+		End If
+
+		If TULongIntType(ty) <> Null And ty.GetSize() = 8 Then
+			Return 12
+		End If
+
+		If TLongType(ty)<>Null Then
+			Return 13
+		End If
+
+		If TLongIntType(ty) <> Null And ty.GetSize() = 8 Then
+			Return 14
+		End If
+
+		If WORD_SIZE = 8 And TLParamType(ty)<>Null Then
+			Return 15
+		End If
+
+		If TFloatType(ty)<>Null Then
+			Return 18
+		End If
+
+		If TDoubleType(ty)<>Null Then
+			Return 20
 		End If
 		
 		Return T_MAX_DISTANCE
@@ -945,7 +945,7 @@ Type TShortType Extends TIntegralType
 		End If
 
 		If WORD_SIZE = 4 And (TSizeTType(ty)<>Null Or TWParamType(ty)<>Null) Then
-			Return 2
+			Return 1
 		End If
 		
 		If TUIntType(ty)<>Null Then
@@ -953,51 +953,51 @@ Type TShortType Extends TIntegralType
 		End If
 
 		If TLongIntType(ty)<>Null And ty.GetSize()=4 Then
-			Return 2
+			Return 3
 		End If
 
 		If TIntType(ty)<>Null Then
-			Return 3
+			Return 4
 		End If
 
 		If TLongIntType(ty)<>Null And ty.GetSize()=4 Then
-			Return 3
+			Return 5
 		End If
 
 		If WORD_SIZE = 4 And TLParamType(ty)<>Null Then
-			Return 3
+			Return 6
 		End If
 		
 		If WORD_SIZE = 8 And (TSizeTType(ty)<>Null Or TWParamType(ty)<>Null) Then
-			Return 4
+			Return 7
 		End If
 
 		If TULongType(ty)<>Null Then
-			Return 4
+			Return 8
 		End If
 
 		If TULongIntType(ty)<>Null And ty.GetSize()=8 Then
-			Return 4
+			Return 9
 		End If
 
 		If TLongType(ty)<>Null Then
-			Return 5
+			Return 10
 		End If
 
 		If TLongIntType(ty)<>Null And ty.GetSize()=8 Then
-			Return 5
+			Return 11
 		End If
 
 		If WORD_SIZE = 8 And TLParamType(ty)<>Null Then
-			Return 5
+			Return 12
 		End If
 
 		If TFloatType(ty)<>Null Then
-			Return 6
+			Return 14
 		End If
 
 		If TDoubleType(ty)<>Null Then
-			Return 8
+			Return 16
 		End If
 		
 		Return T_MAX_DISTANCE
@@ -1056,11 +1056,11 @@ Type TLongType Extends TIntegralType ' BaH Long
 		End If
 
 		If TLongIntType(ty)<>Null And ty.GetSize()=8 Then
-			Return 1
+			Return 2
 		End If
 
 		If TFloatType(ty)<>Null Then
-			Return 2
+			Return 8
 		End If
 
 		If TDoubleType(ty)<>Null Then
@@ -1068,7 +1068,7 @@ Type TLongType Extends TIntegralType ' BaH Long
 		End If
 
 		If TFloat64Type(ty)<>Null Then
-			Return 6
+			Return 10
 		End If
 		
 		Return T_MAX_DISTANCE
@@ -1122,27 +1122,27 @@ Type TULongType Extends TIntegralType
 		End If
 
 		If TULongIntType(ty)<>Null And ty.GetSize()=8 Then
-			Return 1
+			Return 2
 		End If
 		
 		If TLongType(ty)<>Null Then
-			Return 2
-		End If
-
-		If TLongIntType(ty)<>Null And ty.GetSize()=8 Then
-			Return 2
-		End If
-
-		If TFloatType(ty)<>Null Then
 			Return 3
 		End If
 
-		If TDoubleType(ty)<>Null Then
+		If TLongIntType(ty)<>Null And ty.GetSize()=8 Then
 			Return 4
 		End If
 
-		If TFloat64Type(ty)<>Null Then
+		If TFloatType(ty)<>Null Then
+			Return 8
+		End If
+
+		If TDoubleType(ty)<>Null Then
 			Return 6
+		End If
+
+		If TFloat64Type(ty)<>Null Then
+			Return 10
 		End If
 
 		Return T_MAX_DISTANCE
@@ -1193,11 +1193,11 @@ Type TLongIntType Extends TIntegralType
 		End If
 
 		If longIntSize = 4 And TLParamType(ty)<>Null Then
-			Return 1
+			Return 2
 		End If
 		
 		If longIntSize = 4 And TLongType(ty)<>Null Then
-			Return 2
+			Return 3
 		End If
 
 		If longIntSize = 8 And TLParamType(ty)<>Null Then
