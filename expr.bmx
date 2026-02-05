@@ -473,7 +473,7 @@ Type TConstExpr Extends TExpr
 							b:+ 1
 						End If
 						
-						While i < value.Length
+						While i < v.Length
 							If Not IsDigit(v[i]) Then
 								Exit
 							End If
