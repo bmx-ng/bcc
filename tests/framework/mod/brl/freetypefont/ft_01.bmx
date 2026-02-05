@@ -6,8 +6,8 @@ Import BRL.FreeTypeFont
 Local font:TFreeTypeFont = TFreeTypeFont.Load("DroidSansMono.ttf", 12, SMOOTHFONT)
 
 If font Then
-	Print "Family = " + String.FromCString(font._face.fname)
-	Print "Style  = " + String.FromCString(font._face.sname)
+	Print "Family = " + font.FamilyName()
+	Print "Style  = " + font.StyleName() 
 	Print "Height = " + font.Height()
 Else
 	Print "Could not load font"
