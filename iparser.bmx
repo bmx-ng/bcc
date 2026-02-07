@@ -1868,7 +1868,7 @@ End Rem
 			Return ty
 		End If
 		If CParse( "longint" )
-			Local ty:TType = New TLongType
+			Local ty:TType = New TLongIntType
 			While CParse("ptr")
 				ty = TType.MapToPointerType(ty)
 			Wend
