@@ -166,7 +166,7 @@ Type TExpr
 							decl = TVarExpr(argExpr).decl
 						Else
 							decl = TMemberVarExpr(argExpr).decl
-				End If
+						End If
 						If decl.IsReadOnly() Then
 							If TFieldDecl(decl) Then
 								Local scope:TFuncDecl = _env.FuncScope()
@@ -423,7 +423,7 @@ Type TConstExpr Extends TExpr
 			Return Self
 		End If
 		
-		If TIntType( ty ) Or TShortType( ty ) Or TByteType( ty ) Or TLongType( ty ) Or TUIntType( ty ) Or TULongType( ty ) Or TWParamType(ty) Or TLParamType(ty) Or TLongIntType(ty) Or TULongIntType(ty)
+		If TIntType( ty ) Or TShortType( ty ) Or TByteType( ty ) Or TLongType( ty ) Or TUIntType( ty ) Or TULongType( ty ) Or TWParamType(ty) Or TLParamType(ty) Or TLongIntType(ty) Or TULongIntType(ty) Or TSizeTType(ty) Then
 			Local radix:Int
 			If value.StartsWith( "%" )
 				radix=1
