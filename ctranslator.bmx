@@ -476,13 +476,13 @@ Type TCTranslator Extends TTranslator
 			If TLParamType( ty ) Return value
 			If TInt128Type( ty ) Return value
 			If TFloatType( ty ) Then
-				If value = "nan" Or value.StartsWith("1.#IND0000") Then
+				If value = "nan" Or value = "NaN" Or value.StartsWith("1.#IND0000") Then
 					Return "bbPOSNANf"
-				Else If value="-nan" Or value.StartsWith("-1.#IND0000") Then
+				Else If value="-nan" Or value = "-NaN" Or value.StartsWith("-1.#IND0000") Then
 					Return "bbNEGNANf"
-				Else If value = "inf" Or value.StartsWith("1.#INF0000") Then
+				Else If value = "inf" Or value = "Infinity" Or value.StartsWith("1.#INF0000") Then
 					Return "bbPOSINFf"
-				Else If value = "-inf" Or value.StartsWith("-1.#INF0000") Then
+				Else If value = "-inf" Or value = "-Infinity" Or value.StartsWith("-1.#INF0000") Then
 					Return "bbNEGINFf"
 				Else
 					If value.ToLower().Find("e")>=0 Then
@@ -495,13 +495,13 @@ Type TCTranslator Extends TTranslator
 				End If
 			End If
 			If TDoubleType( ty ) Or TFloat128Type(ty) Or TDouble128Type(ty) Or TFloat64Type(ty) Then
-				If value = "nan" Or value.StartsWith("1.#IND0000") Then
+				If value = "nan" Or value = "NaN" Or value.StartsWith("1.#IND0000") Then
 					Return "bbPOSNANd"
-				Else If value="-nan" Or value.StartsWith("-1.#IND0000") Then
+				Else If value="-nan" Or value = "-NaN" Or value.StartsWith("-1.#IND0000") Then
 					Return "bbNEGNANd"
-				Else If value = "inf" Or value.StartsWith("1.#INF0000") Then
+				Else If value = "inf" Or value = "Infinity" Or value.StartsWith("1.#INF0000") Then
 					Return "bbPOSINFd"
-				Else If value = "-inf" Or value.StartsWith("-1.#INF0000") Then
+				Else If value = "-inf" Or value = "-Infinity" Or value.StartsWith("-1.#INF0000") Then
 					Return "bbNEGINFd"
 				Else
 					If value.ToLower().Find("e") >=0 Then
