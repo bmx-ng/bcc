@@ -469,9 +469,27 @@ Type TCTranslator Extends TTranslator
 			If TUIntType( ty ) Return value+"U"
 			If TLongType( ty ) Return value+"LL"
 			If TULongType( ty ) Return value+"ULL"
-			If TSizeTType( ty ) Return value
-			If TLongIntType( ty ) Return value
-			If TULongIntType( ty ) Return value
+			If TSizeTType( ty ) Then
+				If WORD_SIZE = 8 Then
+					Return value+"ULL"
+				Else
+					Return value+"U"
+				End If
+			End If
+			If TLongIntType( ty ) Then
+				If TLongIntType(ty).GetSize() = 8 Then
+					Return value+"LL"
+				Else
+					Return value
+				End If
+			End If
+			If TULongIntType( ty ) Then
+				If TULongIntType(ty).GetSize() = 8 Then
+					Return value+"ULL"
+				Else
+					Return value+"U"
+				End If
+			End If
 			If TWParamType( ty ) Return value
 			If TLParamType( ty ) Return value
 			If TInt128Type( ty ) Return value

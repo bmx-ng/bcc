@@ -194,12 +194,18 @@ Type TToker
 			While IsBinDigit( TCHR() )
 				_tokePos:+1
 			Wend
+			If _tokePos - start - 1 > 31 Then
+				_tokeType = TOKE_LONGLIT
+			End If
 		Else If str="$" And IsHexDigit( TCHR() )
 			_tokeType=TOKE_INTLIT
 			_tokePos:+1
 			While IsHexDigit( TCHR() )
 				_tokePos:+1
 			Wend
+			If _tokePos - start - 1 > 8 Then
+				_tokeType = TOKE_LONGLIT
+			End If
 		Else If str="~q"
 			Local isMulti:Int
 			_tokeType=TOKE_STRINGLIT
