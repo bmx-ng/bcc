@@ -676,7 +676,11 @@ Type TConstExpr Extends TExpr
 	End Method
 
 	Function HexToDecString:String(hex:String)
+?bmxng
+		Local StaticArray digits:Int[32]
+?Not bmxng
 		Local digits:Int[32] ' 2^64 fits in 20 decimal digits; 32 is safe
+?
 		Local nd:Int = 1
 		digits[0] = 0
 
@@ -857,7 +861,11 @@ Type TConstExpr Extends TExpr
 		Const BASE:Long = 4294967296:Long  ' 2^32
 
 		' collect digits in reverse (max 20 digits for 64-bit)
+?bmxng
+		Local StaticArray buf:Int[32]
+?not bmxng
 		Local buf:Int[32]
+?
 		Local n:Int = 0
 
 		While (hi <> 0) Or (lo <> 0)
@@ -884,11 +892,11 @@ Type TConstExpr Extends TExpr
 			n :+ 1
 		Wend
 
-		Local s:String = ""
+		Local sb:TStringBuffer = New TStringBuffer(n)
 		For Local i:Int = n-1 To 0 Step -1
-			s :+ Chr(buf[i])
+			sb.AppendChar(buf[i])
 		Next
-		Return s
+		Return sb.ToString()
 	End Function
 End Type
 
