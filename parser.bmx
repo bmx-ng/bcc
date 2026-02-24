@@ -2930,7 +2930,7 @@ End Rem
 			End If
 			
 			Select _tokeType
-				Case TOKE_INTLIT
+				Case TOKE_INTLIT, TOKE_LONGLIT
 					Err "Expecting '}' but encountered integer literal"
 				Case TOKE_FLOATLIT
 					Err "Expecting '}' but encountered floating point literal"

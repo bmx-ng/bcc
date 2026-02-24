@@ -432,75 +432,76 @@ Type TConstExpr Extends TExpr
 			EndIf
 
 			If radix
-				Local val:Long = 0
-
-				For Local i:Int=1 Until value.Length
-					Local ch:Int=value[i]
-					If ch>=48 And ch<58
-						val=val Shl radix | (ch & 15)
-					Else
-						val=val Shl radix | ((ch & 15)+9)
-					EndIf
-				Next
-				If TIntType(ty) And val >= 2147483648:Long Then
-					value = String( -2147483648:Long + (val - 2147483648:Long))
+				If radix = 4 Then
+					value = HexToDecString(value[1..])
+					value = WrapForType(value, ty)
 				Else
-					If TShortType( ty ) Then
-						value=String( Short(val) )
-					Else If TByteType( ty ) Then
-						value=String( Byte(val) )
+					Local val:Long = 0
+
+					For Local i:Int=1 Until value.Length
+						Local ch:Int=value[i]
+						If ch>=48 And ch<58
+							val=val Shl radix | (ch & 15)
+						Else
+							val=val Shl radix | ((ch & 15)+9)
+						EndIf
+					Next
+					If TIntType(ty) And val >= 2147483648:Long Then
+						value = String( -2147483648:Long + (val - 2147483648:Long))
 					Else
-						value=String( val )
+						If TShortType( ty ) Then
+							value=String( Short(val) )
+						Else If TByteType( ty ) Then
+							value=String( Byte(val) )
+						Else
+							value=String( val )
+						End If
 					End If
 				End If
 			Else
-				If TShortType( ty ) Then
-					value = String.FromLong(Short(value.ToLong()))
-				Else If TByteType( ty ) Then
-					value = String.FromLong(Byte(value.ToLong()))
-				Else
-					Local buf:Byte[64]
-					Local b:Int
-					Local v:String = value.Trim()
-					Local leading0:Int = True
-					If v Then
-						Local i:Int
-						If v[0] = Asc("+") Then
-							i = 1
-						Else If v[0] = Asc("-") Then
-							i = 1
-							buf[b] = Asc("-")
-							b:+ 1
-						End If
-						
-						While i < v.Length
-							If Not IsDigit(v[i]) Then
-								Exit
-							End If
-							If leading0 And v[i] = Asc("0") Then
-								i :+ 1
-								Continue
-							End If
-							leading0 = False
-							buf[b] = v[i]
-							
-							b :+ 1
-							i :+ 1
-						Wend
-						
-						If leading0 Then
-							value = "0"
-						Else
-							value = String.FromBytes(buf, b)
-						End If
-					Else
-						value = "0"
+				Local buf:Byte[64]
+				Local b:Int
+				Local v:String = value.Trim()
+				Local leading0:Int = True
+				If v Then
+					Local i:Int
+					If v[0] = Asc("+") Then
+						i = 1
+					Else If v[0] = Asc("-") Then
+						i = 1
+						buf[b] = Asc("-")
+						b:+ 1
 					End If
+					
+					While i < v.Length
+						If Not IsDigit(v[i]) Then
+							Exit
+						End If
+						If leading0 And v[i] = Asc("0") Then
+							i :+ 1
+							Continue
+						End If
+						leading0 = False
+						buf[b] = v[i]
+						
+						b :+ 1
+						i :+ 1
+					Wend
+
+					Local cleaned:String
+					If leading0 Then
+						cleaned = "0"
+					Else
+						cleaned = String.FromBytes(buf, b)
+					End If
+					value = WrapForType(cleaned, ty)
+				Else
+					value = "0"
 				End If
 			EndIf
 
 		Else If TDecimalType( ty )
-			If Not (value.Contains("e") Or value.Contains("E") Or value.Contains(".") Or value.Contains("inf") Or value.Contains("nan"))
+			If Not (value.Contains("e") Or value.Contains("E") Or value.Contains(".") Or value.Contains("inf") Or value.Contains("nan") Or value.Contains("NaN") Or value.Contains("Inf"))
 				If TFloatType(ty) Then
 					value:+".00000000"
 				Else
@@ -511,6 +512,56 @@ Type TConstExpr Extends TExpr
 		Self.ty=ty
 		Self.value=value
 		Return Self
+	End Method
+
+	Method WrapForType:String(num:String, ty:TType)
+		Local wrapped:String
+
+		If TIntType(ty) Then
+			wrapped = WrapDecToBitsString(num, 32, True)
+		Else If TShortType(ty) Then
+			wrapped = WrapDecToBitsString(num, 16, False)
+		Else If TByteType(ty) Then
+			wrapped = WrapDecToBitsString(num, 8, False)
+		Else If TUIntType(ty) Then
+			wrapped = WrapDecToBitsString(num, 32, False)
+		Else If TLongType(ty) Then
+			wrapped = WrapDecToBitsString(num, 64, True)
+		Else If TULongType(ty) Then
+			wrapped = WrapDecToBitsString(num, 64, False)
+		Else If TWParamType(ty) Then
+			If WORD_SIZE = 4 Then
+				wrapped = WrapDecToBitsString(num, 32, False)
+			Else
+				wrapped = WrapDecToBitsString(num, 64, False)
+			End If
+		Else If TLParamType(ty) Then
+			If WORD_SIZE = 4 Then
+				wrapped = WrapDecToBitsString(num, 32, True)
+			Else
+				wrapped = WrapDecToBitsString(num, 64, True)
+			End If
+		Else If TLongIntType(ty) Then
+			If TLongIntType(ty).GetSize() = 4 Then
+				wrapped = WrapDecToBitsString(num, 32, True)
+			Else
+				wrapped = WrapDecToBitsString(num, 64, True)
+			End If
+		Else If TULongIntType(ty) Then
+			If TULongIntType(ty).GetSize() = 4 Then
+				wrapped = WrapDecToBitsString(num, 32, False)
+			Else
+				wrapped = WrapDecToBitsString(num, 64, False)
+			End If
+		Else If TSizeTType(ty) Then
+			If WORD_SIZE = 4 Then
+				wrapped = WrapDecToBitsString(num, 32, False)
+			Else
+				wrapped = WrapDecToBitsString(num, 64, False)
+			End If
+		End If
+
+		Return wrapped
 	End Method
 
 	Method UpdateType(ty:TType)
@@ -624,6 +675,229 @@ Type TConstExpr Extends TExpr
 		Return True
 	End Method
 
+	Function HexToDecString:String(hex:String)
+?bmxng
+		Local StaticArray digits:Int[32]
+?Not bmxng
+		Local digits:Int[32] ' 2^64 fits in 20 decimal digits; 32 is safe
+?
+		Local nd:Int = 1
+		digits[0] = 0
+
+		For Local i:Int = 0 Until hex.Length
+			Local ch:Int = hex[i]
+			Local v:Int
+			If ch >= 48 And ch <= 57 Then
+				v = ch - 48
+			Else If ch >= 65 And ch <= 70 Then
+				v = ch - 55
+			Else If ch >= 97 And ch <= 102 Then
+				v = ch - 87
+			Else
+				' invalid
+				Return ""
+			EndIf
+
+			' multiply current decimal by 16, add v
+			Local carry:Int = v
+			For Local j:Int = 0 Until nd
+				Local x:Int = digits[j] * 16 + carry
+				digits[j] = x Mod 10
+				carry = x / 10
+			Next
+			While carry > 0
+				If nd >= digits.Length Then
+					Err "Overflow: Too many digits"
+					Return "0"
+				End If
+
+				digits[nd] = carry Mod 10
+				carry = carry / 10
+				nd :+ 1
+			Wend
+		Next
+
+		' strip leading zeros
+		While nd > 1 And digits[nd-1] = 0
+			nd :- 1
+		Wend
+
+		' build string reversed
+		Local sb:TStringBuffer = New TStringBuffer(nd)
+		For Local k:Int = nd-1 To 0 Step -1
+			sb.AppendChar(digits[k] + 48)
+		Next
+		Return sb.ToString()
+	End Function
+
+	Function WrapDecToBitsString:String( s:String, bits:Int, isSigned:Int )
+
+		If bits<>8 And bits<>16 And bits<>32 And bits<>64 Then
+			Return "0"
+		End If
+		If s.Length = 0 Then
+			Return "0"
+		End If
+
+		' --- parse sign ---
+		Local i:Int = 0
+		Local neg:Int = 0
+		Local c0:Int = s[0]
+		If c0 = 45 Then   ' '-'
+			neg = 1
+			i = 1
+		Else If c0 = 43 Then ' '+'
+			i = 1
+		End If
+
+		' --- accumulate modulo 2^64 in (hi, lo) base 2^32 ---
+		Local hi:Long = 0
+		Local lo:Long = 0
+		Const BASE:Long = 4294967296:Long  ' 2^32
+		Const MASK32:Long = $FFFFFFFF:Long
+
+		For Local k:Int = i Until s.Length
+			Local ch:Int = s[k]
+			If ch < 48 Or ch > 57 Then
+				Exit
+			End If
+
+			Local d:Long = (ch - 48)
+
+			' (hi,lo) = (hi,lo) * 10 + d   (mod 2^64)
+			Local lo10:Long = lo * 10:Long + d
+			Local carry:Long = lo10 / BASE
+			lo = lo10 & MASK32
+			hi = (hi * 10:Long + carry) & MASK32
+		Next
+
+		' --- apply negative sign as modulo wrap: u = (-u) mod 2^64 ---
+		If neg Then
+			' two’s complement negate in 64 bits
+			lo = ((~lo) + 1:Long) & MASK32
+			If lo = 0 Then
+				hi = ((~hi) + 1:Long) & MASK32
+			Else
+				hi = (~hi) & MASK32
+			End If
+		End If
+
+		' --- mask down to requested bit-width (mod 2^bits) ---
+		If bits < 64 Then
+			If bits <= 32 Then
+				Local maskLo:Long
+				If bits = 32 Then
+					maskLo = MASK32
+				Else
+					maskLo = (1:Long Shl bits) - 1:Long
+				End If
+				lo = lo & maskLo
+				hi = 0
+			Else
+				' bits is 33..63
+				Local hiBits:Int = bits - 32
+				Local maskHi:Long = (1:Long Shl hiBits) - 1:Long
+				hi = hi & maskHi
+				lo = lo & MASK32
+			End If
+		Else
+			hi = hi & MASK32
+			lo = lo & MASK32
+		End If
+
+		' --- format result ---
+		If isSigned Then
+			' signed interpretation
+			If bits < 64 Then
+				' sign bit test and subtract 2^bits if set
+				If bits <= 32 Then
+					Local top:Long = 1:Long Shl (bits - 1)
+					Local v:Long = lo
+					If (v & top) <> 0 Then v :- (1:Long Shl bits)
+					Return String(v)
+				Else
+					' 33..63: sign is in hi
+					Local signMask:Long = 1:Long Shl ((bits - 32) - 1)
+					Local vhi:Long = hi
+					Local vlo:Long = lo
+					If (vhi & signMask) <> 0 Then
+						' subtract 2^bits: subtract from hi part
+						vhi :- (1:Long Shl (bits - 32))
+					End If
+					' combine as signed 64 in Long (safe for bits<=63)
+					Local v:Long = (vhi Shl 32) | (vlo & MASK32)
+					Return String(v)
+				End If
+			Else
+				' 64-bit signed: just reinterpret (hi,lo) as signed Long
+				Local v:Long = (hi Shl 32) | (lo & MASK32)
+				Return String(v)
+			End If
+		Else
+			' unsigned interpretation
+			If bits <= 32 Then
+				' lo is 0..2^32-1 and fits in signed Long as positive
+				Return String(lo)
+			Else
+				Return U64ToDecString(hi, lo)
+			End If
+		End If
+	End Function
+
+
+	' Convert unsigned 64-bit (hi,lo) base 2^32 to decimal string without ULong.
+	Function U64ToDecString:String( hi:Long, lo:Long )
+		Const MASK32:Long = $FFFFFFFF:Long
+		hi :& MASK32
+		lo :& MASK32
+
+		If hi = 0 And lo = 0 Then
+			Return "0"
+		End If
+		If hi = 0 Then
+			Return String(lo)
+		End If
+
+		Const BASE:Long = 4294967296:Long  ' 2^32
+
+		' collect digits in reverse (max 20 digits for 64-bit)
+?bmxng
+		Local StaticArray buf:Int[32]
+?not bmxng
+		Local buf:Int[32]
+?
+		Local n:Int = 0
+
+		While (hi <> 0) Or (lo <> 0)
+			If n >= buf.Length Then
+				Err "Overflow: Too many digits"
+				Return "0"
+			End If
+
+			' Divide (hi,lo) by 10:
+			' q_hi = hi / 10, r_hi = hi % 10
+			' x = r_hi*2^32 + lo
+			' q_lo = x / 10, r = x % 10
+			Local qhi:Long = hi / 10:Long
+			Local rhi:Long = hi - qhi * 10:Long
+
+			Local x:Long = rhi * BASE + lo  ' fits in signed Long (<= 9*2^32 + (2^32-1))
+			Local qlo:Long = x / 10:Long
+			Local r:Int = Int(x - qlo * 10:Long)
+
+			hi = qhi & MASK32
+			lo = qlo & MASK32
+
+			buf[n] = r + 48
+			n :+ 1
+		Wend
+
+		Local sb:TStringBuffer = New TStringBuffer(n)
+		For Local i:Int = n-1 To 0 Step -1
+			sb.AppendChar(buf[i])
+		Next
+		Return sb.ToString()
+	End Function
 End Type
 
 Type TVarExpr Extends TExpr
