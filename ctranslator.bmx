@@ -3378,6 +3378,12 @@ Type TCTranslator Extends TTranslator
 				cast = TransCast(TFunctionPtrType(stmt.lhs.exprType))
 			End If
 			s.Append( Bra(cast + rhs ))
+		Else If IsPointerType(stmt.lhs.exprType, 0, TType.T_POINTER) And IsPointerType(stmt.rhs.exprType, 0, TType.T_POINTER) Then
+			s.Append( lhs ).Append( TransAssignOp( stmt.op ) )
+			If Not cast
+				cast = Bra(TransType(stmt.lhs.exprType, ""))
+			End If
+			s.Append( Bra(cast + Bra(rhs) ))
 		Else
 			s.Append( lhs ).Append( TransAssignOp( stmt.op ) ).Append( cast ).Append( rhs )
 		End If
