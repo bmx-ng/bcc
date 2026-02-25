@@ -81,11 +81,13 @@ Type TExpr
 	End Method
 
 	'expr and ty already semanted!
-	Method Cast:TExpr( ty:TType,castFlags:Int=0 )
+	Method Cast:TExpr( ty:TType,castFlags:Int=0, includingVar:Int = True )
 		If Not exprType Then
 			Semant()
 		End If
-		If exprType.EqualsType( ty ) Return Self
+		If exprType.EqualsType( ty, includingVar )
+			Return Self
+		End If
 		Return New TCastExpr.Create( ty,Self,castFlags ).Semant()
 	End Method
 

@@ -253,8 +253,8 @@ Type TCTranslator Extends TTranslator
 
 	End Method
 
-	Method TransType$( ty:TType, ident:String, fpReturnTypeFunctionArgs:String = Null, fpReturnTypeClassFunc:Int = False)
-		Local p:String = TransSPointer(ty, True)
+	Method TransType$( ty:TType, ident:String, fpReturnTypeFunctionArgs:String = Null, fpReturnTypeClassFunc:Int = False, withVar:Int = True)
+		Local p:String = TransSPointer(ty, withVar)
 		
 		If TVoidType( ty ) Or Not ty Then
 			Return "void"
@@ -649,14 +649,20 @@ Type TCTranslator Extends TTranslator
 			If t.Length() t.Append( "," )
 			If i < args.length
 				Local arg:TExpr = args[i]
-				
+
 				' object cast to match param type
 				If TObjectType(ty) And Not TObjectType(ty).classDecl.IsStruct() And Not argDecl.castTo Then
 					Local fdecl:TFuncDecl = decl
 					If TClassDecl(decl.scope) Then
 						fdecl = TClassDecl(decl.scope).GetLatestFuncDecl(decl)
 					End If
-					t.Append( Bra(TransObject(TObjectType(TArgDecl(fdecl.argDecls[i].actual).ty).classDecl)) )
+					Local actualType:TType = TArgDecl(fdecl.argDecls[i].actual).ty
+					Local cast:String = TransObject(TObjectType(actualType).classDecl)
+					' if arg is var, we need to add another level of indirection to the cast
+					If actualType._flags & TType.T_VAR Then
+						cast = cast + "*"
+					End If
+					t.Append( Bra(cast) )
 				End If
 				
 				Local varRef:String
@@ -729,9 +735,15 @@ Type TCTranslator Extends TTranslator
 						Continue
 					End If
 
-					If TCastExpr(arg) And TVarExpr(TCastExpr(arg).expr) Then
-						t.Append( varRef )
-						t.Append( TransCast(TFunctionPtrType(ty)) ).Append( Bra(arg.Trans()) )
+					If TCastExpr(arg) And (TVarExpr(TCastExpr(arg).expr) Or (TCastExpr(TCastExpr(arg).expr) And TVarExpr(TCastExpr(TCastExpr(arg).expr).expr))) Then
+						If TFunctionPtrType(ty) Then
+							t.Append( varRef )
+							t.Append( TransCast(TFunctionPtrType(ty)) ).Append( Bra(arg.Trans()) )
+						Else
+							Local cast:String = TransType(ty, "")
+							Local s:String = Bra(arg.Trans())
+							t.Append(Bra(Bra(cast) + s))
+						End If
 						Continue
 					End If
 
@@ -3301,7 +3313,8 @@ Type TCTranslator Extends TTranslator
 		
 		If TObjectType(stmt.lhs.exprType) And (Not TObjectType(stmt.lhs.exprType).classdecl.IsStruct() Or IsPointerType(stmt.lhs.exprType)) Then
 			If Not IsNumericType(stmt.rhs.exprType) Then
-				cast = Bra(TransType(stmt.lhs.exprType, ""))
+				' cast without applying "var ness"
+				cast = Bra(TransType(stmt.lhs.exprType, "",,,False))
 			End If
 		End If
 
@@ -3358,6 +3371,13 @@ Type TCTranslator Extends TTranslator
 			s.Append( lhs ).Append( TransAssignOp( stmt.op ) ).Append( cast ).Append( rhs )
 		Else If TObjectType(stmt.lhs.exprType) And TObjectType(stmt.lhs.exprType).classDecl.IsStruct() And rhs = "&bbNullObject" Then
 			s.Append( lhs ).Append( TransAssignOp( stmt.op ) ).Append( cast ).Append( "{}" )
+		Else If TFunctionPtrType(stmt.lhs.exprType) Then
+			' cast rhs to function pointer type to avoid warnings about incompatible function pointer types
+			s.Append( lhs ).Append( TransAssignOp( stmt.op ) )
+			If Not cast Then
+				cast = TransCast(TFunctionPtrType(stmt.lhs.exprType))
+			End If
+			s.Append( Bra(cast + rhs ))
 		Else
 			s.Append( lhs ).Append( TransAssignOp( stmt.op ) ).Append( cast ).Append( rhs )
 		End If

@@ -987,7 +987,7 @@ op = mapSymbol(op)
 	
 	Method EmitLocalDeclarations(decl:TScopeDecl, v:TValDecl = Null) Abstract
 	
-	Method TransType$( ty:TType, ident:String, fpReturnTypeFunctionArgs:String = Null, fpReturnTypeClassFunc:Int = False) Abstract
+	Method TransType$( ty:TType, ident:String, fpReturnTypeFunctionArgs:String = Null, fpReturnTypeClassFunc:Int = False, withVar:Int = True) Abstract
 
 	Method TransObject:String(decl:TScopeDecl, this:Int = False) Abstract
 	

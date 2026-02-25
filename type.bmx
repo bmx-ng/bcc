@@ -36,7 +36,7 @@ Type TType
 		Return Self
 	End Method
 
-	Method EqualsType:Int( ty:TType )
+	Method EqualsType:Int( ty:TType, includingVar:Int = True )
 		Return False
 	End Method
 	
@@ -253,12 +253,18 @@ Type TType
 		Return s
 	End Method
 	
-	Method IsFlagEquivalent:Int(ty:TType)
-		Return _flags = ty._flags Or ..
-			(Not IsPointerType(Self, 0, TType.T_POINTER) And (ty._flags & T_VAR)) Or ..
-			(Not IsPointerType(ty, 0, TType.T_POINTER) And (_flags & T_VAR)) Or ..
-			(IsPointerType(Self, 0, TType.T_POINTER) And (ty._flags & T_VARPTR)) Or ..
-			(IsPointerType(ty, 0, TType.T_POINTER) And (_flags & T_VARPTR))
+	Method IsFlagEquivalent:Int(ty:TType, includingVar:Int = True)
+		If includingVar Then
+			Return _flags = ty._flags Or ..
+				(Not IsPointerType(Self, 0, TType.T_POINTER) And (ty._flags & T_VAR)) Or ..
+				(Not IsPointerType(ty, 0, TType.T_POINTER) And (_flags & T_VAR)) Or ..
+				(IsPointerType(Self, 0, TType.T_POINTER) And (ty._flags & T_VARPTR)) Or ..
+				(IsPointerType(ty, 0, TType.T_POINTER) And (_flags & T_VARPTR))
+		Else
+			Return _flags = ty._flags Or ..
+				(IsPointerType(Self, 0, TType.T_POINTER) And (ty._flags & T_VARPTR)) Or ..
+				(IsPointerType(ty, 0, TType.T_POINTER) And (_flags & T_VARPTR))
+		End If
 	End Method
 	
 End Type
@@ -383,7 +389,7 @@ End Function
 
 Type TVoidType Extends TType
 
-	Method EqualsType:Int( ty:TType )
+	Method EqualsType:Int( ty:TType, includingVar:Int = True )
 		If opt_issuperstrict Then
 			Return TVoidType( ty )<>Null
 		Else
@@ -403,7 +409,7 @@ End Type
 
 Type TNullType Extends TType
 
-	Method EqualsType:Int( ty:TType )
+	Method EqualsType:Int( ty:TType, includingVar:Int = True )
 		Return False
 	End Method
 	
@@ -423,7 +429,7 @@ End Type
 
 Type TBoolType Extends TType
 
-	Method EqualsType:Int( ty:TType )
+	Method EqualsType:Int( ty:TType, includingVar:Int = True )
 		Return TBoolType( ty )<>Null
 	End Method
 	
@@ -488,7 +494,7 @@ End Type
 
 Type TIntType Extends TIntegralType
 	
-	Method EqualsType:Int( ty:TType )
+	Method EqualsType:Int( ty:TType, includingVar:Int = True )
 		Return TIntType( ty )<>Null And (_flags = ty._flags Or ..
 			(_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR) Or (_flags & T_VAR))
 	End Method
@@ -567,7 +573,7 @@ End Type
 
 Type TUIntType Extends TIntegralType
 	
-	Method EqualsType:Int( ty:TType )
+	Method EqualsType:Int( ty:TType, includingVar:Int = True )
 		Return TUIntType( ty )<>Null And (_flags = ty._flags Or ..
 			(_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR) Or (_flags & T_VAR))
 	End Method
@@ -662,7 +668,7 @@ End Type
 
 Type TSizeTType Extends TIntegralType
 	
-	Method EqualsType:Int( ty:TType )
+	Method EqualsType:Int( ty:TType, includingVar:Int = True )
 		Return TSizeTType( ty )<>Null And (_flags = ty._flags Or ..
 			(_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR) Or (_flags & T_VAR))
 	End Method
@@ -801,7 +807,7 @@ End Type
 
 Type TByteType Extends TIntegralType
 	
-	Method EqualsType:Int( ty:TType )
+	Method EqualsType:Int( ty:TType, includingVar:Int = True )
 		Return TByteType( ty )<>Null And (_flags = ty._flags Or ..
 			(_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR) Or (_flags & T_VAR))
 	End Method
@@ -912,7 +918,7 @@ End Type
 
 Type TShortType Extends TIntegralType
 
-	Method EqualsType:Int( ty:TType )
+	Method EqualsType:Int( ty:TType, includingVar:Int = True )
 		Return TShortType( ty )<>Null And (_flags = ty._flags Or ..
 			(_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR) Or (_flags & T_VAR))
 	End Method
@@ -1019,7 +1025,7 @@ End Type
 
 Type TLongType Extends TIntegralType ' BaH Long
 	
-	Method EqualsType:Int( ty:TType )
+	Method EqualsType:Int( ty:TType, includingVar:Int = True )
 		Return TLongType( ty )<>Null And (_flags = ty._flags Or ..
 			(_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR) Or (_flags & T_VAR))
 	End Method
@@ -1085,7 +1091,7 @@ End Type
 
 Type TULongType Extends TIntegralType
 	
-	Method EqualsType:Int( ty:TType )
+	Method EqualsType:Int( ty:TType, includingVar:Int = True )
 		Return TULongType( ty )<>Null And (_flags = ty._flags Or ..
 			(_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR) Or (_flags & T_VAR))
 	End Method
@@ -1159,7 +1165,7 @@ End Type
 
 Type TLongIntType Extends TIntegralType
 	
-	Method EqualsType:Int( ty:TType )
+	Method EqualsType:Int( ty:TType, includingVar:Int = True )
 		Return TLongIntType( ty )<>Null And (_flags = ty._flags Or ..
 			(_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR) Or (_flags & T_VAR))
 	End Method
@@ -1247,7 +1253,7 @@ End Type
 
 Type TULongIntType Extends TIntegralType
 	
-	Method EqualsType:Int( ty:TType )
+	Method EqualsType:Int( ty:TType, includingVar:Int = True )
 		Return TULongIntType( ty )<>Null And (_flags = ty._flags Or ..
 			(_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR) Or (_flags & T_VAR))
 	End Method
@@ -1350,7 +1356,7 @@ End Type
 
 Type TFloatType Extends TDecimalType
 	
-	Method EqualsType:Int( ty:TType )
+	Method EqualsType:Int( ty:TType, includingVar:Int = True )
 		Return TFloatType( ty )<>Null And (_flags = ty._flags Or ..
 			(_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR) Or (_flags & T_VAR))
 	End Method
@@ -1405,7 +1411,7 @@ End Type
 
 Type TDoubleType Extends TDecimalType
 	
-	Method EqualsType:Int( ty:TType )
+	Method EqualsType:Int( ty:TType, includingVar:Int = True )
 		Return TDoubleType( ty )<>Null And (_flags = ty._flags Or ..
 			(_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR) Or (_flags & T_VAR))
 	End Method
@@ -1455,7 +1461,7 @@ End Type
 
 Type TInt128Type Extends TIntrinsicType
 	
-	Method EqualsType:Int( ty:TType )
+	Method EqualsType:Int( ty:TType, includingVar:Int = True )
 		Return TInt128Type( ty )<>Null And (_flags = ty._flags Or ..
 			(_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR) Or (_flags & T_VAR))
 	End Method
@@ -1509,7 +1515,7 @@ End Type
 
 Type TFloat64Type Extends TIntrinsicType
 	
-	Method EqualsType:Int( ty:TType )
+	Method EqualsType:Int( ty:TType, includingVar:Int = True )
 		Return TFloat64Type( ty )<>Null And (_flags = ty._flags Or ..
 			(_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR) Or (_flags & T_VAR))
 	End Method
@@ -1556,7 +1562,7 @@ End Type
 
 Type TFloat128Type Extends TIntrinsicType
 	
-	Method EqualsType:Int( ty:TType )
+	Method EqualsType:Int( ty:TType, includingVar:Int = True )
 		Return TFloat128Type( ty )<>Null And (_flags = ty._flags Or ..
 			(_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR) Or (_flags & T_VAR))
 	End Method
@@ -1611,7 +1617,7 @@ End Type
 
 Type TDouble128Type Extends TIntrinsicType
 	
-	Method EqualsType:Int( ty:TType )
+	Method EqualsType:Int( ty:TType, includingVar:Int = True )
 		Return TDouble128Type( ty )<>Null And (_flags = ty._flags Or ..
 			(_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR) Or (_flags & T_VAR))
 	End Method
@@ -1668,7 +1674,7 @@ Type TStringType Extends TType
 
 	Field cdecl:TClassDecl
 
-	Method EqualsType:Int( ty:TType )
+	Method EqualsType:Int( ty:TType, includingVar:Int = True )
 		Return TStringType( ty )<>Null And (_flags = ty._flags Or (_flags & T_VAR))
 	End Method
 
@@ -1751,7 +1757,7 @@ Type TArrayType Extends TType
 		Return New TArrayType.Create( ty )
 	End Method
 		
-	Method EqualsType:Int( ty:TType )
+	Method EqualsType:Int( ty:TType, includingVar:Int = True )
 		Local arrayType:TArrayType=TArrayType( ty )
 		Return arrayType And elemType.EqualsType( arrayType.elemType ) And dims = arrayType.dims And arrayType.isStatic = isStatic And arrayType.length = length
 	End Method
@@ -1831,9 +1837,9 @@ Type TObjectType Extends TType
 		Return New TObjectType.Create( TClassDecl(classDecl.actual) )
 	End Method
 	
-	Method EqualsType:Int( ty:TType )
+	Method EqualsType:Int( ty:TType, includingVar:Int = True )
 		Local objty:TObjectType=TObjectType( ty )
-		Return TNullDecl(classDecl) <> Null Or (objty And (classDecl=objty.classDecl) And (Not classDecl.IsStruct() Or IsFlagEquivalent(ty)))' Or classDecl.ExtendsClass( objty.classDecl ))) 'Or TObjectVarPtrType(ty) <> Null
+		Return TNullDecl(classDecl) <> Null Or (objty And (classDecl=objty.classDecl) And ( IsFlagEquivalent(ty,includingVar)))' Or classDecl.ExtendsClass( objty.classDecl ))) 'Or TObjectVarPtrType(ty) <> Null
 	End Method
 	
 	Method ExtendsType:Int( ty:TType, noExtendString:Int = False, widensTest:Int = False, ignoreObjectSubclasses:Int = False )
@@ -1943,7 +1949,7 @@ Type TIdentType Extends TType
 		InternalErr "TIdentType.ActualType"
 	End Method
 	
-	Method EqualsType:Int( ty:TType )
+	Method EqualsType:Int( ty:TType, includingVar:Int = True )
 		InternalErr "TIdentType.EqualsType"
 	End Method
 	
@@ -2131,7 +2137,7 @@ Type TExternObjectType Extends TType
 		Return New TExternObjectType.Create( TClassDecl(classDecl.actual) )
 	End Method
 	
-	Method EqualsType:Int( ty:TType )
+	Method EqualsType:Int( ty:TType, includingVar:Int = True )
 		Local objty:TObjectType=TObjectType( ty )
 		Return TNullDecl(classDecl) <> Null Or (objty And (classDecl=objty.classDecl Or classDecl.ExtendsClass( objty.classDecl ))) Or TObjectType(ty)
 	End Method
@@ -2182,7 +2188,7 @@ Type TFunctionPtrType Extends TType
 		Return Self
 	End Method
 
-	Method EqualsType:Int( ty:TType )
+	Method EqualsType:Int( ty:TType, includingVar:Int = True )
 		If Not TFunctionPtrType(ty) Then Return False
 		' declared function pointer
 		Local tyfunc:TFuncDecl = TFunctionPtrType(ty).func
@@ -2266,7 +2272,7 @@ End Type
 
 Type TWParamType Extends TParamType
 
-	Method EqualsType:Int( ty:TType )
+	Method EqualsType:Int( ty:TType, includingVar:Int = True )
 		Return TWParamType( ty )<>Null And (_flags = ty._flags Or ..
 			(_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR) Or (_flags & T_VAR))
 	End Method
@@ -2368,7 +2374,7 @@ End Type
 
 Type TLParamType Extends TParamType
 
-	Method EqualsType:Int( ty:TType )
+	Method EqualsType:Int( ty:TType, includingVar:Int = True )
 		Return TLParamType( ty )<>Null And (_flags = ty._flags Or ..
 			(_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR) Or (_flags & T_VAR))
 	End Method
@@ -2470,7 +2476,7 @@ Type TEnumType Extends TType
 		Return Self
 	End Method
 
-	Method EqualsType:Int( ty:TType )
+	Method EqualsType:Int( ty:TType, includingVar:Int = True )
 		Local ety:TEnumType = TEnumType(ty)
 		Return ety And decl = ety.decl And(_flags = ty._flags Or ..
 			(_flags & T_VARPTR And ty._flags & T_PTR) Or (ty._flags & T_VARPTR And _flags & T_PTR) Or (_flags & T_VAR))
