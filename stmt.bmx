@@ -180,8 +180,7 @@ Type TAssignStmt Extends TStmt
 				Local splitOp:Int = True
 				Select op
 					Case "="
-					
-						rhs=rhs.Cast( lhs.exprType )
+						rhs=rhs.Cast( lhs.exprType,, False )
 						splitOp = False
 						
 					Case ":*",":/",":+",":-"
