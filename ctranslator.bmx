@@ -932,6 +932,8 @@ Type TCTranslator Extends TTranslator
 			Local cast:String
 			If (TObjectType(decl.ty) And Not TObjectType(decl.ty).classDecl.IsStruct()) Or TFunctionPtrType(decl.ty) Then
 				cast = Bra(TransType(decl.ty, ""))
+			Else If IsPointerType(decl.ty, 0, TType.T_POINTER) Then
+				cast = Bra(TransType(decl.ty, ""))
 			End If
 		
 			If TInvokeExpr(init) And Not TInvokeExpr(init).invokedWithBraces Then
