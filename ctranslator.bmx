@@ -726,12 +726,7 @@ Type TCTranslator Extends TTranslator
 					End If
 					' some cases where we are passing a function pointer via a void* parameter.
 					If TCastExpr(arg) And TInvokeExpr(TCastExpr(arg).expr) And Not TInvokeExpr(TCastExpr(arg).expr).invokedWithBraces Then
-						t.Append( varRef )
-						If Not TInvokeExpr(TCastExpr(arg).expr).decl.munged Then
-							t.Append( TInvokeExpr(TCastExpr(arg).expr).decl.actual.munged )
-						Else
-							t.Append( TInvokeExpr(TCastExpr(arg).expr).decl.munged )
-						End If
+						t.Append( TCastExpr(arg).Trans() )
 						Continue
 					End If
 
@@ -2143,6 +2138,7 @@ Type TCTranslator Extends TTranslator
 			If TByteType( dst )
 				If IsPointerType(src, TType.T_BYTE, TType.T_POINTER & dst._flags) Return t
 				If TNumericType( src ) Return Bra("(BBBYTE" + p + ")"+t)
+				If TFunctionPtrType(src) Return Bra("(BBBYTE" + p + ")"+t)
 			Else If TShortType( dst )
 				If IsPointerType(src, TType.T_SHORT, TType.T_POINTER & dst._flags) Return t
 				If TNumericType( src ) Return Bra("(BBSHORT" + p + ")"+t)
