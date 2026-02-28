@@ -1285,6 +1285,7 @@ Type TNewObjectExpr Extends TExpr
 				End Try
 				If fdecl Then
 					expr = New TInvokeMemberExpr.Create( expr,fdecl, iArgs ).Semant()
+					args = Null ' member expr takes ownership of the args
 					eType = expr.exprType
 					If TObjectType(eType) Then
 						cdecl = TObjectType(expr.exprType).classdecl
@@ -1312,6 +1313,14 @@ Type TNewObjectExpr Extends TExpr
 
 	Method Trans$()
 		Return _trans.TransNewObjectExpr( Self )
+	End Method
+
+	Method ToString:String()
+		Local s:String = "TNewObjectExpr("+ty.ToString()
+		For Local arg:TExpr=EachIn args
+			s:+","+arg.ToString()
+		Next
+		Return s+")"
 	End Method
 End Type
 
@@ -3840,6 +3849,15 @@ Type TNewExpr Extends TExpr
 		'Return _trans.TransFuncCallExpr( Self )
 	End Method
 
+	Method ToString:String()
+		Local t$="TNewExpr("
+		If isSuper t:+ "super"
+		For Local arg:TExpr=EachIn args
+			t:+","+arg.ToString()
+		Next
+		Return t+")"
+	End Method
+
 End Type
 
 Type TNullExpr Extends TExpr
@@ -3863,6 +3881,10 @@ Type TNullExpr Extends TExpr
 
 	Method Eval$()
 		Return ""
+	End Method
+
+	Method ToString:String()
+		Return "TNullExpr()"
 	End Method
 
 End Type
@@ -3891,6 +3913,10 @@ Type TLoopLabelExpr Extends TExpr
 		Return ""
 	End Method
 
+	Method ToString:String()
+		Return "LoopLabel(" + loop.ToString() + ")"
+	End Method
+
 End Type
 
 Type TDataLabelExpr Extends TExpr
@@ -3915,6 +3941,10 @@ Type TDataLabelExpr Extends TExpr
 
 	Method Eval$()
 		Return ""
+	End Method
+
+	Method ToString:String()
+		Return "DataLabel(" + dataDef.ToString() + ")"
 	End Method
 
 End Type
@@ -3942,6 +3972,10 @@ Type TIdentEnumExpr Extends TExpr
 
 	Method Eval$()
 		Return value.Value()
+	End Method
+
+	Method ToString:String()
+		Return "TIdentEnumExpr(" + value.ToString() + ")"
 	End Method
 
 End Type
