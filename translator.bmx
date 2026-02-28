@@ -920,6 +920,7 @@ op = mapSymbol(op)
 	
 	Method CreateLocal$( expr:TExpr, init:Int = True, vol:Int = True )
 		Local tmp:TLocalDecl=New TLocalDecl.Create( "",expr.exprType,expr, True, , vol )
+		tmp.Semant()
 		MungDecl tmp
 		Emit TransLocalDecl( tmp,expr, True, init )+";"
 
