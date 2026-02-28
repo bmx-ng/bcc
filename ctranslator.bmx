@@ -726,7 +726,12 @@ Type TCTranslator Extends TTranslator
 					End If
 					' some cases where we are passing a function pointer via a void* parameter.
 					If TCastExpr(arg) And TInvokeExpr(TCastExpr(arg).expr) And Not TInvokeExpr(TCastExpr(arg).expr).invokedWithBraces Then
-						t.Append( TCastExpr(arg).Trans() )
+						If argDecl.castTo Then
+							Local s:String = Bra(argDecl.castTo)
+							t.Append( Bra(s + TCastExpr(arg).Trans() ) )
+						Else
+							t.Append( TCastExpr(arg).Trans() )
+						End If
 						Continue
 					End If
 
@@ -735,7 +740,12 @@ Type TCTranslator Extends TTranslator
 							t.Append( varRef )
 							t.Append( TransCast(TFunctionPtrType(ty)) ).Append( Bra(arg.Trans()) )
 						Else
-							Local cast:String = TransType(ty, "")
+							Local cast:String
+							If argDecl.castTo Then
+								cast = argDecl.castTo
+							Else
+								cast = TransType(ty, "")
+							End If
 							Local s:String = Bra(arg.Trans())
 							t.Append(Bra(Bra(cast) + s))
 						End If
@@ -1738,7 +1748,11 @@ Type TCTranslator Extends TTranslator
 				If decl.IsExtern() Then
 					Return "struct " + decl.ident + "*"
 				Else
-					Return "struct " + decl.munged + "_obj*"
+					If decl.munged = "bbArrayClass" Then
+						Return "BBARRAY"
+					Else
+						Return "struct " + decl.munged + "_obj*"
+					End If
 				End If
 			End If
 		End If
