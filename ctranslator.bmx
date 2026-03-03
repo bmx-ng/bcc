@@ -2932,7 +2932,11 @@ Type TCTranslator Extends TTranslator
 		Local count:Int
 		For Local elem:TExpr=EachIn expr.exprs
 			If t t:+","
-			t:+elem.Trans()
+			Local cast:String
+			If TObjectType(elemType) Then
+				cast = Bra(TransType(elemType, ""))
+			End If
+			t:+ cast + elem.Trans()
 			count :+ 1
 		Next
 
