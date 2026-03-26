@@ -6361,7 +6361,7 @@ End Rem
 		If IsNumericType(expr.exprType) Then
 			Local s:String = expr.Eval()
 			If Not s Then
-				Return "0"
+				Return "0" + TransIfcType(expr.exprType)
 			Else
 				If TDecimalType(expr.exprType) Then
 					If s.StartsWith("1.#INF0000") Or s = "1e1000" Then
@@ -6374,7 +6374,7 @@ End Rem
 
 					Return s + TransIfcType(expr.exprType)
 				Else
-					Return s
+					Return s + TransIfcType(expr.exprType)
 				End If
 			End If
 		EndIf
