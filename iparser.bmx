@@ -1104,6 +1104,15 @@ Type TIParser
 									init = New TNullExpr.Create(TType.nullObjectType)
 								End If
 							End If
+
+							If TNumericType(ty) Then
+								' expecting type after const value
+								Local argTy:TType = ParseDeclType(attrs)
+								' upgrade...
+								If argTy Then
+									TConstExpr(init).ty = argTy
+								End If
+							End If
 						Else
 							' munged reference to default function pointer
 							Local defaultFunc:String = ParseStringLit()
@@ -1466,6 +1475,15 @@ End Rem
 					Else
 						' a default value ?
 						decl.declInit = ParseUnaryExpr()
+
+						If TNumericType(ty) Then
+							' expecting type numeric const
+							Local initTy:TType = ParseDeclType(attrs)
+							' upgrade...
+							If initTy Then
+								TConstExpr(decl.declInit).ty = initTy
+							End If
+						End If
 					End If
 				End If
 				
