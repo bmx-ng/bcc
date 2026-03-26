@@ -1110,7 +1110,11 @@ Type TIParser
 								Local argTy:TType = ParseDeclType(attrs)
 								' upgrade...
 								If argTy Then
-									TConstExpr(init).ty = argTy
+									If TConstExpr(init) Then
+										TConstExpr(init).ty = argTy
+									Else If TUnaryExpr(init) And TConstExpr(TUnaryExpr(init).expr) Then ' eg. -1
+										TConstExpr(TUnaryExpr(init).expr).ty = argTy
+									End If
 								End If
 							End If
 						Else
@@ -1481,7 +1485,11 @@ End Rem
 							Local initTy:TType = ParseDeclType(attrs)
 							' upgrade...
 							If initTy Then
-								TConstExpr(decl.declInit).ty = initTy
+								If TConstExpr(decl.declInit) Then
+									TConstExpr(decl.declInit).ty = initTy
+								Else If TUnaryExpr(decl.declInit) And TConstExpr(TUnaryExpr(decl.declInit).expr) Then ' eg. -1
+									TConstExpr(TUnaryExpr(decl.declInit).expr).ty = initTy
+								End If
 							End If
 						End If
 					End If

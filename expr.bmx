@@ -1360,6 +1360,14 @@ Type TNewArrayExpr Extends TExpr
 		Return _trans.TransNewArrayExpr( Self )
 	End Method
 
+	Method ToString:String()
+		Local s:String = "TNewArrayExpr("+ty.ToString()
+		For Local e:TExpr=EachIn expr
+			s:+","+e.ToString()
+		Next
+		Return s+")"
+	End Method
+
 End Type
 
 '	super.ident( args )
@@ -1444,6 +1452,14 @@ Type TInvokeSuperExpr Extends TExpr
 		Return _trans.TransInvokeSuperExpr( Self )
 	End Method
 
+	Method ToString:String()
+		Local t$="TInvokeSuperExpr("+ident
+		For Local arg:TExpr=EachIn args
+			t:+","+arg.ToString()
+		Next
+		Return t+")"
+	End Method
+
 End Type
 
 '	Self
@@ -1480,6 +1496,10 @@ Type TSelfExpr Extends TExpr
 
 	Method Trans$()
 		Return _trans.TransSelfExpr( Self )
+	End Method
+
+	Method ToString:String()
+		Return "TSelfExpr"
 	End Method
 
 End Type
@@ -2133,6 +2153,10 @@ Type TUnaryExpr Extends TExpr
 		Return _trans.TransUnaryExpr( Self )
 	End Method
 
+	Method ToString$()
+		Return "<UnaryExpr<" + op + expr.ToString() + ">>"
+	End Method
+
 End Type
 
 Type TBinaryExpr Extends TExpr
@@ -2145,7 +2169,7 @@ Type TBinaryExpr Extends TExpr
 	End Method
 
 	Method ToString$()
-		Return "(" + lhs.ToString() + " " + op + " " + rhs.ToString() + ")"
+		Return "<BinaryExpr<" + lhs.ToString() + " " + op + " " + rhs.ToString() + ">>"
 	End Method
 
 End Type
@@ -2506,6 +2530,10 @@ Type TBinaryMathExpr Extends TBinaryExpr
 		InternalErr "TBinaryMathExpr.Eval"
 	End Method
 
+	Method ToString$()
+		Return "<BinaryMathExpr<" + lhs.ToString() + " " + op + " " + rhs.ToString() + ">>"
+	End Method
+
 End Type
 
 '=,<>,<,<=,>,>=
@@ -2652,6 +2680,10 @@ Type TBinaryCompareExpr Extends TBinaryExpr
 		If r=0 Return ""
 		InternalErr "TBinaryCompareExpr.Eval"
 	End Method
+
+	Method ToString$()
+		Return "<BinaryCompareExpr<" + lhs.ToString() + " " + op + " " + rhs.ToString() + ">>"
+	End Method
 End Type
 
 'and, or
@@ -2687,6 +2719,10 @@ Type TBinaryLogicExpr Extends TBinaryExpr
 		Case "or"  If lhs.Eval() Or rhs.Eval() Return "1" Else Return ""
 		End Select
 		InternalErr "TBinaryLogicExpr.Eval"
+	End Method
+
+	Method ToString$()
+		Return "<BinaryLogicExpr<" + lhs.ToString() + " " + op + " " + rhs.ToString() + ">>"
 	End Method
 End Type
 
