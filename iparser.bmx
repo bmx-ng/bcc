@@ -1111,9 +1111,9 @@ Type TIParser
 								' upgrade...
 								If argTy Then
 									If TConstExpr(init) Then
-										TConstExpr(init).ty = argTy
+										init = New TConstExpr.Create(argTy, TConstExpr(init).originalValue)
 									Else If TUnaryExpr(init) And TConstExpr(TUnaryExpr(init).expr) Then ' eg. -1
-										TConstExpr(TUnaryExpr(init).expr).ty = argTy
+										TUnaryExpr(init).expr = New TConstExpr.Create(argTy, TConstExpr(TUnaryExpr(init).expr).originalValue)
 									End If
 								End If
 							End If
@@ -1486,9 +1486,9 @@ End Rem
 							' upgrade...
 							If initTy Then
 								If TConstExpr(decl.declInit) Then
-									TConstExpr(decl.declInit).ty = initTy
+									decl.declInit = New TConstExpr.Create( initTy, TConstExpr(decl.declInit).originalValue )
 								Else If TUnaryExpr(decl.declInit) And TConstExpr(TUnaryExpr(decl.declInit).expr) Then ' eg. -1
-									TConstExpr(TUnaryExpr(decl.declInit).expr).ty = initTy
+									TUnaryExpr(decl.declInit).expr = New TConstExpr.Create( initTy, TConstExpr(TUnaryExpr(decl.declInit).expr).originalValue )
 								End If
 							End If
 						End If
