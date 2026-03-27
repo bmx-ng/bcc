@@ -1105,7 +1105,7 @@ Type TIParser
 								End If
 							End If
 
-							If TNumericType(ty) Then
+							If TNumericType(ty) And Not TDecimalType(ty) Then
 								' expecting type after const value
 								Local argTy:TType = ParseDeclType(attrs)
 								' upgrade...
@@ -1480,7 +1480,7 @@ End Rem
 						' a default value ?
 						decl.declInit = ParseUnaryExpr()
 
-						If TNumericType(ty) Then
+						If TNumericType(ty) And Not TDecimalType(ty) Then
 							' expecting type numeric const
 							Local initTy:TType = ParseDeclType(attrs)
 							' upgrade...
