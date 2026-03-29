@@ -6201,7 +6201,8 @@ End Rem
 			If args args:+","
 			args:+ arg.ident + TransIfcType( arg.ty )
 
-			If arg.init Then
+			' staticarray length is already encoded in the type, so skip the initialiser for static arrays
+			If arg.init And Not (TArrayType(arg.ty) And TArrayType(arg.ty).isStatic) Then
 				If TInvokeExpr(arg.init) Then
 					args:+ "=" + Enquote(TInvokeExpr(arg.init).decl.munged)
 				Else
