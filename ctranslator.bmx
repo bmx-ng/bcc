@@ -3875,23 +3875,27 @@ End Rem
 
 		' pass object for method
 		If decl.IsMethod() Then
-			args.Append( TransObject(decl.scope, True) ).Append( " o" )
+			args.Append( TransObject(decl.scope, True) ).Append( " volatile o" )
 		End If
 
 		Local argCasts:TStackList =New TStackList
 		For Local i:Int=0 Until decl.argDecls.Length
 			Local arg:TArgDecl=decl.argDecls[i]
 			Local oarg:TArgDecl=odecl.argDecls[i]
+			Local volTrans:String
+			If TObjectType(arg.ty) and arg.volatile And Not TObjectType(arg.ty).classDecl.IsStruct() Then
+				volTrans = " volatile "
+			End If
 			MungDecl arg, True
 			If args.Length() > 0 Then args.Append(",")
 			If Not TFunctionPtrType(oarg.ty) Then
 				If Not odecl.castTo Then
-					args.Append(TransType( oarg.ty, arg.munged )).Append(" ").Append(arg.munged)
+					args.Append(TransType( oarg.ty, arg.munged )).Append(" ").Append(volTrans).Append(arg.munged)
 					If TArrayType(oarg.ty) And TArrayType(oarg.ty).isStatic Then
 						args.Append("[").Append(TArrayType(oarg.ty).length).Append("]")
 					End If
 				Else
-					args.Append( oarg.castTo ).Append(" ").Append(arg.munged)
+					args.Append( oarg.castTo ).Append(" ").Append(volTrans).Append(arg.munged)
 				End If
 			Else
 				If Not odecl.castTo Then
@@ -5648,22 +5652,26 @@ End Rem
 			Wend
 		End If
 
-		Local args:String = TransObject(classdecl, True) + " o"
+		Local args:String = TransObject(classdecl, True) + " volatile o"
 
 		For Local i:Int=0 Until fdecl.argDecls.Length
+			Local volTrans:String
 			Local arg:TArgDecl=fdecl.argDecls[i]
 			Local oarg:TArgDecl=odecl.argDecls[i]
+			If TObjectType(arg.ty) and arg.volatile Then
+				volTrans = " volatile "
+			End If
 			MungDecl arg, True
 			If args args:+","
 			If Not TFunctionPtrType(oarg.ty) Then
 				If Not odecl.castTo Then
-					args:+TransType( oarg.ty, arg.munged )+" "+arg.munged
+					args:+TransType( oarg.ty, arg.munged )+ volTrans +" "+arg.munged
 				Else
-					args:+ oarg.castTo + " " + arg.munged
+					args:+ oarg.castTo + volTrans + " " + arg.munged
 				End If
 			Else
 				If Not odecl.castTo Then
-					args:+TransType( oarg.ty, arg.munged )
+					args:+TransType( oarg.ty, arg.munged )+ volTrans
 				Else
 					args:+ oarg.castTo
 				End If
