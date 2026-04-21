@@ -701,12 +701,13 @@ Type TLocalDecl Extends TVarDecl
 	End Method
 
 	Method OnSemant()
-		If declTy Then
-			If TObjectType(declTy) Then
-				volatile = True
-			End If
+		If declTy And TObjectType(declTy) Then
+			volatile = True
 		End If
 		Super.OnSemant()
+		If ty And TObjectType(ty) Then
+			volatile = True
+		End If
 	End Method
 	
 	Method ToString$()
