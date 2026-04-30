@@ -670,21 +670,22 @@ End Type
 
 Type TFileHash
 
+	Const BUFFER_SIZE:Int = 8192
+
 	Field statePtr:Byte Ptr
+	Field data:Byte Ptr
 	
 	Method Create:TFileHash()
 		statePtr = bmx_hash_createState()
+		data = MemAlloc(BUFFER_SIZE)
 		Return Self
 	End Method
 	
 	Method CalculateHash:String(stream:TStream)
-		Const BUFFER_SIZE:Int = 8192
-	
 	
 		bmx_hash_reset(statePtr)
-		
-		Local data:Byte[BUFFER_SIZE]
-		
+		MemClear(data, BUFFER_SIZE)
+
 		While True
 			Local read:Int = stream.Read(data, BUFFER_SIZE)
 
@@ -698,6 +699,22 @@ Type TFileHash
 		
 		Return bmx_hash_digest(statePtr)
 		
+	End Method
+	
+	Method Free()
+		If statePtr Then
+			bmx_hash_free(statePtr)
+			statePtr = Null
+		End If
+
+		If data Then
+			MemFree(data)
+			data = Null
+		End If
+	End Method
+
+	Method Delete()
+		Free()
 	End Method
 
 End Type
@@ -758,6 +775,7 @@ Extern
 	Function bmx_hash_reset(state:Byte Ptr)
 	Function bmx_hash_update(state:Byte Ptr, data:Byte Ptr, length:Int)
 	Function bmx_hash_digest:String(state:Byte Ptr)
+	Function bmx_hash_free(state:Byte Ptr)
 
 	Function bmx_bitwise_not_uint:String(value:String)
 	Function bmx_bitwise_not_sizet:String(value:String)
