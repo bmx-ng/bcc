@@ -1,12 +1,12 @@
 
 #include "brl.mod/blitz.mod/blitz.h"
 
-#ifndef XXHASH_H_5627135585666179
+#define XXH_PRIVATE_API
+#define XXH_NAMESPACE bcc_
 #define XXH_STATIC_LINKING_ONLY
 #define XXH_IMPLEMENTATION
 
 #include "xxhash.h"
-#endif
 
 BBString * bmx_gen_hash(BBString * txt) {
 	char buf[64];
@@ -37,4 +37,8 @@ BBString * bmx_hash_digest(XXH3_state_t * state) {
 	char buf[64];
 	snprintf(buf, 64, "%llx", XXH3_64bits_digest(state));
 	return bbStringFromCString(buf);
+}
+
+void bmx_hash_free(XXH3_state_t * state) {
+	XXH3_freeState(state);
 }
