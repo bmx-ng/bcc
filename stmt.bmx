@@ -180,6 +180,21 @@ Type TAssignStmt Extends TStmt
 				Local splitOp:Int = True
 				Select op
 					Case "="
+
+						If TObjectType(lhs.exprType) Then
+							Local args:TExpr[] = [rhs]
+							Try
+								Local decl:TFuncDecl = TFuncDecl(TObjectType(lhs.exprType).classDecl.FindFuncDecl(":=", args,,,,True,SCOPE_CLASS_HEIRARCHY))
+								If decl Then
+									lhs = New TInvokeMemberExpr.Create( lhs, decl, args ).Semant()
+									rhs = Null
+									Return
+								End If
+							Catch error:String
+								' ignore - if we can't find an operator, we'll just do a normal assignment and let the type system catch any errors with that.
+							End Try
+						End If
+
 						rhs=rhs.Cast( lhs.exprType,, False )
 						splitOp = False
 						

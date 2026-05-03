@@ -529,6 +529,8 @@ Type TTranslator
 				Return "_xoreq"
 			Case ":^"
 				Return "_poweq"
+			Case ":="
+				Return "_assign"
 			Case "<"
 				Return "_lt"
 			Case "<="

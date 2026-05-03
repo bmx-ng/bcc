@@ -3017,7 +3017,7 @@ End Rem
 				Select t
 					Case "*","/","+","-","&","|","~~","^"
 						id = t
-					Case ":*",":/",":+",":-",":&",":|",":~~",":^"
+					Case ":*",":/",":+",":-",":&",":|",":~~",":^",":="
 						id = t
 					Case "<",">"',"="',"<=",">=","=","<>"
 						If CParse("=") Then
@@ -3036,7 +3036,7 @@ End Rem
 						If CParse("=") Then t :+ "="
 						id = t
 					Default
-						DoErr "Operator must be one of: * / + - & | ~~ :* :/ :+ :- :& :| :~~ < > <= >= = <> mod shl shr :mod :shl :shr [] []="
+						DoErr "Operator '" + t + "' must be one of: * / + - & | ~~ :* :/ :+ :- :& :| :~~ := < > <= >= = <> mod shl shr :mod :shl :shr [] []="
 				End Select
 				ty=ParseDeclType()
 			Else
