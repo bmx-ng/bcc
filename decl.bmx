@@ -45,6 +45,7 @@ Const DECL_INITONLY:Long=     $1000000
 Const DECL_NODEBUG:Long=      $2000000
 Const DECL_PROTECTED:Long=    $4000000
 Const DECL_EXPORT:Long=       $8000000
+Const DECL_ASSIGN_INIT:Long=$400000000:Long
 
 Const DECL_API_CDECL:Long=   $00000000
 Const DECL_API_STDCALL:Long= $10000000
@@ -1110,7 +1111,7 @@ Type TScopeDecl Extends TDecl
 			declList = New TFuncDeclList
 		End If
 
-		Local decl:Object=Object(declsMap.ValueForKey( ident ))
+		Local decl:Object=Object(declsMap.ValueForKey( ident.ToLower() ))
 
 		If Not decl Return Null
 
@@ -2332,9 +2333,70 @@ Type TFuncDecl Extends TBlockDecl
 			End If
 		EndIf
 
+		Local assignFunc:TFuncDecl
+
+		If ident = ":=" And Not IsImported() Then			
+			Local _mod:TModuleDecl = _env.ModuleScope()
+
+			assignFunc = GenerateAssignInitFunc( retType, argDecls[0].ty )
+
+			_mod.InsertDecl assignFunc
+
+		End If
+
 		attrs:|DECL_SEMANTED
-		
-		Super.OnSemant()
+		Super.OnSemant()	
+	End Method
+
+	Method GenerateAssignInitFunc:TFuncDecl(classType:TType, valueType:TType)
+		' function TDecimalOperatorAssignInitInt:TDecimal(o:TDecimal Ptr, value:Int)
+		'   If Not o Then
+		' 	  o = New TDecimal
+		'   End If
+		'   o = value
+		'   Return o
+		' end function
+
+		Local args:TArgDecl[] = New TArgDecl[2]
+		args[0] = New TArgDecl.Create("o", TType.MapToVarType(classType.Copy()), Null)
+		args[1] = New TArgDecl.Create("value", valueType.Copy(), Null)
+
+		Local prefix:String = TObjectType(classType).classDecl.ident
+		Local suffix:String
+		If TObjectType(valueType) Then
+			suffix = TObjectType(valueType).classDecl.ident
+		Else
+			suffix = valueType.ToString()
+		End If
+
+		Local assignFunc:TFuncDecl = New TFuncDecl.CreateF( prefix + "OperatorAssignInit" + suffix, classType, args, DECL_ASSIGN_INIT )
+
+		Local cmpVar:TVarExpr = New TVarExpr.Create(args[0])
+
+		' If Not o Then
+		Local ifExpr:TExpr = New TUnaryExpr.Create( "not",cmpVar )
+		Local thenBlock:TBlockDecl=New TBlockDecl.Create( assignFunc, , BLOCK_IF )
+
+		' o = New TDecimal
+		Local newExpr:TExpr = New TNewObjectExpr.Create( classType, Null )
+		'Local assignExpr:TExpr = New TBinaryOpExpr.Create( "=", cmpVar, newExpr )
+		Local assign:TStmt = New TAssignStmt.Create( "=", cmpVar, newExpr, True )
+		thenBlock.AddStmt( assign )
+
+		Local stmt:TIfStmt=New TIfStmt.Create( ifExpr,thenBlock,Null )
+		assignFunc.AddStmt stmt
+
+		' o = value
+		Local valueVar:TVarExpr = New TVarExpr.Create(args[1])
+		'Local assignExpr:TExpr = New TBinaryOpExpr.Create( "=", cmpVar, valueVar )
+		Local assignStmt:TStmt = New TAssignStmt.Create( "=", cmpVar, valueVar, True )
+		assignFunc.AddStmt assignStmt
+
+		' return o
+		Local returnStmt:TReturnStmt = New TReturnStmt.Create( cmpVar )
+		assignFunc.AddStmt returnStmt
+
+		Return assignFunc
 	End Method
 	
 	Method MatchesInterfaceFunction:Int(cdecl:TClassDecl, strictVoidToInt:Int, errorDetails:String Var)

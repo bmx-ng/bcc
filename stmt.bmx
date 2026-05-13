@@ -172,27 +172,22 @@ Type TAssignStmt Extends TStmt
 				' with pointer assignment we don't cast the numeric to a pointer
 				
 			Else If IsPointerType(lhs.exprType, 0, TType.T_VAR) And TNumericType(rhs.exprType) Then
-				' for var, we cast to the non-var type
-				Local ty:TType = lhs.exprType.Copy()
-				ty._flags :~ TType.T_VAR
-				rhs=rhs.Cast( ty )
+				If op = "=" And TObjectType(lhs.exprType) Then
+					If TryAssignInitOperator(lhs, rhs) Then
+						Return
+					End If
+				Else
+					' for var, we cast to the non-var type
+					Local ty:TType = lhs.exprType.Copy()
+					ty._flags :~ TType.T_VAR
+					rhs=rhs.Cast( ty )
+				End If				
 			Else
 				Local splitOp:Int = True
 				Select op
 					Case "="
-
-						If TObjectType(lhs.exprType) Then
-							Local args:TExpr[] = [rhs]
-							Try
-								Local decl:TFuncDecl = TFuncDecl(TObjectType(lhs.exprType).classDecl.FindFuncDecl(":=", args,,,,True,SCOPE_CLASS_HEIRARCHY))
-								If decl Then
-									lhs = New TInvokeMemberExpr.Create( lhs, decl, args ).Semant()
-									rhs = Null
-									Return
-								End If
-							Catch error:String
-								' ignore - if we can't find an operator, we'll just do a normal assignment and let the type system catch any errors with that.
-							End Try
+						If TryAssignInitOperator(lhs, rhs) Then
+							Return
 						End If
 
 						rhs=rhs.Cast( lhs.exprType,, False )
@@ -246,6 +241,48 @@ Type TAssignStmt Extends TStmt
 				
 			End If
 		EndIf
+	End Method
+
+	Method TryAssignInitOperator:Int(lhs:TExpr Var, rhs:TExpr Var)
+
+		If Not TObjectType(lhs.exprType) Then
+			Return False
+		End If
+		Local args:TExpr[] = [rhs]
+		Try
+			Local objType:TObjectType = TObjectType(lhs.exprType)
+			Local decl:TFuncDecl = TFuncDecl(objType.classDecl.FindFuncDecl(":=", args,,,,True,SCOPE_CLASS_HEIRARCHY))
+			If decl And Not TNewObjectExpr(rhs) Then
+				Local _scope:TFuncDecl = _env.FuncScope()
+				If _scope And _scope.attrs & DECL_ASSIGN_INIT Then
+					lhs = New TInvokeMemberExpr.Create(lhs, decl, args).Semant()
+				Else
+					Local valueType:TType = decl.argDecls[0].ty
+					Local prefix:String = objType.classDecl.ident
+					Local suffix:String
+					If TObjectType(valueType) Then
+						suffix = TObjectType(valueType).classDecl.ident
+					Else
+						suffix = valueType.ToString()
+					End If
+					Local assignArgs:TExpr[] = [lhs, rhs]
+					Local aIdent:String = prefix + "OperatorAssignInit" + suffix
+					Local assignDecl:TFuncDecl = TFuncDecl(objType.classDecl.FindFuncDecl(aIdent, assignArgs,,True,,True,SCOPE_ALL))
+					If assignDecl Then
+						lhs = New TInvokeExpr.Create(assignDecl, assignArgs).Semant()
+					Else
+						lhs = New TInvokeMemberExpr.Create(lhs, decl, args).Semant()
+					End If
+				End If
+				rhs = Null
+				Return True
+			End If
+		Catch error:String
+			' ignore - if we can't find an operator, we'll just do a normal assignment
+			' and let the type system catch any errors with that.
+		End Try
+		Return False
+
 	End Method
 	
 	Method Trans$()

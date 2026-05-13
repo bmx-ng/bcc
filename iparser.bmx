@@ -632,6 +632,11 @@ Type TIParser
 				cdecl.FinalizeClass()
 			End If
 		Next
+
+		' semant imported functions
+		For Local fdecl:TFuncDecl = EachIn _mod.Decls()
+			fdecl.Semant()
+		Next
 		
 		Return True
 		
