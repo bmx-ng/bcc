@@ -456,14 +456,14 @@ Type TBoolType Extends TType
 		End If
 
 		If TShortType(ty)<>Null Then
-			Return 2
+			Return 3
 		End If
 
 		If TLongType(ty)<>Null Then
-			Return 3
+			Return 4
 		End If
 		
-		Return 4
+		Return 5
 	End Method
 	
 	Method ToString$()

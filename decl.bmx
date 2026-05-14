@@ -1511,6 +1511,7 @@ End Rem
 		'func.Semant()
 		
 		Local match:TFuncDecl,isexact:Int
+		Local exactMatchCount:Int
 		Local _err$
 		Local errorDetails:String
 		Local matches:TList = New TList
@@ -1683,6 +1684,7 @@ End Rem
 				If Not possible Continue
 				
 				If exact
+					exactMatchCount :+ 1
 					If isexact
 						'Err "Unable to determine overload to use: "+match.ToString()+" or "+func.ToString()+"."
 					Else
@@ -1710,12 +1712,14 @@ End Rem
 			End If
 			
 		Next
-		
-		If matches.Count() = 1 Then
-			match = TFuncDecl(matches.First())
-		Else
-			' find best match
-			match = FindBestMatchForArgs(argExprs, matches)
+
+		If Not match Or exactMatchCount <> 1 Then
+			If matches.Count() = 1 Then
+				match = TFuncDecl(matches.First())
+			Else
+				' find best match
+				match = FindBestMatchForArgs(argExprs, matches)
+			End If
 		End If
 		
 		If Not isexact
