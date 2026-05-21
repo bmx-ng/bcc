@@ -45,7 +45,7 @@ Const DECL_INITONLY:Long=     $1000000
 Const DECL_NODEBUG:Long=      $2000000
 Const DECL_PROTECTED:Long=    $4000000
 Const DECL_EXPORT:Long=       $8000000
-Const DECL_ASSIGN_INIT:Long=$400
+Const DECL_ASSIGN_INIT:Long=  $0000004
 
 Const DECL_API_CDECL:Long=   $00000000
 Const DECL_API_STDCALL:Long= $10000000
@@ -1946,7 +1946,7 @@ End Type
 
 Const FUNC_METHOD:Long=   $0001			'mutually exclusive with ctor
 Const FUNC_CTOR:Long=     $0002
-Const FUNC_PROPERTY:Long= $0004
+' Const FUNC_PROPERTY:Long= $0004
 Const FUNC_DTOR:Long=     $0008
 Const FUNC_BUILTIN:Long = $0080
 Const FUNC_PTR:Long=      $0100
@@ -2102,9 +2102,9 @@ Type TFuncDecl Extends TBlockDecl
 		Return (attrs & (FUNC_METHOD|FUNC_CTOR))=0
 	End Method
 	
-	Method IsProperty:Int()
-		Return (attrs & FUNC_PROPERTY)<>0
-	End Method
+	' Method IsProperty:Int()
+	' 	Return (attrs & FUNC_PROPERTY)<>0
+	' End Method
 
 	Method IsField:Int()
 		Return (attrs & FUNC_FIELD)<>0
