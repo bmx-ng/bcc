@@ -1420,6 +1420,25 @@ Type TParser Extends TGenProcessor
 				expr=ParseExpr()
 				expr=New TSizeOfExpr.Create( expr )
 			EndIf
+		Case "alignof"
+			NextToke
+
+			Local ty:TType = ParseConstNumberType()
+			If ty Then
+				If Not TSizeTType(ty) Then
+					Err "Return type for 'AlignOf' must be Size_T"
+				End If
+			End If
+
+			' optional brackets
+			If CParse( "(" )
+				expr=ParseExpr()
+				Parse ")"
+				expr=New TAlignOfExpr.Create( expr )
+			Else
+				expr=ParseExpr()
+				expr=New TAlignOfExpr.Create( expr )
+			EndIf
 		Case "len"
 			NextToke
 			

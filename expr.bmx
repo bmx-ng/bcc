@@ -3699,6 +3699,31 @@ Type TSizeOfExpr Extends TBuiltinExpr
 
 End Type
 
+Type TAlignOfExpr Extends TBuiltinExpr
+
+	Method Create:TAlignOfExpr( expr:TExpr )
+		Self.id="alignof"
+		Self.expr=expr
+		Return Self
+	End Method
+
+	Method Semant:TExpr(options:Int = 0)
+		If exprType Return Self
+		expr=expr.Semant()
+		exprType=New TSizeTType
+		Return Self
+	End Method
+
+	Method Copy:TExpr()
+		Return New TAlignOfExpr.Create( CopyExpr(expr) )
+	End Method
+
+	Method ToString$()
+		Return "TAlignOfExpr("+expr.ToString()+")"
+	End Method
+
+End Type
+
 Type TChrExpr Extends TBuiltinExpr
 
 	Method Create:TChrExpr( expr:TExpr )

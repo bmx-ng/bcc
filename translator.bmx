@@ -1459,6 +1459,7 @@ End Rem
 		If TChrExpr(expr) Return TransChrExpr(TChrExpr(expr))
 		If TLenExpr(expr) Return TransLenExpr(TLenExpr(expr))
 		If TSizeOfExpr(expr) Return TransSizeOfExpr(TSizeOfExpr(expr))
+		If TAlignOfExpr(expr) Return TransAlignOfExpr(TAlignOfExpr(expr))
 		If TStackAllocExpr(expr) Return TransStackAllocExpr(TStackAllocExpr(expr))
 		If TFieldOffsetExpr(expr) Return TransFieldOffsetExpr(TFieldOffsetExpr(expr))
 		Err "TODO : TransBuiltinExpr()"
@@ -1474,6 +1475,9 @@ End Rem
 	End Method
 
 	Method TransSizeOfExpr:String(expr:TSizeOfExpr)
+	End Method
+
+	Method TransAlignOfExpr:String(expr:TAlignOfExpr)
 	End Method
 
 	Method TransStackAllocExpr:String(expr:TStackAllocExpr)

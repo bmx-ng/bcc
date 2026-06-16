@@ -1896,6 +1896,40 @@ Type TCTranslator Extends TTranslator
 		InternalErr "TCTranslator.TransSizeOfExpr"
 	End Method
 
+	Method TransAlignOfExpr:String(expr:TAlignOfExpr)
+		Local t:TType = expr.expr.exprType
+
+		If t._flags & TType.T_VAR Then
+			t = t.Copy()
+			t._flags :~ TType.T_VAR
+		End If
+
+		If TNumericType(t) Then
+			Return "bbAlignOf" + Bra(TransType(t, ""))
+		Else If TStringType(t) Then
+			Return "bbAlignOf(BBString*)"
+		Else If TArrayType(t) Then
+			Return "bbAlignOf(void*)"
+		Else If TObjectType(t) Then
+			Local cdecl:TClassDecl = TObjectType(t).classDecl
+			If cdecl.ident = "Object" Then
+				Return "bbAlignOf(void*)"
+			End If
+
+			If cdecl.IsStruct() Then
+				If cdecl.IsExtern() Then
+					Return "bbAlignOf" + Bra("struct " + cdecl.ident)
+				Else
+					Return "bbAlignOf" + Bra("struct " + cdecl.munged)
+				End If
+			Else
+				Return "bbAlignOf(void*)"
+			End If
+		End If
+
+		InternalErr "TCTranslator.TransAlignOfExpr"
+	End Method
+
 	Method TransStackAllocExpr:String(expr:TStackAllocExpr)
 		Return "bbStackAlloc" + Bra(expr.expr.Trans())
 	End Method
