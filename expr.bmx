@@ -1920,6 +1920,11 @@ Type TCastExpr Extends TExpr
 			Return Self
 		End If
 
+		If TObjectType(ty) And TObjectType(ty).IsStruct() And IsPointerType(ty, 0, TType.T_POINTER) And IsPointerType(src, 0, TType.T_POINTER) Then
+			exprType = ty
+			Return Self
+		End If
+
 		If TObjectType(ty) And TObjectType(src) And TObjectType(ty).classdecl.IsInterface() And flags & CAST_EXPLICIT Then
 			exprType = ty
 			Return Self
@@ -3140,7 +3145,11 @@ Type TIdentTypeExpr Extends TExpr
 			If TArrayType(exprType) Then
 				Return args[0].Cast( exprType,CAST_EXPLICIT )
 			Else
-				Return args[0].Cast( cdecl.objectType,CAST_EXPLICIT )
+				Local ty:TType = cdecl.objectType.Copy()
+				If IsPointerType(exprType)
+					ty = TType.MapToPointerType(ty)
+				End If
+				Return args[0].Cast( ty,CAST_EXPLICIT )
 			End If
 		End If
 		Err "Illegal number of arguments for type conversion"

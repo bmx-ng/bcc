@@ -1889,6 +1889,10 @@ Type TObjectType Extends TType
 		Return T_MAX_DISTANCE
 	End Method
 
+	Method IsStruct:Int()
+		Return classDecl.IsStruct()
+	End Method
+
 End Type
 
 Type TClassType Extends TType

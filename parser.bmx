@@ -1562,6 +1562,19 @@ Type TParser Extends TGenProcessor
 					_tokeType=_toker.TokeType()
 					expr=New TIdentExpr.Create( ParseIdent(),,,unknownIdentsEvalFalse )
 					ty = ParseConstNumberType()
+
+					' maybe a struct pointer type, e.g. "SVec2 ptr"
+					If Not ty Then
+						If CParse("ptr") Then
+							ty = TType.MapToPointerType( New TIdentType.Create(TIdentExpr(expr).ident) )
+
+							While CParse("ptr")
+								ty = TType.MapToPointerType(ty)
+							Wend
+
+							expr=New TIdentTypeExpr.Create( ty )
+						End If
+					End If
 					
 					If TArrayType(ty) Then
 						If Not TArrayType(ty).elemType Then
