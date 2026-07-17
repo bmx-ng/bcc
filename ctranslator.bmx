@@ -6256,102 +6256,123 @@ End Rem
 		Return Bra(args)
 	End Method
 
+	Method IfcSourceSuffix:String(decl:TDecl)
+		If Not decl Or Not decl.errInfo.length Or decl.errInfo[..1] <> "[" Then Return ""
+		Local close:Int = decl.errInfo.FindLast("]")
+		If close < 0 Then close = decl.errInfo.length
+		Local charSeparator:Int = decl.errInfo[..close].FindLast(";")
+		If charSeparator < 0 Then Return ""
+		Local lineSeparator:Int = decl.errInfo[..charSeparator].FindLast(";")
+		If lineSeparator < 1 Then Return ""
+		Local sourcePath:String = decl.errInfo[1..lineSeparator].Replace("\", "/")
+		Local sourceLine:Int = Int(decl.errInfo[lineSeparator + 1..charSeparator])
+		Local sourceColumn:Int = Int(decl.errInfo[charSeparator + 1..close])
+		Local sourceBase:String = ExtractDir(opt_filepath).Replace("\", "/")
+		If sourceBase.length And sourcePath.StartsWith(sourceBase + "/") Then sourcePath = sourcePath[sourceBase.length + 1..]
+		If Not sourcePath.length Or sourceLine <= 0 Then Return ""
+		Return " '@source " + BmxEnquote(sourcePath) + "," + sourceLine + "," + sourceColumn
+	End Method
+
 	Method EmitIfcClassFuncDecl(funcDecl:TFuncDecl)
 
 		funcDecl.Semant
 
-		Local func:String
+		Local func:TStringBuffer = New TStringBuffer
 
 		' method / function
 		If funcDecl.IsMethod() Or funcDecl.IsCTor() Then
-			func :+ "-"
+			func.Append("-")
 		Else
-			func :+ "+"
+			func.Append("+")
 		End If
 
 		If funcDecl.attrs & FUNC_OPERATOR Then
-			func :+ BmxEnquote(funcDecl.ident)
+			func.Append(BmxEnquote(funcDecl.ident))
 		Else
-			func :+ funcDecl.ident
+			func.Append(funcDecl.ident)
 		End If
 
 		If Not TNewDecl(funcDecl) Then
-			func :+ TransIfcType(funcDecl.retType, funcDecl.ModuleScope().IsSuperStrict())
+			func.Append(TransIfcType(funcDecl.retType, funcDecl.ModuleScope().IsSuperStrict()))
 		End If
 
 		' function args
-		func :+ TransIfcArgs(funcDecl)
+		func.Append(TransIfcArgs(funcDecl))
 
 		If funcDecl.attrs & DECL_FINAL Then
-			func :+ "F"
+			func.Append("F")
 		Else If funcDecl.attrs & DECL_ABSTRACT Then
-			func :+ "A"
+			func.Append("A")
 		End If
 		
 		If funcDecl.attrs & FUNC_OPERATOR Then
-			func :+ "O"
+			func.Append("O")
 		End If
 		
 		If funcDecl.attrs & DECL_PRIVATE Then
-			func :+ "P"
+			func.Append("P")
 		Else If funcDecl.attrs & DECL_PROTECTED Then
-			func :+ "R"
+			func.Append("R")
 		End If
 		
 		If funcDecl.attrs & DECL_API_STDCALL Then
-			func :+ "W"
+			func.Append("W")
 		End If
 		
 		If funcDecl.attrs & DECL_EXPORT Then
-			func :+ "E"
+			func.Append("E")
 		End If
 
-		func :+ "="
+		func.Append("=")
 
-		func :+ Enquote(funcDecl.munged)
+		func.Append(Enquote(funcDecl.munged))
 
-		Emit func
+		func.Append(IfcSourceSuffix(funcDecl))
+
+		Emit func.ToString()
 
 	End Method
 
 	Method EmitIfcFuncDecl(funcDecl:TFuncDecl)
 
-		Local func:String
+		Local func:TStringBuffer = New TStringBuffer
 
-		func :+ funcDecl.ident
+		func.Append(funcDecl.ident)
 
 		' ensure the function has been semanted
 		funcDecl.Semant()
 
-		func :+ TransIfcType(funcDecl.retType, funcDecl.ModuleScope().IsSuperStrict())
+		func.Append(TransIfcType(funcDecl.retType, funcDecl.ModuleScope().IsSuperStrict()))
 
 		' function args
-		func :+ TransIfcArgs(funcDecl)
+		func.Append(TransIfcArgs(funcDecl))
 
 		If funcDecl.attrs & DECL_API_STDCALL Then
-			func :+ "W"
+			func.Append("W")
 		End If
 
-		func :+ "="
+		func.Append("=")
 
-		func :+ Enquote(funcDecl.munged)
+		func.Append(Enquote(funcDecl.munged))
 
 		If funcDecl.castTo Then
-			func :+ ":" + funcDecl.castTo
-			func :+ " " + funcDecl.munged + "("
+			func.Append(":").Append(funcDecl.castTo)
+			func.Append(" ").Append(funcDecl.munged).Append("(")
 
 			For Local i:Int = 0 Until funcDecl.argDecls.length
 				If i Then
-					func :+ ", "
+					func.Append(", ")
 				End If
 
-				func :+ funcDecl.argDecls[i].castTo
+				func.Append(funcDecl.argDecls[i].castTo)
 			Next
 
-			func :+ ")"
+			func.Append(")")
 		End If
 
-		Emit func
+		func.Append(IfcSourceSuffix(funcDecl))
+
+		Emit func.ToString()
 
 	End Method
 
@@ -6444,7 +6465,7 @@ End Rem
 			c:+ "=" + TransIfcConstExpr(TExpr(constDecl.init))
 		End If
 
-		Emit c
+		Emit c + IfcSourceSuffix(constDecl)
 	End Method
 
 	Method EmitIfcFieldDecl(fieldDecl:TFieldDecl)
@@ -6471,59 +6492,70 @@ End Rem
 			f.Append( "``" )
 		End If
 
+		f.Append(IfcSourceSuffix(fieldDecl))
+
 		Emit f.ToString()
 	End Method
 
 	Method EmitIfcClassDecl(classDecl:TClassDecl)
 	
-		Local head:String = classDecl.ident + "^"
+		Local head:TStringBuffer = New TStringBuffer
+		
+		head.Append(classDecl.ident).Append("^")
 		If classDecl.superClass Then
 			Local superDecl:TClassDecl = classDecl.superClass
 
-			head :+ superDecl.ident
+			head.Append(superDecl.ident)
 
 			If superDecl.instArgs Then
-				head :+ "<"
-				Local s:String
+				head.Append("<")
+				Local s:TStringBuffer = New TStringBuffer
+				Local i:Int = 0
 				For Local ty:TType = EachIn superDecl.instArgs
-					If s Then
-						s :+ ","
+					If i Then
+						s.Append(",")
 					End If
-					s :+ ty.ToString()
+					s.Append(ty.ToString())
+					i :+ 1
 				Next
-				head :+ s
-				head :+ ">"
+				head.Append(s.ToString())
+				head.Append(">")
 			End If
 		Else
-			head :+ "Null"
+			head.Append("Null")
 		End If
 		
 		If classDecl.implments Then
-			head :+ "@"
+			head.Append("@")
+			Local s:TStringBuffer = New TStringBuffer
 			For Local i:Int = 0 Until classDecl.implments.length
 				If i Then
-					head :+ ","
+					head.Append(",")
 				End If
-				head :+ classDecl.implments[i].ident
+				head.Append(classDecl.implments[i].ident)
 
 				' interface inst args
 				Local idecl:TClassDecl = classDecl.implments[i]
 				If idecl.instArgs Then
-					head :+ "<"
-					Local s:String
+					head.Append("<")
+					s.SetLength(0)
+					Local i:Int = 0
 					For Local ty:TType = EachIn idecl.instArgs
-						If s Then
-							s :+ ","
+						If i Then
+							s.Append(",")
 						End If
-						s :+ ty.ToString()
+						s.Append(ty.ToString())
+						i :+ 1
 					Next
-					head :+ s
-					head :+ ">"
+					head.Append(s.ToString())
+					head.Append(">")
 				End If
 			Next
 		End If
+
+		head.Append("{").Append(IfcSourceSuffix(classDecl))
 		
-		Emit head + "{", False
+		Emit head.ToString(), False
 
 		'PushMungScope
 		BeginLocalScope
@@ -6560,11 +6592,11 @@ End Rem
 			If Not classDecl.templateSource Then
 
 				If Not (classDecl.attrs & CLASS_INTERFACE) And Not classDecl.IsStruct() And Not classHierarchyGetFunction(classDecl, "New") Then
-					Emit "-New()=" + Enquote("_" + classDecl.munged + "_New")
+					Emit "-New()=" + Enquote("_" + classDecl.munged + "_New") + IfcSourceSuffix(classDecl)
 				End If
 
 				If classHierarchyGetFunction(classDecl, "Delete") Then
-					Emit "-Delete()=" + Enquote("_" + classDecl.munged + "_Delete")
+					Emit "-Delete()=" + Enquote("_" + classDecl.munged + "_Delete") + IfcSourceSuffix(classDecl)
 				End If
 	
 				For Local decl:TDecl=EachIn classDecl.Decls()
@@ -6668,29 +6700,33 @@ End Rem
 	Method EmitIfcGlobalDecl(globalDecl:TGlobalDecl)
 		globalDecl.Semant
 
-		Local g:String = globalDecl.ident
-
-		g:+ TransIfcType(globalDecl.ty, globalDecl.ModuleScope().IsSuperStrict())
+		Local g:TStringBuffer = New TStringBuffer
 		
-		g:+ "&"
+		g.Append(globalDecl.ident)
+
+		g.Append(TransIfcType(globalDecl.ty, globalDecl.ModuleScope().IsSuperStrict()))
+		
+		g.Append("&")
 
 		If globalDecl.IsPrivate() Then
-			g :+ "`"
+			g.Append("`")
 		Else If globalDecl.IsProtected() Then
-			g :+ "``"
+			g.Append("``")
 		End If
 
-		g :+ "="
+		g.Append("=")
 
-		g :+ "mem:p("
+		g.Append("mem:p(")
 		If TFunctionPtrType(globalDecl.ty) Then
-			g :+ Enquote(TFunctionPtrType(globalDecl.ty).func.munged)
+			g.Append(Enquote(TFunctionPtrType(globalDecl.ty).func.munged))
 		Else
-			g :+ Enquote(globalDecl.munged)
+			g.Append(Enquote(globalDecl.munged))
 		End If
-		g :+ ")"
+		g.Append(")")
 
-		Emit g
+		g.Append(IfcSourceSuffix(globalDecl))
+
+		Emit g.ToString()
 	End Method
 
 	Method EmitIfcEnumDecl(enumdecl:TEnumDecl)
@@ -6698,10 +6734,10 @@ End Rem
 		
 		Local e:String = enumDecl.ident + "\" + TransIfcType(enumDecl.ty)
 
-		Emit e + "{", False
+		Emit e + "{" + IfcSourceSuffix(enumDecl), False
 		
 		For Local val:TEnumValueDecl = EachIn enumDecl.values
-			Emit val.ident + "=" + val.Value()
+			Emit val.ident + "=" + val.Value() + IfcSourceSuffix(val)
 		Next
 		
 		Local flags:String

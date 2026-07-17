@@ -1310,7 +1310,11 @@ Type TIParser
 					args[i].castTo = at
 					
 				
-					If _toker._toke=")" Exit
+					' Consume the closing parenthesis so NextToke also skips any
+					' whitespace before an optional interface metadata comment.
+					' Leaving it as the current token caused the outer interface
+					' parser to see that whitespace as the start of a declaration.
+					If CParse(")") Exit
 					Parse ","
 					
 					i:+ 1
