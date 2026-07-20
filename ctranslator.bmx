@@ -456,6 +456,7 @@ Type TCTranslator Extends TTranslator
 		If decl.IsExtern()    Then modifiers :+ "E"
 		If decl.IsPrivate()   Then modifiers :+ "P"
 		If decl.IsProtected() Then modifiers :+ "R"
+		If decl.IsInternal()  Then modifiers :+ "I"
 		If modifiers Then modifiers = "'" + modifiers
 		Return modifiers
 	End Method
@@ -6313,6 +6314,8 @@ End Rem
 			func.Append("P")
 		Else If funcDecl.attrs & DECL_PROTECTED Then
 			func.Append("R")
+		Else If funcDecl.attrs & DECL_INTERNAL Then
+			func.Append("I")
 		End If
 		
 		If funcDecl.attrs & DECL_API_STDCALL Then
@@ -6461,6 +6464,14 @@ End Rem
 		Local c:String
 		c = constDecl.ident + TransIfcType(constDecl.ty)
 
+		If constDecl.IsPrivate() Then
+			c :+ "`"
+		Else If constDecl.IsProtected() Then
+			c :+ "``"
+		Else If constDecl.IsInternal() Then
+			c :+ "```"
+		End If
+
 		If TExpr(constDecl.init) Then
 			c:+ "=" + TransIfcConstExpr(TExpr(constDecl.init))
 		End If
@@ -6490,6 +6501,8 @@ End Rem
 			f.Append( "`" )
 		Else If fieldDecl.IsProtected() Then
 			f.Append( "``" )
+		Else If fieldDecl.IsInternal() Then
+			f.Append( "```" )
 		End If
 
 		f.Append(IfcSourceSuffix(fieldDecl))
@@ -6712,6 +6725,8 @@ End Rem
 			g.Append("`")
 		Else If globalDecl.IsProtected() Then
 			g.Append("``")
+		Else If globalDecl.IsInternal() Then
+			g.Append("```")
 		End If
 
 		g.Append("=")

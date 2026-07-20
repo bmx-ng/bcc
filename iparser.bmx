@@ -1183,6 +1183,9 @@ Type TIParser
 				Case Asc("R")
 					attrs:| DECL_PROTECTED
 					parsed = True
+				Case Asc("I")
+					attrs:| DECL_INTERNAL
+					parsed = True
 				Case Asc("E")
 					attrs:| DECL_EXPORT
 					parsed = True
@@ -1392,7 +1395,11 @@ Type TIParser
 				
 				If CParse("`") Then
 					If CParse("`") Then
-						attrs :| DECL_PROTECTED
+						If CParse("`") Then
+							attrs :| DECL_INTERNAL
+						Else
+							attrs :| DECL_PROTECTED
+						End If
 					Else
 						attrs :| DECL_PRIVATE
 					End If

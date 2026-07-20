@@ -32,6 +32,7 @@ Const DECL_OVERRIDE:Long=    $40000000
 Const DECL_INLINE:Long=      $80000000
 Const DECL_THREADED:Long=   $100000000:Long
 Const DECL_NO_VAR:Long=     $200000000:Long
+Const DECL_INTERNAL:Long=   $400000000:Long
 
 Const DECL_SEMANTED:Long=      $100000
 Const DECL_SEMANTING:Long=     $200000
@@ -195,8 +196,12 @@ Type TDecl
 		Return (attrs & DECL_PROTECTED)<>0
 	End Method
 	
+	Method IsInternal:Int()
+		Return (attrs & DECL_INTERNAL)<>0
+	End Method
+
 	Method IsPublic:Int()
-		Return Not (IsPrivate() Or IsProtected())
+		Return Not (IsPrivate() Or IsProtected() Or IsInternal())
 	End Method
 	
 	Method IsReadOnly:Int()
@@ -272,6 +277,23 @@ Type TDecl
 	End Method
 	
 	Method CheckAccess:Int()
+		Local cd:TClassDecl = TClassDecl(scope)
+		If cd Then
+			If IsPrivate() Then
+				Return cd = _env.ClassScope()
+			End If
+			If IsProtected() Then
+				Local ec:TClassDecl = _env.ClassScope()
+				If Not ec Return False
+				Return ec.ExtendsClass(cd)
+			End If
+			If IsInternal() Then
+				Return ModuleScope() = _env.ModuleScope()
+			End If
+			Return True
+		End If
+
+		If IsInternal() And ModuleScope()<>_env.ModuleScope() Return False
 		If IsPrivate() And ModuleScope()<>_env.ModuleScope() Return False
 		Return True
 	End Method
@@ -280,8 +302,10 @@ Type TDecl
 		If Not CheckAccess()
 			If IsPrivate() Then
 				Err ToString() +" is private."
-			Else
+			Else If IsProtected() Then
 				Err ToString() +" is protected."
+			Else
+				Err ToString() +" is internal."
 			End If
 		EndIf
 	End Method
@@ -2456,7 +2480,9 @@ Type TFuncDecl Extends TBlockDecl
 				If EqualsFunc( decl, True ) And Not voidReturnTypeFail
 
 					' check we aren't attempting to assign weaker access modifiers
-					If (IsProtected() And decl.IsPublic()) Or (IsPrivate() And (decl.IsProtected() Or decl.IsPublic())) Then
+					If (decl.IsPublic() And Not IsPublic()) Or ..
+						(decl.IsProtected() And Not (IsProtected() Or IsPublic())) Or ..
+						(decl.IsInternal() And Not (IsInternal() Or IsPublic())) Then
 					
 						Err PrivilegeError(Self, decl)
 					
@@ -2506,17 +2532,6 @@ Type TFuncDecl Extends TBlockDecl
 	End Method
 
 	Method CheckAccess:Int()
-		If ModuleScope() = _env.ModuleScope() Return True
-		Local cd:TClassDecl = ClassScope()
-		If cd Then
-			If IsPrivate() And cd<>_env.ClassScope() Return False
-			If IsProtected() Then
-				Local ec:TClassDecl = _env.ClassScope()
-				If Not ec Return False
-				If Not ec.ExtendsClass(cd) Return False
-			End If
-			Return True
-		End If
 		Return Super.CheckAccess()
 	End Method
 
@@ -2524,6 +2539,8 @@ Type TFuncDecl Extends TBlockDecl
 		Local p:String
 		If decl.IsProtected() Then
 			p = "Protected"
+		Else If decl.IsInternal() Then
+			p = "Internal"
 		Else
 			p = "Private"
 		End If
@@ -2531,6 +2548,8 @@ Type TFuncDecl Extends TBlockDecl
 		Local dp:String
 		If decl2.IsPublic() Then
 			dp = "Public"
+		Else If decl2.IsInternal() Then
+			dp = "Internal"
 		Else
 			dp = "Protected"
 		End If
