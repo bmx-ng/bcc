@@ -6274,6 +6274,16 @@ End Rem
 		Return " '@source " + BmxEnquote(sourcePath) + "," + sourceLine + "," + sourceColumn
 	End Method
 
+	Method IfcVisibilityTicks:String(decl:TDecl)
+		If Not decl Then Return ""
+		If decl.IsPrivateInternal() Then Return "````"
+		If decl.IsProtectedInternal() Then Return "`````"
+		If decl.IsPrivate() Then Return "`"
+		If decl.IsProtected() Then Return "``"
+		If decl.IsInternal() Then Return "```"
+		Return ""
+	End Method
+
 	Method EmitIfcClassFuncDecl(funcDecl:TFuncDecl)
 
 		funcDecl.Semant
@@ -6310,14 +6320,10 @@ End Rem
 			func.Append("O")
 		End If
 		
-		If funcDecl.attrs & DECL_PRIVATE Then
-			func.Append("P")
-		Else If funcDecl.attrs & DECL_PROTECTED Then
-			func.Append("R")
-		Else If funcDecl.attrs & DECL_INTERNAL Then
-			func.Append("I")
-		End If
-		
+		If funcDecl.attrs & DECL_PRIVATE Then func.Append("P")
+		If funcDecl.attrs & DECL_PROTECTED Then func.Append("R")
+		If funcDecl.attrs & DECL_INTERNAL Then func.Append("I")
+
 		If funcDecl.attrs & DECL_API_STDCALL Then
 			func.Append("W")
 		End If
@@ -6464,13 +6470,7 @@ End Rem
 		Local c:String
 		c = constDecl.ident + TransIfcType(constDecl.ty)
 
-		If constDecl.IsPrivate() Then
-			c :+ "`"
-		Else If constDecl.IsProtected() Then
-			c :+ "``"
-		Else If constDecl.IsInternal() Then
-			c :+ "```"
-		End If
+		c :+ IfcVisibilityTicks(constDecl)
 
 		If TExpr(constDecl.init) Then
 			c:+ "=" + TransIfcConstExpr(TExpr(constDecl.init))
@@ -6497,13 +6497,7 @@ End Rem
 
 		f.Append( "&" )
 		
-		If fieldDecl.IsPrivate() Then
-			f.Append( "`" )
-		Else If fieldDecl.IsProtected() Then
-			f.Append( "``" )
-		Else If fieldDecl.IsInternal() Then
-			f.Append( "```" )
-		End If
+		f.Append(IfcVisibilityTicks(fieldDecl))
 
 		f.Append(IfcSourceSuffix(fieldDecl))
 
@@ -6721,13 +6715,7 @@ End Rem
 		
 		g.Append("&")
 
-		If globalDecl.IsPrivate() Then
-			g.Append("`")
-		Else If globalDecl.IsProtected() Then
-			g.Append("``")
-		Else If globalDecl.IsInternal() Then
-			g.Append("```")
-		End If
+		g.Append(IfcVisibilityTicks(globalDecl))
 
 		g.Append("=")
 

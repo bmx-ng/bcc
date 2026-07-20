@@ -1163,8 +1163,9 @@ Type TIParser
 		End If
 
 		Local parsed:Int
-		For Local i:Int = 0 Until _toke.Length
-			Select _toke[i]
+		Local flagText:String = _toke.ToUpper()
+		For Local i:Int = 0 Until flagText.Length
+			Select flagText[i]
 				Case Asc("F")
 					attrs:| DECL_FINAL
 					parsed = True

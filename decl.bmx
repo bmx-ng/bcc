@@ -200,10 +200,43 @@ Type TDecl
 		Return (attrs & DECL_INTERNAL)<>0
 	End Method
 
+	Method IsPrivateInternal:Int()
+		Return IsPrivate() And IsInternal()
+	End Method
+
+	Method IsProtectedInternal:Int()
+		Return IsProtected() And IsInternal()
+	End Method
+
 	Method IsPublic:Int()
 		Return Not (IsPrivate() Or IsProtected() Or IsInternal())
 	End Method
-	
+
+	Method AccessMask:Int()
+		If IsPublic() Then Return %11111
+		If IsPrivateInternal() Then Return %00011
+		If IsProtectedInternal() Then Return %01111
+		If IsPrivate() Then Return %00001
+		If IsProtected() Then Return %00111
+		If IsInternal() Then Return %01011
+		Return 0
+	End Method
+
+	Method AccessName:String()
+		If IsPrivateInternal() Then Return "private internal"
+		If IsProtectedInternal() Then Return "protected internal"
+		If IsPrivate() Then Return "private"
+		If IsProtected() Then Return "protected"
+		If IsInternal() Then Return "internal"
+		Return "public"
+	End Method
+
+	Method AccessIncludes:Int(other:TDecl)
+		If Not other Then Return False
+		Local required:Int = other.AccessMask()
+		Return (AccessMask() & required) = required
+	End Method
+
 	Method IsReadOnly:Int()
 		Return (attrs & DECL_READ_ONLY)<>0
 	End Method
@@ -279,11 +312,18 @@ Type TDecl
 	Method CheckAccess:Int()
 		Local cd:TClassDecl = TClassDecl(scope)
 		If cd Then
+			Local ec:TClassDecl = _env.ClassScope()
+			Local sameModule:Int = ModuleScope() = _env.ModuleScope()
+			If IsPrivateInternal() Then
+				Return sameModule And ec And ec.ExtendsClass(cd)
+			End If
+			If IsProtectedInternal() Then
+				Return sameModule Or (ec And ec.ExtendsClass(cd))
+			End If
 			If IsPrivate() Then
-				Return cd = _env.ClassScope()
+				Return cd = ec
 			End If
 			If IsProtected() Then
-				Local ec:TClassDecl = _env.ClassScope()
 				If Not ec Return False
 				Return ec.ExtendsClass(cd)
 			End If
@@ -300,13 +340,7 @@ Type TDecl
 	
 	Method AssertAccess()
 		If Not CheckAccess()
-			If IsPrivate() Then
-				Err ToString() +" is private."
-			Else If IsProtected() Then
-				Err ToString() +" is protected."
-			Else
-				Err ToString() +" is internal."
-			End If
+			Err ToString() +" is " + AccessName() + "."
 		EndIf
 	End Method
 
@@ -856,17 +890,6 @@ Type TGlobalDecl Extends TVarDecl
 	End Method
 
 	Method CheckAccess:Int()
-		Local cd:TClassDecl = ClassScope()
-		If cd Then
-			If cd.modulescope() = _env.modulescope() Return True
-			If IsPrivate() And cd<>_env.ClassScope() Return False
-			If IsProtected() Then
-				Local ec:TClassDecl = _env.ClassScope()
-				If Not ec Return False
-				If Not ec.ExtendsClass(cd) Return False
-			End If
-			Return True
-		End If
 		Return Super.CheckAccess()
 	End Method
 
@@ -906,45 +929,7 @@ Type TFieldDecl Extends TVarDecl
 	End Method
 
 	Method CheckAccess:Int()
-
-		If ModuleScope() = _env.ModuleScope() Then
-			Return True
-		End If
-
-		Local cs:TClassDecl = ClassScope()
-
-		If IsPrivate() And cs Then
-			Local ec:TClassDecl = _env.ClassScope()
-
-			While ec
-
-				If cs = ec Then
-					Return True
-				End If
-				
-				ec = ec.scope.ClassScope()
-			Wend
-			
-			If Not ec Then
-				Return False
-			End If
-		End If
-		If IsProtected() And cs Then
-			Local ec:TClassDecl = _env.ClassScope()
-			
-			While ec
-				If ec.ExtendsClass(cs) Then
-					Return True
-				End If
-				
-				ec = ec.scope.ClassScope()
-			Wend
-			
-			If Not ec Then
-				Return False
-			End If
-		End If
-		Return True
+		Return Super.CheckAccess()
 	End Method
 	
 	Method OnSemant()
@@ -2480,9 +2465,7 @@ Type TFuncDecl Extends TBlockDecl
 				If EqualsFunc( decl, True ) And Not voidReturnTypeFail
 
 					' check we aren't attempting to assign weaker access modifiers
-					If (decl.IsPublic() And Not IsPublic()) Or ..
-						(decl.IsProtected() And Not (IsProtected() Or IsPublic())) Or ..
-						(decl.IsInternal() And Not (IsInternal() Or IsPublic())) Then
+					If Not AccessIncludes(decl) Then
 					
 						Err PrivilegeError(Self, decl)
 					
@@ -2536,25 +2519,7 @@ Type TFuncDecl Extends TBlockDecl
 	End Method
 
 	Function PrivilegeError:String(decl:TFuncDecl, decl2:TFuncDecl)
-		Local p:String
-		If decl.IsProtected() Then
-			p = "Protected"
-		Else If decl.IsInternal() Then
-			p = "Internal"
-		Else
-			p = "Private"
-		End If
-		
-		Local dp:String
-		If decl2.IsPublic() Then
-			dp = "Public"
-		Else If decl2.IsInternal() Then
-			dp = "Internal"
-		Else
-			dp = "Protected"
-		End If
-	
-		Return decl.ToString() + " clashes with " + decl2.ToString() + ". Attempt to assign weaker access privileges ('" + p + "'), was '" + dp + "'."
+		Return decl.ToString() + " clashes with " + decl2.ToString() + ". Attempt to assign weaker access privileges ('" + decl.AccessName() + "'), was '" + decl2.AccessName() + "'."
 	End Function
 	
 	Method NextIdx:Int()

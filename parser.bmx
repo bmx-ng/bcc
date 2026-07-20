@@ -3721,17 +3721,23 @@ End Rem
 					Err "Private cannot be used with interfaces."
 				End If
 				NextToke
-				decl_attrs=decl_attrs | DECL_PRIVATE
-				decl_attrs:& ~DECL_PROTECTED
-				decl_attrs:& ~DECL_INTERNAL
+				decl_attrs:& ~(DECL_PRIVATE | DECL_PROTECTED | DECL_INTERNAL)
+				decl_attrs:| DECL_PRIVATE
+				If _toke = "internal" Then
+					NextToke
+					decl_attrs:| DECL_INTERNAL
+				End If
 			Case "protected"
 				If attrs & CLASS_INTERFACE Then
 					Err "Protected cannot be used with interfaces."
 				End If
 				NextToke
-				decl_attrs=decl_attrs | DECL_PROTECTED
-				decl_attrs:& ~DECL_PRIVATE
-				decl_attrs:& ~DECL_INTERNAL
+				decl_attrs:& ~(DECL_PRIVATE | DECL_PROTECTED | DECL_INTERNAL)
+				decl_attrs:| DECL_PROTECTED
+				If _toke = "internal" Then
+					NextToke
+					decl_attrs:| DECL_INTERNAL
+				End If
 			Case "internal"
 				If attrs & CLASS_INTERFACE Then
 					Err "Internal cannot be used with interfaces."
