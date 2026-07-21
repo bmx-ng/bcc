@@ -1163,8 +1163,9 @@ Type TIParser
 		End If
 
 		Local parsed:Int
-		For Local i:Int = 0 Until _toke.Length
-			Select _toke[i]
+		Local flagText:String = _toke.ToUpper()
+		For Local i:Int = 0 Until flagText.Length
+			Select flagText[i]
 				Case Asc("F")
 					attrs:| DECL_FINAL
 					parsed = True
@@ -1182,6 +1183,9 @@ Type TIParser
 					parsed = True
 				Case Asc("R")
 					attrs:| DECL_PROTECTED
+					parsed = True
+				Case Asc("I")
+					attrs:| DECL_INTERNAL
 					parsed = True
 				Case Asc("E")
 					attrs:| DECL_EXPORT
@@ -1390,13 +1394,17 @@ Type TIParser
 
 				End If
 				
-				If CParse("`") Then
-					If CParse("`") Then
-						attrs :| DECL_PROTECTED
-					Else
-						attrs :| DECL_PRIVATE
-					End If
-				End If
+				Local visibilityTicks:Int
+				While CParse("`")
+					visibilityTicks :+ 1
+				Wend
+				Select visibilityTicks
+					Case 1 attrs :| DECL_PRIVATE
+					Case 2 attrs :| DECL_PROTECTED
+					Case 3 attrs :| DECL_INTERNAL
+					Case 4 attrs :| DECL_PRIVATE | DECL_INTERNAL
+					Case 5 attrs :| DECL_PROTECTED | DECL_INTERNAL
+				End Select
 				
 
 Rem
