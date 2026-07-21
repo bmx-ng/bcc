@@ -1394,17 +1394,17 @@ Type TIParser
 
 				End If
 				
-				If CParse("`") Then
-					If CParse("`") Then
-						If CParse("`") Then
-							attrs :| DECL_INTERNAL
-						Else
-							attrs :| DECL_PROTECTED
-						End If
-					Else
-						attrs :| DECL_PRIVATE
-					End If
-				End If
+				Local visibilityTicks:Int
+				While CParse("`")
+					visibilityTicks :+ 1
+				Wend
+				Select visibilityTicks
+					Case 1 attrs :| DECL_PRIVATE
+					Case 2 attrs :| DECL_PROTECTED
+					Case 3 attrs :| DECL_INTERNAL
+					Case 4 attrs :| DECL_PRIVATE | DECL_INTERNAL
+					Case 5 attrs :| DECL_PROTECTED | DECL_INTERNAL
+				End Select
 				
 
 Rem
