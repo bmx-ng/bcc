@@ -1722,7 +1722,25 @@ End Rem
 			
 		Next
 
-		If Not match Or exactMatchCount <> 1 Then
+		' A unique exact argument match normally wins without further ranking. Do
+		' not use that shortcut across inheritance levels, though: an applicable
+		' method declared closer to the receiver takes precedence when its supplied
+		' argument conversions are equally good, even when it uses trailing default
+		' arguments. This preserves the established derived-over-inherited rule.
+		Local useExactMatch:Int = match And exactMatchCount = 1
+		Local exactClass:TClassDecl
+		If useExactMatch And match.IsMethod() Then exactClass = TClassDecl(match.scope)
+		If exactClass Then
+			For Local candidate:TFuncDecl = EachIn matches
+				Local candidateClass:TClassDecl = TClassDecl(candidate.scope)
+				If candidate.IsMethod() And candidateClass And candidateClass.ExtendsClass(exactClass) Then
+					useExactMatch = False
+					Exit
+				End If
+			Next
+		End If
+
+		If Not useExactMatch Then
 			If matches.Count() = 1 Then
 				match = TFuncDecl(matches.First())
 			Else
