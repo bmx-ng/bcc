@@ -5687,8 +5687,14 @@ End Rem
 			Wend
 		End If
 
-		Local args:String = TransObject(classdecl, True) + " volatile o"
+		Local args:String = TransObject(classdecl, True)
 
+		If Not classdecl.IsStruct() Then
+			args :+ " volatile"
+		End If
+
+		args :+ " o"
+		
 		For Local i:Int=0 Until fdecl.argDecls.Length
 			Local volTrans:String
 			Local arg:TArgDecl=fdecl.argDecls[i]
